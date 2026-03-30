@@ -60,3 +60,11 @@
 - [x] Verify database connectivity
 - [x] Test static file serving
 - [x] End-to-end verification
+
+## Data Import
+- [x] Import io_employees.csv into io_employees table (403 rows)
+- [x] Import io_attendance.csv into io_attendance table (34,106 rows)
+- [x] Import io_coaching.csv into io_coaching table (2,839 rows incl. group coaching)
+- [x] Import io_coaching_rca.csv into io_coaching_rca table (85 rows)
+- [x] Import io_coaching_ztp.csv into io_coaching_ztp table (19 rows)
+- [x] Import io_coaching-to_separate.csv as group coaching rows (7 rows)

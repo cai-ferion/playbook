@@ -1,0 +1,50 @@
+{
+  "query": "SELECT ohr_id, full_name, actual_role, planning_group, employement_status, shift_time FROM io_employees LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT ohr_id, full_name, actual_role, planning_group, employement_status, shift_time FROM io_employees LIMIT 5;",
+  "rows": [
+    {
+      "ohr_id": "703212987",
+      "full_name": "Polimetla, Ravi Kiran",
+      "actual_role": "Manager",
+      "planning_group": "MULTIPLE",
+      "employement_status": "Active",
+      "shift_time": "Flexi"
+    },
+    {
+      "ohr_id": "703222789",
+      "full_name": "Prasad, Arun",
+      "actual_role": "Team Lead",
+      "planning_group": "RECALL_MEASUREMENT_CTR",
+      "employement_status": "Active",
+      "shift_time": "Mid-Shift"
+    },
+    {
+      "ohr_id": "740004255",
+      "full_name": "Gallano, Jerome Paul Javier",
+      "actual_role": "Team Lead",
+      "planning_group": "RECALL_MEASUREMENT_CTR",
+      "employement_status": "Active",
+      "shift_time": "GY Shift"
+    },
+    {
+      "ohr_id": "740017089",
+      "full_name": "Parreno, Lorena Medina",
+      "actual_role": "Agent",
+      "planning_group": "RECALL_MEASUREMENT_CTR",
+      "employement_status": "Active",
+      "shift_time": "GY Shift"
+    },
+    {
+      "ohr_id": "740027103",
+      "full_name": "Romero, Krantz Maigue",
+      "actual_role": "Agent",
+      "planning_group": "RECALL_MEASUREMENT_CTR",
+      "employement_status": "Active",
+      "shift_time": "GY Shift"
+    }
+  ],
+  "messages": [],
+  "stdout": "ohr_id\tfull_name\tactual_role\tplanning_group\temployement_status\tshift_time\n703212987\tPolimetla, Ravi Kiran\tManager\tMULTIPLE\tActive\tFlexi\n703222789\tPrasad, Arun\tTeam Lead\tRECALL_MEASUREMENT_CTR\tActive\tMid-Shift\n740004255\tGallano, Jerome Paul Javier\tTeam Lead\tRECALL_MEASUREMENT_CTR\tActive\tGY Shift\n740017089\tParreno, Lorena Medina\tAgent\tRECALL_MEASUREMENT_CTR\tActive\tGY Shift\n740027103\tRomero, Krantz Maigue\tAgent\tRECALL_MEASUREMENT_CTR\tActive\tGY Shift\n",
+  "stderr": "",
+  "execution_time_ms": 1638
+}
