@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playbook</title>
+  <link rel="icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/favicon_c4d47f68.png" type="image/png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- ===== Auth Page ===== -->
+  <div class="auth-page" id="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/favicon_c4d47f68.png" alt="Logo">
+        <h1>Playbook</h1>
+      </div>
+      <div class="auth-buttons" id="auth-buttons">
+        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup')">Sign Up</button>
+        <button class="btn btn-outline btn-lg auth-btn" onclick="showAuthForm('login')">Login</button>
+      </div>
+      <!-- Sign Up Form -->
+      <div class="auth-form" id="auth-form-signup" style="display:none;">
+
+        <div class="auth-field">
+          <label>OHR ID</label>
+          <input type="text" class="form-input" id="signup-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <div class="password-wrapper">
+            <input type="password" class="form-input" id="signup-password" placeholder="Create a password" autocomplete="new-password">
+            <button class="password-toggle" id="signup-toggle" onmousedown="unmaskPassword('signup-password')" onmouseup="maskPassword('signup-password')" onmouseleave="maskPassword('signup-password')" ontouchstart="unmaskPassword('signup-password')" ontouchend="maskPassword('signup-password')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="password-rules" id="signup-rules">
+            <span id="rule-length">At least 8 characters</span>
+            <span id="rule-capital">1 capital letter</span>
+            <span id="rule-alphanum">Alphanumeric characters</span>
+            <span id="rule-special">Only !, @, #, $, % allowed as special chars</span>
+          </div>
+        </div>
+        <div class="auth-error" id="signup-error"></div>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUp()">Create Account</button>
+        <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
+      </div>
+      <!-- Login Form -->
+      <div class="auth-form" id="auth-form-login" style="display:none;">
+
+        <div class="auth-field">
+          <label>OHR ID</label>
+          <input type="text" class="form-input" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <div class="password-wrapper">
+            <input type="password" class="form-input" id="login-password" placeholder="Enter your password" autocomplete="current-password">
+            <button class="password-toggle" id="login-toggle" onmousedown="unmaskPassword('login-password')" onmouseup="maskPassword('login-password')" onmouseleave="maskPassword('login-password')" ontouchstart="unmaskPassword('login-password')" ontouchend="maskPassword('login-password')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="auth-error" id="login-error"></div>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="handleLogin()">Login</button>
+        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+          <button class="btn btn-ghost auth-link" onclick="showForgotPassword()">Forgot Password?</button>
+          <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container" id="app-container" style="display:none;">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/favicon_c4d47f68.png" alt="Logo">
+          <h1>Playbook</h1>
+        </div>
+        <div class="sidebar-subtitle">Operational Platform &middot; 2026</div>
+      </div>
+      <nav class="sidebar-nav" style="overflow:hidden;">
+        <div class="sidebar-nav-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-bottom:8px;">
+        <!-- Anchor Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-anchor">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('anchor')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+            Anchor
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-anchor">
+            <button class="nav-item" data-view="input" onclick="switchView('input')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Input Portal
+            </button>
+            <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')" id="nav-dashboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </button>
+            <button class="nav-item" data-view="billing" onclick="switchView('billing')" id="nav-billing">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Billing Compliance
+            </button>
+            <button class="nav-item" data-view="alerts" onclick="switchView('alerts')" id="nav-alerts">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Risk Alerts
+              <span class="nav-badge" id="alert-nav-count">0</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Compass Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-compass">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('compass')" id="nav-compass">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            Compass
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-compass">
+            <button class="nav-item" data-view="compass-input" onclick="switchView('compass-input')" id="nav-compass-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M12 11a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M17 18.5c0-1.4-2.2-2.5-5-2.5s-5 1.1-5 2.5"/></svg>
+              Coaching Profile
+            </button>
+            <button class="nav-item" data-view="compass-disputes" onclick="switchView('compass-disputes')" id="nav-compass-disputes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Disputes Area
+            </button>
+          </div>
+        </div>
+
+        <!-- Sandbox Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-sandbox">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('sandbox')" id="nav-sandbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            Sandbox
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-sandbox">
+            <button class="nav-item" data-view="sandbox-input" onclick="switchView('sandbox-input')" id="nav-sandbox-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Input Portal
+            </button>
+            <button class="nav-item" data-view="sandbox-review" onclick="switchView('sandbox-review')" id="nav-sandbox-review">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Review Area
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Haven Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-haven">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('haven')" id="nav-haven">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Haven
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-haven">
+            <button class="nav-item" data-view="haven-input" onclick="switchView('haven-input')" id="nav-haven-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Input Portal
+            </button>
+            <button class="nav-item" data-view="haven-review" onclick="switchView('haven-review')" id="nav-haven-review">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Review Area
+            </button>
+            <button class="nav-item" data-view="haven-final" onclick="switchView('haven-final')" id="nav-haven-final">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Final Review Area
+            </button>
+          </div>
+        </div>
+
+        <!-- Helm Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-helm">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('helm')" id="nav-helm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+            Helm
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-helm">
+            <button class="nav-item" data-view="helm-board" onclick="switchView('helm-board')" id="nav-helm-board">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Task Board
+            </button>
+            <button class="nav-item" data-view="helm-analytics" onclick="switchView('helm-analytics')" id="nav-helm-analytics">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Analytics
+            </button>
+          </div>
+        </div>
+
+        </div>
+        <!-- Fixed bottom nav items -->
+        <div class="sidebar-nav-bottom" style="flex-shrink:0;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px;">
+          <!-- Regimen (Employee Roster - Admin only) -->
+          <button class="nav-item" data-view="regimen" onclick="switchView('regimen')" id="nav-regimen" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Regimen
+          </button>
+          <button class="nav-item" data-view="admin" onclick="switchView('admin')" id="nav-admin" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            Admin Tools
+          </button>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div>Playbook &middot; IO Operations</div>
+      </div>
+    </aside>
+
+    <!-- ===== Main Content ===== -->
+    <div class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h2 id="view-title">Command Dashboard</h2>
+          <span class="header-meta" id="header-meta">Last Updated: &mdash;</span>
+        </div>
+        <div class="header-right">
+          <!-- Notification Bell -->
+          <div class="notif-wrapper" id="notif-bell">
+            <button class="notif-bell-btn" onclick="toggleNotifPanel()" title="Notifications">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
+            </button>
+            <!-- Notification Dropdown Panel -->
+            <div class="notif-panel" id="notif-panel">
+              <div class="notif-panel-header">
+                <h3>Notifications</h3>
+                <div class="notif-panel-actions">
+                  <button class="notif-action-btn" onclick="markAllNotificationsRead()" title="Mark all as read">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <button class="notif-action-btn" onclick="clearAllNotifications()" title="Clear all">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="notif-list" id="notif-list">
+                <div class="notif-empty">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <p>No notifications yet</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-outline btn-sm export-csv-btn" id="export-csv-btn" onclick="handleExportCSV()" style="display:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="forceSync()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh Data
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="handleLogout()" title="Logout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== View 1: Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-input">
+
+        <!-- Omnibar: Unified View Builder -->
+        <div class="omnibar" id="omnibar">
+          <div class="omnibar-top">
+            <div class="omnibar-chips" id="omnibar-chips">
+              <!-- Active filter/sort chips render here -->
+            </div>
+            <div class="omnibar-actions">
+              <button class="btn btn-outline btn-sm omnibar-btn" id="omnibar-add-filter" onclick="event.stopPropagation(); omnibarOpenMenu('filter')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Add Filter
+              </button>
+              <button class="btn btn-outline btn-sm omnibar-btn" id="omnibar-add-sort" onclick="event.stopPropagation(); omnibarOpenMenu('sort')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                Add Sort
+              </button>
+              <button class="btn btn-primary btn-sm omnibar-btn" id="omnibar-apply" onclick="omnibarApplyView()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Apply View
+              </button>
+              <button class="btn btn-ghost btn-sm" id="omnibar-clear" onclick="omnibarClearAll()" title="Clear all filters and sorts">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Clear
+              </button>
+            </div>
+            <div class="omnibar-meta">
+              <span class="input-record-count" id="input-record-count">Filtered Records: 0</span>
+            </div>
+          </div>
+          <!-- Omnibar dropdown menu (filter/sort picker) -->
+          <div class="omnibar-menu" id="omnibar-menu" style="display:none;"></div>
+
+          <!-- Billing Code Edit Section (integrated into omnibar area) -->
+          <div class="billing-code-edit-section omnibar-billing" id="billing-code-edit-section" style="display:none;">
+            <div class="billing-code-edit-header">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <strong>Edit Billing Code</strong>
+            </div>
+            <div class="billing-code-edit-controls">
+              <div class="filter-group">
+                <label class="filter-label">Agent Name:</label>
+                <select class="form-select form-select-sm" id="bc-edit-agent" onchange="onBcEditAgentChange()"></select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Start Date:</label>
+                <input type="date" class="form-input form-input-sm" id="bc-edit-start-date">
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">End Date:</label>
+                <input type="date" class="form-input form-input-sm" id="bc-edit-end-date">
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Current Code:</label>
+                <span class="bc-current-code" id="bc-edit-current">—</span>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">New Code:</label>
+                <select class="form-select form-select-sm" id="bc-edit-new-code">
+                  <option value="">— Select —</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk Selection Toolbar (appears when rows are selected) -->
+        <div class="bulk-toolbar" id="bulk-toolbar" style="display:none;">
+          <div class="bulk-toolbar-left">
+            <label class="bulk-select-all-label">
+              <input type="checkbox" id="bulk-select-all" onchange="bulkToggleAll(this.checked)">
+              <span id="bulk-count">0 selected</span>
+            </label>
+          </div>
+          <div class="bulk-toolbar-right">
+            <div class="bulk-action-group">
+              <label class="filter-label">Tag:</label>
+              <select class="form-select form-select-sm" id="bulk-tag-select">
+                <option value="">— Select Tag —</option>
+                <option value="P">P</option>
+                <option value="LATE">LATE</option>
+                <option value="UPL">UPL</option>
+                <option value="PL">PL</option>
+                <option value="ML">ML</option>
+                <option value="WO">WO</option>
+                <option value="NYO">NYO</option>
+                <option value="EXIT">EXIT</option>
+              </select>
+              <button class="btn btn-primary btn-sm" onclick="bulkApplyTag()">Apply Tag</button>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="bulkDeselectAll()">Deselect All</button>
+          </div>
+        </div>
+
+        <!-- Toolbar: edit count, undo, save -->
+        <div class="input-toolbar">
+          <div class="input-toolbar-left">
+            <span class="input-edit-count" id="input-edit-count"></span>
+          </div>
+          <div class="input-toolbar-right">
+            <span class="input-record-info" id="input-record-info"></span>
+            <div class="input-pagination" id="input-pagination"></div>
+            <button class="btn btn-outline btn-sm" id="undo-btn" onclick="handleUndoAll()" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Undo All
+            </button>
+            <button class="btn btn-primary btn-sm" id="save-btn" onclick="handleSave()" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save Changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Virtualized Scrollable Table Container -->
+        <div class="input-table-wrapper" id="vtable-scroll-container">
+          <table class="data-table input-table" id="input-table">
+            <thead id="input-table-head"></thead>
+            <tbody id="input-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===== View 2: Dashboard ===== -->
+      <div class="view-container" id="view-dashboard">
+        <div class="loading-overlay" id="dashboard-loading" style="display:none;">
+          <div class="spinner"></div>
+          <div class="loading-text">Loading Data...</div>
+        </div>
+
+        <div id="dashboard-content">
+          <!-- Dashboard Omnibar -->
+          <div class="omnibar" id="dash-omnibar">
+            <div class="omnibar-top">
+              <div class="omnibar-chips" id="dash-omnibar-chips"></div>
+              <div class="omnibar-actions">
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation(); dashOmnibarOpenMenu('filter')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  Add Filter
+                </button>
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation(); dashOmnibarOpenMenu('sort')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  Add Sort
+                </button>
+                <button class="btn btn-primary btn-sm omnibar-btn" onclick="dashOmnibarApply()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Apply View
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="dashOmnibarClearAll()" title="Clear all filters and sorts">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
+                </button>
+              </div>
+              <div class="omnibar-meta">
+                <span id="dash-record-count" style="font-size:14px;font-weight:600;color:var(--text-secondary);">Filtered Records: 0</span>
+              </div>
+            </div>
+            <div class="omnibar-menu" id="dash-omnibar-menu" style="display:none;"></div>
+          </div>
+
+          <!-- KPI Cards (4 cards) -->
+          <div class="kpi-grid" id="kpi-grid"></div>
+
+          <!-- Side-by-side: Shift Breakdown + FLM Supervisor -->
+          <div class="dash-row">
+            <div class="card shift-combined-card">
+              <div class="card-header">
+                <span class="card-title">SHIFT BREAKDOWN</span>
+                <button class="expand-btn" onclick="expandShiftBreakdown()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Expand
+                </button>
+              </div>
+              <div id="shift-breakdown"></div>
+            </div>
+            <div class="card flm-card" style="overflow-y:auto;max-height:800px;">
+              <div class="card-header">
+                <span class="card-title">SUPERVISOR WISE</span>
+              </div>
+              <div id="flm-breakdown"></div>
+            </div>
+          </div>
+
+          <!-- Shrink Details (expandable) -->
+          <div class="card shrink-details-card">
+            <div class="card-header">
+              <span class="card-title">SHRINK DETAILS</span>
+              <button class="expand-btn" onclick="expandShrinkDetails()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                Expand
+              </button>
+            </div>
+            <div id="agent-list" style="max-height:500px;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 5: Billing Compliance ===== -->
+      <div class="view-container view-hidden" id="view-billing">
+        <div class="billing-compliance-container">
+
+          <div class="billing-controls">
+            <div class="filter-group">
+              <label class="filter-label">Select Week Ending:</label>
+              <select class="form-select" id="billing-week-select" onchange="loadBillingCompliance()">
+                <option value="">Select Week Ending</option>
+              </select>
+            </div>
+
+          </div>
+          <div class="loading-overlay" id="billing-compliance-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Data...</div>
+          </div>
+          <div id="billing-compliance-table" style="display:none;">
+            <div class="billing-table-wrapper">
+              <table class="data-table billing-table">
+                <thead>
+                  <tr>
+                    <th>Billing Code</th>
+                    <th style="text-align:center">Forecasted P</th>
+                    <th style="text-align:center">OT Rendered</th>
+                    <th style="text-align:center">Delivered Hours</th>
+                    <th style="text-align:center">UPL Count</th>
+                    <th style="text-align:center">PL Count</th>
+                    <th style="text-align:center">Actual Weekly Compliance %</th>
+                    <th style="text-align:center">Goal | 98%</th>
+                    <th style="text-align:center">Goal | 100%</th>
+                    <th style="text-align:center">Goal | 101%</th>
+                  </tr>
+                </thead>
+                <tbody id="billing-compliance-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Billing Code Reference Table (relocated from Admin Tools) -->
+          <div class="card admin-card" style="margin-top:20px;">
+            <div class="card-header">
+              <span class="card-title">BILLING CODE REFERENCE</span>
+            </div>
+            <div class="admin-card-body">
+              <table class="data-table admin-preview-table">
+                <thead><tr><th>Planning Group</th><th>Role</th><th>Code</th></tr></thead>
+                <tbody>
+                  <tr><td>S-ABF</td><td>Agent</td><td>MA</td></tr>
+                  <tr><td>S-ABF</td><td>Operational SME</td><td>MS</td></tr>
+                  <tr><td>S-ABF</td><td>Quality &amp; Policy Expert</td><td>MQ</td></tr>
+                  <tr><td>S-ABF</td><td>Team Lead</td><td>SA</td></tr>
+                  <tr><td>CS-ABF</td><td>Agent</td><td>CA</td></tr>
+                  <tr><td>CS-ABF</td><td>Operational SME</td><td>CS</td></tr>
+                  <tr><td>CS-ABF</td><td>Quality &amp; Policy Expert</td><td>CQ</td></tr>
+                  <tr><td>CS-ABF</td><td>Team Lead</td><td>SC</td></tr>
+                  <tr><td>CSO_CTR</td><td>(any)</td><td>SO</td></tr>
+                  <tr><td>FAD_CTR</td><td>(any)</td><td>FA</td></tr>
+                  <tr><td>RECALL_MEASUREMENT_CTR</td><td>(any)</td><td>RM</td></tr>
+                  <tr><td>SME_CTR</td><td>(any)</td><td>SM</td></tr>
+                  <tr><td>QPE_CTR</td><td>(any)</td><td>QP</td></tr>
+                  <tr><td>(any)</td><td>Team Lead</td><td>SV</td></tr>
+                  <tr><td>(any)</td><td>Trainer</td><td>TR</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== View 4: Admin Tools ===== -->
+      <div class="view-container view-hidden" id="view-admin">
+        <div class="admin-tools-container">
+
+          <!-- Pause Site -->
+          <div class="card admin-card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <span class="card-title">SITE MAINTENANCE</span>
+              <span id="pause-status-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
+            </div>
+            <div class="admin-card-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+              <p style="margin:0;font-size:13px;color:var(--text-secondary);flex:1;min-width:200px;">When paused, all users except you (OHR 740045023) will see a maintenance screen and cannot access the site.</p>
+              <button class="btn btn-sm" id="pause-site-btn" onclick="toggleSitePause()" style="white-space:nowrap;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <span id="pause-btn-text">Pause Site</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Locked Out Accounts -->
+          <div class="card admin-card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <span class="card-title">LOCKED OUT ACCOUNTS</span>
+              <button class="btn btn-outline btn-sm" onclick="loadLockedAccounts()" style="margin-left:auto;font-size:12px;">Refresh</button>
+            </div>
+            <div class="admin-card-body">
+              <div id="lockout-loading" style="display:none;color:var(--text-secondary);font-size:13px;padding:8px 0;">Loading...</div>
+              <div id="lockout-empty" style="color:var(--text-secondary);font-size:13px;padding:8px 0;">No locked accounts found.</div>
+              <div class="admin-preview-table-wrapper" id="lockout-table-wrapper" style="display:none;">
+                <table class="data-table admin-preview-table" id="lockout-table">
+                  <thead><tr><th>OHR</th><th>Name</th><th>Password</th><th>Action</th></tr></thead>
+                  <tbody id="lockout-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Cards Row (side by side) -->
+          <div class="admin-upload-row">
+            <!-- Section 1: SRT Status Update -->
+            <div class="card admin-card admin-card-half">
+              <div class="card-header">
+                <span class="card-title">UPDATE SRT STATUS</span>
+              </div>
+              <div class="admin-card-body">
+                <p class="admin-help">Upload Billing Projection File &mdash; Update SRT Status for all Billed Resources.</p>
+                <div class="admin-upload-area" id="srt-upload-area">
+                  <input type="file" id="srt-file-input" accept=".xlsb,.xlsx,.xls" style="display:none" onchange="handleSrtFileSelect(event)">
+                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('srt-file-input').click()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload
+                  </button>
+                  <span class="admin-file-name" id="srt-file-name">No file selected</span>
+                </div>
+                <div class="admin-progress" id="srt-progress" style="display:none;">
+                  <div class="progress-bar"><div class="progress-fill" id="srt-progress-fill"></div></div>
+                  <span class="progress-text" id="srt-progress-text">Processing...</span>
+                </div>
+                <div class="admin-result" id="srt-result" style="display:none;"></div>
+              </div>
+            </div>
+
+            <!-- Section 2: Billing Code Update -->
+            <div class="card admin-card admin-card-half">
+              <div class="card-header">
+                <span class="card-title">UPDATE BILLING CODES</span>
+              </div>
+              <div class="admin-card-body">
+                <p class="admin-help">Upload Attribute Manager File &mdash; Update Billing Code for all Billed Resources.</p>
+                <div class="admin-upload-area" id="billing-upload-area">
+                  <input type="file" id="billing-file-input" accept=".csv" style="display:none" onchange="handleBillingFileSelect(event)">
+                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('billing-file-input').click()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload
+                  </button>
+                  <span class="admin-file-name" id="billing-file-name">No file selected</span>
+                </div>
+                <div class="admin-progress" id="billing-progress" style="display:none;">
+                  <div class="progress-bar"><div class="progress-fill" id="billing-progress-fill"></div></div>
+                  <span class="progress-text" id="billing-progress-text">Processing...</span>
+                </div>
+                <div class="admin-result" id="billing-result" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SRT Preview (full width below) -->
+          <div class="admin-preview" id="srt-preview" style="display:none;">
+            <h4>Preview: SRT Status Changes</h4>
+            <div class="admin-preview-stats" id="srt-preview-stats"></div>
+            <div class="admin-preview-filters" id="srt-preview-filters" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap;"></div>
+            <div class="admin-preview-table-wrapper">
+              <table class="data-table admin-preview-table" id="srt-preview-table">
+                <thead><tr><th>OHR</th><th>Name</th><th>Current Status</th><th>New Status</th></tr></thead>
+                <tbody id="srt-preview-body"></tbody>
+              </table>
+            </div>
+            <div class="admin-actions">
+              <button class="btn btn-outline btn-sm" onclick="cancelSrtUpload()">Cancel</button>
+              <button class="btn btn-primary btn-sm" id="srt-apply-btn" onclick="applySrtChanges()">Apply Changes</button>
+            </div>
+          </div>
+
+          <!-- Billing Preview (full width below) -->
+          <div class="admin-preview" id="billing-preview" style="display:none;">
+            <h4>Preview: Billing Code Changes</h4>
+            <div class="admin-preview-stats" id="billing-preview-stats"></div>
+            <div class="admin-preview-table-wrapper">
+              <table class="data-table admin-preview-table" id="billing-preview-table">
+                <thead><tr><th>OHR</th><th>Name</th><th>SRT ID</th><th>Designation</th><th>Planning Group</th><th>Mapped PG</th><th>Mapped Role</th><th>Code</th></tr></thead>
+                <tbody id="billing-preview-body"></tbody>
+              </table>
+            </div>
+            <p class="admin-help" style="margin-top:8px;"><strong>Date Range:</strong> <span id="billing-date-range"></span></p>
+            <div class="admin-actions">
+              <button class="btn btn-outline btn-sm" onclick="cancelBillingUpload()">Cancel</button>
+              <button class="btn btn-primary btn-sm" id="billing-apply-btn" onclick="applyBillingChanges()">Apply Changes</button>
+            </div>
+          </div>
+
+          <!-- Database Backup / Export -->
+          <div class="card admin-card" style="margin-top:20px;">
+            <div class="card-header">
+              <span class="card-title">DATABASE BACKUP / EXPORT</span>
+            </div>
+            <div class="admin-card-body">
+              <p class="admin-help">Export IO Operations tables as CSV files for backup and safekeeping.</p>
+              <div id="backup-loading" style="display:none;color:var(--text-secondary);font-size:13px;padding:8px 0;">Loading table info...</div>
+              <div class="admin-preview-table-wrapper" id="backup-table-wrapper" style="display:none;">
+                <table class="data-table admin-preview-table" id="backup-table">
+                  <thead><tr><th>Table</th><th>Records</th><th>Action</th></tr></thead>
+                  <tbody id="backup-body"></tbody>
+                </table>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" onclick="loadBackupTables()">Refresh Counts</button>
+                <button class="btn btn-primary btn-sm" onclick="exportAllTables()">Export All Tables (JSON)</button>
+              </div>
+              <div class="admin-result" id="backup-result" style="display:none;margin-top:8px;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== View 3: Risk Alerts ===== -->
+      <div class="view-container view-hidden" id="view-alerts">
+        <div class="loading-overlay" id="alerts-loading" style="display:none;">
+          <div class="spinner"></div>
+          <div class="loading-text">Loading Data...</div>
+        </div>
+
+        <div id="alerts-content">
+          <div class="filter-bar" style="margin-bottom:16px;">
+            <span class="filter-label">Month:</span>
+            <select class="form-select" id="alert-filter-month" onchange="applyAlertFilters()">
+              <option value="All">All Months</option>
+            </select>
+            <span class="filter-label">Week Ending:</span>
+            <select class="form-select" id="alert-filter-week" onchange="applyAlertFilters()">
+              <option value="All">All Weeks</option>
+            </select>
+          </div>
+
+          <div class="alert-tabs" id="alert-tabs"></div>
+          <div class="alert-description" id="alert-description"></div>
+          <div id="alert-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== View 6a: Compass Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-compass-input">
+        <div class="module-page">
+
+          <div class="loading-overlay" id="compass-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Coaching Logs...</div>
+          </div>
+
+          <div id="compass-content" style="display:none;">
+          <!-- Compass Omnibar -->
+          <div class="omnibar" id="compass-omnibar">
+            <div class="omnibar-top" style="flex-wrap:nowrap;">
+              <button class="btn btn-primary btn-sm" id="compass-new-btn" onclick="compassShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+              </button>
+              <div class="omnibar-chips" id="compass-omnibar-chips" style="flex:1;min-width:0;"></div>
+              <div class="omnibar-actions" style="flex-shrink:0;">
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();compassOmnibarOpenMenu('filter')" title="Add Filter">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  Add Filter
+                </button>
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();compassOmnibarOpenMenu('sort')" title="Add Sort">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  Add Sort
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="compassOmnibarClearAll()" title="Clear All">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
+                </button>
+              </div>
+              <span class="omnibar-meta" style="flex-shrink:0;font-size:12px;color:var(--fg-muted);">Filtered: <strong id="compass-filtered-count" style="color:var(--fg);">0</strong></span>
+            </div>
+            <div class="omnibar-menu" id="compass-omnibar-menu" style="display:none;"></div>
+          </div>
+          <!-- Hidden filters kept for backward compatibility -->
+          <select class="form-select" id="compass-filter-type" style="display:none;"><option value="All">All Types</option></select>
+          <select class="form-select" id="compass-filter-status" style="display:none;"><option value="All">All Statuses</option></select>
+          <!-- Side-by-side tables: Coaching Given & Coaching Received -->
+          <div class="compass-dual-tables" id="compass-dual-tables">
+            <div class="compass-table-panel">
+              <div class="compass-table-panel-header">
+                <span class="compass-table-panel-title">Coaching Given</span>
+                <span class="compass-table-panel-count"><strong id="compass-given-count">0</strong> records</span>
+              </div>
+              <div class="compass-given-tabs" id="compass-given-tabs">
+                <button class="compass-given-tab active" data-tab="all" onclick="compassSwitchGivenTab('all')">All</button>
+                <button class="compass-given-tab" data-tab="unacknowledged" onclick="compassSwitchGivenTab('unacknowledged')">Unacknowledged <span id="compass-unack-count" class="compass-tab-badge">0</span></button>
+                <button class="compass-given-tab" data-tab="acknowledged" onclick="compassSwitchGivenTab('acknowledged')">Acknowledged <span id="compass-ack-count" class="compass-tab-badge">0</span></button>
+              </div>
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="compass-table-given">
+                  <thead id="compass-table-given-head"></thead>
+                  <tbody id="compass-table-given-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="compass-pagination-given"></div>
+            </div>
+            <div class="compass-table-panel">
+              <div class="compass-table-panel-header">
+                <span class="compass-table-panel-title">Coaching Received</span>
+                <span class="compass-table-panel-count"><strong id="compass-received-count">0</strong> records</span>
+              </div>
+              <div class="compass-given-tabs" id="compass-received-tabs">
+                <button class="compass-given-tab active" data-tab="all" onclick="compassSwitchReceivedTab('all')">All</button>
+                <button class="compass-given-tab" data-tab="unacknowledged" onclick="compassSwitchReceivedTab('unacknowledged')">Unacknowledged <span id="compass-recv-unack-count" class="compass-tab-badge">0</span></button>
+                <button class="compass-given-tab" data-tab="acknowledged" onclick="compassSwitchReceivedTab('acknowledged')">Acknowledged <span id="compass-recv-ack-count" class="compass-tab-badge">0</span></button>
+              </div>
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="compass-table-received">
+                  <thead id="compass-table-received-head"></thead>
+                  <tbody id="compass-table-received-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="compass-pagination-received"></div>
+            </div>
+          </div>
+          </div><!-- end compass-content -->
+
+          <!-- New/Edit Form (hidden by default) -->
+          <div class="module-form-overlay" id="compass-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="compass-form-title">New Coaching Log</h3>
+                <button class="module-form-close" onclick="compassCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="compass-form-body"></div>
+              <div class="module-form-footer" id="compass-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 6b: Compass Disputes Area ===== -->
+      <div class="view-container view-hidden" id="view-compass-disputes">
+        <div class="module-page">
+          <div class="module-header" style="display:none;"></div>
+          <div class="loading-overlay" id="compass-disputes-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Disputes...</div>
+          </div>
+          <div id="compass-kanban-board" class="kanban-board"></div>
+          <!-- Disputes Detail Overlay (opens within Disputes Area, not Coaching Profile) -->
+          <div class="module-form-overlay" id="disputes-detail-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="disputes-detail-title">Coaching Log</h3>
+                <button class="module-form-close" onclick="disputesCloseDetail()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="disputes-detail-body"></div>
+              <div class="module-form-footer" id="disputes-detail-footer"></div>
+            </div>
+          </div>
+          <!-- Disputes Action Popout (on top of detail overlay) -->
+          <div class="module-form-overlay" id="disputes-action-overlay" style="display:none;z-index:1100;">
+            <div class="module-form-panel" style="max-width:480px;">
+              <div class="module-form-header">
+                <h3 id="disputes-action-title">Action</h3>
+                <button class="module-form-close" onclick="disputesCloseAction()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="disputes-action-body"></div>
+              <div class="module-form-footer" id="disputes-action-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 7a: Sandbox — Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-sandbox-input">
+        <div class="module-page">
+          <!-- Sub-page: Input Portal -->
+          <div id="sandbox-sub-input">
+            <!-- Sandbox Omnibar -->
+            <div class="omnibar" id="sandbox-omnibar">
+              <div class="omnibar-top" style="flex-wrap:nowrap;">
+                <button class="btn btn-primary btn-sm" id="sandbox-new-btn" onclick="sandboxShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  New Insight
+                </button>
+                <div class="omnibar-chips" id="sandbox-omnibar-chips" style="flex:1;min-width:0;"></div>
+                <div class="omnibar-actions" style="flex-shrink:0;">
+                  <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();sandboxOmnibarOpenMenu('filter')" title="Add Filter">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    Add Filter
+                  </button>
+                  <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();sandboxOmnibarOpenMenu('sort')" title="Add Sort">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                    Add Sort
+                  </button>
+                  <button class="btn btn-ghost btn-sm" onclick="sandboxOmnibarClearAll()" title="Clear All">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Clear
+                  </button>
+                </div>
+                <div class="omnibar-meta" style="flex-shrink:0;">
+                  <span id="sandbox-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Filtered Records: 0</span>
+                </div>
+              </div>
+              <div class="omnibar-menu" id="sandbox-omnibar-menu" style="display:none;"></div>
+            </div>
+            <div class="loading-overlay" id="sandbox-loading" style="display:none;">
+              <div class="spinner"></div>
+              <div class="loading-text">Loading Insights...</div>
+            </div>
+            <div class="module-table-wrapper">
+              <table class="data-table module-table" id="sandbox-table">
+                <thead id="sandbox-table-head"></thead>
+                <tbody id="sandbox-table-body"></tbody>
+              </table>
+            </div>
+            <div class="module-pagination" id="sandbox-pagination"></div>
+          </div>
+
+          <!-- New/Edit Form -->
+          <div class="module-form-overlay" id="sandbox-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="sandbox-form-title">New Insight</h3>
+                <button class="module-form-close" onclick="sandboxCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="sandbox-form-body"></div>
+              <div class="module-form-footer" id="sandbox-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 7b: Sandbox — Review Area ===== -->
+      <div class="view-container view-hidden" id="view-sandbox-review">
+        <div class="module-page">
+          <div class="loading-overlay" id="sandbox-review-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Review Queue...</div>
+          </div>
+          <div id="sandbox-kanban-board" class="kanban-board"></div>
+        </div>
+      </div>
+
+
+
+      <!-- ===== View 8a: Haven — Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-haven-input">
+        <div class="module-page">
+          <!-- Sub-page: Input Portal -->
+          <div id="haven-sub-input">
+            <div class="module-header-right" style="margin-bottom:12px;">
+              <button class="btn btn-primary btn-sm" id="haven-new-btn" onclick="havenShowNewForm()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                File Leave
+              </button>
+            </div>
+            <div class="module-filters" id="haven-filters">
+              <div class="filter-group">
+                <label class="filter-label">Status:</label>
+                <select class="form-select form-select-sm" id="haven-filter-status" onchange="havenApplyFilters()">
+                  <option value="All">All Statuses</option>
+                  <option value="Pending TL">Pending TL</option>
+                  <option value="Pending OM">Pending OM</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Date Range:</label>
+                <input type="date" class="form-input form-input-sm" id="haven-filter-start" onchange="havenApplyFilters()">
+                <span style="color:var(--fg-muted);">to</span>
+                <input type="date" class="form-input form-input-sm" id="haven-filter-end" onchange="havenApplyFilters()">
+              </div>
+            </div>
+            <div class="loading-overlay" id="haven-loading" style="display:none;">
+              <div class="spinner"></div>
+              <div class="loading-text">Loading Leave Requests...</div>
+            </div>
+            <div class="module-stats" id="haven-stats"></div>
+            <div class="module-table-wrapper">
+              <table class="data-table module-table" id="haven-table">
+                <thead id="haven-table-head"></thead>
+                <tbody id="haven-table-body"></tbody>
+              </table>
+            </div>
+            <div class="module-pagination" id="haven-pagination"></div>
+          </div>
+
+          <!-- New/Edit Form -->
+          <div class="module-form-overlay" id="haven-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="haven-form-title">File Leave Request</h3>
+                <button class="module-form-close" onclick="havenCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="haven-form-body"></div>
+              <div class="module-form-footer" id="haven-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 8b: Haven — Review Area ===== -->
+      <div class="view-container view-hidden" id="view-haven-review">
+        <div class="module-page">
+          <div id="haven-review-content"></div>
+        </div>
+      </div>
+
+      <!-- ===== View 8c: Haven — Final Review Area ===== -->
+      <div class="view-container view-hidden" id="view-haven-final">
+        <div class="module-page">
+          <div id="haven-final-content"></div>
+        </div>
+      </div>
+
+      <!-- ===== View 10a: Helm — Task Board ===== -->
+      <div class="view-container view-hidden" id="view-helm-board">
+        <div class="module-page">
+          <!-- Sub-page: Task Board -->
+          <div id="helm-sub-board">
+            <div class="module-header-right" style="margin-bottom:12px;">
+              <button class="btn btn-primary btn-sm" id="helm-new-btn" onclick="helmShowNewForm()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Task
+              </button>
+            </div>
+            <div class="module-tabs" id="helm-tabs">
+              <button class="module-tab active" data-tab="all" onclick="helmSwitchTab('all')">All Tasks</button>
+              <button class="module-tab" data-tab="mine" onclick="helmSwitchTab('mine')">My Tasks</button>
+            </div>
+            <div class="module-filters" id="helm-filters">
+              <div class="filter-group">
+                <label class="filter-label">Status:</label>
+                <select class="form-select form-select-sm" id="helm-filter-status" onchange="helmApplyFilters()">
+                  <option value="All">All Statuses</option>
+                  <option value="Open">Open</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Priority:</label>
+                <select class="form-select form-select-sm" id="helm-filter-priority" onchange="helmApplyFilters()">
+                  <option value="All">All Priorities</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Urgent">Urgent</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Search:</label>
+                <input type="text" class="form-input form-input-sm" id="helm-search" placeholder="Title, ID, or name..." oninput="helmApplyFilters()">
+              </div>
+            </div>
+            <div class="loading-overlay" id="helm-loading" style="display:none;">
+              <div class="spinner"></div>
+              <div class="loading-text">Loading Tasks...</div>
+            </div>
+            <div class="module-stats" id="helm-stats"></div>
+            <div class="module-table-wrapper">
+              <table class="data-table module-table" id="helm-table">
+                <thead id="helm-table-head"></thead>
+                <tbody id="helm-table-body"></tbody>
+              </table>
+            </div>
+            <div class="module-pagination" id="helm-pagination"></div>
+          </div>
+
+          <!-- New/Edit Form -->
+          <div class="module-form-overlay" id="helm-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="helm-form-title">New Task</h3>
+                <button class="module-form-close" onclick="helmCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="helm-form-body"></div>
+              <div class="module-form-footer" id="helm-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 10b: Helm — Analytics ===== -->
+      <div class="view-container view-hidden" id="view-helm-analytics">
+        <div class="module-page">
+          <div class="loading-overlay" id="helm-analytics-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing task data...</div>
+          </div>
+          <div id="helm-analytics-content"></div>
+        </div>
+      </div>
+
+      <!-- ===== View 9: Roster Management ===== -->
+
+
+      <div class="view-container view-hidden" id="view-regimen">
+        <div class="module-page">
+          <!-- Roster Omnibar -->
+          <div class="omnibar" id="roster-omnibar">
+           <div class="omnibar-top" style="flex-wrap:nowrap;justify-content:flex-start;">
+               <button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;flex-shrink:0;">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                 Add Employee
+               </button>
+               <div class="omnibar-actions" style="flex-shrink:0;">
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation(); rosterOmnibarOpenMenu('filter')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  Add Filter
+                </button>
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation(); rosterOmnibarOpenMenu('sort')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  Add Sort
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="rosterOmnibarClearAll()" title="Clear all filters and sorts">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
+                </button>
+              </div>
+              <div class="omnibar-meta" style="flex-shrink:0;">
+                <span id="roster-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Records: 0</span>
+               </div>
+               <div class="omnibar-chips" id="roster-omnibar-chips" style="flex:1;min-width:0;"></div>
+             </div>
+             <div class="omnibar-menu" id="roster-omnibar-menu" style="display:none;"></div>
+          </div>
+          <!-- Loading -->
+          <div class="loading-overlay" id="roster-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Roster...</div>
+          </div>
+          <!-- Table -->
+          <div class="module-table-wrapper">
+            <table class="data-table module-table" id="roster-table">
+              <thead id="roster-table-head"></thead>
+              <tbody id="roster-table-body"></tbody>
+            </table>
+          </div>
+          <div class="module-pagination" id="roster-pagination"></div>
+          <!-- Edit Form -->
+          <div class="module-form-overlay" id="roster-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="roster-form-title">Edit Employee</h3>
+                <button class="module-form-close" onclick="rosterCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="roster-form-body"></div>
+              <div class="module-form-footer" id="roster-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Confirmation Modal -->
+  <!-- Audit Timeline Modal -->
+  <div class="modal-overlay" id="audit-modal" style="display:none;" onclick="closeAuditModal()">
+    <div class="modal-dialog modal-autosize" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Audit Timeline</h3>
+        <button class="modal-close-btn" onclick="closeAuditModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="audit-modal-body">
+        <div class="audit-loading">Loading audit trail...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="save-modal" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Confirm Save</h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to save the changes?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-sm" onclick="closeSaveModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="save-confirm-btn" onclick="confirmSave()">Yes, Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Shrink Details Overlay -->
+  <div class="modal-overlay" id="shrink-fullscreen" style="display:none;" onclick="closeShrinkFullscreen()">
+    <div class="modal-dialog" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>SHRINK DETAILS</h3>
+        <button class="modal-close-btn" onclick="closeShrinkFullscreen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="shrink-fullscreen-body"></div>
+      <div class="modal-footer" id="shrink-pagination"></div>
+    </div>
+  </div>
+
+  <!-- Modal Shift Breakdown Overlay -->
+  <div class="modal-overlay" id="shift-fullscreen" style="display:none;" onclick="closeShiftFullscreen()">
+    <div class="modal-dialog modal-autosize" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>SHIFT BREAKDOWN</h3>
+        <button class="modal-close-btn" onclick="closeShiftFullscreen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="shift-fullscreen-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/input-portal.js"></script>
+  <script src="js/dash-omnibar.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/billing.js"></script>
+  <script src="js/compass.js"></script>
+  <script src="js/compass-omnibar.js"></script>
+  <script src="js/sandbox.js"></script>
+  <script src="js/haven.js"></script>
+  <script src="js/helm.js"></script>
+  <script src="js/roster.js"></script>
+  <script src="js/maintenance.js"></script>
+
+  <!-- Maintenance Overlay -->
+  <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f0883e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:24px;">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <h1 style="color:#e6edf3;font-size:28px;font-weight:700;margin:0 0 12px 0;">Under Maintenance</h1>
+      <p style="color:#8b949e;font-size:16px;max-width:400px;line-height:1.6;margin:0;">Playbook is currently undergoing scheduled maintenance. Please check back shortly.</p>
+    </div>
+  </div>
+</body>
+</html>

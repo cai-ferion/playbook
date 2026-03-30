@@ -1,17 +1,10 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +18,320 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// ============================================================
+// IO Operations Tables
+// ============================================================
+
+export const ioEmployees = mysqlTable("io_employees", {
+  ohr_id: varchar("ohr_id", { length: 20 }).primaryKey(),
+  full_name: varchar("full_name", { length: 255 }),
+  access_level: int("access_level"),
+  last_name: varchar("last_name", { length: 128 }),
+  given_name: varchar("given_name", { length: 128 }),
+  middle_name: varchar("middle_name", { length: 128 }),
+  suffix: varchar("suffix", { length: 20 }),
+  billing_name: varchar("billing_name", { length: 255 }),
+  srt_name: varchar("srt_name", { length: 255 }),
+  employement_status: varchar("employement_status", { length: 50 }),
+  actual_role: varchar("actual_role", { length: 100 }),
+  supervisor_name: varchar("supervisor_name", { length: 255 }),
+  supervisor_email: varchar("supervisor_email", { length: 320 }),
+  shift_time: varchar("shift_time", { length: 100 }),
+  work_off: varchar("work_off", { length: 100 }),
+  planning_group: varchar("planning_group", { length: 100 }),
+  complete_planning_group: text("complete_planning_group"),
+  srt_status: varchar("srt_status", { length: 50 }),
+  srt_id: varchar("srt_id", { length: 50 }),
+  workday_id: varchar("workday_id", { length: 50 }),
+  meta_email: varchar("meta_email", { length: 320 }),
+  macbook_asset_id: varchar("macbook_asset_id", { length: 50 }),
+  chromebook_asset_id: varchar("chromebook_asset_id", { length: 50 }),
+  hire_date: varchar("hire_date", { length: 30 }),
+  regular_date: varchar("regular_date", { length: 30 }),
+  dob: varchar("dob", { length: 30 }),
+  personal_email: varchar("personal_email", { length: 320 }),
+  contact_number: varchar("contact_number", { length: 50 }),
+  primary_address: text("primary_address"),
+  barangay: varchar("barangay", { length: 128 }),
+  city: varchar("city", { length: 128 }),
+  province: varchar("province", { length: 128 }),
+  locker_floor: varchar("locker_floor", { length: 20 }),
+  locker_number: varchar("locker_number", { length: 20 }),
+  meta_onboarding_date: varchar("meta_onboarding_date", { length: 30 }),
+  live_date: varchar("live_date", { length: 30 }),
+  badge_id: varchar("badge_id", { length: 50 }),
+  badge_serial: varchar("badge_serial", { length: 50 }),
+  platform: varchar("platform", { length: 100 }),
+  billing_code: varchar("billing_code", { length: 100 }),
+  password: varchar("password", { length: 255 }),
+  is_locked: boolean("is_locked").default(false),
+});
+
+export type IoEmployee = typeof ioEmployees.$inferSelect;
+export type InsertIoEmployee = typeof ioEmployees.$inferInsert;
+
+export const ioAttendance = mysqlTable("io_attendance", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  ohr_id: varchar("ohr_id", { length: 20 }),
+  log_date: varchar("log_date", { length: 30 }),
+  tag: varchar("tag", { length: 50 }),
+  billing_code: varchar("billing_code", { length: 100 }),
+  upl_reason: varchar("upl_reason", { length: 255 }),
+  remarks: text("remarks"),
+  ot_hours: varchar("ot_hours", { length: 20 }),
+  created_at: varchar("created_at", { length: 64 }),
+  snap_full_name: varchar("snap_full_name", { length: 255 }),
+  snap_supervisor: varchar("snap_supervisor", { length: 255 }),
+  snap_planning_group: varchar("snap_planning_group", { length: 100 }),
+  snap_shift_time: varchar("snap_shift_time", { length: 100 }),
+  snap_actual_role: varchar("snap_actual_role", { length: 100 }),
+  snap_billing_name: varchar("snap_billing_name", { length: 255 }),
+  snap_status: varchar("snap_status", { length: 50 }),
+  is_locked: boolean("is_locked").default(false),
+  locked_at: varchar("locked_at", { length: 64 }),
+});
+
+export type IoAttendance = typeof ioAttendance.$inferSelect;
+export type InsertIoAttendance = typeof ioAttendance.$inferInsert;
+
+export const ioCoaching = mysqlTable("io_coaching", {
+  id: int("id").autoincrement().primaryKey(),
+  coaching_id: varchar("coaching_id", { length: 20 }),
+  coaching_type: varchar("coaching_type", { length: 100 }),
+  coach: varchar("coach", { length: 255 }),
+  coach_ohr: varchar("coach_ohr", { length: 20 }),
+  coach_meta_email: varchar("coach_meta_email", { length: 320 }),
+  coach_sup: varchar("coach_sup", { length: 255 }),
+  coach_sup_email: varchar("coach_sup_email", { length: 320 }),
+  coach_pg: varchar("coach_pg", { length: 100 }),
+  coaching_date: varchar("coaching_date", { length: 64 }),
+  ack_date: varchar("ack_date", { length: 64 }),
+  week_ending: varchar("week_ending", { length: 30 }),
+  month: varchar("month", { length: 30 }),
+  coachee: varchar("coachee", { length: 255 }),
+  coachee_ohr: varchar("coachee_ohr", { length: 20 }),
+  coachee_meta_email: varchar("coachee_meta_email", { length: 320 }),
+  coachee_sup: varchar("coachee_sup", { length: 255 }),
+  coachee_sup_email: varchar("coachee_sup_email", { length: 320 }),
+  coachee_pg: varchar("coachee_pg", { length: 100 }),
+  sme_joiner: varchar("sme_joiner", { length: 255 }),
+  sme_meta_email: varchar("sme_meta_email", { length: 320 }),
+  session_goal: text("session_goal"),
+  level_1_category: varchar("level_1_category", { length: 255 }),
+  level_2_direct_cause: varchar("level_2_direct_cause", { length: 255 }),
+  level_3_contributing_cause: varchar("level_3_contributing_cause", { length: 255 }),
+  level_4_deficiency: varchar("level_4_deficiency", { length: 255 }),
+  level_5_root_cause: varchar("level_5_root_cause", { length: 255 }),
+  guidelines: text("guidelines"),
+  coaching_details: text("coaching_details"),
+  status: varchar("status", { length: 100 }),
+  dispute_comments: text("dispute_comments"),
+  dispute_attachments: text("dispute_attachments"),
+  qa_comments: text("qa_comments"),
+  qa_attachments: text("qa_attachments"),
+  sme_qa_dispute_comments: text("sme_qa_dispute_comments"),
+  sme_qa_dispute_attachments: text("sme_qa_dispute_attachments"),
+  trainer_comments: text("trainer_comments"),
+  trainer_attachments: text("trainer_attachments"),
+  sme_trainer_comments: text("sme_trainer_comments"),
+  sme_trainer_attachments: text("sme_trainer_attachments"),
+  qtp_manager_comments: text("qtp_manager_comments"),
+  qtp_manager_attachments: text("qtp_manager_attachments"),
+  coachee_ack: text("coachee_ack"),
+  coachee_commitments: text("coachee_commitments"),
+  coaching_rating: varchar("coaching_rating", { length: 50 }),
+  coachee_sentiments: text("coachee_sentiments"),
+  attachments: text("attachments"),
+  sme_dispute_stamp: varchar("sme_dispute_stamp", { length: 64 }),
+  qa_decision_stamp: varchar("qa_decision_stamp", { length: 64 }),
+  sme_qa_dispute_stamp: varchar("sme_qa_dispute_stamp", { length: 64 }),
+  trainer_decision_stamp: varchar("trainer_decision_stamp", { length: 64 }),
+  sme_trainer_dispute_stamp: varchar("sme_trainer_dispute_stamp", { length: 64 }),
+  qtp_manager_stamp: varchar("qtp_manager_stamp", { length: 64 }),
+  infraction_category: varchar("infraction_category", { length: 255 }),
+  infraction: varchar("infraction", { length: 255 }),
+  infraction_description: text("infraction_description"),
+  severity: varchar("severity", { length: 10 }),
+  locked_by: varchar("locked_by", { length: 255 }),
+  coachee_list: text("coachee_list"),
+  job_id: varchar("job_id", { length: 100 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoCoaching = typeof ioCoaching.$inferSelect;
+export type InsertIoCoaching = typeof ioCoaching.$inferInsert;
+
+export const ioCoachingRca = mysqlTable("io_coaching_rca", {
+  id: int("id").autoincrement().primaryKey(),
+  rca_id: varchar("rca_id", { length: 50 }),
+  coaching_id: varchar("coaching_id", { length: 50 }),
+  level_1_category: varchar("level_1_category", { length: 255 }),
+  level_2_direct_cause: varchar("level_2_direct_cause", { length: 255 }),
+  level_3_contributing_cause: varchar("level_3_contributing_cause", { length: 255 }),
+  level_4_deficiency: varchar("level_4_deficiency", { length: 255 }),
+  level_5_root_cause: text("level_5_root_cause"),
+  guidelines: text("guidelines"),
+  created_at: varchar("created_at", { length: 64 }),
+});
+
+export type IoCoachingRca = typeof ioCoachingRca.$inferSelect;
+export type InsertIoCoachingRca = typeof ioCoachingRca.$inferInsert;
+
+export const ioCoachingZtp = mysqlTable("io_coaching_ztp", {
+  id: int("id").autoincrement().primaryKey(),
+  ztp_id: varchar("ztp_id", { length: 50 }),
+  infraction_category: varchar("infraction_category", { length: 255 }),
+  infraction: varchar("infraction", { length: 255 }),
+  description: text("description"),
+  severity: varchar("severity", { length: 10 }),
+  created_at: varchar("created_at", { length: 64 }),
+});
+
+export type IoCoachingZtp = typeof ioCoachingZtp.$inferSelect;
+export type InsertIoCoachingZtp = typeof ioCoachingZtp.$inferInsert;
+
+export const ioNotifications = mysqlTable("io_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  type: varchar("type", { length: 50 }),
+  title: varchar("title", { length: 255 }),
+  message: text("message"),
+  actor_ohr: varchar("actor_ohr", { length: 20 }),
+  actor_name: varchar("actor_name", { length: 255 }),
+  target_role: varchar("target_role", { length: 50 }),
+  target_ohr: varchar("target_ohr", { length: 20 }),
+  metadata: text("metadata"),
+  is_read: boolean("is_read").default(false),
+  created_at: varchar("created_at", { length: 64 }),
+});
+
+export type IoNotification = typeof ioNotifications.$inferSelect;
+export type InsertIoNotification = typeof ioNotifications.$inferInsert;
+
+export const ioInsights = mysqlTable("io_insights", {
+  id: int("id").autoincrement().primaryKey(),
+  insight_id: varchar("insight_id", { length: 50 }),
+  insight_title: varchar("insight_title", { length: 500 }),
+  status: varchar("status", { length: 255 }),
+  meta_email: varchar("meta_email", { length: 320 }),
+  submitter: varchar("submitter", { length: 255 }),
+  ohr_id: varchar("ohr_id", { length: 20 }),
+  week_ending: varchar("week_ending", { length: 30 }),
+  supervisor: varchar("supervisor", { length: 255 }),
+  supervisor_email: varchar("supervisor_email", { length: 320 }),
+  planning_group: varchar("planning_group", { length: 100 }),
+  insight_category: varchar("insight_category", { length: 100 }),
+  proposal_type: varchar("proposal_type", { length: 100 }),
+  platform: varchar("platform", { length: 100 }),
+  implementation_standards: varchar("implementation_standards", { length: 255 }),
+  queue: varchar("queue", { length: 255 }),
+  problem_statement: text("problem_statement"),
+  proposed_change: text("proposed_change"),
+  job_id_1: text("job_id_1"),
+  job_id_2: text("job_id_2"),
+  job_id_3: text("job_id_3"),
+  job_id_4: text("job_id_4"),
+  job_id_5: text("job_id_5"),
+  job_id_6: text("job_id_6"),
+  job_id_7: text("job_id_7"),
+  job_id_8: text("job_id_8"),
+  job_id_9: text("job_id_9"),
+  job_id_10: text("job_id_10"),
+  impact: text("impact"),
+  reach: text("reach"),
+  created_date: varchar("created_date", { length: 64 }),
+  ir_update_date: varchar("ir_update_date", { length: 64 }),
+  tr_update_date: varchar("tr_update_date", { length: 64 }),
+  implementation_date: varchar("implementation_date", { length: 64 }),
+  initial_reviewer: varchar("initial_reviewer", { length: 255 }),
+  initial_reviewer_comments: text("initial_reviewer_comments"),
+  trainer: varchar("trainer", { length: 255 }),
+  trainer_comments: text("trainer_comments"),
+  attachments: text("attachments"),
+  task_id: varchar("task_id", { length: 100 }),
+  month: varchar("month", { length: 30 }),
+  locked_by: varchar("locked_by", { length: 255 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoInsight = typeof ioInsights.$inferSelect;
+export type InsertIoInsight = typeof ioInsights.$inferInsert;
+
+export const ioLeaves = mysqlTable("io_leaves", {
+  id: int("id").autoincrement().primaryKey(),
+  leave_id: varchar("leave_id", { length: 50 }),
+  leave_type: varchar("leave_type", { length: 100 }),
+  status: varchar("status", { length: 100 }),
+  ohr_id: varchar("ohr_id", { length: 20 }),
+  full_name: varchar("full_name", { length: 255 }),
+  meta_email: varchar("meta_email", { length: 320 }),
+  supervisor: varchar("supervisor", { length: 255 }),
+  supervisor_email: varchar("supervisor_email", { length: 320 }),
+  planning_group: varchar("planning_group", { length: 100 }),
+  start_date: varchar("start_date", { length: 30 }),
+  end_date: varchar("end_date", { length: 30 }),
+  reason: text("reason"),
+  remarks: text("remarks"),
+  approver_comments: text("approver_comments"),
+  attachments: text("attachments"),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoLeave = typeof ioLeaves.$inferSelect;
+export type InsertIoLeave = typeof ioLeaves.$inferInsert;
+
+export const ioAuditLog = mysqlTable("io_audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  record_type: varchar("record_type", { length: 50 }),
+  record_id: varchar("record_id", { length: 64 }),
+  action: varchar("action", { length: 50 }),
+  field_name: varchar("field_name", { length: 100 }),
+  old_value: text("old_value"),
+  new_value: text("new_value"),
+  actor_ohr: varchar("actor_ohr", { length: 20 }),
+  actor_name: varchar("actor_name", { length: 255 }),
+  timestamp: varchar("timestamp", { length: 64 }),
+  metadata: text("metadata"),
+});
+
+export type IoAuditLog = typeof ioAuditLog.$inferSelect;
+export type InsertIoAuditLog = typeof ioAuditLog.$inferInsert;
+
+export const ioTasks = mysqlTable("io_tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  task_id: varchar("task_id", { length: 20 }),
+  title: varchar("title", { length: 500 }),
+  description: text("description"),
+  status: varchar("status", { length: 100 }),
+  priority: varchar("priority", { length: 20 }),
+  assigned_to_ohr: varchar("assigned_to_ohr", { length: 20 }),
+  assigned_to_name: varchar("assigned_to_name", { length: 255 }),
+  assigned_to_pg: varchar("assigned_to_pg", { length: 100 }),
+  assigned_by_ohr: varchar("assigned_by_ohr", { length: 20 }),
+  assigned_by_name: varchar("assigned_by_name", { length: 255 }),
+  due_date: varchar("due_date", { length: 64 }),
+  completed_date: varchar("completed_date", { length: 64 }),
+  target_entity: varchar("target_entity", { length: 100 }),
+  target_entity_id: varchar("target_entity_id", { length: 100 }),
+  attachments: text("attachments"),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoTask = typeof ioTasks.$inferSelect;
+export type InsertIoTask = typeof ioTasks.$inferInsert;
+
+export const ioTaskComments = mysqlTable("io_task_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  task_id: varchar("task_id", { length: 20 }),
+  author_ohr: varchar("author_ohr", { length: 20 }),
+  author_name: varchar("author_name", { length: 255 }),
+  content: text("content"),
+  attachments: text("attachments"),
+  created_at: varchar("created_at", { length: 64 }),
+});
+
+export type IoTaskComment = typeof ioTaskComments.$inferSelect;
+export type InsertIoTaskComment = typeof ioTaskComments.$inferInsert;

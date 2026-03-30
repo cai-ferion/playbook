@@ -1,0 +1,62 @@
+# Playbook — Workforce Management System TODO
+
+## Database Schema
+- [x] Create io_employees table (roster management)
+- [x] Create io_attendance table (daily attendance logs)
+- [x] Create io_coaching table (coaching session tracking)
+- [x] Create io_coaching_rca table (root cause analysis)
+- [x] Create io_coaching_ztp table (zero tolerance policy infractions)
+- [x] Create io_notifications table
+- [x] Create io_insights table
+- [x] Create io_leaves table
+- [x] Create io_audit_log table (attendance modification tracking)
+- [x] Create io_tasks and io_task_comments tables
+
+## Server-Side Integration
+- [x] Integrate io-routes.ts (Express API for all IO operations)
+- [x] Integrate io-backup.ts (data import/export routes)
+- [x] Register IO routes in server index
+- [x] Update drizzle schema.ts with all IO tables
+- [x] Update server/db.ts with IO query helpers
+
+## Client-Side (Playbook Desktop Site)
+- [x] Integrate server/public/index.html (full desktop UI)
+- [x] Integrate server/public/css/styles.css
+- [x] Integrate server/public/js/app.js (UI rendering, view switching, filters)
+- [x] Integrate server/public/js/data.js (data layer, KPI calculations, risk detection)
+- [x] Integrate server/public/js/input-portal.js (bulk attendance entry)
+- [x] Integrate server/public/js/billing.js (billing compliance)
+- [x] Integrate server/public/js/admin.js (admin panel)
+- [x] Integrate server/public/js/compass.js (coaching management)
+- [x] Integrate server/public/js/compass-omnibar.js (coaching search)
+- [x] Integrate server/public/js/haven.js (insights/proposals)
+- [x] Integrate server/public/js/helm.js (task management)
+- [x] Integrate server/public/js/sandbox.js (sandbox module)
+- [x] Integrate server/public/js/roster.js (employee roster)
+- [x] Integrate server/public/js/notifications.js
+- [x] Integrate server/public/js/maintenance.js
+- [x] Integrate server/public/js/automailer.js
+- [x] Integrate server/public/js/anchor-analytics.js
+- [x] Integrate server/public/js/dash-omnibar.js
+
+## Static Assets
+- [x] Upload favicon.png and logo.png to CDN
+- [x] Update asset references in HTML/CSS
+
+## Features
+- [x] Employee roster management with detailed profiles
+- [x] Attendance tracking with tags (P, LATE, UPL, PL, ML, WO, NYO, EXIT)
+- [x] Input portal for bulk attendance entry
+- [x] Dashboard with KPI metrics and breakdowns
+- [x] Risk alerts system (UPL violations, NCNS, trends)
+- [x] Coaching management with RCA and ZTP
+- [x] Billing compliance module
+- [x] Admin panel with user management
+- [x] Role-based access control (admin vs user)
+- [x] Audit logging for attendance modifications
+
+## Testing & Verification
+- [x] Write vitest tests for API routes
+- [x] Verify database connectivity
+- [x] Test static file serving
+- [x] End-to-end verification
