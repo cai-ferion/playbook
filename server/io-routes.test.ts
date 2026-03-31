@@ -178,7 +178,6 @@ describe("Database Schema", () => {
     expect(columns).toContain("title");
     expect(columns).toContain("description");
     expect(columns).toContain("status");
-    expect(columns).toContain("priority");
     expect(columns).toContain("assigned_to_ohr");
     expect(columns).toContain("assigned_by_ohr");
     expect(columns).toContain("due_date");

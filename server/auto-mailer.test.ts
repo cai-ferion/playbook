@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * Auto-Mailer Module Tests
+ * Auto-Notifier Module Tests
  * 
- * Tests the email content generation and scheduling logic.
- * We test the pure functions and configuration rather than actual email sending.
+ * Tests the notification content generation and scheduling logic.
+ * We test the pure functions and configuration rather than actual DB operations.
  */
 
-// Test the email content building logic
-describe("auto-mailer email content", () => {
+describe("auto-notifier content", () => {
   function formatDateReadable(dateStr: string): string {
     const d = new Date(dateStr + "T00:00:00Z");
     const options: Intl.DateTimeFormatOptions = {
@@ -20,93 +19,68 @@ describe("auto-mailer email content", () => {
     return d.toLocaleDateString("en-US", options);
   }
 
-  function buildEmailSubject(tag: string, date: string, agentName: string): string {
+  function buildNotificationTitle(tag: string, date: string): string {
     const readableDate = formatDateReadable(date);
-    const tagLabel = tag === "UPL" ? "Unplanned Leave" : "Late Attendance";
-    return `[Playbook] ${tagLabel} Notice — ${agentName} — ${readableDate}`;
+    return `${tag} Notice — ${readableDate}`;
   }
 
-  function buildEmailContent(params: {
-    agentName: string;
+  function buildNotificationMessage(params: {
     tag: string;
     date: string;
     reason: string;
     remarks: string;
   }): string {
-    const { agentName, tag, date, reason, remarks } = params;
+    const { tag, date, reason, remarks } = params;
     const readableDate = formatDateReadable(date);
     const tagLabel = tag === "UPL" ? "Unplanned Leave (UPL)" : "Late Attendance (LATE)";
-    return `Dear ${agentName},
-
-This is to formally notify you that you have been tagged as ${tagLabel} for ${readableDate}.
-
-Tag: ${tag}
-Date: ${readableDate}
-Reason: ${reason || "Not specified"}
-Remarks: ${remarks || "No additional remarks"}
-
-Please coordinate with your supervisor regarding this matter. If you believe this tagging was made in error, kindly reach out to your immediate supervisor for clarification and resolution.
-
-This is an automated notification from the Playbook Attendance Management System. Please do not reply directly to this email.
-
-Playbook Reporting`;
+    return `You have been tagged as ${tagLabel} for ${readableDate}.\n\nReason: ${reason || "Not specified"}\nRemarks: ${remarks || "No additional remarks"}\n\nPlease coordinate with your supervisor regarding this matter.`;
   }
 
-  it("builds correct UPL email subject", () => {
-    const subject = buildEmailSubject("UPL", "2026-03-31", "Doe, John");
-    expect(subject).toContain("[Playbook]");
-    expect(subject).toContain("Unplanned Leave");
-    expect(subject).toContain("Doe, John");
-    expect(subject).toContain("March");
+  it("builds correct UPL notification title", () => {
+    const title = buildNotificationTitle("UPL", "2026-03-31");
+    expect(title).toContain("UPL Notice");
+    expect(title).toContain("March");
   });
 
-  it("builds correct LATE email subject", () => {
-    const subject = buildEmailSubject("LATE", "2026-03-31", "Smith, Jane");
-    expect(subject).toContain("Late Attendance");
-    expect(subject).toContain("Smith, Jane");
+  it("builds correct LATE notification title", () => {
+    const title = buildNotificationTitle("LATE", "2026-03-31");
+    expect(title).toContain("LATE Notice");
   });
 
-  it("builds professional UPL email body", () => {
-    const content = buildEmailContent({
-      agentName: "Doe, John",
+  it("builds UPL notification message", () => {
+    const message = buildNotificationMessage({
       tag: "UPL",
       date: "2026-03-31",
       reason: "Personal Emergency",
       remarks: "Called in sick",
     });
-    expect(content).toContain("Dear Doe, John");
-    expect(content).toContain("Unplanned Leave (UPL)");
-    expect(content).toContain("Personal Emergency");
-    expect(content).toContain("Called in sick");
-    expect(content).toContain("Playbook Reporting");
-    expect(content).not.toContain("Workforce Management System");
-    expect(content).toContain("coordinate with your supervisor");
+    expect(message).toContain("Unplanned Leave (UPL)");
+    expect(message).toContain("Personal Emergency");
+    expect(message).toContain("Called in sick");
+    expect(message).toContain("coordinate with your supervisor");
   });
 
-  it("builds professional LATE email body", () => {
-    const content = buildEmailContent({
-      agentName: "Smith, Jane",
+  it("builds LATE notification message", () => {
+    const message = buildNotificationMessage({
       tag: "LATE",
       date: "2026-01-15",
       reason: "Traffic",
       remarks: "30 minutes late",
     });
-    expect(content).toContain("Dear Smith, Jane");
-    expect(content).toContain("Late Attendance (LATE)");
-    expect(content).toContain("Traffic");
-    expect(content).toContain("30 minutes late");
+    expect(message).toContain("Late Attendance (LATE)");
+    expect(message).toContain("Traffic");
+    expect(message).toContain("30 minutes late");
   });
 
   it("handles missing reason and remarks gracefully", () => {
-    const content = buildEmailContent({
-      agentName: "Test Agent",
+    const message = buildNotificationMessage({
       tag: "UPL",
       date: "2026-02-01",
       reason: "",
       remarks: "",
     });
-    expect(content).toContain("Not specified");
-    expect(content).toContain("No additional remarks");
+    expect(message).toContain("Not specified");
+    expect(message).toContain("No additional remarks");
   });
 
   it("formats date in human-readable format", () => {
@@ -116,9 +90,8 @@ Playbook Reporting`;
   });
 });
 
-describe("auto-mailer configuration", () => {
+describe("auto-notifier configuration", () => {
   it("has correct PHT timezone offset", () => {
-    // PHT is UTC+8
     const PHT_OFFSET_HOURS = 8;
     expect(PHT_OFFSET_HOURS).toBe(8);
   });
@@ -126,8 +99,8 @@ describe("auto-mailer configuration", () => {
   it("cron schedules convert PHT to UTC correctly", () => {
     // 2:30 AM PHT = 18:30 UTC (previous day)
     // 11:30 AM PHT = 03:30 UTC
-    const cron230AM = "30 18 * * *"; // 18:30 UTC = 2:30 AM PHT next day
-    const cron1130AM = "30 3 * * *"; // 03:30 UTC = 11:30 AM PHT
+    const cron230AM = "30 18 * * *";
+    const cron1130AM = "30 3 * * *";
 
     expect(cron230AM).toBe("30 18 * * *");
     expect(cron1130AM).toBe("30 3 * * *");
@@ -143,14 +116,46 @@ describe("auto-mailer configuration", () => {
     expect(phtHour1130).toBe(11);
   });
 
-  it("uses correct email addresses", () => {
-    const SENIOR_MANAGER_EMAIL = "kiranravi@meta.com";
-    const BCC_EMAIL = "banarvinmaurice@meta.com";
-    const FROM_ADDRESS = "Playbook Reporting <onboarding@resend.dev>";
+  it("uses correct admin OHR for notifications", () => {
+    const ADMIN_OHR = "740045023";
+    expect(ADMIN_OHR).toBe("740045023");
+  });
 
-    expect(SENIOR_MANAGER_EMAIL).toBe("kiranravi@meta.com");
-    expect(BCC_EMAIL).toBe("banarvinmaurice@meta.com");
-    expect(FROM_ADDRESS).toContain("Playbook Reporting");
-    expect(FROM_ADDRESS).toContain("onboarding@resend.dev");
+  it("notification types are correctly defined", () => {
+    const types = {
+      upl: "upl_notice",
+      late: "late_notice",
+      uplAdmin: "upl_admin",
+      lateAdmin: "late_admin",
+      dailySummary: "daily_summary",
+      taskAssigned: "task_assigned",
+    };
+    expect(types.upl).toBe("upl_notice");
+    expect(types.late).toBe("late_notice");
+    expect(types.dailySummary).toBe("daily_summary");
+    expect(types.taskAssigned).toBe("task_assigned");
+  });
+});
+
+describe("task assignment notification content", () => {
+  it("builds correct task notification message", () => {
+    const taskId = "TSK-001";
+    const title = "Fix production bug";
+    const dueDate = "2026-04-05";
+    const assignedByName = "Bantasan, Arvin";
+
+    const dueStr = new Date(dueDate + "T00:00:00Z").toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+
+    const message = `${taskId}: ${title} — Due: ${dueStr}. Assigned by ${assignedByName}.`;
+
+    expect(message).toContain("TSK-001");
+    expect(message).toContain("Fix production bug");
+    expect(message).toContain("Apr");
+    expect(message).toContain("Bantasan, Arvin");
   });
 });

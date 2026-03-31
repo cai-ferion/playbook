@@ -25,25 +25,26 @@ describe("Batch 15 Changes", () => {
     });
   });
 
-  // 2. Task email notification
-  describe("Helm - Task Email Notification", () => {
-    it("should have sendTaskEmailNotification function in io-routes.ts", () => {
+  // 2. Task assignment notification (migrated from email to in-app)
+  describe("Helm - Task Assignment Notification", () => {
+    it("should have sendTaskAssignmentNotifications function in io-routes.ts", () => {
       const ioRoutes = fs.readFileSync(
         path.join(__dirname, "io-routes.ts"),
         "utf-8"
       );
-      expect(ioRoutes).toContain("sendTaskAssignmentEmails");
+      expect(ioRoutes).toContain("sendTaskAssignmentNotifications");
     });
 
-    it("should call email notification after task creation", () => {
+    it("should create in-app notifications after task creation (not emails)", () => {
       const ioRoutes = fs.readFileSync(
         path.join(__dirname, "io-routes.ts"),
         "utf-8"
       );
-      // Should have Resend import
-      expect(ioRoutes).toContain("Resend");
+      // Should NOT have Resend or Brevo
+      expect(ioRoutes).not.toContain("Resend");
+      expect(ioRoutes).not.toContain("brevo");
       // Should call notification in the POST /tasks endpoint
-      expect(ioRoutes).toContain("sendTaskAssignmentEmails");
+      expect(ioRoutes).toContain("sendTaskAssignmentNotifications");
     });
   });
 
@@ -68,20 +69,21 @@ describe("Batch 15 Changes", () => {
     });
   });
 
-  // 4. Daily CSV email
-  describe("Auto-mailer - Daily CSV Email", () => {
-    it("should have daily CSV cron job in auto-mailer.ts", () => {
+  // 4. Daily summary notification (migrated from CSV email to in-app)
+  describe("Auto-notifier - Daily Summary Notification", () => {
+    it("should have daily summary cron job in auto-mailer.ts", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      expect(autoMailer).toContain("sendDailyAttendanceCsv");
-      expect(autoMailer).toContain("ge-co-miswfmteam@meta.com");
-      expect(autoMailer).toContain("wfm-ctr-php@meta.com");
-      expect(autoMailer).toContain("io-teamleadsmla@meta.com");
+      expect(autoMailer).toContain("sendDailySummaryNotification");
+      // Should NOT have email addresses anymore
+      expect(autoMailer).not.toContain("ge-co-miswfmteam@meta.com");
+      expect(autoMailer).not.toContain("resend");
+      expect(autoMailer).not.toContain("brevo");
     });
 
-    it("should filter by current date for CSV", () => {
+    it("should filter by current date for summary", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
@@ -90,12 +92,12 @@ describe("Batch 15 Changes", () => {
       expect(autoMailer).toContain("today");
     });
 
-    it("should have manual trigger endpoint", () => {
+    it("should have manual trigger endpoint for daily summary", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      expect(autoMailer).toContain("send-daily-csv");
+      expect(autoMailer).toContain("send-daily-summary");
     });
   });
 
@@ -248,13 +250,13 @@ describe("Batch 15 Changes", () => {
       expect(rosterJs).not.toContain("'<th>Actions</th>'");
     });
 
-    it("should still have Access Level column (has active data)", () => {
+    it("should not have Access Level column (removed in Batch 16)", () => {
       const rosterJs = fs.readFileSync(
         path.join(__dirname, "public/js/roster.js"),
         "utf-8"
       );
-      expect(rosterJs).toContain("access_level");
-      expect(rosterJs).toContain("Access Level");
+      expect(rosterJs).not.toContain("access_level");
+      expect(rosterJs).not.toContain("Access Level");
     });
   });
 });

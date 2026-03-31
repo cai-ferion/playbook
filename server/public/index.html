@@ -81,6 +81,18 @@
           <h1>Playbook</h1>
         </div>
         <div class="sidebar-subtitle">Operational Platform &middot; 2026</div>
+        <!-- Sidebar Mode Toggle -->
+        <div class="sidebar-mode-toggle" id="sidebar-mode-toggle">
+          <button class="sidebar-toggle-btn active" id="sidebar-toggle-nav" onclick="setSidebarMode('nav')" title="Navigation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            Menu
+          </button>
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-notif" onclick="setSidebarMode('notifications')" title="Notifications">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Alerts
+            <span class="sidebar-notif-badge" id="sidebar-notif-badge" style="display:none;">0</span>
+          </button>
+        </div>
       </div>
       <nav class="sidebar-nav" style="overflow:hidden;">
         <div class="sidebar-nav-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-bottom:8px;">
@@ -229,6 +241,27 @@
           </button>
         </div>
       </nav>
+      <!-- Sidebar Notification Panel (hidden by default, shown when toggled) -->
+      <div class="sidebar-notif-panel" id="sidebar-notif-panel" style="display:none;">
+        <div class="sidebar-notif-header">
+          <div class="sidebar-notif-actions">
+            <button class="notif-action-btn" onclick="markAllNotificationsRead()" title="Mark all as read">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Mark all read
+            </button>
+            <button class="notif-action-btn" onclick="clearAllNotifications()" title="Clear all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Clear all
+            </button>
+          </div>
+        </div>
+        <div class="sidebar-notif-list" id="sidebar-notif-list">
+          <div class="notif-empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <p>No notifications yet</p>
+          </div>
+        </div>
+      </div>
       <div class="sidebar-footer">
         <div>Playbook &middot; IO Operations</div>
       </div>
@@ -243,33 +276,7 @@
           <span class="header-meta" id="header-meta">Last Updated: &mdash;</span>
         </div>
         <div class="header-right">
-          <!-- Notification Bell -->
-          <div class="notif-wrapper" id="notif-bell" style="display:none;">
-            <button class="notif-bell-btn" onclick="toggleNotifPanel()" title="Notifications">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
-            </button>
-            <!-- Notification Dropdown Panel -->
-            <div class="notif-panel" id="notif-panel">
-              <div class="notif-panel-header">
-                <h3>Notifications</h3>
-                <div class="notif-panel-actions">
-                  <button class="notif-action-btn" onclick="markAllNotificationsRead()" title="Mark all as read">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  </button>
-                  <button class="notif-action-btn" onclick="clearAllNotifications()" title="Clear all">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
-                </div>
-              </div>
-              <div class="notif-list" id="notif-list">
-                <div class="notif-empty">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                  <p>No notifications yet</p>
-                </div>
-              </div>
-            </div>
-          </div>
+
           <button class="btn btn-outline btn-sm export-csv-btn" id="export-csv-btn" onclick="handleExportCSV()" style="display:none;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export CSV

@@ -555,7 +555,7 @@ async function rosterSaveEdit() {
     showToast('Employee updated successfully', 'success');
     if (typeof createNotification === 'function') {
       const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification('roster_edit', 'Employee Updated', `${updates.full_name || ROSTER.editingId} record updated`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'roster_edit', title: 'Employee Updated', message: `${updates.full_name || ROSTER.editingId} record updated` });
     }
     rosterCloseForm();
     await rosterFetchEmployees();
@@ -643,7 +643,7 @@ async function rosterSaveNew() {
     showToast('Employee added successfully', 'success');
     if (typeof createNotification === 'function') {
       const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification('roster_add', 'Employee Added', `${record.full_name} (${record.ohr_id}) added to roster`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'roster_add', title: 'Employee Added', message: `${record.full_name} (${record.ohr_id} }) added to roster`, user?.ohr_id, user?.full_name);
     }
     rosterCloseForm();
     await rosterFetchEmployees();
@@ -671,7 +671,7 @@ async function rosterDeleteEmployee(ohrId) {
     showToast('Employee deleted', 'success');
     if (typeof createNotification === 'function') {
       const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification('roster_delete', 'Employee Deleted', `${emp ? emp.full_name : ohrId} removed from roster`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'roster_delete', title: 'Employee Deleted', message: `${emp ? emp.full_name : ohrId} removed from roster` });
     }
     await rosterFetchEmployees();
   } catch (e) {

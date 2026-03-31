@@ -905,9 +905,7 @@ async function compassDisputeAction(newStatus) {
 
     showToast('Dispute action applied', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Update',
-        `${log.coaching_id || log.id}: Status changed to ${update.status}`,
-        currentUser?.ohr_id, currentUser?.full_name);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Update', message: `${log.coaching_id || log.id}: Status changed to ${update.status}` });
     }
     compassCloseForm();
     await compassFetchLogs();
@@ -2566,9 +2564,7 @@ async function disputesSubmitDisputeMarkdown() {
 
     showToast('Markdown disputed successfully. Card moved to LV2.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute',
-        `${log.coaching_id || log.id}: Markdown disputed by ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown disputed by ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -2628,9 +2624,7 @@ async function disputesSubmitAcceptMarkdown() {
 
     showToast('Markdown accepted. Log moved to Coaching Profile for acknowledgement.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Resolved',
-        `${log.coaching_id || log.id}: Markdown accepted by ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown accepted by ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -2689,9 +2683,7 @@ async function disputesQuickAction(newStatus) {
 
     showToast('Dispute action applied', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Update',
-        `${log.coaching_id || log.id}: Status changed to ${update.status}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Update', message: `${log.coaching_id || log.id}: Status changed to ${update.status}` });
     }
     disputesCloseDetail();
     await compassFetchLogs();
@@ -2896,9 +2888,7 @@ async function disputesSubmitRetainMarkdown() {
 
     showToast('Markdown retained. Card moved to LV3.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute',
-        `${log.coaching_id || log.id}: Markdown retained by QA — ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown retained by QA — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -2958,9 +2948,7 @@ async function disputesSubmitReverseMarkdown() {
 
     showToast('Markdown reversed. Log moved to Coaching Profile for acknowledgement.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Resolved',
-        `${log.coaching_id || log.id}: Markdown reversed by QA — ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown reversed by QA — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3020,9 +3008,7 @@ async function disputesSubmitQADecisionAccepted() {
 
     showToast('QA decision accepted. Log moved to Coaching Profile for acknowledgement.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Resolved',
-        `${log.coaching_id || log.id}: QA decision accepted by SME — ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: QA decision accepted by SME — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3151,9 +3137,7 @@ async function disputesSubmitQADecisionRejected() {
 
     showToast('QA decision rejected. Card moved to LV4 — Pending Trainer Decision.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Escalated',
-        `${log.coaching_id || log.id}: QA decision rejected by SME, escalated to Trainer — ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Escalated', message: `${log.coaching_id || log.id}: QA decision rejected by SME, escalated to Trainer — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3253,9 +3237,7 @@ async function disputesSubmitLV5RetainMarkdown() {
 
     showToast('Markdown retained. Card moved to LV6 — Pending QTP Manager Decision.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Escalated',
-        `${log.coaching_id || log.id}: Markdown retained by SME at LV5, escalated to QTP Manager — ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Escalated', message: `${log.coaching_id || log.id}: Markdown retained by SME at LV5, escalated to QTP Manager — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3314,9 +3296,7 @@ async function disputesSubmitLV5ReverseMarkdown() {
 
     showToast('Markdown reversed. Log sent to coachee for acknowledgement.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('coaching_dispute', 'Coaching Dispute Resolved',
-        `${log.coaching_id || log.id}: Markdown reversed by SME at LV5 — ${actorName}`,
-        cu?.ohr_id, actorName);
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown reversed by SME at LV5 — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();

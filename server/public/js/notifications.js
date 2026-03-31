@@ -1,7 +1,7 @@
 /**
  * Playbook — Notification Center
  * Database-backed in-app notification system.
- * Provides bell icon with badge, dropdown panel, and event tracking.
+ * Sidebar toggle panel with badge, grouped list, and event tracking.
  */
 
 // ===== Notification State =====
@@ -9,25 +9,50 @@
 const notifState = {
   notifications: [],
   unreadCount: 0,
-  isOpen: false,
   pollInterval: null,
   lastFetch: null,
   loading: false,
 };
 
+// ===== Sidebar Mode Toggle =====
+
+let _sidebarMode = 'nav'; // 'nav' | 'notifications'
+
+function setSidebarMode(mode) {
+  _sidebarMode = mode;
+  const navEl = document.querySelector('.sidebar-nav');
+  const notifPanelEl = document.getElementById('sidebar-notif-panel');
+  const toggleNav = document.getElementById('sidebar-toggle-nav');
+  const toggleNotif = document.getElementById('sidebar-toggle-notif');
+
+  if (mode === 'notifications') {
+    if (navEl) navEl.style.display = 'none';
+    if (notifPanelEl) notifPanelEl.style.display = 'flex';
+    if (toggleNav) toggleNav.classList.remove('active');
+    if (toggleNotif) toggleNotif.classList.add('active');
+    renderSidebarNotifList();
+  } else {
+    if (navEl) navEl.style.display = '';
+    if (notifPanelEl) notifPanelEl.style.display = 'none';
+    if (toggleNav) toggleNav.classList.add('active');
+    if (toggleNotif) toggleNotif.classList.remove('active');
+  }
+}
+
 // ===== API Helpers =====
 
-async function fetchNotifications(limit = 50) {
-  const url = `${IO_API_BASE}/notifications?limit=${limit}`;
+async function fetchNotifications(limit = 100) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  // If current user has target_ohr, also fetch their targeted notifications
+  const url = `${IO_API_BASE}/notifications?${params}`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error('Failed to fetch notifications');
   return resp.json();
 }
 
-async function createNotification({ type, title, message, metadata = {} }) {
-  const actor_ohr = currentUser ? currentUser.ohr_id : null;
-  const actor_name = currentUser ? currentUser.full_name : null;
-  const target_role = 'all';
+async function createNotification({ type, title, message, target_ohr, target_role, metadata = {} }) {
+  const actor_ohr = typeof currentUser !== 'undefined' && currentUser ? currentUser.ohr_id : null;
+  const actor_name = typeof currentUser !== 'undefined' && currentUser ? currentUser.full_name : null;
 
   const payload = {
     type,
@@ -35,26 +60,32 @@ async function createNotification({ type, title, message, metadata = {} }) {
     message,
     actor_ohr,
     actor_name,
-    target_role,
+    target_ohr: target_ohr || null,
+    target_role: target_role || 'all',
     metadata: JSON.stringify(metadata),
     is_read: false,
   };
 
-  const resp = await fetch(`${IO_API_BASE}/notifications`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const resp = await fetch(`${IO_API_BASE}/notifications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-  if (!resp.ok) {
-    console.error('[Notifications] Failed to create notification:', await resp.text());
+    if (!resp.ok) {
+      console.error('[Notifications] Failed to create notification:', await resp.text());
+      return null;
+    }
+
+    const data = await resp.json();
+    // Refresh notifications after creating
+    await loadNotifications();
+    return data;
+  } catch (err) {
+    console.error('[Notifications] Create error:', err);
     return null;
   }
-
-  const data = await resp.json();
-  // Refresh notifications after creating
-  await loadNotifications();
-  return data;
 }
 
 async function markNotificationRead(id) {
@@ -72,8 +103,8 @@ async function markAllNotificationsRead() {
   });
   notifState.notifications.forEach(n => n.is_read = true);
   notifState.unreadCount = 0;
-  renderNotifBadge();
-  renderNotifList();
+  renderSidebarNotifBadge();
+  renderSidebarNotifList();
 }
 
 async function clearAllNotifications() {
@@ -83,8 +114,8 @@ async function clearAllNotifications() {
   });
   notifState.notifications = [];
   notifState.unreadCount = 0;
-  renderNotifBadge();
-  renderNotifList();
+  renderSidebarNotifBadge();
+  renderSidebarNotifList();
 }
 
 // ===== Load & Poll =====
@@ -94,11 +125,22 @@ async function loadNotifications() {
   notifState.loading = true;
   try {
     const data = await fetchNotifications(100);
-    notifState.notifications = data;
-    notifState.unreadCount = data.filter(n => !n.is_read && n.type !== 'system_maintenance' && n.title !== 'MAINTENANCE_FLAG').length;
+    // Filter: show only notifications relevant to the current user
+    const userOhr = typeof currentUser !== 'undefined' && currentUser ? currentUser.ohr_id : null;
+    const userRole = typeof currentUser !== 'undefined' && currentUser ? currentUser.actual_role : null;
+
+    notifState.notifications = data.filter(n => {
+      // Exclude maintenance flags
+      if (n.type === 'system_maintenance' || n.title === 'MAINTENANCE_FLAG') return false;
+      // If notification has a target_ohr, only show to that user (or admin)
+      if (n.target_ohr && n.target_ohr !== userOhr && userOhr !== '740045023') return false;
+      return true;
+    });
+
+    notifState.unreadCount = notifState.notifications.filter(n => !n.is_read).length;
     notifState.lastFetch = new Date();
-    renderNotifBadge();
-    if (notifState.isOpen) renderNotifList();
+    renderSidebarNotifBadge();
+    if (_sidebarMode === 'notifications') renderSidebarNotifList();
   } catch (err) {
     console.error('[Notifications] Load error:', err);
   } finally {
@@ -120,8 +162,8 @@ function stopNotifPolling() {
 
 // ===== Rendering =====
 
-function renderNotifBadge() {
-  const badge = document.getElementById('notif-badge');
+function renderSidebarNotifBadge() {
+  const badge = document.getElementById('sidebar-notif-badge');
   if (!badge) return;
   if (notifState.unreadCount > 0) {
     badge.textContent = notifState.unreadCount > 99 ? '99+' : notifState.unreadCount;
@@ -131,54 +173,35 @@ function renderNotifBadge() {
   }
 }
 
-function toggleNotifPanel() {
-  notifState.isOpen = !notifState.isOpen;
-  const panel = document.getElementById('notif-panel');
-  if (!panel) return;
-
-  if (notifState.isOpen) {
-    panel.classList.add('notif-panel-open');
-    renderNotifList();
-    // Close panel when clicking outside
-    setTimeout(() => {
-      document.addEventListener('click', closeNotifOnOutsideClick);
-    }, 10);
-  } else {
-    panel.classList.remove('notif-panel-open');
-    document.removeEventListener('click', closeNotifOnOutsideClick);
-  }
-}
-
-function closeNotifOnOutsideClick(e) {
-  const panel = document.getElementById('notif-panel');
-  const bell = document.getElementById('notif-bell');
-  if (panel && bell && !panel.contains(e.target) && !bell.contains(e.target)) {
-    notifState.isOpen = false;
-    panel.classList.remove('notif-panel-open');
-    document.removeEventListener('click', closeNotifOnOutsideClick);
-  }
-}
-
 function getNotifIcon(type) {
   switch (type) {
     case 'record_save':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
     case 'srt_upload':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
     case 'billing_change':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
-    case 'system_alert':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-    case 'login':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>';
     case 'billing_code_edit':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+    case 'system_alert':
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    case 'login':
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>';
     case 'coaching_issued':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
     case 'absent_alert':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>';
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>';
+    case 'upl_notice':
+    case 'late_notice':
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    case 'upl_admin':
+    case 'late_admin':
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    case 'daily_summary':
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+    case 'task_assigned':
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>';
     default:
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
   }
 }
 
@@ -197,27 +220,16 @@ function formatNotifTime(isoStr) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function renderNotifList() {
-  const list = document.getElementById('notif-list');
+function renderSidebarNotifList() {
+  const list = document.getElementById('sidebar-notif-list');
   if (!list) return;
 
-  if (notifState.notifications.length === 0) {
-    list.innerHTML = `
-      <div class="notif-empty">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <p>No notifications yet</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Filter out maintenance flag notifications from display
-  const displayNotifs = notifState.notifications.filter(n => n.type !== 'system_maintenance' && n.title !== 'MAINTENANCE_FLAG');
+  const displayNotifs = notifState.notifications;
 
   if (displayNotifs.length === 0) {
     list.innerHTML = `
       <div class="notif-empty">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <p>No notifications yet</p>
       </div>
     `;
@@ -255,7 +267,7 @@ function renderNotifList() {
           <div class="notif-icon">${getNotifIcon(n.type)}</div>
           <div class="notif-content">
             <div class="notif-title">${escapeHtml(n.title)}</div>
-            <div class="notif-message">${escapeHtml(n.message)}</div>
+            <div class="notif-message">${escapeHtml(n.message || '')}</div>
             <div class="notif-time">${formatNotifTime(n.created_at)}</div>
           </div>
         </div>
@@ -271,8 +283,8 @@ async function handleNotifClick(id) {
   if (notif && !notif.is_read) {
     notif.is_read = true;
     notifState.unreadCount = Math.max(0, notifState.unreadCount - 1);
-    renderNotifBadge();
-    renderNotifList();
+    renderSidebarNotifBadge();
+    renderSidebarNotifList();
     await markNotificationRead(id);
   }
 }
@@ -369,7 +381,7 @@ async function notifySystemAlert(title, message) {
 /**
  * Create a notification when a coaching log is issued.
  * @param {string} coacheeName - Name of the coachee
- * @param {string} coachingType - Type of coaching (e.g., New Session)
+ * @param {string} coachingType - Type of coaching
  * @param {string} coachingId - The coaching_id (CL-xxx)
  * @param {string} sessionGoal - The session goal/topic
  */
@@ -389,30 +401,14 @@ async function notifyCoachingIssued(coacheeName, coachingType, coachingId, sessi
  * @param {string} date - The date of the absence
  */
 async function notifyAbsentTag(agentName, agentOhr, date) {
-  const actor_ohr = currentUser ? currentUser.ohr_id : null;
-  const actor_name = currentUser ? currentUser.full_name : null;
-
-  const payload = {
+  await createNotification({
     type: 'absent_alert',
     title: 'Absence Recorded',
     message: `You have been marked as Absent on ${date || 'a recent date'}. If this is incorrect, please contact your supervisor.`,
-    actor_ohr,
-    actor_name,
     target_ohr: agentOhr || null,
     target_role: 'agent',
-    metadata: JSON.stringify({ agentName, agentOhr, date }),
-    is_read: false,
-  };
-
-  try {
-    await fetch(`${IO_API_BASE}/notifications`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch (err) {
-    console.error('[Notifications] Failed to create absent alert:', err);
-  }
+    metadata: { agentName, agentOhr, date },
+  });
 }
 
 // ===== Initialization =====

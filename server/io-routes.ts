@@ -21,109 +21,40 @@ import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzl
 import crypto from "crypto";
 const router = Router();
 
-const BREVO_SENDER_EMAIL = 'banarvinmaurice@meta.com';
-const BREVO_SENDER_NAME = 'Playbook Reporting';
 
-// Brevo send email via HTTP API
-async function brevoSendEmailFromRoutes(params: {
-  to: { email: string; name?: string }[];
-  cc?: { email: string; name?: string }[];
-  bcc?: { email: string; name?: string }[];
-  subject: string;
-  textContent?: string;
-  htmlContent?: string;
-}): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) return { success: false, error: 'BREVO_API_KEY not set' };
-  try {
-    const body: any = {
-      sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
-      to: params.to,
-      subject: params.subject,
-    };
-    if (params.cc && params.cc.length > 0) body.cc = params.cc;
-    if (params.bcc && params.bcc.length > 0) body.bcc = params.bcc;
-    if (params.htmlContent) body.htmlContent = params.htmlContent;
-    if (params.textContent) body.textContent = params.textContent;
-
-    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await resp.json();
-    if (resp.ok) return { success: true, messageId: data.messageId };
-    return { success: false, error: data.message || JSON.stringify(data) };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-}
 
 // ============================================================
-// Task Email Notification Helper (Brevo)
+// Task Assignment Notification Helper (In-App)
 // ============================================================
 
-async function sendTaskAssignmentEmails(record: any) {
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) {
-    console.warn('[IO API] BREVO_API_KEY not set, skipping task email');
-    return;
-  }
-
-  // Parse comma-separated assignee OHRs
+async function sendTaskAssignmentNotifications(record: any) {
   const ohrs = (record.assigned_to_ohr || '').split(',').map((s: string) => s.trim()).filter(Boolean);
   if (ohrs.length === 0) return;
 
-  // Fetch employee emails for all assignees
   try {
     const db = await getDb();
     if (!db) return;
     const employees = await db.select().from(ioEmployees).where(inArray(ioEmployees.ohr_id, ohrs));
-    const emailMap = new Map(employees.map((e: any) => [e.ohr_id, e.meta_email]));
 
-    const dueStr = record.due_date ? new Date(record.due_date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified';
+    const dueStr = record.due_date ? new Date(record.due_date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : 'No due date';
 
-    for (const ohr of ohrs) {
-      const email = emailMap.get(ohr);
-      if (!email) {
-        console.warn(`[IO API] No email found for OHR ${ohr}, skipping`);
-        continue;
-      }
-
-      const emp = employees.find((e: any) => e.ohr_id === ohr);
-      const empName = emp?.full_name || 'Team Member';
-
-      const subject = `[Playbook] New Task Assigned — ${record.task_id}: ${record.title}`;
-      const textContent = `Dear ${empName},
-
-You have been assigned a new task in Playbook.
-
-Task ID: ${record.task_id}
-Title: ${record.title}
-Description: ${record.description || 'No description provided'}
-Due Date: ${dueStr}
-Assigned By: ${record.assigned_by_name || 'System'}
-
-Please log in to Playbook to view and manage this task.
-
-This is an automated notification from the Playbook Task Management System. Please do not reply directly to this email.
-
-Playbook Reporting`;
-
-      const result = await brevoSendEmailFromRoutes({
-        to: [{ email, name: empName }],
-        subject,
-        textContent,
+    for (const emp of employees) {
+      await db.insert(ioNotifications).values({
+        type: 'task_assigned',
+        title: 'New Task Assigned',
+        message: `${record.task_id}: ${record.title} — Due: ${dueStr}. Assigned by ${record.assigned_by_name || 'System'}.`,
+        actor_ohr: record.assigned_by_ohr || null,
+        actor_name: record.assigned_by_name || 'System',
+        target_ohr: emp.ohr_id,
+        target_role: 'agent',
+        metadata: JSON.stringify({ task_id: record.task_id, title: record.title, due_date: record.due_date }),
+        is_read: false,
+        created_at: new Date().toISOString(),
       });
-
-      if (result.success) {
-        console.log(`[IO API] Task email sent to ${email} for task ${record.task_id} (msgId: ${result.messageId})`);
-      } else {
-        console.error(`[IO API] Failed to send task email to ${email}: ${result.error}`);
-      }
+      console.log(`[IO API] Task notification created for ${emp.full_name} (${emp.ohr_id}) — task ${record.task_id}`);
     }
   } catch (err: any) {
-    console.error('[IO API] Error sending task assignment emails:', err.message);
+    console.error('[IO API] Error creating task assignment notifications:', err.message);
   }
 }
 
@@ -924,9 +855,9 @@ router.post("/tasks", async (req: Request, res: Response) => {
     await db.insert(ioTasks).values(record);
     res.json({ ok: true, task_id: taskId, ...record });
 
-    // Send email notifications to all assigned users (fire-and-forget)
-    sendTaskAssignmentEmails(record).catch(err => {
-      console.error('[IO API] Background task email error:', err.message);
+    // Create in-app notifications for all assigned users (fire-and-forget)
+    sendTaskAssignmentNotifications(record).catch((err: any) => {
+      console.error('[IO API] Background task notification error:', err.message);
     });
   } catch (err: any) {
     console.error("[IO API] tasks create error:", err);
@@ -1168,141 +1099,7 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
   }
 });
 
-// ============================================================
-// WEBHOOK ENDPOINTS — For Meta Agentic Workflow Builder
-// ============================================================
-
-// POST /api/io/webhooks/send-task-emails
-// Triggers task assignment emails for an existing task
-// Body: { task_id: string }
-router.post("/webhooks/send-task-emails", async (req: Request, res: Response) => {
-  try {
-    const db = await getDb();
-    if (!db) return res.status(500).json({ success: false, error: "Database not available" });
-    const { task_id } = req.body;
-    if (!task_id) return res.status(400).json({ success: false, error: "task_id is required" });
-
-    const tasks = await db.select().from(ioTasks).where(eq(ioTasks.task_id, task_id));
-    if (tasks.length === 0) return res.status(404).json({ success: false, error: "Task not found" });
-
-    const task = tasks[0];
-    await sendTaskAssignmentEmails(task);
-    res.json({ success: true, message: `Task assignment emails triggered for ${task_id}` });
-  } catch (err: any) {
-    console.error("[Webhook] send-task-emails error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// POST /api/io/webhooks/send-upl-late-notifications
-// Triggers UPL/LATE attendance notification emails for today
-// Body: {} (no params needed — uses today's date)
-router.post("/webhooks/send-upl-late-notifications", async (_req: Request, res: Response) => {
-  try {
-    // Call the existing auto-mailer endpoint internally
-    const port = process.env.PORT || 3000;
-    const resp = await fetch(`http://localhost:${port}/api/io/send-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    const data = await resp.json();
-    res.json({ success: true, message: "UPL/LATE notifications triggered", result: data });
-  } catch (err: any) {
-    console.error("[Webhook] send-upl-late-notifications error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// POST /api/io/webhooks/send-daily-csv
-// Triggers the daily attendance CSV email
-// Body: {} (no params needed — uses today's date)
-router.post("/webhooks/send-daily-csv", async (_req: Request, res: Response) => {
-  try {
-    // Call the existing auto-mailer endpoint internally
-    const port = process.env.PORT || 3000;
-    const resp = await fetch(`http://localhost:${port}/api/io/send-daily-csv`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    const data = await resp.json();
-    res.json({ success: true, message: "Daily CSV email triggered", result: data });
-  } catch (err: any) {
-    console.error("[Webhook] send-daily-csv error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// POST /api/io/webhooks/send-email
-// General-purpose email webhook — send a custom email via Brevo
-// Body: { to: string | string[], subject: string, body: string }
-router.post("/webhooks/send-email", async (req: Request, res: Response) => {
-  try {
-    const apiKey = process.env.BREVO_API_KEY;
-    if (!apiKey) return res.status(500).json({ success: false, error: "BREVO_API_KEY not configured" });
-
-    const { to, subject, body } = req.body;
-    if (!to || !subject || !body) {
-      return res.status(400).json({ success: false, error: "to, subject, and body are required" });
-    }
-
-    const recipients = Array.isArray(to) ? to : [to];
-    const results: any[] = [];
-
-    for (const email of recipients) {
-      const result = await brevoSendEmailFromRoutes({
-        to: [{ email }],
-        subject,
-        textContent: body,
-      });
-      results.push({ email, success: result.success, messageId: result.messageId || null, error: result.error || null });
-    }
-
-    const sent = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
-    res.json({ success: true, message: `Sent: ${sent}, Failed: ${failed}`, results });
-  } catch (err: any) {
-    console.error("[Webhook] send-email error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// GET /api/io/webhooks — List all available webhooks (documentation)
-router.get("/webhooks", (_req: Request, res: Response) => {
-  res.json({
-    webhooks: [
-      {
-        name: "Send Task Assignment Emails",
-        method: "POST",
-        path: "/api/io/webhooks/send-task-emails",
-        body: { task_id: "string (required) — The task ID to send emails for" },
-        description: "Sends email notifications to all users assigned to the specified task."
-      },
-      {
-        name: "Send UPL/LATE Notifications",
-        method: "POST",
-        path: "/api/io/webhooks/send-upl-late-notifications",
-        body: {},
-        description: "Triggers UPL and LATE attendance notification emails for today's records. Redirects to /api/io/send-notifications."
-      },
-      {
-        name: "Send Daily Attendance CSV",
-        method: "POST",
-        path: "/api/io/webhooks/send-daily-csv",
-        body: {},
-        description: "Triggers the daily attendance CSV email to configured recipients. Redirects to /api/io/send-daily-csv."
-      },
-      {
-        name: "Send Custom Email",
-        method: "POST",
-        path: "/api/io/webhooks/send-email",
-        body: {
-          to: "string | string[] (required) — Recipient email(s)",
-          subject: "string (required) — Email subject line",
-          body: "string (required) — Email body text"
-        },
-        description: "Sends a custom email to one or more recipients via Brevo."
-      }
-    ],
-    note: "All webhooks are open (no authentication required). Base URL is your Playbook domain."
-  });
-});
-
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");
-  console.log("[Webhooks] Available at /api/io/webhooks (GET for docs)");
 }

@@ -1428,8 +1428,7 @@ function applyBillingCodeEditToPending() {
     renderInputTable();
     const oldCode = document.getElementById('bc-edit-current')?.textContent || '';
     if (typeof createNotification === 'function') {
-      const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification('billing_code_edit', 'Billing Code Changed', `${agentName}: code changed to ${newCode} for ${count} records (${startDate} to ${endDate})`, user?.ohr_id, user?.full_name).catch(() => {});
+      createNotification({ type: 'billing_code_edit', title: 'Billing Code Changed', message: `${agentName}: code changed to ${newCode} for ${count} records (${startDate} to ${endDate})` }).catch(() => {});
     }
   } else {
     showToast('No records needed updating in the specified date range.', 'info');

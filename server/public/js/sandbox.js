@@ -757,7 +757,7 @@ async function sandboxReview(action) {
 
     showToast('Insight updated successfully', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('insight_review', 'Insight Reviewed', `${ins.insight_id} — ${ins.title || ins.insight_title} → ${updates.status}`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'insight_review', title: 'Insight Reviewed', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${updates.status}` });
     }
     sandboxCloseForm();
     await sandboxFetchInsights();
@@ -798,7 +798,7 @@ async function sandboxRejectWith(statusValue) {
 
     showToast('Insight rejected', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('insight_review', 'Insight Rejected', `${ins.insight_id} — ${ins.title || ins.insight_title} → ${statusValue}`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'insight_review', title: 'Insight Rejected', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${statusValue}` });
     }
     sandboxCloseForm();
     await sandboxFetchInsights();
@@ -1015,7 +1015,7 @@ async function sandboxSubmitNew() {
 
     showToast('Insight submitted successfully', 'success');
     if (typeof createNotification === 'function') {
-      createNotification('insight_submit', 'New Insight Submitted', `${insightId} — ${title}`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'insight_submit', title: 'New Insight Submitted', message: `${insightId} — ${title}` });
     }
     sandboxCloseForm();
     await sandboxFetchInsights();

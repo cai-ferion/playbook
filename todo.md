@@ -271,3 +271,43 @@
 - [x] Replace Resend in io-routes.ts (task assignment emails)
 - [x] Replace Resend in webhook send-email endpoint
 - [x] Test email delivery to @meta.com addresses via Brevo (all 4 webhooks tested successfully)
+
+## Batch 20 — Replace Brevo with Gmail for Email Delivery (CANCELLED)
+- [x] Cancelled — Gmail MCP requires per-send confirmation, gws CLI lacks Gmail scopes
+
+## Batch 21 — In-App Notification System (Replace All Email)
+
+### Remove Email Components
+- [x] Remove all Resend imports and code
+- [x] Remove all Brevo imports and code
+- [x] Remove sendTaskAssignmentEmails — replaced with sendTaskAssignmentNotifications
+- [x] Remove all webhook email endpoints (/api/io/webhooks/*)
+- [x] Remove email cron jobs from auto-mailer.ts — replaced with notification cron jobs
+- [x] Remove resend and @getbrevo/brevo dependencies
+
+### Notification Database & API
+- [x] io_notifications table already exists (id, type, title, message, actor_ohr, target_ohr, is_read, created_at)
+- [x] GET /api/io/notifications endpoint already exists
+- [x] PATCH /api/io/notifications/:id/read endpoint already exists
+- [x] PATCH /api/io/notifications/read-all endpoint already exists
+
+### Notification Triggers (replace email triggers)
+- [x] UPL/LATE attendance tags → create notification for the tagged employee (auto-mailer cron)
+- [x] Task assignment in Helm → create notification for each assigned user (sendTaskAssignmentNotifications)
+- [x] Daily attendance summary → create notification for admin (auto-mailer cron)
+
+### Toggle Sidebar UI
+- [x] Add toggle mechanism to sidebar — switch between main nav and notifications panel
+- [x] Build notifications panel with list of notifications, read/unread styling, timestamps
+- [x] Show unread count badge on the notifications toggle
+- [x] Remove old notification bell dropdown from header
+- [x] Convert all old positional-arg createNotification calls to object syntax (compass, haven, roster, sandbox)
+- [x] Add notification type icons for UPL/LATE/task/daily_summary
+- [x] Filter notifications by target_ohr for current user
+- [x] Fix stale tests (batch15, io-routes) for removed columns/email code
+- [x] Write comprehensive notification system test suite (28 tests)
+
+### Notification Triggers (already working)
+- [x] UPL/LATE attendance tags → create notification for the tagged employee (auto-mailer cron)
+- [x] Task assignment in Helm → create notification for each assigned user (sendTaskAssignmentNotifications)
+- [x] Daily attendance summary → create notification for admin (auto-mailer cron)
