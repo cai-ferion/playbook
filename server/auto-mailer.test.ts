@@ -49,9 +49,7 @@ Please coordinate with your supervisor regarding this matter. If you believe thi
 
 This is an automated notification from the Playbook Attendance Management System. Please do not reply directly to this email.
 
-Regards,
-Playbook Reporting
-Workforce Management System`;
+Playbook Reporting`;
   }
 
   it("builds correct UPL email subject", () => {
@@ -81,6 +79,7 @@ Workforce Management System`;
     expect(content).toContain("Personal Emergency");
     expect(content).toContain("Called in sick");
     expect(content).toContain("Playbook Reporting");
+    expect(content).not.toContain("Workforce Management System");
     expect(content).toContain("coordinate with your supervisor");
   });
 

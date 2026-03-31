@@ -67,9 +67,7 @@ Please coordinate with your supervisor regarding this matter. If you believe thi
 
 This is an automated notification from the Playbook Attendance Management System. Please do not reply directly to this email.
 
-Regards,
-Playbook Reporting
-Workforce Management System`;
+Playbook Reporting`;
 }
 
 function buildEmailSubject(tag: string, date: string, agentName: string): string {

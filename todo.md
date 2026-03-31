@@ -105,3 +105,4 @@
 
 ## Admin OHR Correction — Batch 8
 - [x] Change admin OHR from 740045032 back to 740045023 across all files (9 JS files, 20 occurrences updated)
+- [x] Simplify email closing to just "Playbook Reporting" (remove Regards and Workforce Management System)
