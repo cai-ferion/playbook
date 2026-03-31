@@ -1,0 +1,9 @@
+{
+  "query": "SELECT ohr_id, full_name, employement_status, actual_role, planning_group FROM io_employees WHERE employement_status = 'Nesting' LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT ohr_id, full_name, employement_status, actual_role, planning_group FROM io_employees WHERE employement_status = 'Nesting' LIMIT 20;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1668
+}

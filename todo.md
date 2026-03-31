@@ -117,3 +117,7 @@
 - [x] Fix surplus/deficit logic: surplus when ratio > 1.05 (surplus = total - 1.05×base), deficit when ratio < threshold, otherwise "Met"
 - [x] Update column headers from "Goal | 95%" to "Goal | 98%" etc.
 - [x] Remove p_vals from total calculation (keep total = Delivered + OT only, as intended)
+
+## Employee Nesting Status Update — Batch 11
+- [x] Update 15 employees to "Nesting" status in io_employees table
+- [x] Ensure billing compliance code excludes employees with "Nesting" employement_status (already works — status field comes from emp.employement_status)
