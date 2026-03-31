@@ -168,6 +168,6 @@
 - [x] Build Performance view in sidebar with filter bar, KPI cards, and sortable table
 - [x] Integrate with io_employees for roster enrichment
 
-## Batch 13 — Move Performance Nav
-- [x] Move Performance nav from Anchor section to under Helm group
-- [x] Restrict Performance visibility to admin OHR (740045023) only (inherits Helm's admin-only visibility)
+## Batch 14 — Rename Performance to Horizon (own nav group)
+- [x] Move Performance out of Helm into its own top-level nav group called "Horizon"
+- [x] Add Horizon to admin-only visibility list (nav-group-horizon added to both login and session restore)
