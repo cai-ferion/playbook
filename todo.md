@@ -254,3 +254,11 @@
 ### Regimen - Filter Bar
 - [x] Move "Add Filter" button from bottom-right to bottom-left of dropdown
 - [x] Shorten filter bar width to not cover the whole table (set dropdown to 320px fixed width)
+
+## Batch 18 — Webhook Endpoints for Meta Agentic Workflow Builder
+
+- [x] Create/verify webhook endpoint for task assignment emails
+- [x] Create/verify webhook endpoint for daily attendance CSV email
+- [x] Create/verify webhook endpoint for UPL/LATE attendance notification emails
+- [x] Create webhook for general/custom email sending
+- [x] Document all webhook URLs and payloads for the Workflow Builder

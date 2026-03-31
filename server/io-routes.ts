@@ -1135,7 +1135,150 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// WEBHOOK ENDPOINTS — For Meta Agentic Workflow Builder
+// ============================================================
+
+// POST /api/io/webhooks/send-task-emails
+// Triggers task assignment emails for an existing task
+// Body: { task_id: string }
+router.post("/webhooks/send-task-emails", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ success: false, error: "Database not available" });
+    const { task_id } = req.body;
+    if (!task_id) return res.status(400).json({ success: false, error: "task_id is required" });
+
+    const tasks = await db.select().from(ioTasks).where(eq(ioTasks.task_id, task_id));
+    if (tasks.length === 0) return res.status(404).json({ success: false, error: "Task not found" });
+
+    const task = tasks[0];
+    await sendTaskAssignmentEmails(task);
+    res.json({ success: true, message: `Task assignment emails triggered for ${task_id}` });
+  } catch (err: any) {
+    console.error("[Webhook] send-task-emails error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/io/webhooks/send-upl-late-notifications
+// Triggers UPL/LATE attendance notification emails for today
+// Body: {} (no params needed — uses today's date)
+router.post("/webhooks/send-upl-late-notifications", async (_req: Request, res: Response) => {
+  try {
+    // Call the existing auto-mailer endpoint internally
+    const port = process.env.PORT || 3000;
+    const resp = await fetch(`http://localhost:${port}/api/io/send-notifications`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await resp.json();
+    res.json({ success: true, message: "UPL/LATE notifications triggered", result: data });
+  } catch (err: any) {
+    console.error("[Webhook] send-upl-late-notifications error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/io/webhooks/send-daily-csv
+// Triggers the daily attendance CSV email
+// Body: {} (no params needed — uses today's date)
+router.post("/webhooks/send-daily-csv", async (_req: Request, res: Response) => {
+  try {
+    // Call the existing auto-mailer endpoint internally
+    const port = process.env.PORT || 3000;
+    const resp = await fetch(`http://localhost:${port}/api/io/send-daily-csv`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await resp.json();
+    res.json({ success: true, message: "Daily CSV email triggered", result: data });
+  } catch (err: any) {
+    console.error("[Webhook] send-daily-csv error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/io/webhooks/send-email
+// General-purpose email webhook — send a custom email
+// Body: { to: string | string[], subject: string, body: string }
+router.post("/webhooks/send-email", async (req: Request, res: Response) => {
+  try {
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) return res.status(500).json({ success: false, error: "RESEND_API_KEY not configured" });
+
+    const { Resend } = await import("resend");
+    const resend = new Resend(resendKey);
+    const FROM_ADDRESS = 'Playbook Reporting <onboarding@resend.dev>';
+
+    const { to, subject, body } = req.body;
+    if (!to || !subject || !body) {
+      return res.status(400).json({ success: false, error: "to, subject, and body are required" });
+    }
+
+    const recipients = Array.isArray(to) ? to : [to];
+    const results: any[] = [];
+
+    for (const email of recipients) {
+      try {
+        const result = await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: email,
+          subject,
+          text: body,
+        });
+        results.push({ email, success: true, id: result?.data?.id || null, error: result?.error?.message || null });
+      } catch (emailErr: any) {
+        results.push({ email, success: false, error: emailErr.message });
+      }
+    }
+
+    const sent = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    res.json({ success: true, message: `Sent: ${sent}, Failed: ${failed}`, results });
+  } catch (err: any) {
+    console.error("[Webhook] send-email error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/io/webhooks — List all available webhooks (documentation)
+router.get("/webhooks", (_req: Request, res: Response) => {
+  res.json({
+    webhooks: [
+      {
+        name: "Send Task Assignment Emails",
+        method: "POST",
+        path: "/api/io/webhooks/send-task-emails",
+        body: { task_id: "string (required) — The task ID to send emails for" },
+        description: "Sends email notifications to all users assigned to the specified task."
+      },
+      {
+        name: "Send UPL/LATE Notifications",
+        method: "POST",
+        path: "/api/io/webhooks/send-upl-late-notifications",
+        body: {},
+        description: "Triggers UPL and LATE attendance notification emails for today's records. Redirects to /api/io/send-notifications."
+      },
+      {
+        name: "Send Daily Attendance CSV",
+        method: "POST",
+        path: "/api/io/webhooks/send-daily-csv",
+        body: {},
+        description: "Triggers the daily attendance CSV email to configured recipients. Redirects to /api/io/send-daily-csv."
+      },
+      {
+        name: "Send Custom Email",
+        method: "POST",
+        path: "/api/io/webhooks/send-email",
+        body: {
+          to: "string | string[] (required) — Recipient email(s)",
+          subject: "string (required) — Email subject line",
+          body: "string (required) — Email body text"
+        },
+        description: "Sends a custom email to one or more recipients via Resend."
+      }
+    ],
+    note: "All webhooks are open (no authentication required). Base URL is your Playbook domain."
+  });
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");
+  console.log("[Webhooks] Available at /api/io/webhooks (GET for docs)");
 }
