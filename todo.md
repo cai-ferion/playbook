@@ -262,3 +262,12 @@
 - [x] Create/verify webhook endpoint for UPL/LATE attendance notification emails
 - [x] Create webhook for general/custom email sending
 - [x] Document all webhook URLs and payloads for the Workflow Builder
+
+## Batch 19 — Replace Resend with Brevo
+
+- [x] Store Brevo API key as environment variable
+- [x] Install Brevo SDK (using HTTP API directly)
+- [x] Replace Resend in auto-mailer.ts (UPL/LATE notifications + daily CSV)
+- [x] Replace Resend in io-routes.ts (task assignment emails)
+- [x] Replace Resend in webhook send-email endpoint
+- [x] Test email delivery to @meta.com addresses via Brevo (all 4 webhooks tested successfully)

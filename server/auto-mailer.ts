@@ -1,5 +1,5 @@
 /**
- * Auto-Mailer Module
+ * Auto-Mailer Module (Brevo / Sendinblue)
  * Sends automated email notifications for UPL and LATE attendance tags.
  * 
  * Schedule: 2:30 AM and 11:30 AM Philippine Time (UTC+8) daily.
@@ -9,19 +9,19 @@
  * - CC: Agent's supervisor (supervisor_email from io_employees) + Senior Manager (Polimetla, Ravi Kiran)
  * - BCC: banarvinmaurice@meta.com
  * 
- * From: "Playbook Reporting" <onboarding@resend.dev>
+ * From: "Playbook Reporting" <banarvinmaurice@meta.com>
  */
 
 import { Express } from "express";
 import cron from "node-cron";
-import { Resend } from "resend";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq, and, inArray } from "drizzle-orm";
 import { ioAttendance, ioEmployees } from "../drizzle/schema";
 
 const SENIOR_MANAGER_EMAIL = "kiranravi@meta.com";
 const BCC_EMAIL = "banarvinmaurice@meta.com";
-const FROM_ADDRESS = "Playbook Reporting <onboarding@resend.dev>";
+const SENDER_EMAIL = "banarvinmaurice@meta.com";
+const SENDER_NAME = "Playbook Reporting";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -93,7 +93,51 @@ interface EmployeeRecord {
   supervisor_email: string | null;
 }
 
-async function sendNotifications(db: ReturnType<typeof drizzle>, resend: Resend): Promise<{ sent: number; errors: number }> {
+// Brevo send email via HTTP API
+async function brevoSendEmail(params: {
+  apiKey: string;
+  to: { email: string; name?: string }[];
+  cc?: { email: string; name?: string }[];
+  bcc?: { email: string; name?: string }[];
+  subject: string;
+  textContent?: string;
+  htmlContent?: string;
+  attachment?: { name: string; content: string }[];
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    const body: any = {
+      sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+      to: params.to,
+      subject: params.subject,
+    };
+    if (params.cc && params.cc.length > 0) body.cc = params.cc;
+    if (params.bcc && params.bcc.length > 0) body.bcc = params.bcc;
+    if (params.htmlContent) body.htmlContent = params.htmlContent;
+    if (params.textContent) body.textContent = params.textContent;
+    if (params.attachment && params.attachment.length > 0) body.attachment = params.attachment;
+
+    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": params.apiKey,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+      return { success: true, messageId: data.messageId };
+    } else {
+      return { success: false, error: data.message || JSON.stringify(data) };
+    }
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
+async function sendNotifications(db: ReturnType<typeof drizzle>, apiKey: string): Promise<{ sent: number; errors: number }> {
   const today = getTodayPHT();
   console.log(`[AutoMailer] Running notification check for date: ${today}`);
 
@@ -168,31 +212,26 @@ async function sendNotifications(db: ReturnType<typeof drizzle>, resend: Resend)
     });
 
     // Build CC list: supervisor + senior manager
-    const ccList: string[] = [];
-    if (supervisorEmail) ccList.push(supervisorEmail);
-    if (SENIOR_MANAGER_EMAIL && !ccList.includes(SENIOR_MANAGER_EMAIL)) {
-      ccList.push(SENIOR_MANAGER_EMAIL);
+    const ccList: { email: string }[] = [];
+    if (supervisorEmail) ccList.push({ email: supervisorEmail });
+    if (SENIOR_MANAGER_EMAIL && !ccList.some(c => c.email === SENIOR_MANAGER_EMAIL)) {
+      ccList.push({ email: SENIOR_MANAGER_EMAIL });
     }
 
-    try {
-      const result = await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: [agentEmail],
-        cc: ccList.length > 0 ? ccList : undefined,
-        bcc: [BCC_EMAIL],
-        subject,
-        text: content,
-      });
+    const result = await brevoSendEmail({
+      apiKey,
+      to: [{ email: agentEmail, name: agentName }],
+      cc: ccList.length > 0 ? ccList : undefined,
+      bcc: [{ email: BCC_EMAIL }],
+      subject,
+      textContent: content,
+    });
 
-      if (result.error) {
-        console.error(`[AutoMailer] Failed to send to ${agentEmail}:`, result.error);
-        errors++;
-      } else {
-        console.log(`[AutoMailer] Sent ${record.tag} notification to ${agentEmail} (ID: ${result.data?.id})`);
-        sent++;
-      }
-    } catch (err) {
-      console.error(`[AutoMailer] Error sending to ${agentEmail}:`, err);
+    if (result.success) {
+      console.log(`[AutoMailer] Sent ${record.tag} notification to ${agentEmail} (msgId: ${result.messageId})`);
+      sent++;
+    } else {
+      console.error(`[AutoMailer] Failed to send to ${agentEmail}: ${result.error}`);
       errors++;
     }
 
@@ -205,11 +244,11 @@ async function sendNotifications(db: ReturnType<typeof drizzle>, resend: Resend)
 }
 
 export function registerAutoMailer(app: Express): void {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.BREVO_API_KEY;
   const dbUrl = process.env.DATABASE_URL;
 
   if (!apiKey) {
-    console.warn("[AutoMailer] RESEND_API_KEY not set. Auto-mailer disabled.");
+    console.warn("[AutoMailer] BREVO_API_KEY not set. Auto-mailer disabled.");
     return;
   }
 
@@ -218,19 +257,14 @@ export function registerAutoMailer(app: Express): void {
     return;
   }
 
-  const resend = new Resend(apiKey);
   const db = drizzle(dbUrl);
 
   // Schedule: 2:30 AM PHT = 18:30 UTC (previous day)
   // Schedule: 11:30 AM PHT = 03:30 UTC
-  // node-cron runs in server timezone (UTC), so convert PHT to UTC:
-  // 2:30 AM PHT = 6:30 PM UTC (prev day) → cron: 30 18 * * *
-  // 11:30 AM PHT = 3:30 AM UTC → cron: 30 3 * * *
-
   cron.schedule("30 18 * * *", async () => {
     console.log("[AutoMailer] Triggered: 2:30 AM PHT shift check");
     try {
-      await sendNotifications(db, resend);
+      await sendNotifications(db, apiKey);
     } catch (err) {
       console.error("[AutoMailer] Cron job error (2:30 AM PHT):", err);
     }
@@ -239,7 +273,7 @@ export function registerAutoMailer(app: Express): void {
   cron.schedule("30 3 * * *", async () => {
     console.log("[AutoMailer] Triggered: 11:30 AM PHT shift check");
     try {
-      await sendNotifications(db, resend);
+      await sendNotifications(db, apiKey);
     } catch (err) {
       console.error("[AutoMailer] Cron job error (11:30 AM PHT):", err);
     }
@@ -247,10 +281,10 @@ export function registerAutoMailer(app: Express): void {
 
   console.log("[AutoMailer] Scheduled: 2:30 AM PHT (18:30 UTC) and 11:30 AM PHT (03:30 UTC)");
 
-  // Manual trigger endpoint (admin only)
+  // Manual trigger endpoint
   app.post("/api/io/send-notifications", async (req, res) => {
     try {
-      const result = await sendNotifications(db, resend);
+      const result = await sendNotifications(db, apiKey);
       res.json({
         success: true,
         message: `Notifications sent: ${result.sent}, errors: ${result.errors}`,
@@ -323,7 +357,8 @@ export function registerAutoMailer(app: Express): void {
         records: preview,
       });
     } catch (err: any) {
-      res.status(500).json({ error: err.message });
+      console.error("[AutoMailer] Preview error:", err);
+      res.status(500).json({ success: false, error: err.message });
     }
   });
 
@@ -383,25 +418,29 @@ export function registerAutoMailer(app: Express): void {
 
       const readableDate = formatDateReadable(today);
       const subject = `[Playbook] Daily Attendance Report — ${readableDate}`;
-      const text = `Daily Attendance Report for ${readableDate}\n\nTotal Records: ${records.length}\n\nPlease find the attached CSV file containing today's attendance data.\n\nPlaybook Reporting`;
+      const textContent = `Daily Attendance Report for ${readableDate}\n\nTotal Records: ${records.length}\n\nPlease find the attached CSV file containing today's attendance data.\n\nPlaybook Reporting`;
 
-      // Convert CSV to base64 for Resend attachment
+      // Convert CSV to base64 for Brevo attachment
       const csvBase64 = Buffer.from(csv, 'utf-8').toString('base64');
 
-      await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: CSV_RECIPIENTS,
+      const result = await brevoSendEmail({
+        apiKey: apiKey!,
+        to: CSV_RECIPIENTS.map(email => ({ email })),
         subject,
-        text,
-        attachments: [
+        textContent,
+        attachment: [
           {
-            filename: `attendance_${today}.csv`,
+            name: `attendance_${today}.csv`,
             content: csvBase64,
           },
         ],
       });
 
-      console.log(`[AutoMailer-CSV] Daily CSV sent to ${CSV_RECIPIENTS.join(', ')} (${records.length} records)`);
+      if (result.success) {
+        console.log(`[AutoMailer-CSV] Daily CSV sent to ${CSV_RECIPIENTS.join(', ')} (${records.length} records, msgId: ${result.messageId})`);
+      } else {
+        console.error(`[AutoMailer-CSV] Failed to send daily CSV: ${result.error}`);
+      }
     } catch (err: any) {
       console.error("[AutoMailer-CSV] Error sending daily CSV:", err.message);
     }

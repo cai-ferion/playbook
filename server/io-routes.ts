@@ -19,23 +19,56 @@ import {
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
-import { Resend } from "resend";
-
 const router = Router();
 
+const BREVO_SENDER_EMAIL = 'banarvinmaurice@meta.com';
+const BREVO_SENDER_NAME = 'Playbook Reporting';
+
+// Brevo send email via HTTP API
+async function brevoSendEmailFromRoutes(params: {
+  to: { email: string; name?: string }[];
+  cc?: { email: string; name?: string }[];
+  bcc?: { email: string; name?: string }[];
+  subject: string;
+  textContent?: string;
+  htmlContent?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return { success: false, error: 'BREVO_API_KEY not set' };
+  try {
+    const body: any = {
+      sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+      to: params.to,
+      subject: params.subject,
+    };
+    if (params.cc && params.cc.length > 0) body.cc = params.cc;
+    if (params.bcc && params.bcc.length > 0) body.bcc = params.bcc;
+    if (params.htmlContent) body.htmlContent = params.htmlContent;
+    if (params.textContent) body.textContent = params.textContent;
+
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (resp.ok) return { success: true, messageId: data.messageId };
+    return { success: false, error: data.message || JSON.stringify(data) };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 // ============================================================
-// Task Email Notification Helper
+// Task Email Notification Helper (Brevo)
 // ============================================================
 
 async function sendTaskAssignmentEmails(record: any) {
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    console.warn('[IO API] RESEND_API_KEY not set, skipping task email');
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.warn('[IO API] BREVO_API_KEY not set, skipping task email');
     return;
   }
-
-  const resend = new Resend(resendKey);
-  const FROM_ADDRESS = 'Playbook Reporting <onboarding@resend.dev>';
 
   // Parse comma-separated assignee OHRs
   const ohrs = (record.assigned_to_ohr || '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -61,7 +94,7 @@ async function sendTaskAssignmentEmails(record: any) {
       const empName = emp?.full_name || 'Team Member';
 
       const subject = `[Playbook] New Task Assigned — ${record.task_id}: ${record.title}`;
-      const text = `Dear ${empName},
+      const textContent = `Dear ${empName},
 
 You have been assigned a new task in Playbook.
 
@@ -77,16 +110,16 @@ This is an automated notification from the Playbook Task Management System. Plea
 
 Playbook Reporting`;
 
-      try {
-        const result = await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: email,
-          subject,
-          text,
-        });
-        console.log(`[IO API] Task email sent to ${email} for task ${record.task_id} (ID: ${result?.data?.id || 'unknown'})`);
-      } catch (emailErr: any) {
-        console.error(`[IO API] Failed to send task email to ${email}:`, emailErr.message, JSON.stringify(emailErr));
+      const result = await brevoSendEmailFromRoutes({
+        to: [{ email, name: empName }],
+        subject,
+        textContent,
+      });
+
+      if (result.success) {
+        console.log(`[IO API] Task email sent to ${email} for task ${record.task_id} (msgId: ${result.messageId})`);
+      } else {
+        console.error(`[IO API] Failed to send task email to ${email}: ${result.error}`);
       }
     }
   } catch (err: any) {
@@ -1194,16 +1227,12 @@ router.post("/webhooks/send-daily-csv", async (_req: Request, res: Response) => 
 });
 
 // POST /api/io/webhooks/send-email
-// General-purpose email webhook — send a custom email
+// General-purpose email webhook — send a custom email via Brevo
 // Body: { to: string | string[], subject: string, body: string }
 router.post("/webhooks/send-email", async (req: Request, res: Response) => {
   try {
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) return res.status(500).json({ success: false, error: "RESEND_API_KEY not configured" });
-
-    const { Resend } = await import("resend");
-    const resend = new Resend(resendKey);
-    const FROM_ADDRESS = 'Playbook Reporting <onboarding@resend.dev>';
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) return res.status(500).json({ success: false, error: "BREVO_API_KEY not configured" });
 
     const { to, subject, body } = req.body;
     if (!to || !subject || !body) {
@@ -1214,17 +1243,12 @@ router.post("/webhooks/send-email", async (req: Request, res: Response) => {
     const results: any[] = [];
 
     for (const email of recipients) {
-      try {
-        const result = await resend.emails.send({
-          from: FROM_ADDRESS,
-          to: email,
-          subject,
-          text: body,
-        });
-        results.push({ email, success: true, id: result?.data?.id || null, error: result?.error?.message || null });
-      } catch (emailErr: any) {
-        results.push({ email, success: false, error: emailErr.message });
-      }
+      const result = await brevoSendEmailFromRoutes({
+        to: [{ email }],
+        subject,
+        textContent: body,
+      });
+      results.push({ email, success: result.success, messageId: result.messageId || null, error: result.error || null });
     }
 
     const sent = results.filter(r => r.success).length;
@@ -1270,7 +1294,7 @@ router.get("/webhooks", (_req: Request, res: Response) => {
           subject: "string (required) — Email subject line",
           body: "string (required) — Email body text"
         },
-        description: "Sends a custom email to one or more recipients via Resend."
+        description: "Sends a custom email to one or more recipients via Brevo."
       }
     ],
     note: "All webhooks are open (no authentication required). Base URL is your Playbook domain."
