@@ -344,7 +344,7 @@ function renderComplianceDoughnut(complianceData) {
     const data = codeGroups[code] || { forecastedP: 0, otRendered: 0 };
     const totalPayload = (data.forecastedP * 7.5) + data.otRendered;
     const pct = (totalPayload / target) * 100;
-    if (pct >= 95) {
+    if (pct >= 100) {
       passing++;
       details.push({ code, pct, status: 'pass' });
     } else {
@@ -365,7 +365,7 @@ function renderComplianceDoughnut(complianceData) {
   billingDoughnutChart = new Chart(canvas, {
     type: 'doughnut',
     data: {
-      labels: ['Passing (\u226595%)', 'Below 95%'],
+      labels: ['Passing (100%)', 'Below 100%'],
       datasets: [{
         data: [passing, failing],
         backgroundColor: ['#22c55e', '#ef4444'],
@@ -413,10 +413,10 @@ function renderComplianceDoughnut(complianceData) {
   if (legendEl) {
     const failingCodes = details.filter(d => d.status === 'fail');
     if (failingCodes.length > 0) {
-      legendEl.innerHTML = '<strong style="color:#ef4444;">Below 95%:</strong> ' +
+      legendEl.innerHTML = '<strong style="color:#ef4444;">Below 100%:</strong> ' +
         failingCodes.map(d => `${BILLING_CODE_LABELS[d.code] || d.code} (${d.pct.toFixed(1)}%)`).join(', ');
     } else {
-      legendEl.innerHTML = '<strong style="color:#22c55e;">All billing codes are meeting the 95% threshold.</strong>';
+      legendEl.innerHTML = '<strong style="color:#22c55e;">All billing codes are meeting the 100% threshold.</strong>';
     }
   }
 }

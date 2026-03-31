@@ -1,0 +1,110 @@
+import { describe, it, expect } from "vitest";
+import * as fs from "fs";
+import * as path from "path";
+
+describe("Batch 17 — Revisions", () => {
+  // 1. Billing Compliance: 100% threshold
+  describe("Billing Compliance", () => {
+    const billingJs = fs.readFileSync(path.join(__dirname, "../server/public/js/billing.js"), "utf-8");
+    const indexHtml = fs.readFileSync(path.join(__dirname, "../server/public/index.html"), "utf-8");
+
+    it("should use 100% threshold instead of 95%", () => {
+      expect(billingJs).toContain("pct >= 100");
+      expect(billingJs).not.toContain("pct >= 95");
+    });
+
+    it("should display 100% labels in doughnut chart", () => {
+      expect(billingJs).toContain("Passing (100%)");
+      expect(billingJs).toContain("Below 100%");
+    });
+
+    it("should show 100% THRESHOLD in HTML title", () => {
+      expect(indexHtml).toContain("100% THRESHOLD");
+      expect(indexHtml).not.toContain("95% THRESHOLD");
+    });
+  });
+
+  // 2. Coaching Disputes: remove border lines, fix LV3→LV4 routing
+  describe("Coaching Disputes", () => {
+    const compassJs = fs.readFileSync(path.join(__dirname, "../server/public/js/compass.js"), "utf-8");
+    const stylesCss = fs.readFileSync(path.join(__dirname, "../server/public/css/styles.css"), "utf-8");
+
+    it("should not have border-bottom on kanban-column-header", () => {
+      const headerBlock = stylesCss.match(/\.kanban-column-header\s*\{[^}]+\}/)?.[0] || "";
+      expect(headerBlock).not.toContain("border-bottom");
+    });
+
+    it("should set status to 'QA Decision Rejected' for LV3→LV4 routing", () => {
+      expect(compassJs).toContain("status: 'QA Decision Rejected'");
+    });
+  });
+
+  // 3. Sandbox Review History: trail style
+  describe("Sandbox Review History", () => {
+    const sandboxJs = fs.readFileSync(path.join(__dirname, "../server/public/js/sandbox.js"), "utf-8");
+
+    it("should render trail with timeline dots", () => {
+      expect(sandboxJs).toContain("border-radius:50%");
+      expect(sandboxJs).toContain("border-top:3px solid var(--accent-primary)");
+    });
+
+    it("should show 'No Attachment' text in trail entries", () => {
+      expect(sandboxJs).toContain("No Attachment");
+    });
+  });
+
+  // 4. Regimen Detail Card
+  describe("Regimen Detail Card", () => {
+    const rosterJs = fs.readFileSync(path.join(__dirname, "../server/public/js/roster.js"), "utf-8");
+
+    it("should have empty card title", () => {
+      expect(rosterJs).toContain("formTitle.innerHTML = ''");
+    });
+
+    it("should have 'Related PG' instead of 'Complete PG'", () => {
+      expect(rosterJs).toContain("'Related PG'");
+      // Also renamed in table columns
+      expect(rosterJs).not.toContain("'Complete PG'");
+    });
+
+    it("should have 'Go Live Date' instead of 'Live Date'", () => {
+      expect(rosterJs).toContain("'Go Live Date'");
+    });
+
+    it("should have 'Asset & Logistics' section", () => {
+      expect(rosterJs).toContain("'Asset & Logistics'");
+    });
+
+    it("should have 'Meta Onboarding Date' in Dates section", () => {
+      expect(rosterJs).toContain("'Meta Onboarding Date'");
+    });
+
+    it("should have formatSrtId function for scientific notation", () => {
+      expect(rosterJs).toContain("function formatSrtId");
+    });
+
+    it("should have editable fields for admin (740045023)", () => {
+      expect(rosterJs).toContain("roster-edit-field");
+      expect(rosterJs).toContain("740045023");
+    });
+
+    it("should have rosterSaveDetailEdits function", () => {
+      expect(rosterJs).toContain("function rosterSaveDetailEdits");
+    });
+  });
+
+  // 5. Regimen Filter Bar
+  describe("Regimen Filter Bar", () => {
+    const stylesCss = fs.readFileSync(path.join(__dirname, "../server/public/css/styles.css"), "utf-8");
+
+    it("should have omnibar-menu-footer with flex-start alignment", () => {
+      const footerBlock = stylesCss.match(/\.omnibar-menu-footer\s*\{[^}]+\}/)?.[0] || "";
+      expect(footerBlock).toContain("flex-start");
+    });
+
+    it("should have omnibar-menu with fixed width", () => {
+      const menuBlock = stylesCss.match(/\.omnibar-menu\s*\{[^}]+\}/)?.[0] || "";
+      expect(menuBlock).toContain("width: 320px");
+    });
+  });
+});

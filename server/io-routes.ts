@@ -78,15 +78,15 @@ This is an automated notification from the Playbook Task Management System. Plea
 Playbook Reporting`;
 
       try {
-        await resend.emails.send({
+        const result = await resend.emails.send({
           from: FROM_ADDRESS,
           to: email,
           subject,
           text,
         });
-        console.log(`[IO API] Task email sent to ${email} for task ${record.task_id}`);
+        console.log(`[IO API] Task email sent to ${email} for task ${record.task_id} (ID: ${result?.data?.id || 'unknown'})`);
       } catch (emailErr: any) {
-        console.error(`[IO API] Failed to send task email to ${email}:`, emailErr.message);
+        console.error(`[IO API] Failed to send task email to ${email}:`, emailErr.message, JSON.stringify(emailErr));
       }
     }
   } catch (err: any) {

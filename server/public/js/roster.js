@@ -30,7 +30,7 @@ const ROSTER = {
     { key: 'shift_time', label: 'Shift Time', editable: true },
     { key: 'work_off', label: 'Work Off', editable: true },
     { key: 'planning_group', label: 'Planning Group', editable: true },
-    { key: 'complete_planning_group', label: 'Complete PG', editable: true },
+    { key: 'complete_planning_group', label: 'Related PG', editable: true },
     { key: 'srt_status', label: 'SRT Status', editable: true },
     { key: 'srt_id', label: 'SRT ID', editable: true },
     { key: 'workday_id', label: 'Workday ID', editable: true },
@@ -61,7 +61,7 @@ const ROSTER = {
     { key: 'full_name', label: 'Full Name', editable: true },
     { key: 'actual_role', label: 'Role', editable: true },
     { key: 'planning_group', label: 'Planning Group', editable: true },
-    { key: 'complete_planning_group', label: 'Complete PG', editable: true },
+    { key: 'complete_planning_group', label: 'Related PG', editable: true },
     { key: 'supervisor_name', label: 'Supervisor', editable: true },
     { key: 'meta_email', label: 'Meta Email', editable: true },
     { key: 'employement_status', label: 'Status', editable: true },
@@ -228,7 +228,7 @@ function rosterRenderValuePicker() {
     html += `<label class="omnibar-value-item"><input type="checkbox" value="${escapeAttr(v)}"><span>${escapeHtml(v)}</span></label>`;
   }
   html += '</div>';
-  html += `<div class="omnibar-menu-footer"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); rosterOmnibarAddMultiFilter()">Add Filter</button></div>`;
+  html += `<div class="omnibar-menu-footer" style="text-align:left;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); rosterOmnibarAddMultiFilter()">Add Filter</button></div>`;
   menu.innerHTML = html;
 
   if (searchable) {
@@ -688,6 +688,15 @@ function rosterCloseForm() {
 
 // ===== Employee Detail Card =====
 
+function formatSrtId(val) {
+  if (!val) return '';
+  const s = String(val);
+  if (/e\+/i.test(s)) {
+    try { return BigInt(Math.round(Number(s))).toString(); } catch(e) { return s; }
+  }
+  return s;
+}
+
 function rosterOpenDetail(ohrId) {
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
@@ -697,95 +706,122 @@ function rosterOpenDetail(ohrId) {
   const formFooter = document.getElementById('roster-form-footer');
   const overlay = document.getElementById('roster-form-overlay');
 
-  formTitle.innerHTML = `<span>${escapeHtml(emp.full_name || emp.ohr_id)}</span>`;
+  // Remove card title (leave empty)
+  formTitle.innerHTML = '';
 
   const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
 
-  // Group fields into sections
+  // Group fields into sections per requirements
   const personalFields = [
-    { label: 'OHR ID', value: emp.ohr_id },
-    { label: 'Full Name', value: emp.full_name },
-    { label: 'Last Name', value: emp.last_name },
-    { label: 'Given Name', value: emp.given_name },
-    { label: 'Middle Name', value: emp.middle_name },
-    { label: 'Suffix', value: emp.suffix },
-    { label: 'Date of Birth', value: emp.dob },
-    { label: 'Personal Email', value: emp.personal_email },
-    { label: 'Contact Number', value: emp.contact_number },
+    { label: 'OHR ID', key: 'ohr_id', value: emp.ohr_id },
+    { label: 'Full Name', key: 'full_name', value: emp.full_name },
+    { label: 'Last Name', key: 'last_name', value: emp.last_name },
+    { label: 'Given Name', key: 'given_name', value: emp.given_name },
+    { label: 'Middle Name', key: 'middle_name', value: emp.middle_name },
+    { label: 'Suffix', key: 'suffix', value: emp.suffix },
+    { label: 'Date of Birth', key: 'dob', value: emp.dob },
+    { label: 'Personal Email', key: 'personal_email', value: emp.personal_email },
+    { label: 'Contact Number', key: 'contact_number', value: emp.contact_number },
+    { label: 'Primary Address', key: 'primary_address', value: emp.primary_address },
+    { label: 'Barangay', key: 'barangay', value: emp.barangay },
+    { label: 'City', key: 'city', value: emp.city },
+    { label: 'Province', key: 'province', value: emp.province },
   ];
 
   const workFields = [
-    { label: 'Status', value: emp.employement_status, badge: true, color: statusColor },
-    { label: 'Role', value: emp.actual_role },
-    { label: 'Planning Group', value: emp.planning_group },
-    { label: 'Complete PG', value: emp.complete_planning_group },
-    { label: 'Supervisor', value: emp.supervisor_name },
-    { label: 'Supervisor Email', value: emp.supervisor_email },
-    { label: 'Shift Time', value: emp.shift_time },
-    { label: 'Work Off', value: emp.work_off },
-    { label: 'Billing Name', value: emp.billing_name },
-    { label: 'Platform', value: emp.platform },
-    { label: 'SRT Name', value: emp.srt_name },
-    { label: 'SRT Status', value: emp.srt_status },
-    { label: 'SRT ID', value: emp.srt_id },
+    { label: 'Status', key: 'employement_status', value: emp.employement_status, badge: true, color: statusColor },
+    { label: 'Role', key: 'actual_role', value: emp.actual_role },
+    { label: 'Meta Email', key: 'meta_email', value: emp.meta_email },
+    { label: 'Workday ID', key: 'workday_id', value: emp.workday_id },
+    { label: 'Planning Group', key: 'planning_group', value: emp.planning_group },
+    { label: 'Related PG', key: 'complete_planning_group', value: emp.complete_planning_group },
+    { label: 'Supervisor', key: 'supervisor_name', value: emp.supervisor_name },
+    { label: 'Supervisor Email', key: 'supervisor_email', value: emp.supervisor_email },
+    { label: 'Shift Time', key: 'shift_time', value: emp.shift_time },
+    { label: 'Work Off', key: 'work_off', value: emp.work_off },
+    { label: 'Billing Name', key: 'billing_name', value: emp.billing_name },
+    { label: 'SRT Name', key: 'srt_name', value: emp.srt_name },
+    { label: 'SRT Status', key: 'srt_status', value: emp.srt_status },
+    { label: 'SRT ID', key: 'srt_id', value: formatSrtId(emp.srt_id) },
+    { label: 'Platform', key: 'platform', value: emp.platform },
   ];
 
-  const metaFields = [
-    { label: 'Meta Email', value: emp.meta_email },
-    { label: 'Workday ID', value: emp.workday_id },
-    { label: 'MacBook Asset', value: emp.macbook_asset_id },
-    { label: 'Chromebook Asset', value: emp.chromebook_asset_id },
-    { label: 'Badge ID', value: emp.badge_id },
-    { label: 'Badge Serial', value: emp.badge_serial },
-    { label: 'Meta Onboarding', value: emp.meta_onboarding_date },
-    { label: 'Live Date', value: emp.live_date },
+  const assetFields = [
+    { label: 'MacBook Asset', key: 'macbook_asset_id', value: emp.macbook_asset_id },
+    { label: 'Chromebook Asset', key: 'chromebook_asset_id', value: emp.chromebook_asset_id },
+    { label: 'Badge ID', key: 'badge_id', value: emp.badge_id },
+    { label: 'Badge Serial', key: 'badge_serial', value: emp.badge_serial },
+    { label: 'Locker Floor', key: 'locker_floor', value: emp.locker_floor },
+    { label: 'Locker Number', key: 'locker_number', value: emp.locker_number },
   ];
 
   const dateFields = [
-    { label: 'Hire Date', value: emp.hire_date },
-    { label: 'Regular Date', value: emp.regular_date },
+    { label: 'Hire Date', key: 'hire_date', value: emp.hire_date },
+    { label: 'Regular Date', key: 'regular_date', value: emp.regular_date },
+    { label: 'Meta Onboarding Date', key: 'meta_onboarding_date', value: emp.meta_onboarding_date },
+    { label: 'Go Live Date', key: 'live_date', value: emp.live_date },
   ];
 
-  const addressFields = [
-    { label: 'Primary Address', value: emp.primary_address },
-    { label: 'Barangay', value: emp.barangay },
-    { label: 'City', value: emp.city },
-    { label: 'Province', value: emp.province },
-    { label: 'Locker Floor', value: emp.locker_floor },
-    { label: 'Locker Number', value: emp.locker_number },
-  ];
+  function renderField(f) {
+    const displayVal = (f.value !== null && f.value !== undefined && f.value !== '') ? String(f.value) : '\u2014';
+    if (f.badge) {
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value"><span class="module-status-badge" style="background:${f.color}20;color:${f.color};border:1px solid ${f.color}40;">${escapeHtml(displayVal)}</span></span></div>`;
+    }
+    if (isAdmin) {
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value"><input type="text" class="form-input form-input-sm roster-edit-field" data-key="${escapeAttr(f.key)}" value="${escapeAttr(displayVal === '\u2014' ? '' : displayVal)}" style="font-size:13px;padding:2px 6px;width:100%;max-width:280px;"></span></div>`;
+    }
+    return `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value">${escapeHtml(displayVal)}</span></div>`;
+  }
 
   function renderSection(title, fields) {
     let html = `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">${escapeHtml(title)}</h4>`;
-    fields.forEach(f => {
-      if (!f.value && f.value !== 0) return;
-      if (f.badge) {
-        html += `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value"><span class="module-status-badge" style="background:${f.color}20;color:${f.color};border:1px solid ${f.color}40;">${escapeHtml(String(f.value))}</span></span></div>`;
-      } else {
-        html += `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value">${escapeHtml(String(f.value))}</span></div>`;
-      }
-    });
+    fields.forEach(f => html += renderField(f));
     return html;
   }
 
   let html = '<div class="detail-section">';
-  html += renderSection('Personal Information', personalFields);
+  html += renderSection('Personal Details', personalFields);
   html += renderSection('Work Information', workFields);
-  html += renderSection('Meta & Assets', metaFields);
+  html += renderSection('Asset & Logistics', assetFields);
   html += renderSection('Dates', dateFields);
-  html += renderSection('Address & Locker', addressFields);
   html += '</div>';
 
   formBody.innerHTML = html;
 
-  // Footer with edit button for admin
+  // Footer
   let footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
-  if (ROSTER.isAdmin) {
-    footerHtml += ` <button class="btn btn-primary btn-sm" onclick="rosterCloseForm();rosterEditEmployee('${escapeAttr(emp.ohr_id)}')">Edit</button>`;
+  if (isAdmin) {
+    footerHtml += ` <button class="btn btn-primary btn-sm" onclick="rosterSaveDetailEdits('${escapeAttr(emp.ohr_id)}')">Save Changes</button>`;
   }
   formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
+}
+
+async function rosterSaveDetailEdits(ohrId) {
+  const inputs = document.querySelectorAll('.roster-edit-field');
+  const updates = {};
+  inputs.forEach(inp => {
+    const key = inp.dataset.key;
+    const val = inp.value.trim();
+    updates[key] = val || null;
+  });
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/employees/${ohrId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Failed to save');
+    showToast('Employee details updated successfully', 'success');
+    rosterCloseForm();
+    await rosterFetchEmployees();
+  } catch (e) {
+    console.error('Failed to save employee details:', e);
+    showToast('Failed to save changes', 'error');
+  }
 }
 
 // ===== Init =====

@@ -2351,12 +2351,12 @@ body {
   margin-top: 20px;
 }
 .billing-ref-card {
-  flex: 0 0 280px;
-  max-width: 280px;
+  flex: 0 0 360px;
+  max-width: 360px;
 }
 .billing-doughnut-card {
-  flex: 1;
-  min-width: 300px;
+  flex: 0 0 280px;
+  max-width: 280px;
 }
 
 /* Billing analytics section */
@@ -3079,7 +3079,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--fg-muted);
-  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3513,7 +3512,8 @@ body {
   position: absolute;
   top: 100%;
   left: 0;
-  right: 0;
+  right: auto;
+  width: 320px;
   margin-top: 4px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -3607,7 +3607,7 @@ body {
   border-top: 1px solid var(--border-muted);
   margin-top: 4px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 /* ============================================================

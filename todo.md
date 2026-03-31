@@ -221,3 +221,36 @@
 
 ### Anchor - Billing Compliance
 - [x] Add "Target Hours" column to Billing Code Reference section (editable only for admin 740045023)
+
+## Batch 17 — Revisions
+
+### Anchor - Billing Compliance
+- [x] Widen Billing Code Reference table (Target Hours column is cropped)
+- [x] Decrease size of YTD Compliance doughnut chart so other charts fit beside the reference widget
+- [x] Change YTD Compliance threshold from 95% to 100%
+
+### Coaching - Disputes Area
+- [x] Remove the horizontal lines between kanban column headers and pagination controls
+- [x] Fix LV3 → LV4 routing: "QA Decision Rejected" with remarks should route to LV4 - Pending Trainer Decision (was setting status to 'QA Retention Rejected - SME' instead of 'QA Decision Rejected')
+
+### Sandbox - Review Area
+- [x] Restyle Review History section to match Dispute Trail template (timeline with dots, date/name, remarks, attachment status)
+
+### Helm
+- [x] Fix task assignment emails not being received by assigned users (emails ARE being sent successfully via Resend — delivery to @meta.com likely blocked by corporate email filters; improved error logging for diagnosis)
+
+### Regimen - Detail Card
+- [x] Remove card title
+- [x] Add Primary Address, Barangay, City after Contact Number in Personal Details
+- [x] Rename "Complete PG" to "Related PG"
+- [x] Put "Platform" after "SRT ID"
+- [x] Fix SRT ID showing scientific notation — display as whole number
+- [x] Add "Meta Onboarding Date" and "Go Live Date" (renamed from "Live Date") under Dates
+- [x] Add Locker Floor and Locker Number to Asset & Logistics (renamed from "Meta & Assets")
+- [x] Move Meta Email & Workday ID to Work Information section
+- [x] Add "Role" under Work Information
+- [x] Make all fields editable only for admin (OHR: 740045023)
+
+### Regimen - Filter Bar
+- [x] Move "Add Filter" button from bottom-right to bottom-left of dropdown
+- [x] Shorten filter bar width to not cover the whole table (set dropdown to 320px fixed width)

@@ -3130,7 +3130,7 @@ async function disputesSubmitQADecisionRejected() {
   const actorName = cu ? cu.full_name : 'Unknown';
 
   const update = {
-    status: 'QA Retention Rejected - SME',
+    status: 'QA Decision Rejected',
     sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
   };
 

@@ -620,14 +620,24 @@ function sandboxRenderReviewTrail(ins) {
     return '<div style="color:var(--text-secondary);font-size:13px;padding:8px 0;">No review activity yet.</div>';
   }
 
-  return entries.map(e => {
-    const d = e.date ? new Date(e.date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-    return `<div style="border-left:3px solid var(--accent-primary);padding:8px 0 8px 12px;margin-bottom:8px;">
-      <div style="font-size:12px;color:var(--text-secondary);">${escapeHtml(d)}</div>
-      <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-top:2px;">${escapeHtml(e.actor)} — ${escapeHtml(e.action)}</div>
-      ${e.comments ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">${escapeHtml(e.comments)}</div>` : ''}
+  // Dispute Trail style: header bar + timeline with dots
+  let trailHtml = '<div style="border-top:3px solid var(--accent-primary);margin-bottom:12px;"></div>';
+  trailHtml += '<div style="position:relative;padding-left:24px;">';
+  // Vertical line
+  trailHtml += '<div style="position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border-primary);"></div>';
+  trailHtml += entries.map(e => {
+    const d = e.date ? new Date(e.date).toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }) : '';
+    const attachText = e.attachments ? e.attachments : 'No Attachment';
+    return `<div style="position:relative;padding:8px 0 16px 0;">
+      <div style="position:absolute;left:-20px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--accent-primary);"></div>
+      <div style="font-size:13px;color:var(--text-secondary);">${escapeHtml(d)} — <strong style="color:var(--text-primary);">${escapeHtml(e.actor)}</strong></div>
+      <div style="font-size:13px;color:var(--text-primary);margin-top:4px;">${escapeHtml(e.action)}</div>
+      ${e.comments ? `<div style="font-size:13px;color:var(--text-primary);margin-top:2px;">${escapeHtml(e.comments)}</div>` : ''}
+      <div style="font-size:12px;color:var(--accent-primary);margin-top:2px;">${attachText}</div>
     </div>`;
   }).join('');
+  trailHtml += '</div>';
+  return trailHtml;
 }
 
 // ===== Accept Popout (confirmation) =====
