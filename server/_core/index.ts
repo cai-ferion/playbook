@@ -12,6 +12,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerIORoutes } from "../io-routes.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
+import { registerAutoMailer } from "../auto-mailer.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,6 +67,9 @@ async function startServer() {
   // IO Operations API routes
   registerIORoutes(app);
   registerIOBackupRoutes(app);
+
+  // Auto-mailer for UPL/LATE notifications
+  registerAutoMailer(app);
 
   // Health check
   app.get("/api/health", (_req, res) => {

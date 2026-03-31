@@ -234,13 +234,21 @@ function sandboxOmniRenderChips() {
   sandboxOmniState.sorts.forEach((s, i) => {
     const field = SANDBOX_SORT_FIELDS.find(fd => fd.key === s.key);
     const label = field ? field.label : s.key;
-    html += `<span class="omnibar-chip sort-chip">${escapeHtml(label)} ${s.dir === 'asc' ? '(A-Z)' : '(Z-A)'} <button class="chip-remove" onclick="sandboxOmniRemoveSort(${i})">&times;</button></span>`;
+    html += `<span class="omnibar-chip sort-chip"><span class="chip-text-editable" onclick="sandboxOmniEditSort(${i})" title="Click to toggle direction">${escapeHtml(label)} ${s.dir === 'asc' ? '(A-Z)' : '(Z-A)'}</span> <button class="chip-remove" onclick="sandboxOmniRemoveSort(${i})">&times;</button></span>`;
   });
   container.innerHTML = html;
 }
 
 function sandboxOmniRemoveFilter(idx) {
   sandboxOmniState.filters.splice(idx, 1);
+  sandboxOmniRenderChips();
+  sandboxOmniApply();
+}
+
+function sandboxOmniEditSort(idx) {
+  const sort = sandboxOmniState.sorts[idx];
+  if (!sort) return;
+  sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
   sandboxOmniRenderChips();
   sandboxOmniApply();
 }
@@ -526,7 +534,7 @@ function sandboxOpenDetail(insightId, context) {
     const userPgs = userPg.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
     const iPg = (ins.planning_group || '').toLowerCase();
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
-    const isAdmin = currentUser.ohr_id === '740045023';
+    const isAdmin = currentUser.ohr_id === '740045032';
 
     if ((role === 'SME' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending - Initial Review') {
       footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowAcceptPopout(\'initial\')">Approve</button>';

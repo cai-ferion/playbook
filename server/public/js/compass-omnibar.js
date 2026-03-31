@@ -231,6 +231,15 @@
     compassOmnibarApply();
   };
 
+  window.compassOmnibarEditSort = function (idx) {
+    const sort = COMPASS_OMNI.sorts[idx];
+    if (!sort) return;
+    sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+    const fieldDef = COMPASS_SORT_FIELDS.find(f => f.key === sort.field);
+    sort.label = `${fieldDef?.label || sort.field} ${sort.direction === 'asc' ? '\u2191' : '\u2193'}`;
+    compassOmnibarApply();
+  };
+
   window.compassOmnibarRemoveSort = function (idx) {
     COMPASS_OMNI.sorts.splice(idx, 1);
     compassOmnibarApply();
@@ -304,7 +313,7 @@
 
     COMPASS_OMNI.sorts.forEach((s, i) => {
       html += `<span class="omnibar-chip omnibar-chip-sort">
-        <span class="omnibar-chip-label">${escapeHtml(s.label)}</span>
+        <span class="omnibar-chip-label chip-text-editable" onclick="compassOmnibarEditSort(${i})" title="Click to toggle direction">${escapeHtml(s.label)}</span>
         <button class="omnibar-chip-remove" onclick="compassOmnibarRemoveSort(${i})">&times;</button>
       </span>`;
     });
@@ -390,7 +399,7 @@
     }
 
     // Split into given/received based on current user
-    const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
+    const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045032';
 
     if (isAgent) {
       COMPASS.filteredGiven = [];

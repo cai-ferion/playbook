@@ -2344,6 +2344,42 @@ body {
   border-top: 2px solid var(--border);
 }
 
+/* Billing side panels: reference + doughnut chart */
+.billing-side-panels {
+  display: flex;
+  gap: 16px;
+  margin-top: 20px;
+}
+.billing-ref-card {
+  flex: 0 0 280px;
+  max-width: 280px;
+}
+.billing-doughnut-card {
+  flex: 1;
+  min-width: 300px;
+}
+
+/* Billing analytics section */
+.billing-analytics-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .billing-side-panels {
+    flex-direction: column;
+  }
+  .billing-ref-card {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+  .billing-analytics-section {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== SRT Preview Enhancements ===== */
 
 .change-blank {

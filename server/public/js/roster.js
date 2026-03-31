@@ -125,7 +125,7 @@ async function rosterFetchEmployees() {
   if (loading) loading.style.display = 'none';
 
   // Check admin
-  ROSTER.isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  ROSTER.isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045032';
 
   // Show/hide add button — admin only
   const addBtn = document.getElementById('roster-add-btn');
@@ -292,6 +292,14 @@ window.rosterOmnibarRemoveFilter = function (key) {
   rosterRenderOmniChips();
 };
 
+window.rosterOmnibarEditSort = function (key) {
+  const sort = rosterOmniState.sorts.find(s => s.key === key);
+  if (!sort) return;
+  sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+  sort.label = sort.label.replace(/ [\u25B2\u25BC]$/, '');
+  rosterRenderOmniChips();
+};
+
 window.rosterOmnibarRemoveSort = function (key) {
   rosterOmniState.sorts = rosterOmniState.sorts.filter(s => s.key !== key);
   rosterRenderOmniChips();
@@ -352,7 +360,7 @@ function rosterRenderOmniChips() {
     const arrow = s.direction === 'asc' ? '\u25B2' : '\u25BC';
     html += `<span class="omnibar-chip omnibar-chip-sort">
       <span class="chip-icon">${arrow}</span>
-      <span class="chip-text">${escapeHtml(s.label)}</span>
+      <span class="chip-text chip-text-editable" onclick="rosterOmnibarEditSort('${s.key}')" title="Click to toggle direction">${escapeHtml(s.label)}</span>
       <button class="chip-remove" onclick="rosterOmnibarRemoveSort('${s.key}')" title="Remove">&times;</button>
     </span>`;
   }

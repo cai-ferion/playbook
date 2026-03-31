@@ -216,6 +216,14 @@ function omnibarRemoveFilter(key) {
   renderOmnibarChips();
 }
 
+function omnibarEditSort(key) {
+  const sort = omnibarState.sorts.find(s => s.key === key);
+  if (!sort) return;
+  sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+  sort.label = sort.label.replace(/ [\u25B2\u25BC]$/, '') + (sort.direction === 'asc' ? ' \u25B2' : ' \u25BC');
+  renderOmnibarChips();
+}
+
 function omnibarRemoveSort(key) {
   omnibarState.sorts = omnibarState.sorts.filter(s => s.key !== key);
   renderOmnibarChips();
@@ -286,7 +294,7 @@ function renderOmnibarChips() {
     const arrow = s.direction === 'asc' ? '\u25B2' : '\u25BC';
     html += `<span class="omnibar-chip omnibar-chip-sort">
       <span class="chip-icon">${arrow}</span>
-      <span class="chip-text">${escapeHtml(s.label)}</span>
+      <span class="chip-text chip-text-editable" onclick="omnibarEditSort('${s.key}')" title="Click to toggle direction">${escapeHtml(s.label)}</span>
       <button class="chip-remove" onclick="omnibarRemoveSort('${s.key}')" title="Remove">&times;</button>
     </span>`;
   }

@@ -214,6 +214,14 @@
     renderDashChips();
   };
 
+  window.dashOmnibarEditSort = function (key) {
+    const sort = dashOmniState.sorts.find(s => s.key === key);
+    if (!sort) return;
+    sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+    sort.label = sort.label.replace(/ [\u25B2\u25BC]$/, '');
+    renderDashChips();
+  };
+
   window.dashOmnibarRemoveSort = function (key) {
     dashOmniState.sorts = dashOmniState.sorts.filter(s => s.key !== key);
     renderDashChips();
@@ -278,7 +286,7 @@
       const arrow = s.direction === 'asc' ? '\u25B2' : '\u25BC';
       html += `<span class="omnibar-chip omnibar-chip-sort">
         <span class="chip-icon">${arrow}</span>
-        <span class="chip-text">${escapeHtml(s.label)}</span>
+        <span class="chip-text chip-text-editable" onclick="dashOmnibarEditSort('${s.key}')" title="Click to toggle direction">${escapeHtml(s.label)}</span>
         <button class="chip-remove" onclick="dashOmnibarRemoveSort('${s.key}')" title="Remove">&times;</button>
       </span>`;
     }

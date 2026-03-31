@@ -386,14 +386,16 @@ async function handleLogin() {
     document.getElementById('auth-page').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
 
+    const ADMIN_OHR = '740045032';
+
     // Show Admin Tools nav only for admin OHR
     const adminNav = document.getElementById('nav-admin');
-    if (adminNav) adminNav.style.display = (currentUser.ohr_id === '740045023') ? '' : 'none';
+    if (adminNav) adminNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
     // Hide entire Anchor group from Agents
     const anchorGroupEl = document.getElementById('nav-group-anchor');
     if (anchorGroupEl) {
-      if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023') {
+      if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
         anchorGroupEl.style.display = 'none';
       } else {
         anchorGroupEl.style.display = '';
@@ -403,50 +405,39 @@ async function handleLogin() {
     // Show Risk Intelligence nav only for Team Lead, Manager, Trainer
     const alertsNav = document.getElementById('nav-alerts');
     const allowedRoles = ['Team Lead', 'Manager', 'Trainer'];
-    if (alertsNav) alertsNav.style.display = allowedRoles.includes(currentUser.actual_role) || currentUser.ohr_id === '740045023' ? '' : 'none';
+    if (alertsNav) alertsNav.style.display = allowedRoles.includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
 
     // Show Billing Compliance nav for Team Lead and Manager only
     const billingNav = document.getElementById('nav-billing');
-    if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === '740045023') ? '' : 'none';
+    if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
-
-    // Compass (Coaching) — visible to all non-Agent roles
-    const compassGroup = document.getElementById('nav-group-compass');
-    if (compassGroup) compassGroup.style.display = '';
-
-    // Sandbox (Insights) — visible to all non-Agent roles
-    const sandboxNav = document.getElementById('nav-sandbox');
-    if (sandboxNav) sandboxNav.style.display = '';
-
-    // Haven (Leaves) — visible to all non-Agent roles
-    const havenNav = document.getElementById('nav-haven');
-    if (havenNav) havenNav.style.display = '';
+    // Compass, Sandbox, Haven, Helm — visible ONLY to admin OHR (under development)
+    ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
+    });
 
     // Regimen (Roster) — admin only
     const regimenNav = document.getElementById('nav-regimen');
-    if (regimenNav) regimenNav.style.display = (currentUser.ohr_id === '740045023') ? '' : 'none';
+    if (regimenNav) regimenNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
     // Dashboard — hidden from Agents
     const dashboardNav = document.getElementById('nav-dashboard');
-    if (dashboardNav) dashboardNav.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023') ? 'none' : '';
+    if (dashboardNav) dashboardNav.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) ? 'none' : '';
 
     initMultiSelects();
     initDashboardMultiSelects();
-    initNotifications();
     await loadDataOptimized();
     startRefreshTimer();
     // Auto-expand Anchor nav group
     const anchorGroup = document.getElementById('nav-group-anchor');
     if (anchorGroup) anchorGroup.classList.add('expanded');
     // Route to Dashboard for non-Agents, Compass for Agents (all Anchor pages hidden from Agents)
-    if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023') {
-      switchView('compass-input');
+    if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
+      switchView('input');
     } else {
       switchView('dashboard');
     }
-    // Check maintenance mode
-    if (typeof enforceMaintenanceMode === 'function') enforceMaintenanceMode();
-    if (typeof startMaintenancePoll === 'function') startMaintenancePoll();
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
   }
@@ -525,14 +516,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentUser = JSON.parse(stored);
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
+      const ADMIN_OHR2 = '740045032';
+
       // Show Admin Tools nav only for admin OHR
       const adminNav2 = document.getElementById('nav-admin');
-      if (adminNav2) adminNav2.style.display = (currentUser.ohr_id === '740045023') ? '' : 'none';
+      if (adminNav2) adminNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
       // Hide entire Anchor group from Agents
       const anchorGroupEl2 = document.getElementById('nav-group-anchor');
       if (anchorGroupEl2) {
-        if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023') {
+        if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
           anchorGroupEl2.style.display = 'none';
         } else {
           anchorGroupEl2.style.display = '';
@@ -542,25 +535,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Show Risk Intelligence nav only for Team Lead, Manager, Trainer
       const alertsNav2 = document.getElementById('nav-alerts');
       const allowedRoles2 = ['Team Lead', 'Manager', 'Trainer'];
-      if (alertsNav2) alertsNav2.style.display = allowedRoles2.includes(currentUser.actual_role) || currentUser.ohr_id === '740045023' ? '' : 'none';
+      if (alertsNav2) alertsNav2.style.display = allowedRoles2.includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
 
       // Show Billing Compliance nav for Team Lead and Manager only
       const billingNav2 = document.getElementById('nav-billing');
-      if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === '740045023') ? '' : 'none';
+      if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
-
-      // Compass, Sandbox, Haven — visible to all
-      ['nav-group-compass', 'nav-sandbox', 'nav-haven'].forEach(id => {
+      // Compass, Sandbox, Haven, Helm — visible ONLY to admin OHR (under development)
+      ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = '';
+        if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
       });
+
       // Regimen — admin only
       const regimenNav2 = document.getElementById('nav-regimen');
-      if (regimenNav2) regimenNav2.style.display = (currentUser.ohr_id === '740045023') ? '' : 'none';
+      if (regimenNav2) regimenNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
       // Dashboard — hidden from Agents
       const dashboardNav2 = document.getElementById('nav-dashboard');
-      if (dashboardNav2) dashboardNav2.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023') ? 'none' : '';
+      if (dashboardNav2) dashboardNav2.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) ? 'none' : '';
 
       initMultiSelects();
       initDashboardMultiSelects();
@@ -570,14 +563,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       const anchorGroup2 = document.getElementById('nav-group-anchor');
       if (anchorGroup2) anchorGroup2.classList.add('expanded');
       // Route to Dashboard for non-Agents, Compass for Agents (all Anchor pages hidden from Agents)
-      if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023') {
-        switchView('compass-input');
+      if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
+        switchView('input');
       } else {
         switchView('dashboard');
       }
-      // Check maintenance mode
-      if (typeof enforceMaintenanceMode === 'function') enforceMaintenanceMode();
-      if (typeof startMaintenancePoll === 'function') startMaintenancePoll();
     } catch (e) {
       sessionStorage.removeItem('playbook_user');
     }
@@ -1278,34 +1268,37 @@ function renderInputPagination(currentPage, totalPages) {
 
 /**
  * Check if a row should be locked based on:
- * - Current time in Philippine Time (UTC+8)
- * - If it's past 11:00 AM PHT, rows with date <= today are locked
- * - Exempt: OHR 740045023 and actual_role = 'Manager'
+ * - Past dates are always locked
+ * - Current date is editable only after 11:00 AM PHT
+ * - Future dates are not locked
+ * - Exempt: OHR 740045032 and actual_role = 'Manager'
  */
 function isRowLocked(record) {
-  // Exempt admin and Managers
-  if (currentUser && (currentUser.ohr_id === '740045023' || currentUser.actual_role === 'Manager')) {
+  // Exempt admin OHR 740045032 and Managers
+  if (currentUser && (currentUser.ohr_id === '740045032' || currentUser.actual_role === 'Manager')) {
     return false;
   }
 
   const now = new Date();
   // Convert to Philippine Time (UTC+8)
   const phtOffset = 8 * 60; // minutes
-  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-  const phtMinutes = utcMinutes + phtOffset;
-  const phtHour = Math.floor((phtMinutes % (24 * 60)) / 60);
-
-  // Get today's date in PHT
   const phtTime = new Date(now.getTime() + phtOffset * 60000);
+  const phtHour = phtTime.getUTCHours();
   const todayPHT = phtTime.getUTCFullYear() + '-' + String(phtTime.getUTCMonth() + 1).padStart(2, '0') + '-' + String(phtTime.getUTCDate()).padStart(2, '0');
 
-  // If it's past 11:00 AM PHT, lock rows with date <= today
-  if (phtHour >= 11) {
-    if (record.date && record.date <= todayPHT) {
-      return true;
-    }
+  if (!record.date) return true;
+
+  // Past dates are always locked
+  if (record.date < todayPHT) {
+    return true;
   }
 
+  // Current date: editable only after 11:00 AM PHT
+  if (record.date === todayPHT) {
+    return phtHour < 11; // locked if before 11 AM
+  }
+
+  // Future dates are not locked
   return false;
 }
 
@@ -1321,7 +1314,7 @@ function initBillingCodeEdit() {
   const allowed = currentUser && (
     currentUser.actual_role === 'Team Lead' ||
     currentUser.actual_role === 'Manager' ||
-    currentUser.ohr_id === '740045023' ||
+    currentUser.ohr_id === '740045032' ||
     currentUser.ohr_id === '740044909'
   );
   section.style.display = allowed ? 'block' : 'none';
@@ -2028,7 +2021,7 @@ function renderAlerts() {
   // Role-based filtering: Team Lead sees only their agents, Manager sees their planning group
   const role = typeof currentUser !== 'undefined' ? currentUser?.actual_role : '';
   const userOhr = typeof currentUser !== 'undefined' ? currentUser?.ohr_id : '';
-  const isAdmin = userOhr === '740045023';
+  const isAdmin = userOhr === '740045032';
 
   function filterAlertsByRole(alerts) {
     if (isAdmin || role === 'Trainer') return alerts; // Admin and Trainer see all

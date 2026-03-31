@@ -87,3 +87,18 @@
 - [x] Create public CSV/JSON export endpoint for attendance data (/api/io/attendance/export)
 - [x] Write Google Apps Script for automatic sync to user's Google Sheet
 - [x] Test the export endpoint (verified JSON output for March 1-2 date range)
+
+## Batch Revisions — Batch 7
+- [x] Editable sort chips on all omnibars (click to toggle direction on all 5 omnibars)
+- [x] Attendance lock mechanism: only current date editable past 11:00 AM PHT (past dates always locked, admin OHR 740045032 exempt)
+- [x] Billing Compliance: show current week table with loaded data (auto-selects current Friday)
+- [x] Billing Compliance: narrow Billing Code Reference widget (280px sidebar)
+- [x] Billing Compliance: doughnut chart for 95% weekly compliance threshold (YTD data)
+- [x] Billing Compliance: UPL reason trends + 3-month prediction analytics
+- [x] Billing Compliance: LATE reason trends + 3-month prediction analytics
+- [x] Billing Compliance: PL reason trends + 3-month prediction analytics
+- [x] Hide pages: Compass, Sandbox, Haven, Helm, Regimen, Admin Tools (visible only to OHR 740045032)
+- [x] Remove in-website notification systems/functions (bell hidden)
+- [x] Auto-email system: UPL/LATE notifications at 2:30 AM and 11:30 AM PHT
+- [x] Email to agent (meta_email), CC supervisor + senior manager (Polimetla, Ravikiran), BCC banarvinmaurice@meta.com
+- [x] Professional email template with date, tag, reason, remarks
