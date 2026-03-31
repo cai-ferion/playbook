@@ -778,7 +778,7 @@ function updateRefreshDisplay() {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -815,6 +815,11 @@ async function switchView(view) {
     const helmGroup = document.getElementById('nav-group-helm');
     if (helmGroup) helmGroup.classList.add('expanded');
   }
+  const horizonViews = ['performance', 'productivity-hrs'];
+  if (horizonViews.includes(view)) {
+    const horizonGroup = document.getElementById('nav-group-horizon');
+    if (horizonGroup) horizonGroup.classList.add('expanded');
+  }
 
   const titles = {
     input: 'Input Portal', dashboard: 'Command Dashboard', alerts: 'Risk Intelligence',
@@ -824,6 +829,7 @@ async function switchView(view) {
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
     'helm-board': 'Task Board', 'helm-analytics': 'Analytics',
     regimen: 'Regimen',
+    performance: 'Main Metrics', 'productivity-hrs': 'Productivity Hrs.',
   };
   document.getElementById('view-title').textContent = titles[view] || view;
 
@@ -847,6 +853,7 @@ async function switchView(view) {
   if (havenViews.includes(view)) { if (typeof initHaven === 'function') initHaven(view); }
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
+  if (view === 'productivity-hrs') { if (typeof initProductivityHrs === 'function') initProductivityHrs(); }
 }
 
 /**

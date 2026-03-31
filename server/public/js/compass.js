@@ -62,7 +62,7 @@ const COMPASS = {
 
   // Kanban columns for QA Feedback dispute flow
   KANBAN_COLUMNS: [
-    { id: 'pending-sme', title: 'LV1 - PENDING SME REVIEW', statuses: ['Pending SME Review'] },
+    { id: 'pending-sme', title: 'LV1 - PENDING SME REVIEW', statuses: ['Pending SME Review', ''] },
     { id: 'sme-disputed', title: 'LV2 - PENDING QA DECISION', statuses: ['Markdown Disputed - SME'] },
     { id: 'qa-decision', title: 'LV3 - PENDING SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
     { id: 'trainer-review', title: 'LV4 - PENDING TRAINER DECISION', statuses: ['QA Decision Rejected'] },
@@ -458,7 +458,7 @@ function compassRenderKanban() {
 
   let html = '';
   COMPASS.KANBAN_COLUMNS.forEach(col => {
-    const cards = qaLogs.filter(l => col.statuses.includes(l.status));
+    const cards = qaLogs.filter(l => col.statuses.includes(l.status) || (col.statuses.includes('') && !l.status));
     const page = COMPASS._kanbanPages[col.id] || 1;
     const totalPages = Math.ceil(cards.length / KANBAN_PAGE_SIZE) || 1;
     const start = (page - 1) * KANBAN_PAGE_SIZE;

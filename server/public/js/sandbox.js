@@ -407,6 +407,17 @@ function sandboxRenderPagination() {
 
 // ===== Review Area: Kanban Board =====
 
+// Sandbox kanban pagination state
+if (!SANDBOX_MOD._kanbanPages) SANDBOX_MOD._kanbanPages = {};
+const SANDBOX_KANBAN_PAGE_SIZE = 10;
+
+function sandboxKanbanPage(colId, dir) {
+  if (!SANDBOX_MOD._kanbanPages) SANDBOX_MOD._kanbanPages = {};
+  const cur = SANDBOX_MOD._kanbanPages[colId] || 1;
+  SANDBOX_MOD._kanbanPages[colId] = Math.max(1, cur + dir);
+  sandboxRenderKanban();
+}
+
 function sandboxRenderKanban() {
   const board = document.getElementById('sandbox-kanban-board');
   if (!board) return;
@@ -433,6 +444,11 @@ function sandboxRenderKanban() {
   let html = '';
   SANDBOX_MOD.KANBAN_COLUMNS.forEach(col => {
     const cards = filteredInsights.filter(i => col.statuses.includes(i.status));
+    const page = SANDBOX_MOD._kanbanPages[col.id] || 1;
+    const totalPages = Math.ceil(cards.length / SANDBOX_KANBAN_PAGE_SIZE) || 1;
+    const start = (page - 1) * SANDBOX_KANBAN_PAGE_SIZE;
+    const pageCards = cards.slice(start, start + SANDBOX_KANBAN_PAGE_SIZE);
+
     html += `
       <div class="kanban-column">
         <div class="kanban-column-header">
@@ -444,7 +460,7 @@ function sandboxRenderKanban() {
     if (cards.length === 0) {
       html += '<div class="kanban-empty">No items</div>';
     } else {
-      cards.slice(0, 20).forEach(ins => {
+      pageCards.forEach(ins => {
         const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
         html += `
           <div class="kanban-card kanban-card-styled" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','review')">
@@ -466,9 +482,15 @@ function sandboxRenderKanban() {
             </div>
           </div>`;
       });
-      if (cards.length > 20) {
-        html += `<div class="kanban-more">+${cards.length - 20} more</div>`;
-      }
+    }
+
+    // Pagination controls
+    if (totalPages > 1) {
+      html += `<div class="kanban-pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 0;font-size:12px;">
+        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="sandboxKanbanPage('${col.id}',-1)" ${page <= 1 ? 'disabled' : ''}>&laquo; Prev</button>
+        <span style="color:var(--text-secondary);">Page ${page} of ${totalPages}</span>
+        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="sandboxKanbanPage('${col.id}',1)" ${page >= totalPages ? 'disabled' : ''}>Next &raquo;</button>
+      </div>`;
     }
 
     html += '</div></div>';

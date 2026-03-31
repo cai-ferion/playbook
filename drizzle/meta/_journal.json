@@ -15,6 +15,13 @@
       "when": 1774914495054,
       "tag": "0001_thin_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1774973883366,
+      "tag": "0002_naive_lyja",
+      "breakpoints": true
     }
   ]
 }

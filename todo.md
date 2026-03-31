@@ -171,3 +171,33 @@
 ## Batch 14 — Rename Performance to Horizon (own nav group)
 - [x] Move Performance out of Helm into its own top-level nav group called "Horizon"
 - [x] Add Horizon to admin-only visibility list (nav-group-horizon added to both login and session restore)
+
+## Batch 15 — Comprehensive Revisions
+
+### Helm - Task Board
+- [x] Make "Assign To" field multi-choice in New Task form
+- [x] Send automated email to assigned users when a new task is created
+
+### Anchor - Input Portal
+- [x] Fix attendance locking mechanism (dates 03/30/26 and prior should not be editable)
+- [x] Automated daily CSV email: filter by current date, send to ge-co-miswfmteam@meta.com, wfm-ctr-php@meta.com, io-teamleadsmla@meta.com
+
+### Compass - Disputes Area
+- [x] LV1 - Pending SME Review: add blank Status to the filter condition
+
+### Sandbox - Review Area
+- [x] Add pagination to each section when cards don't fit the screen
+- [x] Fix card section routing:
+  - [x] PENDING INITIAL REVIEW: Status = Pending Initial Review
+  - [x] PENDING FINAL REVIEW: Status = Pending Final Review
+  - [x] TRAINER'S AREA: Status = Approved - Final Review / Elevated - Task in Progress / Elevated - POC Rejected / Elevated - Pending POC Discussion / Elevated - No POC
+  - [x] IMPLEMENTED: Status = Implemented
+
+### Horizon
+- [x] Rename "Performance" child page to "Main Metrics"
+- [x] Add new child page "Productivity Hrs."
+
+### Regimen
+- [x] Move Regimen out of Admin Tools group into main nav bar (order: Anchor, Compass, Sandbox, Haven, Helm, Regimen, Horizon)
+- [x] Check if Access Level column is used anywhere (has data: 4 distinct values across all 403 employees)
+- [x] Remove columns: Billing Code, Actions (keeping Access Level since it has active data)

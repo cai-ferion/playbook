@@ -19,8 +19,81 @@ import {
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
+import { Resend } from "resend";
 
 const router = Router();
+
+// ============================================================
+// Task Email Notification Helper
+// ============================================================
+
+async function sendTaskAssignmentEmails(record: any) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    console.warn('[IO API] RESEND_API_KEY not set, skipping task email');
+    return;
+  }
+
+  const resend = new Resend(resendKey);
+  const FROM_ADDRESS = 'Playbook Reporting <onboarding@resend.dev>';
+
+  // Parse comma-separated assignee OHRs
+  const ohrs = (record.assigned_to_ohr || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+  if (ohrs.length === 0) return;
+
+  // Fetch employee emails for all assignees
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const employees = await db.select().from(ioEmployees).where(inArray(ioEmployees.ohr_id, ohrs));
+    const emailMap = new Map(employees.map((e: any) => [e.ohr_id, e.meta_email]));
+
+    const dueStr = record.due_date ? new Date(record.due_date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified';
+
+    for (const ohr of ohrs) {
+      const email = emailMap.get(ohr);
+      if (!email) {
+        console.warn(`[IO API] No email found for OHR ${ohr}, skipping`);
+        continue;
+      }
+
+      const emp = employees.find((e: any) => e.ohr_id === ohr);
+      const empName = emp?.full_name || 'Team Member';
+
+      const subject = `[Playbook] New Task Assigned — ${record.task_id}: ${record.title}`;
+      const text = `Dear ${empName},
+
+You have been assigned a new task in Playbook.
+
+Task ID: ${record.task_id}
+Title: ${record.title}
+Description: ${record.description || 'No description provided'}
+Priority: ${record.priority || 'Medium'}
+Due Date: ${dueStr}
+Assigned By: ${record.assigned_by_name || 'System'}
+
+Please log in to Playbook to view and manage this task.
+
+This is an automated notification from the Playbook Task Management System. Please do not reply directly to this email.
+
+Playbook Reporting`;
+
+      try {
+        await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: email,
+          subject,
+          text,
+        });
+        console.log(`[IO API] Task email sent to ${email} for task ${record.task_id}`);
+      } catch (emailErr: any) {
+        console.error(`[IO API] Failed to send task email to ${email}:`, emailErr.message);
+      }
+    }
+  } catch (err: any) {
+    console.error('[IO API] Error sending task assignment emails:', err.message);
+  }
+}
 
 /** Generate a unique alphanumeric coaching ID: CL-xxxxxxxx */
 function generateCoachingId(): string {
@@ -253,6 +326,17 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     // Server-side lock enforcement (skip for admin/manager)
     if (current.is_locked && actorOhr !== "740045023") {
       return res.status(403).json({ error: "Record is locked and cannot be edited" });
+    }
+
+    // Date-based lock enforcement: past dates are always locked (except admin)
+    if (actorOhr !== "740045023") {
+      const now = new Date();
+      const phtTime = new Date(now.getTime() + 8 * 60 * 60000);
+      const todayPHT = phtTime.toISOString().slice(0, 10);
+      const recordDate = current.log_date || '';
+      if (recordDate < todayPHT) {
+        return res.status(403).json({ error: "Past dates are locked and cannot be edited" });
+      }
     }
 
     // Build audit entries for each changed field
@@ -730,6 +814,17 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
         continue;
       }
 
+      // Date-based lock: past dates locked (except admin)
+      if (actor_ohr !== "740045023") {
+        const nowD = new Date();
+        const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
+        const todayStr = phtD.toISOString().slice(0, 10);
+        if ((record.log_date || '') < todayStr) {
+          locked++;
+          continue;
+        }
+      }
+
       const oldTag = record.tag || "";
       if (oldTag === tag) continue; // No change needed
 
@@ -796,6 +891,11 @@ router.post("/tasks", async (req: Request, res: Response) => {
     };
     await db.insert(ioTasks).values(record);
     res.json({ ok: true, task_id: taskId, ...record });
+
+    // Send email notifications to all assigned users (fire-and-forget)
+    sendTaskAssignmentEmails(record).catch(err => {
+      console.error('[IO API] Background task email error:', err.message);
+    });
   } catch (err: any) {
     console.error("[IO API] tasks create error:", err);
     res.status(500).json({ error: err.message });

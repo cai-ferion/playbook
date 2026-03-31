@@ -329,4 +329,106 @@ export function registerAutoMailer(app: Express): void {
 
   console.log("[AutoMailer] Manual trigger: POST /api/io/send-notifications");
   console.log("[AutoMailer] Preview: GET /api/io/preview-notifications");
+
+  // ============================================================
+  // Daily Attendance CSV Email
+  // Sends current day's attendance as CSV attachment daily
+  // Recipients: ge-co-miswfmteam@meta.com, wfm-ctr-php@meta.com, io-teamleadsmla@meta.com
+  // Schedule: 11:00 PM PHT = 15:00 UTC
+  // ============================================================
+
+  const CSV_RECIPIENTS = [
+    "ge-co-miswfmteam@meta.com",
+    "wfm-ctr-php@meta.com",
+    "io-teamleadsmla@meta.com",
+  ];
+
+  async function sendDailyAttendanceCsv(): Promise<void> {
+    const today = getTodayPHT();
+    console.log(`[AutoMailer-CSV] Generating daily attendance CSV for ${today}`);
+
+    try {
+      // Query today's attendance records
+      const records = await db
+        .select()
+        .from(ioAttendance)
+        .where(eq(ioAttendance.log_date, today));
+
+      if (records.length === 0) {
+        console.log(`[AutoMailer-CSV] No attendance records found for ${today}. Skipping.`);
+        return;
+      }
+
+      // Build CSV
+      const columns = [
+        "id", "ohr_id", "log_date", "tag", "billing_code", "upl_reason",
+        "remarks", "ot_hours", "snap_full_name", "snap_supervisor",
+        "snap_planning_group", "snap_shift_time", "snap_actual_role",
+        "snap_billing_name", "snap_status"
+      ];
+
+      const escapeCsv = (val: any): string => {
+        if (val === null || val === undefined) return "";
+        const str = String(val);
+        if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      };
+
+      let csv = columns.join(",") + "\n";
+      for (const row of records) {
+        csv += columns.map(col => escapeCsv((row as any)[col])).join(",") + "\n";
+      }
+
+      const readableDate = formatDateReadable(today);
+      const subject = `[Playbook] Daily Attendance Report — ${readableDate}`;
+      const text = `Daily Attendance Report for ${readableDate}\n\nTotal Records: ${records.length}\n\nPlease find the attached CSV file containing today's attendance data.\n\nPlaybook Reporting`;
+
+      // Convert CSV to base64 for Resend attachment
+      const csvBase64 = Buffer.from(csv, 'utf-8').toString('base64');
+
+      await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: CSV_RECIPIENTS,
+        subject,
+        text,
+        attachments: [
+          {
+            filename: `attendance_${today}.csv`,
+            content: csvBase64,
+          },
+        ],
+      });
+
+      console.log(`[AutoMailer-CSV] Daily CSV sent to ${CSV_RECIPIENTS.join(', ')} (${records.length} records)`);
+    } catch (err: any) {
+      console.error("[AutoMailer-CSV] Error sending daily CSV:", err.message);
+    }
+  }
+
+  // Schedule: 11:00 PM PHT = 15:00 UTC
+  cron.schedule("0 15 * * *", async () => {
+    console.log("[AutoMailer-CSV] Triggered: 11:00 PM PHT daily attendance CSV");
+    try {
+      await sendDailyAttendanceCsv();
+    } catch (err) {
+      console.error("[AutoMailer-CSV] Cron job error:", err);
+    }
+  });
+
+  console.log("[AutoMailer-CSV] Scheduled: 11:00 PM PHT (15:00 UTC) daily attendance CSV");
+
+  // Manual trigger for daily CSV
+  app.post("/api/io/send-daily-csv", async (req, res) => {
+    try {
+      await sendDailyAttendanceCsv();
+      res.json({ success: true, message: "Daily attendance CSV sent" });
+    } catch (err: any) {
+      console.error("[AutoMailer-CSV] Manual trigger error:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  console.log("[AutoMailer-CSV] Manual trigger: POST /api/io/send-daily-csv");
 }

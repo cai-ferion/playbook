@@ -116,7 +116,11 @@ function helmApplyFilters() {
 
   // Tab filter
   if (HELM.currentTab === 'mine' && cu) {
-    data = data.filter(t => t.assigned_to_ohr === cu.ohr_id || t.assigned_by_ohr === cu.ohr_id);
+    data = data.filter(t => {
+      // Check if current user is one of the assigned (comma-separated) or the assigner
+      const assignedOhrs = (t.assigned_to_ohr || '').split(',').map(s => s.trim());
+      return assignedOhrs.includes(cu.ohr_id) || t.assigned_by_ohr === cu.ohr_id;
+    });
   }
 
   // Status filter
@@ -253,6 +257,7 @@ function helmShowNewForm() {
 
   HELM.editingId = null;
   _helmAttachedFiles = [];
+  _helmSelectedAssignees = [];
 
   const taskId = 'TSK-' + Date.now().toString(36).toUpperCase();
   HELM._pendingTaskId = taskId;
@@ -270,11 +275,11 @@ function helmShowNewForm() {
       </div>
       <div class="form-field">
         <label class="form-label">Assign To <span class="required">*</span></label>
+        <div id="helm-assignee-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
         <div class="searchable-select" id="helm-assignee-wrapper">
-          <input type="hidden" id="helm-new-assignee-ohr" value="">
-          <input type="text" class="form-input" id="helm-assignee-search" placeholder="Search employee..." autocomplete="off" onclick="helmToggleAssigneeDropdown(true)" oninput="helmFilterAssignees()">
-          <div class="searchable-select-dropdown" id="helm-assignee-dropdown" style="display:none;">
-            ${HELM.employees.map(e => `<div class="searchable-select-option" data-value="${escapeAttr(e.ohr_id)}" onclick="helmSelectAssignee('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`).join('')}
+          <input type="text" class="form-input" id="helm-assignee-search" placeholder="Search and select employees..." autocomplete="off" onclick="helmToggleAssigneeDropdown(true)" oninput="helmFilterAssignees()">
+          <div class="searchable-select-dropdown" id="helm-assignee-dropdown" style="display:none;max-height:200px;overflow-y:auto;">
+            ${HELM.employees.map(e => `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmToggleAssigneeMulti('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`).join('')}
           </div>
         </div>
       </div>
@@ -308,6 +313,9 @@ function helmOnEntityChange() {
   if (idField) idField.style.display = entity ? '' : 'none';
 }
 
+// Multi-select assignee state
+var _helmSelectedAssignees = []; // [{ohr, name}]
+
 function helmToggleAssigneeDropdown(show) {
   const dd = document.getElementById('helm-assignee-dropdown');
   if (dd) dd.style.display = show ? '' : 'none';
@@ -320,14 +328,53 @@ function helmFilterAssignees() {
   dd.style.display = '';
   dd.querySelectorAll('.searchable-select-option').forEach(opt => {
     const name = opt.textContent.toLowerCase();
-    opt.style.display = name.includes(query) ? '' : 'none';
+    const ohr = opt.getAttribute('data-ohr');
+    const isSelected = _helmSelectedAssignees.some(a => a.ohr === ohr);
+    opt.style.display = (name.includes(query) && !isSelected) ? '' : 'none';
   });
 }
 
-function helmSelectAssignee(ohr, name) {
-  document.getElementById('helm-new-assignee-ohr').value = ohr;
-  document.getElementById('helm-assignee-search').value = name;
-  helmToggleAssigneeDropdown(false);
+function helmToggleAssigneeMulti(ohr, name) {
+  const idx = _helmSelectedAssignees.findIndex(a => a.ohr === ohr);
+  if (idx >= 0) {
+    _helmSelectedAssignees.splice(idx, 1);
+  } else {
+    _helmSelectedAssignees.push({ ohr, name });
+  }
+  helmRenderAssigneeChips();
+  document.getElementById('helm-assignee-search').value = '';
+  helmFilterAssignees();
+}
+
+function helmRemoveAssignee(ohr) {
+  _helmSelectedAssignees = _helmSelectedAssignees.filter(a => a.ohr !== ohr);
+  helmRenderAssigneeChips();
+  helmFilterAssignees();
+}
+
+// Close assignee dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('helm-assignee-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    helmToggleAssigneeDropdown(false);
+  }
+});
+
+function helmRenderAssigneeChips() {
+  const container = document.getElementById('helm-assignee-chips');
+  if (!container) return;
+  if (_helmSelectedAssignees.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = _helmSelectedAssignees.map(a => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:500;">
+      ${escapeHtml(a.name)}
+      <span onclick="helmRemoveAssignee('${escapeAttr(a.ohr)}')" style="cursor:pointer;display:flex;align-items:center;margin-left:2px;opacity:0.8;" title="Remove">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </span>
+    </span>
+  `).join('');
 }
 
 function helmUpdateFiles() {
@@ -367,14 +414,20 @@ function helmRenderFileList() {
 
 async function helmSubmitNew() {
   const title = (document.getElementById('helm-new-title')?.value || '').trim();
-  const assigneeOhr = document.getElementById('helm-new-assignee-ohr')?.value || '';
   const priority = document.getElementById('helm-new-priority')?.value || 'Medium';
 
   if (!title) { showToast('Title is required', 'error'); return; }
-  if (!assigneeOhr) { showToast('Please select an assignee', 'error'); return; }
+  if (_helmSelectedAssignees.length === 0) { showToast('Please select at least one assignee', 'error'); return; }
 
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const assignee = HELM.employees.find(e => e.ohr_id === assigneeOhr);
+
+  // Build comma-separated values for multi-select assignees
+  const assigneeOhrs = _helmSelectedAssignees.map(a => a.ohr).join(', ');
+  const assigneeNames = _helmSelectedAssignees.map(a => a.name).join(', ');
+  const assigneePgs = _helmSelectedAssignees.map(a => {
+    const emp = HELM.employees.find(e => e.ohr_id === a.ohr);
+    return emp ? emp.planning_group : '';
+  }).join(', ');
 
   // Upload attachments
   let attachmentUrls = [];
@@ -399,10 +452,10 @@ async function helmSubmitNew() {
     task_id: HELM._pendingTaskId || ('TSK-' + Date.now().toString(36).toUpperCase()),
     title: title,
     description: document.getElementById('helm-new-desc')?.value || '',
-    priority: 'Medium',
-    assigned_to_ohr: assigneeOhr,
-    assigned_to_name: assignee ? assignee.full_name : '',
-    assigned_to_pg: assignee ? assignee.planning_group : '',
+    priority: priority,
+    assigned_to_ohr: assigneeOhrs,
+    assigned_to_name: assigneeNames,
+    assigned_to_pg: assigneePgs,
     assigned_by_ohr: cu ? cu.ohr_id : '',
     assigned_by_name: cu ? cu.full_name : '',
     due_date: document.getElementById('helm-new-due')?.value || '',
@@ -423,7 +476,7 @@ async function helmSubmitNew() {
     showToast('Task created successfully', 'success');
     if (typeof createNotification === 'function') {
       createNotification({ type: 'task_assigned', title: 'New Task Assigned',
-        message: `${created.task_id}: "${title}" assigned to ${record.assigned_to_name}` });
+        message: `${created.task_id}: "${title}" assigned to ${assigneeNames}` });
     }
     helmCloseForm();
     await helmFetchTasks();
