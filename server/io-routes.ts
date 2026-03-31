@@ -885,6 +885,65 @@ router.post("/upload", async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// CSV Export for Google Sheets Sync
+// ============================================================
+
+// GET /api/io/attendance/export?format=csv&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+router.get("/attendance/export", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { startDate, endDate, format } = req.query;
+    const conditions: any[] = [];
+
+    if (startDate) conditions.push(gte(ioAttendance.log_date, String(startDate)));
+    if (endDate) conditions.push(lte(ioAttendance.log_date, String(endDate)));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Fetch all matching rows (no limit for export)
+    let query = db.select().from(ioAttendance);
+    if (where) query = query.where(where) as any;
+    const rows = await (query as any).orderBy(asc(ioAttendance.log_date), asc(ioAttendance.ohr_id));
+
+    if (format === "json") {
+      return res.json(rows);
+    }
+
+    // Default: CSV format
+    const columns = [
+      "id", "ohr_id", "log_date", "tag", "billing_code", "upl_reason",
+      "remarks", "ot_hours", "created_at", "snap_full_name", "snap_supervisor",
+      "snap_planning_group", "snap_shift_time", "snap_actual_role",
+      "snap_billing_name", "snap_status", "is_locked", "locked_at"
+    ];
+
+    const escapeCsv = (val: any): string => {
+      if (val === null || val === undefined) return "";
+      const str = String(val);
+      if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
+    let csv = columns.join(",") + "\n";
+    for (const row of rows) {
+      csv += columns.map(col => escapeCsv((row as any)[col])).join(",") + "\n";
+    }
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="attendance_export.csv"');
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.send(csv);
+  } catch (err: any) {
+    console.error("[IO API] attendance export error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");

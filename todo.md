@@ -82,3 +82,8 @@
 
 ## Bug Fixes — Batch 5
 - [x] Fix: Input Portal pagination controls unstyled (added .pagination-btn CSS with proper borders, hover, active state)
+
+## Google Sheets Sync — Batch 6
+- [x] Create public CSV/JSON export endpoint for attendance data (/api/io/attendance/export)
+- [x] Write Google Apps Script for automatic sync to user's Google Sheet
+- [x] Test the export endpoint (verified JSON output for March 1-2 date range)
