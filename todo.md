@@ -110,3 +110,10 @@
 ## Billing Compliance Fix — Batch 9
 - [x] Remove "EX" row from the first table in Anchor - Billing Compliance page
 - [x] Fix: Billing Compliance page doesn't auto-load current week data on initial render
+
+## Billing Compliance Calculation Fixes — Batch 10
+- [x] Fix target hours: MS=222, MQ=148, CA=1665, CS=111, CQ=74, SO=185, FA=185, SM=407, QP=222 (MA=3293 and RM=5476 stay)
+- [x] Fix goal thresholds from 95%/98%/100% to 98%/100%/102%
+- [x] Fix surplus/deficit logic: surplus when ratio > 1.05 (surplus = total - 1.05×base), deficit when ratio < threshold, otherwise "Met"
+- [x] Update column headers from "Goal | 95%" to "Goal | 98%" etc.
+- [x] Remove p_vals from total calculation (keep total = Delivered + OT only, as intended)

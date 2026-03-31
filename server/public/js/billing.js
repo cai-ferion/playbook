@@ -208,18 +208,18 @@ function getGoalCell(totalPayload, targetHours, threshold) {
   const neededForThreshold = targetHours * thresholdDecimal;
 
   if (ratio > 1.05) {
-    const surplus = totalPayload - targetHours;
-    return { text: `${surplus.toFixed(1)} hrs. surplus`, className: 'goal-surplus' };
+    const surplus = Math.round(totalPayload - (1.05 * targetHours));
+    return { text: `${surplus} hrs. surplus`, className: 'goal-surplus' };
   } else if (ratio < thresholdDecimal) {
-    const remaining = neededForThreshold - totalPayload;
-    return { text: `${remaining.toFixed(1)} hrs. until ${threshold}%`, className: 'goal-warning' };
+    const remaining = Math.round(neededForThreshold - totalPayload);
+    return { text: `${remaining} hrs. until ${threshold}%`, className: 'goal-warning' };
   } else {
     return { text: 'Met', className: 'goal-met' };
   }
 }
 
 /**
- * Render the billing compliance data table (now with 95%, 98%, 100% goals).
+ * Render the billing compliance data table (with 98%, 100%, 102% goals).
  */
 function renderBillingComplianceTable(tableData) {
   const tbody = document.getElementById('billing-compliance-body');
@@ -235,30 +235,30 @@ function renderBillingComplianceTable(tableData) {
 
   tbody.innerHTML = '';
   for (const row of tableData) {
-    const goal95 = getGoalCell(row.totalPayload, row.targetHours, 95);
     const goal98 = getGoalCell(row.totalPayload, row.targetHours, 98);
     const goal100 = getGoalCell(row.totalPayload, row.targetHours, 100);
+    const goal102 = getGoalCell(row.totalPayload, row.targetHours, 102);
 
     let actualPct = '';
     let actualClass = '';
     if (row.targetHours !== null && row.targetHours > 0) {
       const pct = (row.totalPayload / row.targetHours) * 100;
-      actualPct = pct.toFixed(1) + '%';
+      actualPct = pct.toFixed(2) + '%';
       if (pct > 100) actualClass = 'compliance-over';
     } else {
       actualPct = 'N/A';
       actualClass = 'compliance-na';
     }
 
-    const hasDeficit95 = goal95.className === 'goal-warning';
     const hasDeficit98 = goal98.className === 'goal-warning';
     const hasDeficit100 = goal100.className === 'goal-warning';
-    const hasAnyDeficit = hasDeficit95 || hasDeficit98 || hasDeficit100;
+    const hasDeficit102 = goal102.className === 'goal-warning';
+    const hasAnyDeficit = hasDeficit98 || hasDeficit100 || hasDeficit102;
 
     let deficitEndCol = -1;
-    if (hasDeficit100) deficitEndCol = 9;
-    else if (hasDeficit98) deficitEndCol = 8;
-    else if (hasDeficit95) deficitEndCol = 7;
+    if (hasDeficit102) deficitEndCol = 9;
+    else if (hasDeficit100) deficitEndCol = 8;
+    else if (hasDeficit98) deficitEndCol = 7;
 
     function deficitClass(colIdx) {
       return (hasAnyDeficit && colIdx >= 0 && colIdx <= deficitEndCol) ? ' billing-deficit-highlight' : '';
@@ -274,9 +274,9 @@ function renderBillingComplianceTable(tableData) {
       <td class="cell-center${deficitClass(4)}">${row.uplCount || ''}</td>
       <td class="cell-center${deficitClass(5)}">${row.plCount || ''}</td>
       <td class="cell-center ${actualClass}${deficitClass(6)}"><strong>${actualPct}</strong></td>
-      <td class="cell-center${deficitClass(7)}"><span class="goal-badge ${goal95.className}">${goal95.text}</span></td>
-      <td class="cell-center${deficitClass(8)}"><span class="goal-badge ${goal98.className}">${goal98.text}</span></td>
-      <td class="cell-center${deficitClass(9)}"><span class="goal-badge ${goal100.className}">${goal100.text}</span></td>
+      <td class="cell-center${deficitClass(7)}"><span class="goal-badge ${goal98.className}">${goal98.text}</span></td>
+      <td class="cell-center${deficitClass(8)}"><span class="goal-badge ${goal100.className}">${goal100.text}</span></td>
+      <td class="cell-center${deficitClass(9)}"><span class="goal-badge ${goal102.className}">${goal102.text}</span></td>
     `;
     tbody.appendChild(tr);
   }
