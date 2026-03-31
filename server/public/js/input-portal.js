@@ -230,6 +230,34 @@ function omnibarClearAll() {
   omnibarApplyView();
 }
 
+function omnibarEditFilter(key) {
+  const field = OMNIBAR_FILTER_FIELDS.find(f => f.key === key);
+  if (!field || field.type === 'toggle') return;
+  omnibarState.menuMode = 'filter';
+  omnibarState.menuStep = 'pick_values';
+  omnibarState.menuField = field;
+  omnibarState._editingFilterKey = key;
+  renderOmnibarMenu();
+  _attachOmnibarOutsideClick();
+
+  // Pre-populate existing values after menu renders
+  setTimeout(() => {
+    const existing = omnibarState.filters.find(f => f.key === key);
+    if (!existing) return;
+    if (field.type === 'date_range') {
+      const startEl = document.getElementById('omni-date-start');
+      const endEl = document.getElementById('omni-date-end');
+      if (startEl) startEl.value = existing.startDate || '';
+      if (endEl) endEl.value = existing.endDate || '';
+    } else if (field.type === 'multi') {
+      const checkboxes = document.querySelectorAll('#omni-value-list input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        if (existing.values && existing.values.includes(cb.value)) cb.checked = true;
+      });
+    }
+  }, 60);
+}
+
 function renderOmnibarChips() {
   const container = document.getElementById('omnibar-chips');
   if (!container) return;
@@ -245,9 +273,11 @@ function renderOmnibarChips() {
     } else {
       chipLabel = f.values.length <= 2 ? `${f.label}: ${f.values.join(', ')}` : `${f.label}: ${f.values.length} selected`;
     }
+    const editClick = f.type !== 'toggle' ? `onclick="omnibarEditFilter('${f.key}')"` : '';
+    const editClass = f.type !== 'toggle' ? 'chip-text-editable' : '';
     html += `<span class="omnibar-chip omnibar-chip-filter">
       <span class="chip-icon">&#9881;</span>
-      <span class="chip-text">${escapeHtml(chipLabel)}</span>
+      <span class="chip-text ${editClass}" ${editClick} title="Click to edit">${escapeHtml(chipLabel)}</span>
       <button class="chip-remove" onclick="omnibarRemoveFilter('${f.key}')" title="Remove">&times;</button>
     </span>`;
   }

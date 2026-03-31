@@ -68,3 +68,14 @@
 - [x] Import io_coaching_rca.csv into io_coaching_rca table (85 rows)
 - [x] Import io_coaching_ztp.csv into io_coaching_ztp table (19 rows)
 - [x] Import io_coaching-to_separate.csv as group coaching rows (7 rows)
+
+## Data Import — Batch 2
+- [x] Import io_attendance_january_26.csv into io_attendance table (12,276 rows)
+- [x] Import io_insights.csv into io_insights table (1,517 rows)
+
+## Data Import — Batch 3
+- [x] Import updated io_attendance.csv (merge/upsert — 34,153 rows processed, all existing updated in place)
+
+## Bug Fixes & Features — Batch 4
+- [x] Fix: Attendance records not showing when filters are applied (date format converted from 'Day, MM/DD' to 'YYYY-MM-DD')
+- [x] Feature: Add editable filter functionality to all 5 omnibars (Input Portal, Dashboard, Roster, Compass, Sandbox)

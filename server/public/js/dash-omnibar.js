@@ -221,6 +221,42 @@
 
   // ===== Chips =====
 
+  window.dashOmnibarEditFilter = function (key) {
+    const field = DASH_FILTER_FIELDS.find(f => f.key === key);
+    if (!field) return;
+    dashOmniState.menuMode = 'filter';
+    dashOmniState.menuStep = 'pick_values';
+    dashOmniState.menuField = field;
+    renderDashMenu();
+    if (!_dashOutsideListener) {
+      setTimeout(() => {
+        _dashOutsideListener = (e) => {
+          const omnibar = document.getElementById('dash-omnibar');
+          const menu = document.getElementById('dash-omnibar-menu');
+          if (!omnibar || !menu) return;
+          if (omnibar.contains(e.target)) return;
+          dashOmnibarCloseMenu();
+        };
+        document.addEventListener('mousedown', _dashOutsideListener);
+      }, 10);
+    }
+    setTimeout(() => {
+      const existing = dashOmniState.filters.find(f => f.key === key);
+      if (!existing) return;
+      if (field.type === 'date_range') {
+        const startEl = document.getElementById('dash-omni-date-start');
+        const endEl = document.getElementById('dash-omni-date-end');
+        if (startEl) startEl.value = existing.startDate || '';
+        if (endEl) endEl.value = existing.endDate || '';
+      } else if (field.type === 'multi') {
+        const checkboxes = document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+          if (existing.values && existing.values.includes(cb.value)) cb.checked = true;
+        });
+      }
+    }, 60);
+  };
+
   function renderDashChips() {
     const container = document.getElementById('dash-omnibar-chips');
     if (!container) return;
@@ -234,7 +270,7 @@
       }
       html += `<span class="omnibar-chip omnibar-chip-filter">
         <span class="chip-icon">&#9881;</span>
-        <span class="chip-text">${escapeHtml(chipLabel)}</span>
+        <span class="chip-text chip-text-editable" onclick="dashOmnibarEditFilter('${f.key}')" title="Click to edit">${escapeHtml(chipLabel)}</span>
         <button class="chip-remove" onclick="dashOmnibarRemoveFilter('${f.key}')" title="Remove">&times;</button>
       </span>`;
     }

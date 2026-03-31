@@ -191,6 +191,33 @@ function sandboxOmniCloseMenu() {
   if (menu) menu.style.display = 'none';
 }
 
+function sandboxOmniEditFilter(idx) {
+  const f = sandboxOmniState.filters[idx];
+  if (!f) return;
+  const fieldDef = SANDBOX_OMNI_FIELDS.find(fd => fd.key === f.field);
+  if (!fieldDef) return;
+  sandboxOmniState.pendingField = f.field;
+  sandboxOmniState.menuOpen = true;
+  sandboxOmniState.menuType = 'filter';
+  sandboxOmniState.menuStep = 'values';
+  sandboxOmniState._editingIdx = idx;
+  sandboxRenderOmniMenu();
+  setTimeout(() => {
+    if (f.op === 'contains') {
+      const inp = document.getElementById('sandbox-omni-text-input');
+      if (inp) inp.value = f.value || '';
+    } else if (f.op === 'dateRange' && f.value) {
+      const fromEl = document.getElementById('sandbox-omni-date-from');
+      const toEl = document.getElementById('sandbox-omni-date-to');
+      if (fromEl) fromEl.value = f.value.from || '';
+      if (toEl) toEl.value = f.value.to || '';
+    } else if (f.op === 'in' && Array.isArray(f.value)) {
+      const checkboxes = document.querySelectorAll('.sandbox-omni-multi-cb');
+      checkboxes.forEach(cb => { if (f.value.includes(cb.value)) cb.checked = true; });
+    }
+  }, 60);
+}
+
 function sandboxOmniRenderChips() {
   const container = document.getElementById('sandbox-omnibar-chips');
   if (!container) return;
@@ -202,7 +229,7 @@ function sandboxOmniRenderChips() {
     if (f.op === 'contains') valStr = `contains "${f.value}"`;
     else if (f.op === 'in') valStr = `is ${f.value.join(', ')}`;
     else if (f.op === 'dateRange') valStr = `${f.value.from || '...'} to ${f.value.to || '...'}`;
-    html += `<span class="omnibar-chip filter-chip">${escapeHtml(label)}: ${escapeHtml(valStr)} <button class="chip-remove" onclick="sandboxOmniRemoveFilter(${i})">&times;</button></span>`;
+    html += `<span class="omnibar-chip filter-chip"><span class="chip-text-editable" onclick="sandboxOmniEditFilter(${i})" title="Click to edit">${escapeHtml(label)}: ${escapeHtml(valStr)}</span> <button class="chip-remove" onclick="sandboxOmniRemoveFilter(${i})">&times;</button></span>`;
   });
   sandboxOmniState.sorts.forEach((s, i) => {
     const field = SANDBOX_SORT_FIELDS.find(fd => fd.key === s.key);

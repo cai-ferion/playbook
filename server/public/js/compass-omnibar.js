@@ -257,6 +257,39 @@
 
   // ===== Render chips =====
 
+  window.compassOmnibarEditFilter = function (idx) {
+    const f = COMPASS_OMNI.filters[idx];
+    if (!f) return;
+    const fieldDef = COMPASS_FILTER_FIELDS.find(fd => fd.key === f.field);
+    if (!fieldDef) return;
+    COMPASS_OMNI.pendingField = f.field;
+    COMPASS_OMNI.menuType = 'filter';
+    COMPASS_OMNI.menuStep = 'value';
+    COMPASS_OMNI._editingIdx = idx;
+    renderMenu();
+    if (COMPASS_OMNI.outsideHandler) {
+      document.removeEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
+    }
+    setTimeout(() => {
+      COMPASS_OMNI.outsideHandler = function (e) {
+        const menu = document.getElementById('compass-omnibar-menu');
+        if (menu && !menu.contains(e.target)) compassOmnibarCloseMenu();
+      };
+      document.addEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
+    }, 10);
+    setTimeout(() => {
+      if (fieldDef.type === 'dateRange' && f.value) {
+        const startEl = document.getElementById('compass-omni-date-start');
+        const endEl = document.getElementById('compass-omni-date-end');
+        if (startEl) startEl.value = f.value.start || '';
+        if (endEl) endEl.value = f.value.end || '';
+      } else if (fieldDef.type === 'multi' && Array.isArray(f.value)) {
+        const checkboxes = document.querySelectorAll('.omnibar-menu-check input[type="checkbox"]');
+        checkboxes.forEach(cb => { if (f.value.includes(cb.value)) cb.checked = true; });
+      }
+    }, 60);
+  };
+
   function renderChips() {
     const container = document.getElementById('compass-omnibar-chips');
     if (!container) return;
@@ -264,7 +297,7 @@
 
     COMPASS_OMNI.filters.forEach((f, i) => {
       html += `<span class="omnibar-chip omnibar-chip-filter">
-        <span class="omnibar-chip-label">${escapeHtml(f.label)}</span>
+        <span class="omnibar-chip-label chip-text-editable" onclick="compassOmnibarEditFilter(${i})" title="Click to edit">${escapeHtml(f.label)}</span>
         <button class="omnibar-chip-remove" onclick="compassOmnibarRemoveFilter(${i})">&times;</button>
       </span>`;
     });

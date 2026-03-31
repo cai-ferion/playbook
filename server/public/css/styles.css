@@ -3381,6 +3381,28 @@ body {
 }
 .chip-remove:hover { opacity: 1; }
 
+.chip-text-editable {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background 150ms ease;
+}
+.chip-text-editable:hover {
+  background: rgba(0, 0, 0, 0.08);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+.omnibar-chip-label.chip-text-editable {
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.omnibar-chip-label.chip-text-editable:hover {
+  background: rgba(0, 0, 0, 0.08);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
 .omnibar-actions {
   display: flex;
   align-items: center;

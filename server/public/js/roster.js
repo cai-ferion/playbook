@@ -297,6 +297,40 @@ window.rosterOmnibarRemoveSort = function (key) {
   rosterRenderOmniChips();
 };
 
+window.rosterOmnibarEditFilter = function (key) {
+  const field = ROSTER_FILTER_FIELDS.find(f => f.key === key);
+  if (!field) return;
+  rosterOmniState.menuMode = 'filter';
+  rosterOmniState.menuStep = 'pick_values';
+  rosterOmniState.menuField = field;
+  rosterRenderOmniMenu();
+  if (!_rosterOutsideListener) {
+    setTimeout(() => {
+      _rosterOutsideListener = (e) => {
+        const omnibar = document.getElementById('roster-omnibar');
+        const menu = document.getElementById('roster-omnibar-menu');
+        if (!omnibar || !menu) return;
+        if (omnibar.contains(e.target)) return;
+        rosterOmnibarCloseMenu();
+      };
+      document.addEventListener('mousedown', _rosterOutsideListener);
+    }, 10);
+  }
+  setTimeout(() => {
+    const existing = rosterOmniState.filters.find(f => f.key === key);
+    if (!existing) return;
+    if (field.type === 'text') {
+      const inp = document.getElementById('roster-omni-text-input');
+      if (inp) inp.value = existing.value || '';
+    } else if (field.type === 'multi') {
+      const checkboxes = document.querySelectorAll('#roster-omni-value-list input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        if (existing.values && existing.values.includes(cb.value)) cb.checked = true;
+      });
+    }
+  }, 60);
+};
+
 function rosterRenderOmniChips() {
   const container = document.getElementById('roster-omnibar-chips');
   if (!container) return;
@@ -310,7 +344,7 @@ function rosterRenderOmniChips() {
     }
     html += `<span class="omnibar-chip omnibar-chip-filter">
       <span class="chip-icon">&#9881;</span>
-      <span class="chip-text">${escapeHtml(chipLabel)}</span>
+      <span class="chip-text chip-text-editable" onclick="rosterOmnibarEditFilter('${f.key}')" title="Click to edit">${escapeHtml(chipLabel)}</span>
       <button class="chip-remove" onclick="rosterOmnibarRemoveFilter('${f.key}')" title="Remove">&times;</button>
     </span>`;
   }

@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, log_date, ohr_id FROM io_attendance LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT id, log_date, ohr_id FROM io_attendance LIMIT 5;",
+  "rows": [
+    {
+      "id": "46023740004255",
+      "log_date": "Thu, 01/01",
+      "ohr_id": "740004255"
+    },
+    {
+      "id": "46023740017089",
+      "log_date": "Thu, 01/01",
+      "ohr_id": "740017089"
+    },
+    {
+      "id": "46023740027851",
+      "log_date": "Thu, 01/01",
+      "ohr_id": "740027851"
+    },
+    {
+      "id": "46023740028184",
+      "log_date": "Thu, 01/01",
+      "ohr_id": "740028184"
+    },
+    {
+      "id": "46023740031449",
+      "log_date": "Thu, 01/01",
+      "ohr_id": "740031449"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tlog_date\tohr_id\n46023740004255\tThu, 01/01\t740004255\n46023740017089\tThu, 01/01\t740017089\n46023740027851\tThu, 01/01\t740027851\n46023740028184\tThu, 01/01\t740028184\n46023740031449\tThu, 01/01\t740031449\n",
+  "stderr": "",
+  "execution_time_ms": 1599
+}
