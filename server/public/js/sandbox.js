@@ -534,7 +534,7 @@ function sandboxOpenDetail(insightId, context) {
     const userPgs = userPg.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
     const iPg = (ins.planning_group || '').toLowerCase();
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
-    const isAdmin = currentUser.ohr_id === '740045032';
+    const isAdmin = currentUser.ohr_id === '740045023';
 
     if ((role === 'SME' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending - Initial Review') {
       footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowAcceptPopout(\'initial\')">Approve</button>';

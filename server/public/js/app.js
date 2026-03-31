@@ -386,7 +386,7 @@ async function handleLogin() {
     document.getElementById('auth-page').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
 
-    const ADMIN_OHR = '740045032';
+    const ADMIN_OHR = '740045023';
 
     // Show Admin Tools nav only for admin OHR
     const adminNav = document.getElementById('nav-admin');
@@ -516,7 +516,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentUser = JSON.parse(stored);
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
-      const ADMIN_OHR2 = '740045032';
+      const ADMIN_OHR2 = '740045023';
 
       // Show Admin Tools nav only for admin OHR
       const adminNav2 = document.getElementById('nav-admin');
@@ -1271,11 +1271,11 @@ function renderInputPagination(currentPage, totalPages) {
  * - Past dates are always locked
  * - Current date is editable only after 11:00 AM PHT
  * - Future dates are not locked
- * - Exempt: OHR 740045032 and actual_role = 'Manager'
+ * - Exempt: OHR 740045023 and actual_role = 'Manager'
  */
 function isRowLocked(record) {
-  // Exempt admin OHR 740045032 and Managers
-  if (currentUser && (currentUser.ohr_id === '740045032' || currentUser.actual_role === 'Manager')) {
+  // Exempt admin OHR 740045023 and Managers
+  if (currentUser && (currentUser.ohr_id === '740045023' || currentUser.actual_role === 'Manager')) {
     return false;
   }
 
@@ -1314,7 +1314,7 @@ function initBillingCodeEdit() {
   const allowed = currentUser && (
     currentUser.actual_role === 'Team Lead' ||
     currentUser.actual_role === 'Manager' ||
-    currentUser.ohr_id === '740045032' ||
+    currentUser.ohr_id === '740045023' ||
     currentUser.ohr_id === '740044909'
   );
   section.style.display = allowed ? 'block' : 'none';
@@ -2021,7 +2021,7 @@ function renderAlerts() {
   // Role-based filtering: Team Lead sees only their agents, Manager sees their planning group
   const role = typeof currentUser !== 'undefined' ? currentUser?.actual_role : '';
   const userOhr = typeof currentUser !== 'undefined' ? currentUser?.ohr_id : '';
-  const isAdmin = userOhr === '740045032';
+  const isAdmin = userOhr === '740045023';
 
   function filterAlertsByRole(alerts) {
     if (isAdmin || role === 'Trainer') return alerts; // Admin and Trainer see all

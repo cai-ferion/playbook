@@ -173,7 +173,7 @@ function compassApplyFilters() {
     );
   }
 
-  const isAdmin740 = currentUser && currentUser.ohr_id === '740045032';
+  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
   const isAgent = currentUser && currentUser.actual_role === 'Agent' && !isAdmin740;
 
   if (isAdmin740) {
@@ -664,7 +664,7 @@ async function compassOpenDetail(coachingId) {
       if (supEmployee) isCoachSup = cu.ohr_id === supEmployee.ohr_id;
     }
   }
-  const isAdmin = cu && cu.ohr_id === '740045032';
+  const isAdmin = cu && cu.ohr_id === '740045023';
   const canSeeAckDetails = isCoachee || isCoachSup || isAdmin; // Rating & Sentiments visible to Coachee, Coach's Supervisor, and admin only
   const isAcknowledged = compassIsAcknowledged(log);
 
@@ -1927,7 +1927,7 @@ async function initCompass() {
   await compassFetchEmployees();
   await compassFetchLogs();
 
-  const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045032';
+  const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
 
   // Initialize dual-table pagination
   COMPASS.pageGiven = 1;
@@ -2371,7 +2371,7 @@ async function disputesOpenDetail(coachingId) {
 
   if (cu) {
     const role = cu.actual_role;
-    const isAdmin = cu.ohr_id === '740045032';
+    const isAdmin = cu.ohr_id === '740045023';
 
     // SME actions on LV1 - Pending SME Review
     if (role === 'SME' || isAdmin) {

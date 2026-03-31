@@ -102,3 +102,6 @@
 - [x] Auto-email system: UPL/LATE notifications at 2:30 AM and 11:30 AM PHT
 - [x] Email to agent (meta_email), CC supervisor + senior manager (Polimetla, Ravikiran), BCC banarvinmaurice@meta.com
 - [x] Professional email template with date, tag, reason, remarks
+
+## Admin OHR Correction — Batch 8
+- [x] Change admin OHR from 740045032 back to 740045023 across all files (9 JS files, 20 occurrences updated)

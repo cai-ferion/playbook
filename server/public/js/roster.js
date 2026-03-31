@@ -125,7 +125,7 @@ async function rosterFetchEmployees() {
   if (loading) loading.style.display = 'none';
 
   // Check admin
-  ROSTER.isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045032';
+  ROSTER.isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
 
   // Show/hide add button — admin only
   const addBtn = document.getElementById('roster-add-btn');

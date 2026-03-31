@@ -399,7 +399,7 @@
     }
 
     // Split into given/received based on current user
-    const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045032';
+    const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
 
     if (isAgent) {
       COMPASS.filteredGiven = [];

@@ -138,7 +138,7 @@ function havenRenderReviewArea() {
 
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   const role = user ? user.actual_role : '';
-  const isAdmin = user && user.ohr_id === '740045032';
+  const isAdmin = user && user.ohr_id === '740045023';
 
   let pendingTL = HAVEN.leaves.filter(l => l.status === 'Pending TL');
   if (role === 'Team Lead' && !isAdmin) {
@@ -397,7 +397,7 @@ function havenOpenDetail(leaveId) {
 
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
-    const isAdmin = currentUser.ohr_id === '740045032';
+    const isAdmin = currentUser.ohr_id === '740045023';
 
     if ((role === 'Team Lead' || isAdmin) && lv.status === 'Pending TL') {
       const myAgents = HAVEN.employees.filter(e => e.supervisor_name === currentUser.full_name).map(e => e.ohr_id);
