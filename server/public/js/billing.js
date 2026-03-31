@@ -164,7 +164,7 @@ async function loadBillingCompliance() {
       });
     }
 
-    const EXCLUDED_CODES = ['SA', 'TR', 'SC', 'SV', 'SR'];
+    const EXCLUDED_CODES = ['SA', 'TR', 'SC', 'SV', 'SR', 'EX'];
     for (const [code, data] of Object.entries(codeGroups)) {
       if (!BILLING_CODE_ORDER.includes(code) && !EXCLUDED_CODES.includes(code)) {
         const deliveredHours = data.forecastedP * 7.5;
