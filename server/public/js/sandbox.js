@@ -15,38 +15,39 @@ const SANDBOX_MOD = {
   _context: 'input', // 'input' or 'review' — where detail was opened from
 
   STATUSES: [
-    'Pending - Initial Review',
-    'Approved - Initial Review',
+    'Pending Initial Review',
+    'Pending Final Review',
+    'Approved - Final Review',
+    'Elevated - Task in Progress',
+    'Elevated - POC Rejected',
+    'Elevated - Pending POC Discussion',
+    'Elevated - No POC',
+    'Implemented',
     'Rejected - Initial Review [Duplicate]',
     'Rejected - Initial Review [Insufficient Context/Details]',
     'Rejected - Initial Review [Out of Scope]',
     'Rejected - Initial Review [Pitched Already]',
-    'Pending - Final Review',
-    'Approved - Final Review',
     'Rejected - Final Review [Duplicate]',
     'Rejected - Final Review [Insufficient Context/Details]',
     'Rejected - Final Review [Out of Scope]',
-    'Rejected - Final Review [Pitched Already]',
-    'Elevated - Pending POC Discussion',
-    'Implemented'
+    'Rejected - Final Review [Pitched Already]'
   ],
 
   STATUS_COLORS: {
-    'Pending - Initial Review': '#3B82F6',
-    'Approved - Initial Review': '#22C55E',
-    'Pending - Final Review': '#F59E0B',
+    'Pending Initial Review': '#3B82F6',
+    'Pending Final Review': '#F59E0B',
     'Approved - Final Review': '#059669',
     'Implemented': '#7C3AED',
-    'Elevated - Pending POC Discussion': '#EC4899'
+    'Elevated - Task in Progress': '#8B5CF6',
+    'Elevated - POC Rejected': '#EF4444',
+    'Elevated - Pending POC Discussion': '#EC4899',
+    'Elevated - No POC': '#6B7280'
   },
 
   KANBAN_COLUMNS: [
-    { id: 'pending-initial', title: 'Pending Initial Review', statuses: ['Pending - Initial Review'] },
-    { id: 'approved-initial', title: 'Approved Initial', statuses: ['Approved - Initial Review'] },
-    { id: 'pending-final', title: 'Pending Final Review', statuses: ['Pending - Final Review'] },
-    { id: 'elevated', title: 'Elevated (POC)', statuses: ['Elevated - Pending POC Discussion'] },
-    { id: 'approved-final', title: 'Approved (Trainer)', statuses: ['Approved - Final Review'] },
-    { id: 'rejected-final', title: 'Rejected (Trainer)', statuses: ['Rejected - Final Review [Duplicate]', 'Rejected - Final Review [Insufficient Context/Details]', 'Rejected - Final Review [Out of Scope]', 'Rejected - Final Review [Pitched Already]'] },
+    { id: 'pending-initial', title: 'Pending Initial Review', statuses: ['Pending Initial Review'] },
+    { id: 'pending-final', title: 'Pending Final Review', statuses: ['Pending Final Review'] },
+    { id: 'trainers-area', title: "Trainer's Area", statuses: ['Approved - Final Review', 'Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'] },
     { id: 'implemented', title: 'Implemented', statuses: ['Implemented'] }
   ]
 };
@@ -79,6 +80,7 @@ const SANDBOX_OMNI_FIELDS = [
   { key: 'created_at', label: 'Created Date', type: 'date' }
 ];
 
+const SANDBOX_DEFAULT_SORT = { field: 'created_at', dir: 'desc' };
 const SANDBOX_SORT_FIELDS = [
   { key: 'insight_id', label: 'Insight ID' },
   { key: 'title', label: 'Title' },
@@ -293,11 +295,12 @@ function sandboxOmniApply() {
     });
   });
 
-  // Apply sorts
-  sandboxOmniState.sorts.forEach(s => {
+  // Apply sorts (default: newest first by created_at)
+  const activeSorts = sandboxOmniState.sorts.length > 0 ? sandboxOmniState.sorts : [SANDBOX_DEFAULT_SORT];
+  activeSorts.forEach(s => {
     data.sort((a, b) => {
-      let va = a[s.key] || '', vb = b[s.key] || '';
-      if (s.key === 'category') { va = a.category || a.insight_category || ''; vb = b.category || b.insight_category || ''; }
+      let va = a[s.key || s.field] || '', vb = b[s.key || s.field] || '';
+      if ((s.key || s.field) === 'category') { va = a.category || a.insight_category || ''; vb = b.category || b.insight_category || ''; }
       if (typeof va === 'string') va = va.toLowerCase();
       if (typeof vb === 'string') vb = vb.toLowerCase();
       if (va < vb) return s.dir === 'asc' ? -1 : 1;
@@ -369,7 +372,7 @@ function sandboxRenderTable() {
 
   tbody.innerHTML = pageData.map(ins => {
     const statusColor = sandboxGetStatusColor(ins.status);
-    const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const date = ins.created_at ? new Date(ins.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
     const shortStatus = (ins.status || '').replace('Rejected - Initial Review ', 'Rej-IR ').replace('Rejected - Final Review ', 'Rej-FR ').replace('Pending - ', 'Pend. ').replace('Approved - ', 'Appr. ');
     const cat = ins.category || ins.insight_category || '—';
 
@@ -442,20 +445,24 @@ function sandboxRenderKanban() {
       html += '<div class="kanban-empty">No items</div>';
     } else {
       cards.slice(0, 20).forEach(ins => {
-        const statusColor = sandboxGetStatusColor(ins.status);
-        const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
         html += `
-          <div class="kanban-card" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','review')">
-            <div class="kanban-card-header">
+          <div class="kanban-card kanban-card-styled" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','review')">
+            <div class="kanban-card-id-row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
               <span class="kanban-card-id">${escapeHtml(ins.insight_id || '')}</span>
-              <span class="kanban-card-date">${date}</span>
             </div>
-            <div class="kanban-card-body">
-              <div class="kanban-card-coachee">${escapeHtml(ins.title || ins.insight_title || '—')}</div>
-              <div class="kanban-card-coach">${escapeHtml(ins.full_name || ins.submitter || '—')}</div>
+            <div class="kanban-card-coachee-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span>${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span>
             </div>
-            <div class="kanban-card-footer">
-              <span class="kanban-card-status" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml((ins.status || '').replace(/\s*\[.*\]/, ''))}</span>
+            <div class="kanban-card-coachee-row" style="font-size:12px;color:var(--fg-muted);">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span>
+            </div>
+            <div class="kanban-card-date-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span>${date}</span>
             </div>
           </div>`;
       });
@@ -478,11 +485,12 @@ function sandboxOpenDetail(insightId, context) {
   SANDBOX_MOD.editingId = insightId;
   SANDBOX_MOD._context = context || 'input';
 
-  // Always use the Input Portal form overlay (shared)
-  const formTitle = document.getElementById('sandbox-form-title');
-  const formBody = document.getElementById('sandbox-form-body');
-  const formFooter = document.getElementById('sandbox-form-footer');
-  const overlay = document.getElementById('sandbox-form-overlay');
+  // Use the correct overlay based on context
+  const isReview = (context === 'review');
+  const formTitle = document.getElementById(isReview ? 'sandbox-review-form-title' : 'sandbox-form-title');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  const formFooter = document.getElementById(isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer');
+  const overlay = document.getElementById(isReview ? 'sandbox-review-form-overlay' : 'sandbox-form-overlay');
 
   // Title is just the Insight ID
   formTitle.textContent = ins.insight_id;
@@ -536,12 +544,12 @@ function sandboxOpenDetail(insightId, context) {
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
     const isAdmin = currentUser.ohr_id === '740045023';
 
-    if ((role === 'SME' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending - Initial Review') {
+    if ((role === 'SME' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending Initial Review') {
       footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowAcceptPopout(\'initial\')">Approve</button>';
       footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'initial\')">Reject</button>';
     }
 
-    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ['Pending - Final Review', 'Elevated - Pending POC Discussion'].includes(ins.status)) {
+    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ['Pending Final Review', 'Elevated - Pending POC Discussion'].includes(ins.status)) {
       footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowAcceptPopout(\'final\')">Approve</button>';
       footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')">Reject</button>';
       if (ins.status !== 'Elevated - Pending POC Discussion') {
@@ -603,7 +611,8 @@ function sandboxRenderReviewTrail(ins) {
 // ===== Accept Popout (confirmation) =====
 
 function sandboxShowAcceptPopout(tier) {
-  const formBody = document.getElementById('sandbox-form-body');
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
   const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
@@ -617,16 +626,19 @@ function sandboxShowAcceptPopout(tier) {
         <button class="btn btn-success btn-sm" onclick="sandboxCloseAcceptPopout();sandboxReview('approve-${tier}')">Save</button>
       </div>
     </div>`;
-  document.getElementById('sandbox-form-footer').style.display = 'none';
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = 'none';
 }
 
 function sandboxCloseAcceptPopout() {
-  const formBody = document.getElementById('sandbox-form-body');
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
     delete formBody._prevHtml;
   }
-  document.getElementById('sandbox-form-footer').style.display = '';
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = '';
 }
 
 // ===== Reject Modal (with aligned reasons) =====
@@ -635,24 +647,26 @@ function sandboxShowRejectModal(tier) {
   const reasons = ['Duplicate', 'Insufficient Context/Details', 'Out of Scope', 'Pitched Already'];
   const prefix = tier === 'initial' ? 'Rejected - Initial Review' : 'Rejected - Final Review';
 
-  const formBody = document.getElementById('sandbox-form-body');
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
   formBody.innerHTML = `
-    <div style="padding:24px;">
-      <h4 style="margin-bottom:16px;font-size:16px;">Select Rejection Reason</h4>
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        ${reasons.map(r => `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border-primary);border-radius:8px;cursor:pointer;font-size:14px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+    <div style="padding:16px 20px;">
+      <h4 style="margin-bottom:10px;font-size:15px;">Select Rejection Reason</h4>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${reasons.map(r => `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border-primary);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
           <input type="radio" name="sandbox-reject-reason" value="${escapeAttr(prefix)} [${escapeAttr(r)}]" style="accent-color:var(--accent-primary);">
           <span>${escapeHtml(r)}</span>
         </label>`).join('')}
       </div>
-      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-outline btn-sm" onclick="sandboxCloseRejectModal()">Cancel</button>
         <button class="btn btn-danger btn-sm" onclick="sandboxSubmitReject()">Save</button>
       </div>
     </div>`;
-  document.getElementById('sandbox-form-footer').style.display = 'none';
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = 'none';
 }
 
 function sandboxSubmitReject() {
@@ -663,12 +677,14 @@ function sandboxSubmitReject() {
 }
 
 function sandboxCloseRejectModal() {
-  const formBody = document.getElementById('sandbox-form-body');
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
     delete formBody._prevHtml;
   }
-  document.getElementById('sandbox-form-footer').style.display = '';
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = '';
 }
 
 // ===== Review Actions =====
@@ -681,7 +697,7 @@ async function sandboxReview(action) {
   const updates = { updated_at: new Date().toISOString() };
 
   if (action === 'approve-initial') {
-    updates.status = 'Pending - Final Review';
+    updates.status = 'Pending Final Review';
     updates.initial_reviewer = user ? user.full_name : '';
     updates.initial_review_date = new Date().toISOString();
   } else if (action === 'approve-final') {
@@ -950,7 +966,7 @@ async function sandboxSubmitNew() {
     supervisor_email: emp ? emp.supervisor_email : '',
     queue: emp ? emp.queue : '',
     platform: emp ? emp.platform : '',
-    status: 'Pending - Initial Review',
+    status: 'Pending Initial Review',
     created_date: new Date().toISOString(),
     created_at: new Date().toISOString(),
     ...jobIds
@@ -980,6 +996,8 @@ async function sandboxSubmitNew() {
 function sandboxCloseForm() {
   const overlay = document.getElementById('sandbox-form-overlay');
   if (overlay) overlay.style.display = 'none';
+  const reviewOverlay = document.getElementById('sandbox-review-form-overlay');
+  if (reviewOverlay) reviewOverlay.style.display = 'none';
   SANDBOX_MOD.editingId = null;
 }
 

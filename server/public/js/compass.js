@@ -20,7 +20,7 @@ const COMPASS = {
   pageGiven: 1,
   pageReceived: 1,
 
-  COACHING_TYPES: ['New Session', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+  COACHING_TYPES: ['General Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
     'Pending SME Review',
@@ -64,11 +64,10 @@ const COMPASS = {
   KANBAN_COLUMNS: [
     { id: 'pending-sme', title: 'LV1 - PENDING SME REVIEW', statuses: ['Pending SME Review'] },
     { id: 'sme-disputed', title: 'LV2 - PENDING QA DECISION', statuses: ['Markdown Disputed - SME'] },
-    { id: 'qa-decision', title: 'LV3 - PENDING SME-QA DECISION', statuses: ['Markdown Reversed - QA', 'Markdown Retained - QA'] },
-
-    { id: 'trainer-review', title: 'LV4 - PENDING TRAINER DECISION', statuses: ['Markdown Reversed - Trainer', 'Markdown Retained - Trainer'] },
-    { id: 'sme-trainer', title: 'LV5 - PENDING SME-TRAINER DECISION', statuses: ['Trainer Decision Rejected - SME'] },
-    { id: 'qtp-review', title: 'LV6 - PENDING QTP MANAGER DECISION', statuses: ['Markdown Reversed - QTP Manager', 'Markdown Retained - QTP Manager'] }
+    { id: 'qa-decision', title: 'LV3 - PENDING SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
+    { id: 'trainer-review', title: 'LV4 - PENDING TRAINER DECISION', statuses: ['QA Decision Rejected'] },
+    { id: 'sme-trainer', title: 'LV5 - PENDING SME-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
+    { id: 'qtp-review', title: 'LV6 - PENDING QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected - SME'] }
   ]
 };
 
@@ -1290,7 +1289,7 @@ async function compassShowNewForm() {
     <!-- Job ID for QA Feedback (hidden by default) -->
     <div class="form-section" id="compass-job-id-section" style="display:none;">
       <div class="form-field">
-        <label class="form-label">Job ID</label>
+        <label class="form-label">Job ID <span style="color:#ef4444;">*</span></label>
         <input type="text" class="form-input" id="compass-new-job-id" placeholder="Enter Job ID (alphanumeric)...">
       </div>
     </div>
@@ -1404,7 +1403,7 @@ async function compassShowNewForm() {
   if (!isQA) {
     const typeSelect = document.getElementById('compass-new-type');
     if (typeSelect) {
-      typeSelect.value = 'New Session';
+      typeSelect.value = 'General Coaching';
       compassOnTypeChange();
     }
   }
@@ -1742,7 +1741,8 @@ async function compassSubmitNew() {
   }
 
   if (type === 'QA Feedback') {
-    record.job_id = document.getElementById('compass-new-job-id')?.value || '';
+    record.job_id = document.getElementById('compass-new-job-id')?.value?.trim() || '';
+    if (!record.job_id) { showToast('Please enter a Job ID', 'error'); return; }
   }
 
   if (type === 'ZTP Coaching') {
@@ -1769,7 +1769,7 @@ async function compassSubmitNew() {
     for (const item of coacheeList) {
       const emp = item.emp || COMPASS.employees.find(e => e.ohr_id === item.ohr);
       const individualRecord = {
-        coaching_type: 'New Session',
+        coaching_type: 'General Coaching',
         coach: coach ? coach.full_name : '',
         coach_ohr: coach ? coach.ohr_id : '',
         coach_meta_email: coach ? (coach.meta_email || '') : '',
@@ -1810,7 +1810,7 @@ async function compassSubmitNew() {
       // Create a notification for each coachee
       if (typeof notifyCoachingIssued === 'function') {
         for (let i = 0; i < coacheeList.length && i < createdIds.length; i++) {
-          notifyCoachingIssued(coacheeList[i].name, 'New Session', createdIds[i] || '', sessionGoal);
+          notifyCoachingIssued(coacheeList[i].name, 'General Coaching', createdIds[i] || '', sessionGoal);
         }
       }
     } else {
@@ -2202,7 +2202,7 @@ document.addEventListener('selectionchange', function() {
 
 // ===== Multi-Select Goal Helpers =====
 
-// Goals to hide for "New Session" type
+// Goals to hide for "General Coaching" type
 const NEW_SESSION_HIDDEN_GOALS = ['Coaching Observation', 'Quality Error Findings'];
 
 function compassFilterGoalOptions(type) {
@@ -2211,7 +2211,7 @@ function compassFilterGoalOptions(type) {
   const labels = dropdown.querySelectorAll('label.multi-select-option');
   labels.forEach(label => {
     const goalName = label.getAttribute('data-goal');
-    if (type === 'New Session' && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
+    if (type === 'General Coaching' && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
       label.style.display = 'none';
       // Also uncheck if hidden
       const cb = label.querySelector('input[type="checkbox"]');

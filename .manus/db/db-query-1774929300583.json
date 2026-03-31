@@ -1,0 +1,40 @@
+{
+  "query": "SELECT DISTINCT session_goal FROM io_coaching WHERE session_goal LIKE '%AES Discussion%' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT DISTINCT session_goal FROM io_coaching WHERE session_goal LIKE '%AES Discussion%' LIMIT 10;",
+  "rows": [
+    {
+      "session_goal": "Scorecard Discussion,Attendance & Productivity,Professional & Personal Development Plan,AES Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,Attendance & Productivity,AHT Performance Findings,Behavior,AES Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,AES Discussion,Internal Discussion,AHT Performance Findings"
+    },
+    {
+      "session_goal": "Internal Discussion,AES Discussion,Scorecard Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,AES Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,Internal Discussion,AES Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,AHT Performance Findings,AES Discussion,Internal Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,Professional & Personal Development Plan,Attendance & Productivity,AHT Performance Findings,Escalation,Behavior,AES Discussion,Internal Discussion"
+    },
+    {
+      "session_goal": "Scorecard Discussion,AHT Performance Findings,AES Discussion,Internal Discussion,Attendance & Productivity"
+    },
+    {
+      "session_goal": "Scorecard Discussion,Professional & Personal Development Plan,Attendance & Productivity,AHT Performance Findings,AES Discussion,Behavior,Internal Discussion"
+    }
+  ],
+  "messages": [],
+  "stdout": "session_goal\nScorecard Discussion,Attendance & Productivity,Professional & Personal Development Plan,AES Discussion\nScorecard Discussion,Attendance & Productivity,AHT Performance Findings,Behavior,AES Discussion\nScorecard Discussion,AES Discussion,Internal Discussion,AHT Performance Findings\nInternal Discussion,AES Discussion,Scorecard Discussion\nScorecard Discussion,AES Discussion\nScorecard Discussion,Internal Discussion,AES Discussion\nScorecard Discussion,AHT Performance Findings,AES Discussion,Internal Discussion\nScorecard Discussion,Professional & Personal Development Plan,Attendance & Productivity,AHT Performance Findings,Escalation,Behavior,AES Discussion,Internal Discussion\nScorecard Discussion,AHT Performance Findings,AES Discussion,Internal Discussion,Attendance & Productivity\nScorecard Discussion,Professional & Personal Development Plan,Attendance & Productivity,AHT Performance Findings,AES Discussion,Behavior,Internal Discussion\n",
+  "stderr": "",
+  "execution_time_ms": 1598
+}

@@ -121,3 +121,49 @@
 ## Employee Nesting Status Update — Batch 11
 - [x] Update 15 employees to "Nesting" status in io_employees table
 - [x] Ensure billing compliance code excludes employees with "Nesting" employement_status (already works — status field comes from emp.employement_status)
+
+## Batch 12 — Comprehensive Revisions
+
+### Compass - Coaching Profile
+- [x] Make "Job ID" field required in New Coaching Log form
+
+### Compass - Disputes Area (card section routing)
+- [x] LV1 - PENDING SME REVIEW: Status = Pending SME Review
+- [x] LV2 - PENDING QA DECISION: Status = Markdown Disputed - SME
+- [x] LV3 - PENDING SME-QA DECISION: Status = Markdown Retained - QA
+- [x] LV4 - PENDING TRAINER DECISION: Status = QA Decision Rejected
+- [x] LV5 - PENDING SME-TRAINER DECISION: Status = Markdown Retained - Trainer
+- [x] LV6 - PENDING QTP MANAGER DECISION: Status = Trainer Decision Rejected - SME
+
+### Sandbox - Input Portal
+- [x] Make "Created Date" column a date-time format
+- [x] Default sort: newest at the top
+
+### Sandbox - Review Area
+- [x] Copy card styling from Compass - Disputes Area (kanban-card-styled with icon rows)
+- [x] Fix card click: detail view now shows in Review Area overlay, not Input Portal
+- [x] Reject form: made smaller, narrowed spacing between rejection reasons
+- [x] Approve → Save routes insight to "Pending Final Review" section
+- [x] Section conditions updated:
+  - [x] Pending Initial Review: Status = Pending Initial Review
+  - [x] Pending Final Review: Status = Pending Final Review
+  - [x] Renamed "Approved (Trainer)" to "Trainer's Area", statuses: Approved - Final Review / Elevated - Task in Progress / Elevated - POC Rejected / Elevated - Pending POC Discussion / Elevated - No POC
+  - [x] Renamed "Rejected (Trainer)" to "Implemented", Status = Implemented
+  - [x] Removed "Elevated (POC)" sectionentirely
+
+### Database Updates
+- [x] Replace all "AES Discussion" with "Scorecard Discussion" in Compass session_goal values (removed from rows that already had Scorecard Discussion, replaced in others)
+- [x] Replace all "New Session" with "General Coaching" in Compass coaching_type column display + database records
+
+### Billing Compliance
+- [x] Fix YTD COMPLIANCE — 95% THRESHOLD chart not loading on published site (moved to server-side aggregation)
+- [x] Fix UPL REASON TRENDS & 3-MONTH PREDICTION chart not loading (server-side aggregation)
+- [x] Fix LATE REASON TRENDS & 3-MONTH PREDICTION chart not loading (server-side aggregation)
+- [x] Fix PL REASON TRENDS & 3-MONTH PREDICTION chart not loading (server-side aggregation)
+
+### Performance Dashboard Migration (from MIGRATION_HANDOFF.md)
+- [x] Create perf_ database tables (6 tables)
+- [x] Create REST API routes at /api/io/performance/* (data, kpi, upload, resync, sync-history, sync-status)
+- [x] Port parseMainMetrics.ts parser for .xlsb files
+- [x] Build Performance view in sidebar with filter bar, KPI cards, and sortable table
+- [x] Integrate with io_employees for roster enrichment

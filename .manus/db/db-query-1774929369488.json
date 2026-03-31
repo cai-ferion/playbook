@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE io_coaching SET coaching_type = 'General Coaching' WHERE coaching_type = 'New Session';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute UPDATE io_coaching SET coaching_type = 'General Coaching' WHERE coaching_type = 'New Session';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1734
+}

@@ -109,6 +109,10 @@
               Risk Alerts
               <span class="nav-badge" id="alert-nav-count">0</span>
             </button>
+            <button class="nav-item" data-view="performance" onclick="switchView('performance')" id="nav-performance">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Performance
+            </button>
 
           </div>
         </div>
@@ -745,6 +749,69 @@
         </div>
       </div>
 
+      <!-- ===== View: Performance Dashboard ===== -->
+      <div class="view-container view-hidden" id="view-performance">
+        <div class="module-page">
+
+          <div class="loading-overlay" id="perf-loading" style="display:none;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Performance Data...</div>
+          </div>
+
+          <!-- Upload / Sync Bar -->
+          <div class="filter-bar" style="margin-bottom:16px;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+              <span class="filter-label">Timeframe:</span>
+              <select class="form-select" id="perf-timeframe" onchange="perfApplyFilters()" style="min-width:180px;"></select>
+              <span class="filter-label">Planning Group:</span>
+              <select class="form-select" id="perf-planning-group" onchange="perfApplyFilters()">
+                <option value="All">All</option>
+              </select>
+              <span class="filter-label">Supervisor:</span>
+              <select class="form-select" id="perf-supervisor" onchange="perfApplyFilters()">
+                <option value="All">All</option>
+              </select>
+              <span class="filter-label">Shift:</span>
+              <select class="form-select" id="perf-shift" onchange="perfApplyFilters()">
+                <option value="All">All</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="perf-sync-info" style="font-size:12px;color:var(--text-muted);"></span>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload .xlsb
+                <input type="file" accept=".xlsb" id="perf-file-input" onchange="perfHandleUpload(this)" style="display:none;">
+              </label>
+              <button class="btn btn-outline btn-sm" onclick="perfResync()" id="perf-resync-btn" title="Re-process stored file">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Resync
+              </button>
+            </div>
+          </div>
+
+          <!-- KPI Summary Cards -->
+          <div id="perf-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+          <!-- Employee Data Table -->
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="perf-table">
+              <thead>
+                <tr id="perf-table-header"></tr>
+              </thead>
+              <tbody id="perf-table-body"></tbody>
+            </table>
+          </div>
+
+          <div id="perf-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted);">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:0.5;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <h3 style="margin-bottom:8px;">No Performance Data</h3>
+            <p>Upload a .xlsb file to populate the dashboard.</p>
+          </div>
+
+        </div>
+      </div>
+
       <!-- ===== View 6a: Compass Input Portal ===== -->
       <div class="view-container view-hidden" id="view-compass-input">
         <div class="module-page">
@@ -949,6 +1016,20 @@
             <div class="loading-text">Loading Review Queue...</div>
           </div>
           <div id="sandbox-kanban-board" class="kanban-board"></div>
+
+          <!-- Review Area Form Overlay -->
+          <div class="module-form-overlay" id="sandbox-review-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="sandbox-review-form-title">Insight Detail</h3>
+                <button class="module-form-close" onclick="sandboxCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="sandbox-review-form-body"></div>
+              <div class="module-form-footer" id="sandbox-review-form-footer"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1242,6 +1323,7 @@
   <script src="js/notifications.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/billing.js"></script>
+  <script src="js/performance.js"></script>
   <script src="js/compass.js"></script>
   <script src="js/compass-omnibar.js"></script>
   <script src="js/sandbox.js"></script>

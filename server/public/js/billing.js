@@ -288,47 +288,46 @@ function renderBillingComplianceTable(tableData) {
 // ===================================================================
 
 /**
- * Load all YTD attendance data and render the doughnut chart + trend charts.
+ * Load YTD billing analytics using server-side aggregation endpoint.
+ * Returns pre-computed compliance and trend data instead of fetching all records.
  */
 async function loadBillingYTDAnalytics() {
   const year = new Date().getFullYear();
-  const startDate = `${year}-01-01`;
-  const today = new Date();
-  const endDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
 
   try {
-    // Fetch YTD data from the API
-    const resp = await fetch(`${IO_API_BASE}/attendance?log_date_gte=${startDate}&log_date_lte=${endDate}&limit=100000`);
+    const resp = await fetch(`${IO_API_BASE}/attendance/billing-ytd?year=${year}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const result = await resp.json();
-    const ytdRecords = (result.data || result || []).filter(r => !EXCLUDED_STATUSES.includes(r.status || r.snap_status));
+    const compliance = result.compliance || [];
+    const trends = result.trends || [];
 
-    renderComplianceDoughnut(ytdRecords);
-    renderReasonTrendsChart(ytdRecords, 'UPL', 'billing-upl-trends-chart', 'billingUplTrendsChart');
-    renderReasonTrendsChart(ytdRecords, 'LATE', 'billing-late-trends-chart', 'billingLateTrendsChart');
-    renderReasonTrendsChart(ytdRecords, 'PL', 'billing-pl-trends-chart', 'billingPlTrendsChart');
+    renderComplianceDoughnut(compliance);
+    renderReasonTrendsChartFromAgg(trends, 'UPL', 'billing-upl-trends-chart', 'billingUplTrendsChart');
+    renderReasonTrendsChartFromAgg(trends, 'LATE', 'billing-late-trends-chart', 'billingLateTrendsChart');
+    renderReasonTrendsChartFromAgg(trends, 'PL', 'billing-pl-trends-chart', 'billingPlTrendsChart');
   } catch (err) {
     console.error('Error loading YTD analytics:', err);
   }
 }
 
 /**
- * Render the YTD compliance doughnut chart showing % of billing codes passing 95% threshold.
+ * Render the YTD compliance doughnut chart from pre-aggregated server data.
+ * @param {Array} complianceData - [{billing_code, forecasted_p, ot_rendered}]
  */
-function renderComplianceDoughnut(ytdRecords) {
+function renderComplianceDoughnut(complianceData) {
   const canvas = document.getElementById('billing-compliance-doughnut');
   const legendEl = document.getElementById('billing-doughnut-legend');
   if (!canvas) return;
 
-  // Group by billing code
+  // Build lookup from aggregated data
   const codeGroups = {};
-  for (const r of ytdRecords) {
-    const code = (r.billing_code || r.billingCode || '').trim();
+  for (const r of complianceData) {
+    const code = (r.billing_code || '').trim();
     if (!code) continue;
-    if (!codeGroups[code]) codeGroups[code] = { forecastedP: 0, otRendered: 0 };
-    const tag = r.tag || '';
-    if (tag === 'P' || tag === 'LATE') codeGroups[code].forecastedP++;
-    const ot = parseFloat(r.ot_hours || r.ot || 0);
-    if (!isNaN(ot)) codeGroups[code].otRendered += ot;
+    codeGroups[code] = {
+      forecastedP: parseInt(r.forecasted_p) || 0,
+      otRendered: parseFloat(r.ot_rendered) || 0,
+    };
   }
 
   let passing = 0;
@@ -362,7 +361,7 @@ function renderComplianceDoughnut(ytdRecords) {
   billingDoughnutChart = new Chart(canvas, {
     type: 'doughnut',
     data: {
-      labels: ['Passing (≥95%)', 'Below 95%'],
+      labels: ['Passing (\u226595%)', 'Below 95%'],
       datasets: [{
         data: [passing, failing],
         backgroundColor: ['#22c55e', '#ef4444'],
@@ -419,13 +418,13 @@ function renderComplianceDoughnut(ytdRecords) {
 }
 
 /**
- * Render a monthly reason trends line chart with 3-month prediction.
- * @param {Array} ytdRecords - All YTD attendance records
+ * Render a monthly reason trends line chart from pre-aggregated server data.
+ * @param {Array} trendsData - [{tag, month, cnt}]
  * @param {string} tagFilter - 'UPL', 'LATE', or 'PL'
  * @param {string} canvasId - Canvas element ID
  * @param {string} chartVarName - Global variable name for chart instance
  */
-function renderReasonTrendsChart(ytdRecords, tagFilter, canvasId, chartVarName) {
+function renderReasonTrendsChartFromAgg(trendsData, tagFilter, canvasId, chartVarName) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
@@ -435,19 +434,12 @@ function renderReasonTrendsChart(ytdRecords, tagFilter, canvasId, chartVarName) 
     window[chartVarName] = null;
   }
 
-  // Filter records by tag
-  const filtered = ytdRecords.filter(r => {
-    const tag = r.tag || '';
-    return tag === tagFilter;
-  });
-
-  // Group by month (YYYY-MM)
+  // Build month counts from aggregated data
   const monthCounts = {};
-  for (const r of filtered) {
-    const date = r.log_date || r.date || '';
-    if (!date) continue;
-    const month = date.substring(0, 7); // YYYY-MM
-    monthCounts[month] = (monthCounts[month] || 0) + 1;
+  for (const r of trendsData) {
+    if (r.tag === tagFilter) {
+      monthCounts[r.month] = parseInt(r.cnt) || 0;
+    }
   }
 
   // Build sorted month labels from Jan to current month

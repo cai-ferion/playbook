@@ -13,6 +13,7 @@ import { serveStatic, setupVite } from "./vite";
 import { registerIORoutes } from "../io-routes.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
 import { registerAutoMailer } from "../auto-mailer.js";
+import performanceRouter from "../io-performance-routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,7 @@ async function startServer() {
   // IO Operations API routes
   registerIORoutes(app);
   registerIOBackupRoutes(app);
+  app.use('/api/io/performance', performanceRouter);
 
   // Auto-mailer for UPL/LATE notifications
   registerAutoMailer(app);

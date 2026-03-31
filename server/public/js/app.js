@@ -411,6 +411,10 @@ async function handleLogin() {
     const billingNav = document.getElementById('nav-billing');
     if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
+    // Show Performance nav for Team Lead and Manager only
+    const perfNav = document.getElementById('nav-performance');
+    if (perfNav) perfNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
+
     // Compass, Sandbox, Haven, Helm — visible ONLY to admin OHR (under development)
     ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm'].forEach(id => {
       const el = document.getElementById(id);
@@ -541,6 +545,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Show Billing Compliance nav for Team Lead and Manager only
       const billingNav2 = document.getElementById('nav-billing');
       if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
+
+      // Show Performance nav for Team Lead and Manager only
+      const perfNav2 = document.getElementById('nav-performance');
+      if (perfNav2) perfNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
       // Compass, Sandbox, Haven, Helm — visible ONLY to admin OHR (under development)
       ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm'].forEach(id => {
@@ -839,6 +847,7 @@ async function switchView(view) {
   if (view === 'dashboard') renderDashboard();
   if (view === 'alerts') loadAllDataForAlerts();
   if (view === 'billing') await initBillingCompliance();
+  if (view === 'performance') { if (typeof initPerformance === 'function') await initPerformance(); }
   if (view === 'admin') { if (typeof onAdminViewLoad === 'function') onAdminViewLoad(); }
   if (view === 'compass-input') { if (typeof initCompass === 'function') initCompass(); }
   if (view === 'compass-disputes') { if (typeof initCompassDisputes === 'function') initCompassDisputes(); }

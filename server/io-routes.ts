@@ -886,6 +886,65 @@ router.post("/upload", async (req: Request, res: Response) => {
 });
 
 // ============================================================
+// Billing YTD Aggregation (server-side to avoid huge payloads)
+// ============================================================
+
+// GET /api/io/attendance/billing-ytd?year=2026
+router.get("/attendance/billing-ytd", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const year = String(req.query.year || new Date().getFullYear());
+    const startDate = `${year}-01-01`;
+    const today = new Date();
+    const endDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // Excluded statuses
+    const excludedStatuses = ['Nesting', 'Attrition Backfill Training', 'Exit'];
+
+    // 1. Billing code compliance summary (Forecasted P, OT, by billing_code)
+    const complianceRows = await db.execute(sql`
+      SELECT
+        a.billing_code,
+        SUM(CASE WHEN a.tag IN ('P', 'LATE', '') OR a.tag IS NULL THEN 1 ELSE 0 END) AS forecasted_p,
+        SUM(COALESCE(a.ot_hours, 0)) AS ot_rendered
+      FROM io_attendance a
+      LEFT JOIN io_employees e ON a.ohr_id = e.ohr_id
+      WHERE a.log_date >= ${startDate}
+        AND a.log_date <= ${endDate}
+        AND (e.employement_status IS NULL OR e.employement_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
+      GROUP BY a.billing_code
+    `);
+
+    // 2. Monthly tag counts for trend charts (UPL, LATE, PL by month)
+    const trendRows = await db.execute(sql`
+      SELECT
+        a.tag,
+        DATE_FORMAT(a.log_date, '%Y-%m') AS month,
+        COUNT(*) AS cnt
+      FROM io_attendance a
+      LEFT JOIN io_employees e ON a.ohr_id = e.ohr_id
+      WHERE a.log_date >= ${startDate}
+        AND a.log_date <= ${endDate}
+        AND a.tag IN ('UPL', 'LATE', 'PL')
+        AND (e.employement_status IS NULL OR e.employement_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
+      GROUP BY a.tag, DATE_FORMAT(a.log_date, '%Y-%m')
+      ORDER BY month
+    `);
+
+    // mysql2 returns [rows, fields] — extract the rows array
+    const compliance = Array.isArray(complianceRows) ? (Array.isArray(complianceRows[0]) ? complianceRows[0] : complianceRows) : [];
+    const trends = Array.isArray(trendRows) ? (Array.isArray(trendRows[0]) ? trendRows[0] : trendRows) : [];
+
+    res.json({ compliance, trends });
+  } catch (err: any) {
+    console.error("[IO API] billing-ytd error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
 // CSV Export for Google Sheets Sync
 // ============================================================
 
