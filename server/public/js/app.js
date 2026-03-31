@@ -411,11 +411,8 @@ async function handleLogin() {
     const billingNav = document.getElementById('nav-billing');
     if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
-    // Show Performance nav for Team Lead and Manager only
-    const perfNav = document.getElementById('nav-performance');
-    if (perfNav) perfNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
-
     // Compass, Sandbox, Haven, Helm — visible ONLY to admin OHR (under development)
+    // Performance is now under Helm, so it inherits Helm's admin-only visibility
     ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
@@ -546,11 +543,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const billingNav2 = document.getElementById('nav-billing');
       if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
-      // Show Performance nav for Team Lead and Manager only
-      const perfNav2 = document.getElementById('nav-performance');
-      if (perfNav2) perfNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
-
       // Compass, Sandbox, Haven, Helm — visible ONLY to admin OHR (under development)
+      // Performance is now under Helm, so it inherits Helm's admin-only visibility
       ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
