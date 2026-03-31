@@ -40,6 +40,9 @@ let billingUplTrendsChart = null;
 let billingLateTrendsChart = null;
 let billingPlTrendsChart = null;
 
+// Track whether the billing dropdown has been initialized
+let billingDropdownInitialized = false;
+
 /**
  * Generate all Friday week endings for the current year.
  */
@@ -70,31 +73,36 @@ function getBillingCurrentWeekEnding() {
 
 /**
  * Initialize the Billing Compliance page controls and auto-load current week.
+ * Made async to properly await data loading on first visit.
  */
-function initBillingCompliance() {
+async function initBillingCompliance() {
   const select = document.getElementById('billing-week-select');
   if (!select) return;
 
-  const weeks = getBillingWeekEndings();
-  select.innerHTML = '<option value="">Select Week Ending</option>';
-  for (const we of weeks) {
-    const opt = document.createElement('option');
-    opt.value = we;
-    const d = new Date(we + 'T00:00:00');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    opt.textContent = `${mm}/${dd}`;
-    select.appendChild(opt);
+  // Only build the dropdown once; on subsequent visits just reload data
+  if (!billingDropdownInitialized) {
+    const weeks = getBillingWeekEndings();
+    select.innerHTML = '<option value="">Select Week Ending</option>';
+    for (const we of weeks) {
+      const opt = document.createElement('option');
+      opt.value = we;
+      const d = new Date(we + 'T00:00:00');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      opt.textContent = `${mm}/${dd}`;
+      select.appendChild(opt);
+    }
+
+    // Default to current week ending
+    const currentWE = getBillingCurrentWeekEnding();
+    if ([...select.options].some(o => o.value === currentWE)) {
+      select.value = currentWE;
+    }
+    billingDropdownInitialized = true;
   }
 
-  // Default to current week ending and auto-load
-  const currentWE = getBillingCurrentWeekEnding();
-  if ([...select.options].some(o => o.value === currentWE)) {
-    select.value = currentWE;
-  }
-
-  // Auto-load the current week's data
-  loadBillingCompliance();
+  // Always load/reload the selected week's data (await to ensure rendering completes)
+  await loadBillingCompliance();
 
   // Also load YTD analytics (doughnut + trends)
   loadBillingYTDAnalytics();

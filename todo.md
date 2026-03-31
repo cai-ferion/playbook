@@ -109,3 +109,4 @@
 
 ## Billing Compliance Fix — Batch 9
 - [x] Remove "EX" row from the first table in Anchor - Billing Compliance page
+- [x] Fix: Billing Compliance page doesn't auto-load current week data on initial render

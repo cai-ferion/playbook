@@ -465,6 +465,7 @@ function handleLogout() {
   appState.records = [];
   appState.originalRecords = [];
   appState.loadedRanges = [];
+  if (typeof billingDropdownInitialized !== 'undefined') billingDropdownInitialized = false;
   document.getElementById('app-container').style.display = 'none';
   document.getElementById('auth-page').style.display = 'flex';
   showAuthButtons();
@@ -774,7 +775,7 @@ function updateRefreshDisplay() {
 
 // ===== View Switching =====
 
-function switchView(view) {
+async function switchView(view) {
   appState.activeView = view;
 
   const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen'];
@@ -837,7 +838,7 @@ function switchView(view) {
   if (view === 'input') renderInputTable();
   if (view === 'dashboard') renderDashboard();
   if (view === 'alerts') loadAllDataForAlerts();
-  if (view === 'billing') initBillingCompliance();
+  if (view === 'billing') await initBillingCompliance();
   if (view === 'admin') { if (typeof onAdminViewLoad === 'function') onAdminViewLoad(); }
   if (view === 'compass-input') { if (typeof initCompass === 'function') initCompass(); }
   if (view === 'compass-disputes') { if (typeof initCompassDisputes === 'function') initCompassDisputes(); }
