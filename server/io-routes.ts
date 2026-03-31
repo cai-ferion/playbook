@@ -68,7 +68,6 @@ You have been assigned a new task in Playbook.
 Task ID: ${record.task_id}
 Title: ${record.title}
 Description: ${record.description || 'No description provided'}
-Priority: ${record.priority || 'Medium'}
 Due Date: ${dueStr}
 Assigned By: ${record.assigned_by_name || 'System'}
 
@@ -408,7 +407,7 @@ router.get("/coaching", async (req: Request, res: Response) => {
     }
 
     const lim = limit ? Number(limit) : 2000;
-    const rows = await db.select().from(ioCoaching).orderBy(desc(sql`created_at`)).limit(lim);
+    const rows = await db.select().from(ioCoaching).orderBy(desc(ioCoaching.id)).limit(lim);
     res.json(rows);
   } catch (err: any) {
     console.error("[IO API] coaching GET error:", err);
@@ -1040,6 +1039,39 @@ router.get("/attendance/billing-ytd", async (req: Request, res: Response) => {
     res.json({ compliance, trends });
   } catch (err: any) {
     console.error("[IO API] billing-ytd error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Billing Target Hours
+// ============================================================
+
+// GET /api/io/billing-target-hours
+router.get("/billing-target-hours", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const result = await db.execute(sql`SELECT code, target_hours FROM io_billing_target_hours`);
+    res.json(result);
+  } catch (err: any) {
+    console.error("[IO API] billing-target-hours GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/billing-target-hours
+router.post("/billing-target-hours", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const { code, target_hours } = req.body;
+    if (!code || target_hours === undefined) return res.status(400).json({ error: "code and target_hours required" });
+    const now = new Date().toISOString();
+    await db.execute(sql`INSERT INTO io_billing_target_hours (code, target_hours, updated_at) VALUES (${code}, ${target_hours}, ${now}) ON DUPLICATE KEY UPDATE target_hours = ${target_hours}, updated_at = ${now}`);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] billing-target-hours POST error:", err);
     res.status(500).json({ error: err.message });
   }
 });

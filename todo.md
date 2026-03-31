@@ -201,3 +201,23 @@
 - [x] Move Regimen out of Admin Tools group into main nav bar (order: Anchor, Compass, Sandbox, Haven, Helm, Regimen, Horizon)
 - [x] Check if Access Level column is used anywhere (has data: 4 distinct values across all 403 employees)
 - [x] Remove columns: Billing Code, Actions (keeping Access Level since it has active data)
+
+## Batch 16 — Revisions
+
+### Compass - Disputes Area
+- [x] Relocate pagination from bottom to top of each kanban section (above the cards)
+- [x] Fix QA Feedback logs not showing in LV1 - Pending SME Review (root cause: ORDER BY created_at DESC with all NULL created_at + 2000 limit excluded new records; fixed to ORDER BY id DESC + increased limit to 5000)
+
+### Helm - Task Board
+- [x] Add search bar to "Assigned To" field in New Task form (already existed)
+- [x] Remove "Priority" column from table and database
+- [x] Remove "My Tasks" tab — keep only "All Tasks" view
+- [x] Remove "Linked Entity" column from table and database
+- [x] Remove "Actions" column from the table
+
+### Regimen
+- [x] Remove "Access Level" column from table and database
+- [x] Add employee detail card view when clicking a row
+
+### Anchor - Billing Compliance
+- [x] Add "Target Hours" column to Billing Code Reference section (editable only for admin 740045023)

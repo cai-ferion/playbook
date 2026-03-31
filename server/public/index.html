@@ -530,24 +530,9 @@
                 <span class="card-title">BILLING CODE REFERENCE</span>
               </div>
               <div class="admin-card-body">
-                <table class="data-table admin-preview-table" style="font-size:12px;">
-                  <thead><tr><th>PG</th><th>Role</th><th>Code</th></tr></thead>
-                  <tbody>
-                    <tr><td>S-ABF</td><td>Agent</td><td>MA</td></tr>
-                    <tr><td>S-ABF</td><td>SME</td><td>MS</td></tr>
-                    <tr><td>S-ABF</td><td>QA</td><td>MQ</td></tr>
-                    <tr><td>S-ABF</td><td>TL</td><td>SA</td></tr>
-                    <tr><td>CS-ABF</td><td>Agent</td><td>CA</td></tr>
-                    <tr><td>CS-ABF</td><td>SME</td><td>CS</td></tr>
-                    <tr><td>CS-ABF</td><td>QA</td><td>CQ</td></tr>
-                    <tr><td>CS-ABF</td><td>TL</td><td>SC</td></tr>
-                    <tr><td>CSO_CTR</td><td>(any)</td><td>SO</td></tr>
-                    <tr><td>FAD_CTR</td><td>(any)</td><td>FA</td></tr>
-                    <tr><td>RM_CTR</td><td>(any)</td><td>RM</td></tr>
-                    <tr><td>SME_CTR</td><td>(any)</td><td>SM</td></tr>
-                    <tr><td>QPE_CTR</td><td>(any)</td><td>QP</td></tr>
-                    <tr><td>(any)</td><td>TL</td><td>SV</td></tr>
-                    <tr><td>(any)</td><td>Trainer</td><td>TR</td></tr>
+                <table class="data-table admin-preview-table" style="font-size:12px;" id="billing-code-ref-table">
+                  <thead><tr><th>PG</th><th>Role</th><th>Code</th><th>Target Hrs</th></tr></thead>
+                  <tbody id="billing-code-ref-body">
                   </tbody>
                 </table>
               </div>
@@ -1136,10 +1121,7 @@
                 New Task
               </button>
             </div>
-            <div class="module-tabs" id="helm-tabs">
-              <button class="module-tab active" data-tab="all" onclick="helmSwitchTab('all')">All Tasks</button>
-              <button class="module-tab" data-tab="mine" onclick="helmSwitchTab('mine')">My Tasks</button>
-            </div>
+
             <div class="module-filters" id="helm-filters">
               <div class="filter-group">
                 <label class="filter-label">Status:</label>
@@ -1151,16 +1133,7 @@
                   <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
-              <div class="filter-group">
-                <label class="filter-label">Priority:</label>
-                <select class="form-select form-select-sm" id="helm-filter-priority" onchange="helmApplyFilters()">
-                  <option value="All">All Priorities</option>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Urgent">Urgent</option>
-                </select>
-              </div>
+
               <div class="filter-group">
                 <label class="filter-label">Search:</label>
                 <input type="text" class="form-input form-input-sm" id="helm-search" placeholder="Title, ID, or name..." oninput="helmApplyFilters()">

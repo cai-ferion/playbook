@@ -17,7 +17,6 @@ const ROSTER = {
   ALL_COLUMNS: [
     { key: 'ohr_id', label: 'OHR ID', editable: true },
     { key: 'full_name', label: 'Full Name', editable: true },
-    { key: 'access_level', label: 'Access Level', editable: true },
     { key: 'last_name', label: 'Last Name', editable: true },
     { key: 'given_name', label: 'Given Name', editable: true },
     { key: 'middle_name', label: 'Middle Name', editable: true },
@@ -449,7 +448,7 @@ function rosterRenderTable() {
   tbody.innerHTML = pageData.map(emp => {
     const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
 
-    return `<tr class="module-row">
+    return `<tr class="module-row" onclick="rosterOpenDetail('${escapeAttr(emp.ohr_id)}')" style="cursor:pointer;">
       ${cols.map(c => {
         if (c.key === 'employement_status') {
           return `<td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(emp[c.key] || '')}</span></td>`;
@@ -685,6 +684,108 @@ function rosterCloseForm() {
   const overlay = document.getElementById('roster-form-overlay');
   if (overlay) overlay.style.display = 'none';
   ROSTER.editingId = null;
+}
+
+// ===== Employee Detail Card =====
+
+function rosterOpenDetail(ohrId) {
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  if (!emp) return;
+
+  const formTitle = document.getElementById('roster-form-title');
+  const formBody = document.getElementById('roster-form-body');
+  const formFooter = document.getElementById('roster-form-footer');
+  const overlay = document.getElementById('roster-form-overlay');
+
+  formTitle.innerHTML = `<span>${escapeHtml(emp.full_name || emp.ohr_id)}</span>`;
+
+  const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+
+  // Group fields into sections
+  const personalFields = [
+    { label: 'OHR ID', value: emp.ohr_id },
+    { label: 'Full Name', value: emp.full_name },
+    { label: 'Last Name', value: emp.last_name },
+    { label: 'Given Name', value: emp.given_name },
+    { label: 'Middle Name', value: emp.middle_name },
+    { label: 'Suffix', value: emp.suffix },
+    { label: 'Date of Birth', value: emp.dob },
+    { label: 'Personal Email', value: emp.personal_email },
+    { label: 'Contact Number', value: emp.contact_number },
+  ];
+
+  const workFields = [
+    { label: 'Status', value: emp.employement_status, badge: true, color: statusColor },
+    { label: 'Role', value: emp.actual_role },
+    { label: 'Planning Group', value: emp.planning_group },
+    { label: 'Complete PG', value: emp.complete_planning_group },
+    { label: 'Supervisor', value: emp.supervisor_name },
+    { label: 'Supervisor Email', value: emp.supervisor_email },
+    { label: 'Shift Time', value: emp.shift_time },
+    { label: 'Work Off', value: emp.work_off },
+    { label: 'Billing Name', value: emp.billing_name },
+    { label: 'Platform', value: emp.platform },
+    { label: 'SRT Name', value: emp.srt_name },
+    { label: 'SRT Status', value: emp.srt_status },
+    { label: 'SRT ID', value: emp.srt_id },
+  ];
+
+  const metaFields = [
+    { label: 'Meta Email', value: emp.meta_email },
+    { label: 'Workday ID', value: emp.workday_id },
+    { label: 'MacBook Asset', value: emp.macbook_asset_id },
+    { label: 'Chromebook Asset', value: emp.chromebook_asset_id },
+    { label: 'Badge ID', value: emp.badge_id },
+    { label: 'Badge Serial', value: emp.badge_serial },
+    { label: 'Meta Onboarding', value: emp.meta_onboarding_date },
+    { label: 'Live Date', value: emp.live_date },
+  ];
+
+  const dateFields = [
+    { label: 'Hire Date', value: emp.hire_date },
+    { label: 'Regular Date', value: emp.regular_date },
+  ];
+
+  const addressFields = [
+    { label: 'Primary Address', value: emp.primary_address },
+    { label: 'Barangay', value: emp.barangay },
+    { label: 'City', value: emp.city },
+    { label: 'Province', value: emp.province },
+    { label: 'Locker Floor', value: emp.locker_floor },
+    { label: 'Locker Number', value: emp.locker_number },
+  ];
+
+  function renderSection(title, fields) {
+    let html = `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">${escapeHtml(title)}</h4>`;
+    fields.forEach(f => {
+      if (!f.value && f.value !== 0) return;
+      if (f.badge) {
+        html += `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value"><span class="module-status-badge" style="background:${f.color}20;color:${f.color};border:1px solid ${f.color}40;">${escapeHtml(String(f.value))}</span></span></div>`;
+      } else {
+        html += `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value">${escapeHtml(String(f.value))}</span></div>`;
+      }
+    });
+    return html;
+  }
+
+  let html = '<div class="detail-section">';
+  html += renderSection('Personal Information', personalFields);
+  html += renderSection('Work Information', workFields);
+  html += renderSection('Meta & Assets', metaFields);
+  html += renderSection('Dates', dateFields);
+  html += renderSection('Address & Locker', addressFields);
+  html += '</div>';
+
+  formBody.innerHTML = html;
+
+  // Footer with edit button for admin
+  let footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
+  if (ROSTER.isAdmin) {
+    footerHtml += ` <button class="btn btn-primary btn-sm" onclick="rosterCloseForm();rosterEditEmployee('${escapeAttr(emp.ohr_id)}')">Edit</button>`;
+  }
+  formFooter.innerHTML = footerHtml;
+
+  overlay.style.display = 'flex';
 }
 
 // ===== Init =====

@@ -100,7 +100,7 @@ async function compassFetchLogs() {
   if (content) content.style.display = 'none';
 
   try {
-    const url = `${IO_API_BASE}/coaching?limit=2000`;
+    const url = `${IO_API_BASE}/coaching?limit=5000`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('Failed to fetch coaching logs');
     COMPASS.logs = await resp.json();
@@ -464,13 +464,24 @@ function compassRenderKanban() {
     const start = (page - 1) * KANBAN_PAGE_SIZE;
     const pageCards = cards.slice(start, start + KANBAN_PAGE_SIZE);
 
+    // Build pagination HTML
+    let paginationHtml = '';
+    if (totalPages > 1) {
+      paginationHtml = `<div class="kanban-col-pagination" style="margin-bottom:8px;">
+        <button class="btn btn-ghost btn-xs" ${page <= 1 ? 'disabled' : ''} onclick="compassKanbanPage('${col.id}',${page - 1})">&laquo;</button>
+        <span style="font-size:11px;color:var(--fg-muted);">${page}/${totalPages}</span>
+        <button class="btn btn-ghost btn-xs" ${page >= totalPages ? 'disabled' : ''} onclick="compassKanbanPage('${col.id}',${page + 1})">&raquo;</button>
+      </div>`;
+    }
+
     html += `
       <div class="kanban-column">
         <div class="kanban-column-header">
           <span class="kanban-column-title">${escapeHtml(col.title)}</span>
           <span class="kanban-column-count">${cards.length}</span>
         </div>
-        <div class="kanban-column-body">`;
+        <div class="kanban-column-body">
+        ${paginationHtml}`;
 
     if (cards.length === 0) {
       html += '<div class="kanban-empty">No items</div>';
@@ -493,15 +504,6 @@ function compassRenderKanban() {
             </div>
           </div>`;
       });
-    }
-
-    // Per-column pagination controls
-    if (totalPages > 1) {
-      html += `<div class="kanban-col-pagination">
-        <button class="btn btn-ghost btn-xs" ${page <= 1 ? 'disabled' : ''} onclick="compassKanbanPage('${col.id}',${page - 1})">&laquo;</button>
-        <span style="font-size:11px;color:var(--fg-muted);">${page}/${totalPages}</span>
-        <button class="btn btn-ghost btn-xs" ${page >= totalPages ? 'disabled' : ''} onclick="compassKanbanPage('${col.id}',${page + 1})">&raquo;</button>
-      </div>`;
     }
 
     html += '</div></div>';

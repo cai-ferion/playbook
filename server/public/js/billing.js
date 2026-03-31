@@ -101,6 +101,10 @@ async function initBillingCompliance() {
     billingDropdownInitialized = true;
   }
 
+  // Load persisted target hours from server, then render the reference table
+  await loadBillingTargetHours();
+  renderBillingCodeReference();
+
   // Always load/reload the selected week's data (await to ensure rendering completes)
   await loadBillingCompliance();
 
@@ -552,4 +556,88 @@ function renderReasonTrendsChartFromAgg(trendsData, tagFilter, canvasId, chartVa
       }
     }
   });
+}
+
+
+// ===== Billing Code Reference Table with Editable Target Hours =====
+
+async function loadBillingTargetHours() {
+  try {
+    const resp = await fetch(`${IO_API_BASE}/billing-target-hours`);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    // data is an array of [rows, fields] from mysql2 — rows is the first element
+    const rows = Array.isArray(data) && Array.isArray(data[0]) ? data[0] : data;
+    for (const row of rows) {
+      if (row.code) BILLING_TARGET_HOURS[row.code] = row.target_hours;
+    }
+  } catch (e) {
+    console.warn('Failed to load billing target hours:', e);
+  }
+}
+
+const BILLING_CODE_REF_DATA = [
+  { pg: 'S-ABF', role: 'Agent', code: 'MA' },
+  { pg: 'S-ABF', role: 'SME', code: 'MS' },
+  { pg: 'S-ABF', role: 'QA', code: 'MQ' },
+  { pg: 'S-ABF', role: 'TL', code: 'SA' },
+  { pg: 'CS-ABF', role: 'Agent', code: 'CA' },
+  { pg: 'CS-ABF', role: 'SME', code: 'CS' },
+  { pg: 'CS-ABF', role: 'QA', code: 'CQ' },
+  { pg: 'CS-ABF', role: 'TL', code: 'SC' },
+  { pg: 'CSO_CTR', role: '(any)', code: 'SO' },
+  { pg: 'FAD_CTR', role: '(any)', code: 'FA' },
+  { pg: 'RM_CTR', role: '(any)', code: 'RM' },
+  { pg: 'SME_CTR', role: '(any)', code: 'SM' },
+  { pg: 'QPE_CTR', role: '(any)', code: 'QP' },
+  { pg: '(any)', role: 'TL', code: 'SV' },
+  { pg: '(any)', role: 'Trainer', code: 'TR' },
+];
+
+function renderBillingCodeReference() {
+  const tbody = document.getElementById('billing-code-ref-body');
+  if (!tbody) return;
+
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+
+  tbody.innerHTML = BILLING_CODE_REF_DATA.map(row => {
+    const targetHrs = BILLING_TARGET_HOURS[row.code] ?? '';
+    const targetCell = isAdmin
+      ? `<td><input type="number" class="form-input form-input-sm billing-target-input" data-code="${escapeAttr(row.code)}" value="${targetHrs}" style="width:70px;padding:2px 6px;font-size:12px;text-align:right;" onchange="billingUpdateTargetHours('${escapeAttr(row.code)}', this.value)"></td>`
+      : `<td style="text-align:right;">${targetHrs !== '' ? targetHrs.toLocaleString() : '—'}</td>`;
+    return `<tr>
+      <td>${escapeHtml(row.pg)}</td>
+      <td>${escapeHtml(row.role)}</td>
+      <td><strong>${escapeHtml(row.code)}</strong></td>
+      ${targetCell}
+    </tr>`;
+  }).join('');
+}
+
+async function billingUpdateTargetHours(code, value) {
+  const numVal = parseInt(value, 10);
+  if (isNaN(numVal) || numVal < 0) {
+    showToast('Please enter a valid positive number', 'error');
+    return;
+  }
+
+  // Update the local mapping
+  BILLING_TARGET_HOURS[code] = numVal;
+
+  // Persist to server
+  try {
+    const resp = await fetch(`${IO_API_BASE}/billing-target-hours`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, target_hours: numVal })
+    });
+    if (!resp.ok) throw new Error('Failed to save');
+    showToast(`Target hours for ${code} updated to ${numVal}`, 'success');
+
+    // Reload the compliance table to reflect new target
+    await loadBillingCompliance();
+  } catch (e) {
+    console.error('Failed to save target hours:', e);
+    showToast('Failed to save target hours', 'error');
+  }
 }
