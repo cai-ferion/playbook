@@ -17,7 +17,6 @@ const SANDBOX_MOD = {
   STATUSES: [
     'Pending Initial Review',
     'Pending Final Review',
-    'Approved - Final Review',
     'Elevated - Task in Progress',
     'Elevated - POC Rejected',
     'Elevated - Pending POC Discussion',
@@ -36,7 +35,6 @@ const SANDBOX_MOD = {
   STATUS_COLORS: {
     'Pending Initial Review': '#3B82F6',
     'Pending Final Review': '#F59E0B',
-    'Approved - Final Review': '#059669',
     'Implemented': '#7C3AED',
     'Elevated - Task in Progress': '#8B5CF6',
     'Elevated - POC Rejected': '#EF4444',
@@ -47,7 +45,7 @@ const SANDBOX_MOD = {
   KANBAN_COLUMNS: [
     { id: 'pending-initial', title: 'Pending Initial Review', statuses: ['Pending Initial Review'] },
     { id: 'pending-final', title: 'Pending Final Review', statuses: ['Pending Final Review'] },
-    { id: 'trainers-area', title: "Trainer's Area", statuses: ['Approved - Final Review', 'Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'] },
+    { id: 'trainers-area', title: "Trainer's Area", statuses: ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'] },
     { id: 'implemented', title: 'Implemented', statuses: ['Implemented'] }
   ]
 };
@@ -571,13 +569,15 @@ function sandboxOpenDetail(insightId, context) {
       footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'initial\')">Reject</button>';
     }
 
-    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ['Pending Final Review', 'Elevated - Pending POC Discussion'].includes(ins.status)) {
+    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending Final Review') {
       footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowFinalApprovePopout()">Approve</button>';
       footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')"  >Reject</button>';
     }
 
-    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Approved - Final Review') {
-      footerHtml += '<button class="btn btn-sm" style="background:#7C3AED;color:#fff;" onclick="sandboxReview(\'implement\')">Mark Implemented</button>';
+    // Trainer's Area: interchange between 4 elevated statuses + Implemented
+    const elevatedStatuses = ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
+    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && elevatedStatuses.includes(ins.status)) {
+      footerHtml += '<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="sandboxShowTrainerStatusPopout()">Change Status</button>';
     }
   }
 
@@ -600,8 +600,7 @@ function sandboxRenderReviewTrail(ins) {
 
   if (ins.final_reviewer) {
     let action = 'Reviewed (Final)';
-    if (ins.status === 'Approved - Final Review') action = 'Approved (Final Review)';
-    else if (ins.status === 'Elevated - Pending POC Discussion') action = 'Elevated to POC Discussion';
+    if (ins.status && ins.status.startsWith('Elevated')) action = 'Approved (Final Review) → ' + ins.status;
     else if (ins.status && ins.status.startsWith('Rejected - Final')) action = 'Rejected (Final Review)';
     else if (ins.status === 'Implemented') action = 'Marked as Implemented';
 
@@ -814,14 +813,6 @@ async function sandboxReview(action) {
     updates.status = 'Pending Final Review';
     updates.initial_reviewer = user ? user.full_name : '';
     updates.initial_review_date = new Date().toISOString();
-  } else if (action === 'approve-final') {
-    updates.status = 'Approved - Final Review';
-    updates.final_reviewer = user ? user.full_name : '';
-    updates.final_review_date = new Date().toISOString();
-  } else if (action === 'implement') {
-    updates.status = 'Implemented';
-    updates.implementation_date = new Date().toISOString();
-    updates.final_reviewer = user ? user.full_name : '';
   }
 
   try {
@@ -884,6 +875,102 @@ async function sandboxRejectWith(statusValue) {
   } catch (e) {
     console.error('Failed to reject insight:', e);
     showToast('Failed to reject: ' + e.message, 'error');
+  }
+}
+
+// ===== Trainer's Area: Status Interchange Popout =====
+
+function sandboxShowTrainerStatusPopout() {
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  formBody._prevHtml = formBody.innerHTML;
+
+  const allChoices = [
+    { value: 'Elevated - Task in Progress', label: 'Elevated - Task in Progress', color: '#8B5CF6' },
+    { value: 'Elevated - POC Rejected', label: 'Elevated - POC Rejected', color: '#EF4444' },
+    { value: 'Elevated - Pending POC Discussion', label: 'Elevated - Pending POC Discussion', color: '#EC4899' },
+    { value: 'Elevated - No POC', label: 'Elevated - No POC', color: '#6B7280' },
+    { value: 'Implemented', label: 'Implemented', color: '#7C3AED' }
+  ];
+
+  // Filter out the current status so the user only sees options they can change to
+  const choices = allChoices.filter(c => c.value !== ins.status);
+
+  formBody.innerHTML = `
+    <div style="padding:16px 20px;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+        <h3 style="margin-bottom:4px;font-size:16px;">Change Status</h3>
+        <p style="color:var(--text-secondary);font-size:13px;">Current: <strong>${ins.status}</strong></p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${choices.map(c => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border-primary);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+          <input type="radio" name="sandbox-trainer-status" value="${c.value}" style="accent-color:${c.color};">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};"></span>
+          ${c.label}
+        </label>`).join('')}
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" onclick="sandboxCloseTrainerStatusPopout()">Cancel</button>
+        <button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="sandboxSubmitTrainerStatus()">Save</button>
+      </div>
+    </div>`;
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = 'none';
+}
+
+function sandboxCloseTrainerStatusPopout() {
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (formBody._prevHtml) {
+    formBody.innerHTML = formBody._prevHtml;
+    formBody._prevHtml = null;
+  }
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = '';
+}
+
+async function sandboxSubmitTrainerStatus() {
+  const selected = document.querySelector('input[name="sandbox-trainer-status"]:checked');
+  if (!selected) { showToast('Please select a status', 'error'); return; }
+
+  const newStatus = selected.value;
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const updates = {
+    status: newStatus,
+    updated_at: new Date().toISOString()
+  };
+
+  if (newStatus === 'Implemented') {
+    updates.implementation_date = new Date().toISOString();
+    updates.final_reviewer = user ? user.full_name : '';
+  }
+
+  try {
+    const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Failed to update insight');
+
+    showToast(`Status changed → ${newStatus}`, 'success');
+    if (typeof createNotification === 'function') {
+      createNotification({ type: 'insight_review', title: 'Insight Status Changed', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${newStatus}` });
+    }
+    sandboxCloseForm();
+    await sandboxFetchInsights();
+    sandboxRenderKanban();
+  } catch (e) {
+    console.error('Failed to update insight:', e);
+    showToast('Failed to update: ' + e.message, 'error');
   }
 }
 

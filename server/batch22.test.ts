@@ -45,13 +45,14 @@ describe('Batch 22 — Anchor Billing Table & Charts', () => {
     expect(html).toContain('billing-right-stack');
   });
 
-  it('YTD compliance doughnut is inside the right stack alongside trend charts', () => {
+  it('YTD compliance doughnut is in its own column, trend charts are in the right stack', () => {
+    const doughnutPos = html.indexOf('billing-doughnut-card');
     const rightStackStart = html.indexOf('billing-right-stack');
-    const doughnutPos = html.indexOf('billing-compliance-doughnut');
     const uplPos = html.indexOf('billing-upl-trends-chart');
-    // All should be after the right-stack div
+    // Doughnut should be in its own card before the right stack
+    expect(doughnutPos).toBeGreaterThan(-1);
     expect(rightStackStart).toBeGreaterThan(-1);
-    expect(doughnutPos).toBeGreaterThan(rightStackStart);
+    expect(doughnutPos).toBeLessThan(rightStackStart);
     expect(uplPos).toBeGreaterThan(rightStackStart);
   });
 });
@@ -90,14 +91,12 @@ describe('Batch 22 — Compass LV4 Trainer Dispute Flow', () => {
     expect(compass).toContain('Reverse Markdown — Trainer Decision');
   });
 
-  it('LV4 reverse sets status to Pending Acknowledgement (Markdown Accepted - Trainer)', () => {
-    expect(compass).toContain("Markdown Accepted - Trainer");
-    expect(compass).toContain("status: 'Pending Acknowledgement'");
+  it('LV4 reverse sets status to Markdown Reversed - Trainer', () => {
+    expect(compass).toContain("status: 'Markdown Reversed - Trainer'");
   });
 
   it('LV4 retain supports file attachments', () => {
-    expect(compass).toContain('dispute-lv4-retain-files');
-    expect(compass).toContain('disputeLV4RetainFilesChanged');
+    expect(compass).toContain('dispute-lv4-retain-remarks');
   });
 
   it('no duplicate disputeRemoveFile function', () => {

@@ -545,26 +545,26 @@
               </div>
             </div>
 
-            <!-- Right column: YTD Compliance + 3 prediction charts stacked -->
-            <div class="billing-right-stack">
-              <!-- YTD Compliance Doughnut Chart -->
-              <div class="card admin-card">
-                <div class="card-header">
-                  <span class="card-title">YTD COMPLIANCE — 100% THRESHOLD</span>
-                </div>
-                <div class="admin-card-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;">
-                  <canvas id="billing-compliance-doughnut" width="200" height="200"></canvas>
-                </div>
-                <div id="billing-doughnut-legend" style="padding:8px 16px 12px;font-size:12px;color:var(--text-secondary);"></div>
+            <!-- YTD Compliance Doughnut Chart (original size) -->
+            <div class="card admin-card billing-doughnut-card">
+              <div class="card-header">
+                <span class="card-title">YTD COMPLIANCE — 100% THRESHOLD</span>
               </div>
+              <div class="admin-card-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;">
+                <canvas id="billing-compliance-doughnut" width="280" height="280"></canvas>
+              </div>
+              <div id="billing-doughnut-legend" style="padding:8px 16px 12px;font-size:12px;color:var(--text-secondary);"></div>
+            </div>
 
+            <!-- Right column: 3 prediction charts stacked -->
+            <div class="billing-right-stack">
               <!-- UPL Reason Trends -->
               <div class="card admin-card">
                 <div class="card-header">
                   <span class="card-title">UPL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
                 </div>
                 <div class="admin-card-body">
-                  <canvas id="billing-upl-trends-chart" height="200"></canvas>
+                  <canvas id="billing-upl-trends-chart" height="180"></canvas>
                 </div>
               </div>
 
@@ -574,7 +574,7 @@
                   <span class="card-title">LATE REASON TRENDS &amp; 3-MONTH PREDICTION</span>
                 </div>
                 <div class="admin-card-body">
-                  <canvas id="billing-late-trends-chart" height="200"></canvas>
+                  <canvas id="billing-late-trends-chart" height="180"></canvas>
                 </div>
               </div>
 
@@ -584,7 +584,7 @@
                   <span class="card-title">PL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
                 </div>
                 <div class="admin-card-body">
-                  <canvas id="billing-pl-trends-chart" height="200"></canvas>
+                  <canvas id="billing-pl-trends-chart" height="180"></canvas>
                 </div>
               </div>
             </div>

@@ -340,3 +340,27 @@
 ### Sandbox - Review Area
 - [x] Remove "Elevate" button from review footer
 - [x] Approve button opens popout with 4 status choices: Elevated - Task in Progress, Elevated - POC Rejected, Elevated - Pending POC Discussion, Elevated - No POC
+
+## Batch 23 — Process Flow Corrections
+
+### Anchor - Billing Compliance
+- [x] Revert YTD Compliance doughnut chart to original size (own column)
+- [x] Move UPL/LATE/PL trend charts to the right of the doughnut
+
+### Compass - Disputes Area (Full 6-Level Flow Correction)
+- [x] LV1 - PENDING SME REVIEW: Accept Markdown (→ "Markdown Accepted") / Dispute Markdown (→ "Markdown Disputed")
+- [x] LV2 - PENDING QA DECISION: Reverse Markdown (→ "Markdown Reversed - QA") / Retain Markdown (→ "Markdown Retained - QA")
+- [x] LV3 - PENDING SME-QA DECISION: Accept Decision (→ "QA Decision Accepted") / Reject Decision (→ "QA Decision Rejected")
+- [x] LV4 - PENDING TRAINER DECISION: Reverse Markdown (→ "Markdown Reversed - Trainer") / Retain Markdown (→ "Markdown Retained - Trainer")
+- [x] LV5 - PENDING SME-TRAINER DECISION: Accept Decision (→ "Trainer Decision Accepted") / Reject Decision (→ "Trainer Decision Rejected")
+- [x] LV6 - PENDING QTP MANAGER DECISION: Reverse Markdown (→ "Markdown Reversed - QTP Manager") / Retain Markdown (→ "Markdown Retained - QTP Manager")
+- [x] Removed all old status names (Markdown Disputed - SME, etc.)
+- [x] Removed Pending Acknowledgement override — each level sets its own terminal status
+
+### Sandbox - Review Area (Full Flow Correction)
+- [x] Pending Initial Review: Approve (→ "Pending Final Review") / Reject (→ rejection reason)
+- [x] Pending Final Review: Approve (→ popout with 4 elevated status choices) / Reject (→ rejection reason)
+- [x] Trainer's Area: Change Status button → interchange between 4 elevated statuses + Implemented
+- [x] Implemented: no actions (final phase)
+- [x] Removed Approved - Final Review status (no longer used)
+- [x] Added sandboxShowTrainerStatusPopout with current-status filtering

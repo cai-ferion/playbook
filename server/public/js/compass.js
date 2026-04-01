@@ -24,16 +24,16 @@ const COMPASS = {
 
   QA_STATUSES: [
     'Pending SME Review',
-    'Markdown Accepted - SME',
-    'Markdown Disputed - SME',
+    'Markdown Accepted',
+    'Markdown Disputed',
     'Markdown Reversed - QA',
     'Markdown Retained - QA',
-    'QA Retention Accepted - SME',
-    'QA Retention Rejected - SME',
+    'QA Decision Accepted',
+    'QA Decision Rejected',
     'Markdown Reversed - Trainer',
     'Markdown Retained - Trainer',
-    'Trainer Decision Accepted - SME',
-    'Trainer Decision Rejected - SME',
+    'Trainer Decision Accepted',
+    'Trainer Decision Rejected',
     'Markdown Reversed - QTP Manager',
     'Markdown Retained - QTP Manager',
     'Pending Acknowledgement',
@@ -46,16 +46,16 @@ const COMPASS = {
     'Pending Acknowledgement': '#F59E0B',
     'Acknowledged': '#22C55E',
     'Pending SME Review': '#3B82F6',
-    'Markdown Accepted - SME': '#22C55E',
-    'Markdown Disputed - SME': '#EF4444',
+    'Markdown Accepted': '#22C55E',
+    'Markdown Disputed': '#EF4444',
     'Markdown Reversed - QA': '#8B5CF6',
     'Markdown Retained - QA': '#F97316',
-    'QA Retention Accepted - SME': '#22C55E',
-    'QA Retention Rejected - SME': '#EF4444',
+    'QA Decision Accepted': '#22C55E',
+    'QA Decision Rejected': '#EF4444',
     'Markdown Reversed - Trainer': '#8B5CF6',
     'Markdown Retained - Trainer': '#F97316',
-    'Trainer Decision Accepted - SME': '#22C55E',
-    'Trainer Decision Rejected - SME': '#EF4444',
+    'Trainer Decision Accepted': '#22C55E',
+    'Trainer Decision Rejected': '#EF4444',
     'Markdown Reversed - QTP Manager': '#8B5CF6',
     'Markdown Retained - QTP Manager': '#F97316'
   },
@@ -63,11 +63,11 @@ const COMPASS = {
   // Kanban columns for QA Feedback dispute flow
   KANBAN_COLUMNS: [
     { id: 'pending-sme', title: 'LV1 - PENDING SME REVIEW', statuses: ['Pending SME Review', ''] },
-    { id: 'sme-disputed', title: 'LV2 - PENDING QA DECISION', statuses: ['Markdown Disputed - SME'] },
+    { id: 'sme-disputed', title: 'LV2 - PENDING QA DECISION', statuses: ['Markdown Disputed'] },
     { id: 'qa-decision', title: 'LV3 - PENDING SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
     { id: 'trainer-review', title: 'LV4 - PENDING TRAINER DECISION', statuses: ['QA Decision Rejected'] },
     { id: 'sme-trainer', title: 'LV5 - PENDING SME-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
-    { id: 'qtp-review', title: 'LV6 - PENDING QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected - SME'] }
+    { id: 'qtp-review', title: 'LV6 - PENDING QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected'] }
   ]
 };
 
@@ -551,10 +551,12 @@ function compassRenderAnalytics() {
 
   // QA dispute resolution stats
   const qaLogs = logs.filter(l => l.coaching_type === 'QA Feedback');
-  const qaResolved = qaLogs.filter(l => ['Markdown Accepted - SME', 'Acknowledged', 'Pending Acknowledgement',
-    'Markdown Reversed - QA', 'Markdown Reversed - Trainer', 'Markdown Reversed - QTP Manager'].includes(l.status));
-  const qaActive = qaLogs.filter(l => !['Markdown Accepted - SME', 'Acknowledged', 'Pending Acknowledgement',
-    'Markdown Reversed - QA', 'Markdown Reversed - Trainer', 'Markdown Reversed - QTP Manager'].includes(l.status));
+  const qaResolved = qaLogs.filter(l => ['Markdown Accepted', 'Acknowledged', 'Pending Acknowledgement',
+    'Markdown Reversed - QA', 'QA Decision Accepted', 'Markdown Reversed - Trainer', 'Trainer Decision Accepted',
+    'Markdown Reversed - QTP Manager', 'Markdown Retained - QTP Manager'].includes(l.status));
+  const qaActive = qaLogs.filter(l => !['Markdown Accepted', 'Acknowledged', 'Pending Acknowledgement',
+    'Markdown Reversed - QA', 'QA Decision Accepted', 'Markdown Reversed - Trainer', 'Trainer Decision Accepted',
+    'Markdown Reversed - QTP Manager', 'Markdown Retained - QTP Manager'].includes(l.status));
 
   let html = `
     <div class="analytics-grid">
@@ -819,22 +821,22 @@ async function compassOpenDetail(coachingId) {
     // SME actions on QA Feedback
     if (role === 'SME' || isAdmin) {
       if (log.status === 'Pending SME Review') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Accepted - SME\')">Accept Markdown</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'Markdown Disputed - SME\')">Dispute Markdown</button>';
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Accepted\')"  >Accept Markdown</button>';
+        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'Markdown Disputed\')"  >Dispute Markdown</button>';
       }
       if (log.status === 'Markdown Retained - QA') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'QA Retention Accepted - SME\')">Accept QA Retention</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'QA Retention Rejected - SME\')">Reject → Escalate to Trainer</button>';
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'QA Decision Accepted\')"  >Accept Decision</button>';
+        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'QA Decision Rejected\')"  >Reject Decision</button>';
       }
       if (log.status === 'Markdown Retained - Trainer') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Trainer Decision Accepted - SME\')">Accept Trainer Decision</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'Trainer Decision Rejected - SME\')">Reject → Escalate to QTP</button>';
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Trainer Decision Accepted\')"  >Accept Decision</button>';
+        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'Trainer Decision Rejected\')"  >Reject Decision</button>';
       }
     }
 
     // QA actions
     if (role === 'QA' || isAdmin) {
-      if (log.status === 'Markdown Disputed - SME') {
+      if (log.status === 'Markdown Disputed') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - QA\')">Reverse Markdown</button>';
         footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - QA\')">Retain Markdown</button>';
       }
@@ -842,18 +844,17 @@ async function compassOpenDetail(coachingId) {
 
     // Trainer actions
     if (role === 'Trainer' || isAdmin) {
-      if (log.status === 'QA Retention Rejected - SME') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - Trainer\')">Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - Trainer\')">Retain Markdown</button>';
+      if (log.status === 'QA Decision Rejected') {
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - Trainer\')"  >Reverse Markdown</button>';
+        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - Trainer\')"  >Retain Markdown</button>';
       }
     }
 
     // QTP Manager actions
     if (role === 'Manager' || isAdmin) {
-      if (log.status === 'Trainer Decision Rejected - SME') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - QTP Manager\')">Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - QTP Manager\')">Retain Markdown</button>';
-      }
+      if (log.status === 'Trainer Decision Rejected') {
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - QTP Manager\')"  >Reverse Markdown</button>';
+        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - QTP Manager\')"  >Retain Markdown</button>';   }
     }
   }
 
@@ -887,12 +888,8 @@ async function compassDisputeAction(newStatus) {
     }
   }
 
-  // If status resolves to agent (accepted/reversed), set to Pending Acknowledgement
-  if (['Markdown Accepted - SME', 'Markdown Reversed - QA',
-       'Markdown Reversed - Trainer', 'Trainer Decision Accepted - SME',
-       'Markdown Reversed - QTP Manager'].includes(newStatus)) {
-    update.status = 'Pending Acknowledgement';
-  }
+  // Status is set directly — no override to Pending Acknowledgement
+  // Each level sets its own terminal status
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
@@ -2373,48 +2370,51 @@ async function disputesOpenDetail(coachingId) {
     const role = cu.actual_role;
     const isAdmin = cu.ohr_id === '740045023';
 
-    // SME actions on LV1 - Pending SME Review
+    // LV1 - SME actions: Accept Markdown / Dispute Markdown
     if (role === 'SME' || isAdmin) {
       if (log.status === 'Pending SME Review') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowAcceptMarkdown()">Accept Markdown</button>';
         footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowDisputeMarkdown()">Dispute Markdown</button>';
       }
-      if (log.status === 'Markdown Retained - QA') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowQADecisionAccepted()">QA Decision Accepted</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowQADecisionRejected()">QA Decision Rejected</button>';
-      }      if (log.status === 'Markdown Retained - Trainer') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesQuickAction(\'Trainer Decision Accepted - SME\')"  >Accept Trainer Decision</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesQuickAction(\'Trainer Decision Rejected - SME\')"  >Reject \u2192 Escalate to QTP</button>';    }
     }
 
-    // QA actions
+    // LV2 - QA actions: Reverse Markdown / Retain Markdown
     if (role === 'QA' || isAdmin) {
-      if (log.status === 'Markdown Disputed - SME') {
+      if (log.status === 'Markdown Disputed') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowReverseMarkdown()">Reverse Markdown</button>';
         footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowRetainMarkdown()">Retain Markdown</button>';
       }
     }
 
-    // Trainer actions (LV4)
+    // LV3 - SME actions: Accept Decision / Reject Decision
+    if (role === 'SME' || isAdmin) {
+      if (log.status === 'Markdown Retained - QA') {
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowQADecisionAccepted()">Accept Decision</button>';
+        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowQADecisionRejected()">Reject Decision</button>';
+      }
+    }
+
+    // LV4 - Trainer actions: Reverse Markdown / Retain Markdown
     if (role === 'Trainer' || isAdmin) {
-      if (log.status === 'QA Retention Rejected - SME') {
+      if (log.status === 'QA Decision Rejected') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV4ReverseMarkdown()">Reverse Markdown</button>';
         footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV4RetainMarkdown()">Retain Markdown</button>';
       }
     }
 
-    // SME actions for LV5 (Trainer Decision Rejected - SME)
+    // LV5 - SME actions: Accept Decision / Reject Decision
     if (role === 'SME' || isAdmin) {
-      if (log.status === 'Trainer Decision Rejected - SME') {
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV5RetainMarkdown()">Retain Markdown</button>';
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV5ReverseMarkdown()">Reverse Markdown</button>';
+      if (log.status === 'Markdown Retained - Trainer') {
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV5AcceptDecision()">Accept Decision</button>';
+        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowLV5RejectDecision()">Reject Decision</button>';
       }
     }
 
-    // QTP Manager actions
+    // LV6 - QTP Manager actions: Reverse Markdown / Retain Markdown
     if (role === 'Manager' || isAdmin) {
-      if (log.status === 'Markdown Retained - QTP Manager' || log.status === 'Markdown Reversed - QTP Manager') {
-        // QTP Manager level - no further actions needed in current scope
+      if (log.status === 'Trainer Decision Rejected') {
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV6ReverseMarkdown()">Reverse Markdown</button>';
+        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV6RetainMarkdown()">Retain Markdown</button>';
       }
     }
   }
@@ -2541,7 +2541,7 @@ async function disputesSubmitDisputeMarkdown() {
   const actorName = cu ? cu.full_name : 'Unknown';
 
   const update = {
-    status: 'Markdown Disputed - SME',
+    status: 'Markdown Disputed',
     dispute_comments: (log.dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
   };
 
@@ -2609,7 +2609,7 @@ async function disputesSubmitAcceptMarkdown() {
   const timestamp = new Date().toLocaleString();
 
   const update = {
-    status: 'Pending Acknowledgement',
+    status: 'Markdown Accepted',
     dispute_comments: (log.dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown accepted by SME.'
   };
 
@@ -2622,7 +2622,7 @@ async function disputesSubmitAcceptMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown accepted. Log moved to Coaching Profile for acknowledgement.', 'success');
+    showToast('Markdown accepted.', 'success');
     if (typeof createNotification === 'function') {
       createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown accepted by ${actorName}` });
     }
@@ -2665,12 +2665,8 @@ async function disputesQuickAction(newStatus) {
     }
   }
 
-  // If status resolves to agent (accepted/reversed), set to Pending Acknowledgement
-  if (['Markdown Accepted - SME', 'Markdown Reversed - QA',
-       'Markdown Reversed - Trainer', 'Trainer Decision Accepted - SME',
-       'Markdown Reversed - QTP Manager'].includes(newStatus)) {
-    update.status = 'Pending Acknowledgement';
-  }
+  // Status is set directly — no override to Pending Acknowledgement
+  // Each level sets its own terminal status
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
@@ -2933,7 +2929,7 @@ async function disputesSubmitReverseMarkdown() {
   const timestamp = new Date().toLocaleString();
 
   const update = {
-    status: 'Pending Acknowledgement',
+    status: 'Markdown Reversed - QA',
     qa_comments: (log.qa_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by QA.'
   };
 
@@ -2946,9 +2942,9 @@ async function disputesSubmitReverseMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown reversed. Log moved to Coaching Profile for acknowledgement.', 'success');
+    showToast('Markdown reversed by QA.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown reversed by QA — ${actorName}` });
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown reversed by QA — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -2993,7 +2989,7 @@ async function disputesSubmitQADecisionAccepted() {
   const timestamp = new Date().toLocaleString();
 
   const update = {
-    status: 'Pending Acknowledgement',
+    status: 'QA Decision Accepted',
     sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] QA decision accepted by SME.'
   };
 
@@ -3006,7 +3002,7 @@ async function disputesSubmitQADecisionAccepted() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('QA decision accepted. Log moved to Coaching Profile for acknowledgement.', 'success');
+    showToast('QA decision accepted.', 'success');
     if (typeof createNotification === 'function') {
       createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: QA decision accepted by SME — ${actorName}` });
     }
@@ -3135,9 +3131,9 @@ async function disputesSubmitQADecisionRejected() {
 }
 
 
-// ===== LV5: SME-Trainer Decision — Retain Markdown (popout with Remarks + Attachments → LV6) =====
+// ===== LV5: SME-Trainer Decision — Accept Decision (confirmation → Trainer Decision Accepted) =====
 
-function disputesShowLV5RetainMarkdown() {
+function disputesShowLV5AcceptDecision() {
   const titleEl = document.getElementById('disputes-action-title');
   const bodyEl = document.getElementById('disputes-action-body');
   const footerEl = document.getElementById('disputes-action-footer');
@@ -3163,13 +3159,13 @@ function disputesShowLV5RetainMarkdown() {
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-warning btn-sm" onclick="disputesSubmitLV5RetainMarkdown()">Save</button>
+    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV5AcceptDecision()">Accept Decision</button>
   `;
 
   overlay.style.display = 'flex';
 }
 
-async function disputesSubmitLV5RetainMarkdown() {
+async function disputesSubmitLV5AcceptDecision() {
   const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
   if (!remarks) {
     showToast('Remarks are required', 'error');
@@ -3202,7 +3198,7 @@ async function disputesSubmitLV5RetainMarkdown() {
   const actorName = cu ? cu.full_name : 'Unknown';
 
   const update = {
-    status: 'Markdown Retained - QTP Manager',
+    status: 'Trainer Decision Accepted',
     sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
   };
 
@@ -3221,9 +3217,9 @@ async function disputesSubmitLV5RetainMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown retained. Card moved to LV6 — Pending QTP Manager Decision.', 'success');
+    showToast('Trainer decision accepted.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Escalated', message: `${log.coaching_id || log.id}: Markdown retained by SME at LV5, escalated to QTP Manager — ${actorName}` });
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Trainer decision accepted by SME — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3234,9 +3230,9 @@ async function disputesSubmitLV5RetainMarkdown() {
   }
 }
 
-// ===== LV5: SME-Trainer Decision — Reverse Markdown (confirmation → back to Coaching Profile) =====
+// ===== LV5: SME-Trainer Decision — Reject Decision (popout with Remarks + Attachments → LV6) =====
 
-function disputesShowLV5ReverseMarkdown() {
+function disputesShowLV5RejectDecision() {
   const titleEl = document.getElementById('disputes-action-title');
   const bodyEl = document.getElementById('disputes-action-body');
   const footerEl = document.getElementById('disputes-action-footer');
@@ -3252,13 +3248,13 @@ function disputesShowLV5ReverseMarkdown() {
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV5ReverseMarkdown()">Save</button>
+    <button class="btn btn-danger btn-sm" onclick="disputesSubmitLV5RejectDecision()">Reject Decision</button>
   `;
 
   overlay.style.display = 'flex';
 }
 
-async function disputesSubmitLV5ReverseMarkdown() {
+async function disputesSubmitLV5RejectDecision() {
   const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
   if (!log) return;
 
@@ -3267,8 +3263,8 @@ async function disputesSubmitLV5ReverseMarkdown() {
   const actorName = cu ? cu.full_name : 'Unknown';
 
   const update = {
-    status: 'Pending Acknowledgement',
-    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed at LV5. Sent to coachee for acknowledgement.'
+    status: 'Trainer Decision Rejected',
+    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Trainer decision rejected by SME. Escalated to QTP Manager.'
   };
 
   try {
@@ -3280,9 +3276,9 @@ async function disputesSubmitLV5ReverseMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown reversed. Log sent to coachee for acknowledgement.', 'success');
+    showToast('Trainer decision rejected. Card moved to LV6 — Pending QTP Manager Decision.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown reversed by SME at LV5 — ${actorName}` });
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Escalated', message: `${log.coaching_id || log.id}: Trainer decision rejected by SME, escalated to QTP Manager — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3434,8 +3430,8 @@ async function disputesSubmitLV4ReverseMarkdown() {
   const timestamp = new Date().toLocaleString();
 
   const update = {
-    status: 'Pending Acknowledgement',
-    trainer_comments: (log.trainer_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by Trainer (Markdown Accepted - Trainer). Routed to Coachee for acknowledgement.'
+    status: 'Markdown Reversed - Trainer',
+    trainer_comments: (log.trainer_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by Trainer.'
   };
 
   try {
@@ -3447,9 +3443,9 @@ async function disputesSubmitLV4ReverseMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown reversed by Trainer. Log routed to Coachee for acknowledgement.', 'success');
+    showToast('Markdown reversed by Trainer.', 'success');
     if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown accepted by Trainer — ${actorName}. Routed to Coachee.` });
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown reversed by Trainer — ${actorName}` });
     }
     disputesCloseAction();
     disputesCloseDetail();
@@ -3457,5 +3453,167 @@ async function disputesSubmitLV4ReverseMarkdown() {
     compassRenderKanban();
   } catch (e) {
     showToast('Failed to reverse markdown: ' + e.message, 'error');
+  }
+}
+
+// ===== LV6: QTP Manager Decision — Reverse Markdown (confirmation → Markdown Reversed - QTP Manager) =====
+
+function disputesShowLV6ReverseMarkdown() {
+  const titleEl = document.getElementById('disputes-action-title');
+  const bodyEl = document.getElementById('disputes-action-body');
+  const footerEl = document.getElementById('disputes-action-footer');
+  const overlay = document.getElementById('disputes-action-overlay');
+
+  titleEl.textContent = 'Reverse Markdown — QTP Manager';
+  bodyEl.innerHTML = `
+    <div style="text-align:center;padding:16px 0;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p style="font-size:14px;color:var(--fg);margin-bottom:4px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
+      <p style="font-size:12px;color:var(--fg-muted);">This will set the status to <strong>Markdown Reversed - QTP Manager</strong>.</p>
+    </div>
+  `;
+
+  footerEl.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
+    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Reverse Markdown</button>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+async function disputesSubmitLV6ReverseMarkdown() {
+  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
+  if (!log) return;
+
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const actorName = cu ? cu.full_name : 'Unknown';
+  const timestamp = new Date().toLocaleString();
+
+  const update = {
+    status: 'Markdown Reversed - QTP Manager',
+    qtp_manager_comments: (log.qtp_manager_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by QTP Manager.'
+  };
+
+  try {
+    const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
+    });
+    if (!resp.ok) throw new Error('Failed to update');
+
+    showToast('Markdown reversed by QTP Manager.', 'success');
+    if (typeof createNotification === 'function') {
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown reversed by QTP Manager — ${actorName}` });
+    }
+    disputesCloseAction();
+    disputesCloseDetail();
+    await compassFetchLogs();
+    compassRenderKanban();
+  } catch (e) {
+    showToast('Failed to reverse markdown: ' + e.message, 'error');
+  }
+}
+
+// ===== LV6: QTP Manager Decision — Retain Markdown (popout with Remarks + Attachments → Markdown Retained - QTP Manager) =====
+
+function disputesShowLV6RetainMarkdown() {
+  const titleEl = document.getElementById('disputes-action-title');
+  const bodyEl = document.getElementById('disputes-action-body');
+  const footerEl = document.getElementById('disputes-action-footer');
+  const overlay = document.getElementById('disputes-action-overlay');
+
+  _disputeAttachedFiles = [];
+
+  titleEl.textContent = 'Retain Markdown — QTP Manager';
+  bodyEl.innerHTML = `
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Remarks <span style="color:var(--error);">*</span></label>
+      <textarea id="dispute-remarks-input" class="form-input" style="width:100%;min-height:80px;resize:vertical;font-size:13px;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Attachments</label>
+      <input type="file" id="dispute-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none" onchange="disputeUpdateFiles()">
+      <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('dispute-file-input').click()" style="display:flex;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        Attach Files
+      </button>
+      <div id="dispute-file-list" style="margin-top:6px;"></div>
+      <p style="font-size:11px;color:var(--fg-subtle);margin-top:4px;">Optional. Accepts documents, spreadsheets, and images.</p>
+    </div>
+    <p style="font-size:12px;color:var(--fg-muted);margin-top:8px;">This will set the status to <strong>Markdown Retained - QTP Manager</strong>.</p>
+  `;
+
+  footerEl.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
+    <button class="btn btn-warning btn-sm" onclick="disputesSubmitLV6RetainMarkdown()">Retain Markdown</button>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+async function disputesSubmitLV6RetainMarkdown() {
+  const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
+  if (!remarks) {
+    showToast('Remarks are required', 'error');
+    return;
+  }
+
+  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
+  if (!log) return;
+
+  let attachmentUrls = [];
+  for (const file of _disputeAttachedFiles) {
+    try {
+      const base64 = await fileToBase64(file);
+      const resp = await fetch(`${IO_API_BASE}/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64 })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        attachmentUrls.push({ name: file.name, url: result.url });
+      }
+    } catch (e) {
+      console.error('Failed to upload attachment:', e);
+    }
+  }
+
+  const timestamp = new Date().toLocaleString();
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const actorName = cu ? cu.full_name : 'Unknown';
+
+  const update = {
+    status: 'Markdown Retained - QTP Manager',
+    qtp_manager_comments: (log.qtp_manager_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
+  };
+
+  if (attachmentUrls.length > 0) {
+    update.qtp_manager_comments += '\n[Attachments: ' + attachmentUrls.map(a => a.name).join(', ') + ']';
+    const existingAttachments = log.dispute_attachments ? JSON.parse(log.dispute_attachments || '[]') : [];
+    update.dispute_attachments = JSON.stringify([...existingAttachments, ...attachmentUrls]);
+  }
+
+  try {
+    const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
+    });
+    if (!resp.ok) throw new Error('Failed to update');
+
+    showToast('Markdown retained by QTP Manager.', 'success');
+    if (typeof createNotification === 'function') {
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown retained by QTP Manager — ${actorName}` });
+    }
+    disputesCloseAction();
+    disputesCloseDetail();
+    await compassFetchLogs();
+    compassRenderKanban();
+  } catch (e) {
+    showToast('Failed to retain markdown: ' + e.message, 'error');
   }
 }
