@@ -643,7 +643,7 @@ async function rosterSaveNew() {
     showToast('Employee added successfully', 'success');
     if (typeof createNotification === 'function') {
       const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification({ type: 'roster_add', title: 'Employee Added', message: `${record.full_name} (${record.ohr_id} }) added to roster`, user?.ohr_id, user?.full_name);
+      createNotification({ type: 'roster_add', title: 'Employee Added', message: `${record.full_name} (${record.ohr_id}) added to roster` });
     }
     rosterCloseForm();
     await rosterFetchEmployees();

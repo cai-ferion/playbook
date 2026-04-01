@@ -311,3 +311,32 @@
 - [x] UPL/LATE attendance tags → create notification for the tagged employee (auto-mailer cron)
 - [x] Task assignment in Helm → create notification for each assigned user (sendTaskAssignmentNotifications)
 - [x] Daily attendance summary → create notification for admin (auto-mailer cron)
+
+## Batch 22 — Multi-Module Revisions
+
+### Anchor - Billing Compliance
+- [x] Widen Billing Code Reference table so "Target Hrs" column title fits on one line
+- [x] Center-align values in the Billing Code Reference table
+- [x] Add UPL REASON TRENDS & 3-MONTH PREDICTION chart beside YTD Compliance, stacked vertically
+- [x] Add LATE REASON TRENDS & 3-MONTH PREDICTION chart beside YTD Compliance, stacked vertically
+- [x] Add PL REASON TRENDS & 3-MONTH PREDICTION chart beside YTD Compliance, stacked vertically
+
+### Compass - Coaching Profile
+- [x] Verify Group Coaching already creates separate "General Coaching" logs per coachee (already implemented)
+
+### Compass - Disputes Area
+- [x] LV4 "Retain Markdown" → popout with remarks + attachments → status "Markdown Retained - Trainer"
+- [x] LV4 "Reverse Markdown" → popout confirmation → status "Markdown Accepted - Trainer" → routes to Coachee acknowledgement
+
+### Helm - Task Board
+- [x] Add "New Request" button next to "New Task" button
+- [x] Request Type: "Attendance Backdated Change Tag" with date, agent, reason fields
+- [x] Request submission creates a notification
+
+### Regimen - Roster Table
+- [x] Fix missing roster table (syntax error in createNotification call broke roster.js parsing)
+- [x] Fix duplicate disputeRemoveFile function in compass.js
+
+### Sandbox - Review Area
+- [x] Remove "Elevate" button from review footer
+- [x] Approve button opens popout with 4 status choices: Elevated - Task in Progress, Elevated - POC Rejected, Elevated - Pending POC Discussion, Elevated - No POC

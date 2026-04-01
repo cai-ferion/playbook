@@ -2515,20 +2515,26 @@ body {
   margin-top: 20px;
 }
 .billing-ref-card {
-  flex: 0 0 360px;
-  max-width: 360px;
+  flex: 0 0 420px;
+  max-width: 420px;
 }
-.billing-doughnut-card {
-  flex: 0 0 280px;
-  max-width: 280px;
+.billing-ref-card .data-table td {
+  text-align: center;
 }
-
-/* Billing analytics section */
-.billing-analytics-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+.billing-ref-card .data-table th {
+  text-align: center;
+}
+.billing-ref-card .data-table td input.billing-target-input {
+  text-align: center;
+  margin: 0 auto;
+  display: block;
+}
+.billing-right-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  margin-top: 20px;
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
@@ -2539,8 +2545,8 @@ body {
     flex: 1 1 auto;
     max-width: 100%;
   }
-  .billing-analytics-section {
-    grid-template-columns: 1fr;
+  .billing-right-stack {
+    width: 100%;
   }
 }
 

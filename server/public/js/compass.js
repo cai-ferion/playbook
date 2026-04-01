@@ -2395,11 +2395,11 @@ async function disputesOpenDetail(coachingId) {
       }
     }
 
-    // Trainer actions
+    // Trainer actions (LV4)
     if (role === 'Trainer' || isAdmin) {
       if (log.status === 'QA Retention Rejected - SME') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesQuickAction(\'Markdown Reversed - Trainer\')">Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesQuickAction(\'Markdown Retained - Trainer\')">Retain Markdown</button>';
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV4ReverseMarkdown()">Reverse Markdown</button>';
+        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV4RetainMarkdown()">Retain Markdown</button>';
       }
     }
 
@@ -3068,20 +3068,6 @@ function disputeHandleFileSelect(input) {
   }
 }
 
-function disputeRemoveFile(idx) {
-  _disputeAttachedFiles.splice(idx, 1);
-  const listEl = document.getElementById('dispute-file-list');
-  if (listEl) {
-    listEl.innerHTML = _disputeAttachedFiles.map((f, i) =>
-      `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg);margin-bottom:2px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        ${escapeHtml(f.name)}
-        <span style="cursor:pointer;color:var(--error);" onclick="disputeRemoveFile(${i})">&times;</span>
-      </div>`
-    ).join('');
-  }
-}
-
 async function disputesSubmitQADecisionRejected() {
   const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
   if (!remarks) {
@@ -3297,6 +3283,173 @@ async function disputesSubmitLV5ReverseMarkdown() {
     showToast('Markdown reversed. Log sent to coachee for acknowledgement.', 'success');
     if (typeof createNotification === 'function') {
       createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown reversed by SME at LV5 — ${actorName}` });
+    }
+    disputesCloseAction();
+    disputesCloseDetail();
+    await compassFetchLogs();
+    compassRenderKanban();
+  } catch (e) {
+    showToast('Failed to reverse markdown: ' + e.message, 'error');
+  }
+}
+
+
+// ===== LV4: Trainer Decision — Retain Markdown (popout with Remarks + Attachments) =====
+
+function disputesShowLV4RetainMarkdown() {
+  const titleEl = document.getElementById('disputes-action-title');
+  const bodyEl = document.getElementById('disputes-action-body');
+  const footerEl = document.getElementById('disputes-action-footer');
+  const overlay = document.getElementById('disputes-action-overlay');
+
+  _disputeAttachedFiles = [];
+
+  titleEl.textContent = 'Retain Markdown — Trainer Decision';
+  bodyEl.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Remarks <span style="color:var(--danger);">*</span></label>
+      <textarea id="dispute-lv4-retain-remarks" class="form-input" rows="4" placeholder="Explain why the markdown is being retained..." style="width:100%;resize:vertical;"></textarea>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Attachments (optional)</label>
+      <input type="file" id="dispute-lv4-retain-files" multiple style="font-size:12px;" onchange="disputeLV4RetainFilesChanged(this)">
+      <div id="dispute-lv4-retain-file-list" style="font-size:11px;color:var(--fg-muted);margin-top:4px;"></div>
+    </div>
+    <p style="font-size:12px;color:var(--fg-muted);margin-top:8px;">This will set the status to <strong>Markdown Retained - Trainer</strong> and route to the SME for further decision.</p>
+  `;
+
+  footerEl.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
+    <button class="btn btn-warning btn-sm" onclick="disputesSubmitLV4RetainMarkdown()">Retain Markdown</button>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+function disputeLV4RetainFilesChanged(input) {
+  _disputeAttachedFiles = Array.from(input.files || []);
+  const listEl = document.getElementById('dispute-lv4-retain-file-list');
+  if (listEl) {
+    listEl.textContent = _disputeAttachedFiles.map(f => f.name).join(', ') || '';
+  }
+}
+
+async function disputesSubmitLV4RetainMarkdown() {
+  const remarks = (document.getElementById('dispute-lv4-retain-remarks')?.value || '').trim();
+  if (!remarks) {
+    showToast('Remarks are required', 'error');
+    return;
+  }
+
+  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
+  if (!log) return;
+
+  // Upload attachments if any
+  let attachmentUrls = [];
+  for (const file of _disputeAttachedFiles) {
+    try {
+      const base64 = await fileToBase64(file);
+      const resp = await fetch(`${IO_API_BASE}/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64 })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        attachmentUrls.push({ name: file.name, url: result.url });
+      }
+    } catch (e) {
+      console.error('Failed to upload attachment:', e);
+    }
+  }
+
+  const timestamp = new Date().toLocaleString();
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const actorName = cu ? cu.full_name : 'Unknown';
+
+  const update = {
+    status: 'Markdown Retained - Trainer',
+    trainer_comments: (log.trainer_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
+  };
+
+  if (attachmentUrls.length > 0) {
+    update.trainer_comments += '\n[Attachments: ' + attachmentUrls.map(a => a.name).join(', ') + ']';
+    const existingAttachments = log.dispute_attachments ? JSON.parse(log.dispute_attachments || '[]') : [];
+    update.dispute_attachments = JSON.stringify([...existingAttachments, ...attachmentUrls]);
+  }
+
+  try {
+    const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
+    });
+    if (!resp.ok) throw new Error('Failed to update');
+
+    showToast('Markdown retained by Trainer. Card moved to LV5.', 'success');
+    if (typeof createNotification === 'function') {
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Update', message: `${log.coaching_id || log.id}: Markdown retained by Trainer — ${actorName}` });
+    }
+    disputesCloseAction();
+    disputesCloseDetail();
+    await compassFetchLogs();
+    compassRenderKanban();
+  } catch (e) {
+    showToast('Failed to retain markdown: ' + e.message, 'error');
+  }
+}
+
+// ===== LV4: Trainer Decision — Reverse Markdown (popout confirmation → Coachee acknowledgement) =====
+
+function disputesShowLV4ReverseMarkdown() {
+  const titleEl = document.getElementById('disputes-action-title');
+  const bodyEl = document.getElementById('disputes-action-body');
+  const footerEl = document.getElementById('disputes-action-footer');
+  const overlay = document.getElementById('disputes-action-overlay');
+
+  titleEl.textContent = 'Reverse Markdown — Trainer Decision';
+  bodyEl.innerHTML = `
+    <div style="text-align:center;padding:16px 0;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p style="font-size:14px;color:var(--fg);margin-bottom:4px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
+      <p style="font-size:12px;color:var(--fg-muted);">Status will change to <strong>Markdown Accepted - Trainer</strong> and the log will be routed to the Coachee for acknowledgement.</p>
+    </div>
+  `;
+
+  footerEl.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
+    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV4ReverseMarkdown()">Reverse Markdown</button>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+async function disputesSubmitLV4ReverseMarkdown() {
+  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
+  if (!log) return;
+
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const actorName = cu ? cu.full_name : 'Unknown';
+  const timestamp = new Date().toLocaleString();
+
+  const update = {
+    status: 'Pending Acknowledgement',
+    trainer_comments: (log.trainer_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by Trainer (Markdown Accepted - Trainer). Routed to Coachee for acknowledgement.'
+  };
+
+  try {
+    const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
+    });
+    if (!resp.ok) throw new Error('Failed to update');
+
+    showToast('Markdown reversed by Trainer. Log routed to Coachee for acknowledgement.', 'success');
+    if (typeof createNotification === 'function') {
+      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown accepted by Trainer — ${actorName}. Routed to Coachee.` });
     }
     disputesCloseAction();
     disputesCloseDetail();

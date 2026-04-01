@@ -572,11 +572,8 @@ function sandboxOpenDetail(insightId, context) {
     }
 
     if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ['Pending Final Review', 'Elevated - Pending POC Discussion'].includes(ins.status)) {
-      footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowAcceptPopout(\'final\')">Approve</button>';
-      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')">Reject</button>';
-      if (ins.status !== 'Elevated - Pending POC Discussion') {
-        footerHtml += ' <button class="btn btn-sm" style="background:#EC4899;color:#fff;" onclick="sandboxReview(\'elevate\')">Elevate</button>';
-      }
+      footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowFinalApprovePopout()">Approve</button>';
+      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')"  >Reject</button>';
     }
 
     if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Approved - Final Review') {
@@ -673,6 +670,91 @@ function sandboxCloseAcceptPopout() {
   document.getElementById(footerId).style.display = '';
 }
 
+// ===== Final Approve Popout (status choice) =====
+
+function sandboxShowFinalApprovePopout() {
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  formBody._prevHtml = formBody.innerHTML;
+
+  const statusChoices = [
+    { value: 'Elevated - Task in Progress', label: 'Elevated - Task in Progress', color: '#8B5CF6' },
+    { value: 'Elevated - POC Rejected', label: 'Elevated - POC Rejected', color: '#EF4444' },
+    { value: 'Elevated - Pending POC Discussion', label: 'Elevated - Pending POC Discussion', color: '#EC4899' },
+    { value: 'Elevated - No POC', label: 'Elevated - No POC', color: '#6B7280' }
+  ];
+
+  formBody.innerHTML = `
+    <div style="padding:16px 20px;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <h3 style="margin-bottom:4px;font-size:16px;">Approve Insight</h3>
+        <p style="color:var(--text-secondary);font-size:13px;">Select the next status for this insight:</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${statusChoices.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border-primary);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+          <input type="radio" name="sandbox-approve-status" value="${escapeAttr(s.value)}" style="accent-color:${s.color};">
+          <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>${escapeHtml(s.label)}</span>
+        </label>`).join('')}
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" onclick="sandboxCloseFinalApprovePopout()">Cancel</button>
+        <button class="btn btn-success btn-sm" onclick="sandboxSubmitFinalApprove()">Save</button>
+      </div>
+    </div>`;
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = 'none';
+}
+
+function sandboxCloseFinalApprovePopout() {
+  const isReview = (SANDBOX_MOD._context === 'review');
+  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (formBody._prevHtml) {
+    formBody.innerHTML = formBody._prevHtml;
+    delete formBody._prevHtml;
+  }
+  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  document.getElementById(footerId).style.display = '';
+}
+
+async function sandboxSubmitFinalApprove() {
+  const selected = document.querySelector('input[name="sandbox-approve-status"]:checked');
+  if (!selected) { showToast('Please select a status', 'error'); return; }
+
+  const newStatus = selected.value;
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const updates = {
+    status: newStatus,
+    final_reviewer: user ? user.full_name : '',
+    final_review_date: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Failed to update insight');
+
+    showToast(`Insight approved → ${newStatus}`, 'success');
+    if (typeof createNotification === 'function') {
+      createNotification({ type: 'insight_review', title: 'Insight Approved', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${newStatus}` });
+    }
+    sandboxCloseForm();
+    await sandboxFetchInsights();
+    sandboxRenderKanban();
+  } catch (e) {
+    console.error('Failed to approve insight:', e);
+    showToast('Failed to approve: ' + e.message, 'error');
+  }
+}
+
 // ===== Reject Modal (with aligned reasons) =====
 
 function sandboxShowRejectModal(tier) {
@@ -734,10 +816,6 @@ async function sandboxReview(action) {
     updates.initial_review_date = new Date().toISOString();
   } else if (action === 'approve-final') {
     updates.status = 'Approved - Final Review';
-    updates.final_reviewer = user ? user.full_name : '';
-    updates.final_review_date = new Date().toISOString();
-  } else if (action === 'elevate') {
-    updates.status = 'Elevated - Pending POC Discussion';
     updates.final_reviewer = user ? user.full_name : '';
     updates.final_review_date = new Date().toISOString();
   } else if (action === 'implement') {

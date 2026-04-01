@@ -736,3 +736,200 @@ function helmCalcAvgCompletion() {
   }, 0);
   return (totalDays / completed.length).toFixed(1);
 }
+
+
+// ===== New Request Form =====
+
+const HELM_REQUEST_TYPES = [
+  { value: 'attendance_backdated_change_tag', label: 'Attendance Backdated Change Tag' }
+];
+
+var _helmRequestSelectedAgent = null;
+
+function helmShowNewRequestForm() {
+  const formTitle = document.getElementById('helm-form-title');
+  const formBody = document.getElementById('helm-form-body');
+  const formFooter = document.getElementById('helm-form-footer');
+  const overlay = document.getElementById('helm-form-overlay');
+
+  HELM.editingId = null;
+  _helmRequestSelectedAgent = null;
+
+  const reqId = 'REQ-' + Date.now().toString(36).toUpperCase();
+  HELM._pendingReqId = reqId;
+  formTitle.textContent = reqId;
+
+  const typeOptions = HELM_REQUEST_TYPES.map(t =>
+    `<option value="${escapeAttr(t.value)}">${escapeHtml(t.label)}</option>`
+  ).join('');
+
+  const employeeOptions = HELM.employees.map(e =>
+    `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmSelectRequestAgent('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)} (${escapeHtml(e.ohr_id)})</div>`
+  ).join('');
+
+  formBody.innerHTML = `
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Request Type <span class="required">*</span></label>
+        <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
+          ${typeOptions}
+        </select>
+      </div>
+
+      <!-- Attendance Backdated Change Tag fields -->
+      <div id="helm-req-attendance-fields">
+        <div class="form-field">
+          <label class="form-label">Date to Change <span class="required">*</span></label>
+          <input type="date" class="form-input" id="helm-req-date" style="width:100%;">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Agent <span class="required">*</span></label>
+          <div id="helm-req-agent-chip" style="margin-bottom:6px;"></div>
+          <div class="searchable-select" id="helm-req-agent-wrapper">
+            <input type="text" class="form-input" id="helm-req-agent-search" placeholder="Search for an agent..." autocomplete="off" onclick="helmToggleRequestAgentDropdown(true)" oninput="helmFilterRequestAgents()">
+            <div class="searchable-select-dropdown" id="helm-req-agent-dropdown" style="display:none;max-height:200px;overflow-y:auto;">
+              ${employeeOptions}
+            </div>
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Reason for Change <span class="required">*</span></label>
+          <textarea class="form-textarea" id="helm-req-reason" rows="4" placeholder="Explain why the tag needs to be changed for this date..." style="width:100%;resize:vertical;"></textarea>
+        </div>
+      </div>
+    </div>
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Cancel</button>
+    <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit Request</button>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+function helmOnRequestTypeChange() {
+  const type = document.getElementById('helm-req-type')?.value || '';
+  const attendanceFields = document.getElementById('helm-req-attendance-fields');
+  if (attendanceFields) {
+    attendanceFields.style.display = (type === 'attendance_backdated_change_tag') ? '' : 'none';
+  }
+}
+
+function helmToggleRequestAgentDropdown(show) {
+  const dd = document.getElementById('helm-req-agent-dropdown');
+  if (dd) dd.style.display = show ? '' : 'none';
+}
+
+function helmFilterRequestAgents() {
+  const query = (document.getElementById('helm-req-agent-search')?.value || '').toLowerCase();
+  const dd = document.getElementById('helm-req-agent-dropdown');
+  if (!dd) return;
+  dd.style.display = '';
+  dd.querySelectorAll('.searchable-select-option').forEach(opt => {
+    const name = (opt.getAttribute('data-name') || '').toLowerCase();
+    const ohr = (opt.getAttribute('data-ohr') || '').toLowerCase();
+    opt.style.display = (name.includes(query) || ohr.includes(query)) ? '' : 'none';
+  });
+}
+
+function helmSelectRequestAgent(ohr, name) {
+  _helmRequestSelectedAgent = { ohr, name };
+  const chipEl = document.getElementById('helm-req-agent-chip');
+  if (chipEl) {
+    chipEl.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;padding:3px 8px;border-radius:12px;font-size:11px;font-weight:500;">
+        ${escapeHtml(name)}
+        <span onclick="helmClearRequestAgent()" style="cursor:pointer;display:flex;align-items:center;margin-left:2px;opacity:0.8;" title="Remove">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </span>
+      </span>
+    `;
+  }
+  helmToggleRequestAgentDropdown(false);
+  const searchInput = document.getElementById('helm-req-agent-search');
+  if (searchInput) searchInput.value = '';
+}
+
+function helmClearRequestAgent() {
+  _helmRequestSelectedAgent = null;
+  const chipEl = document.getElementById('helm-req-agent-chip');
+  if (chipEl) chipEl.innerHTML = '';
+}
+
+// Close request agent dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('helm-req-agent-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    helmToggleRequestAgentDropdown(false);
+  }
+});
+
+async function helmSubmitNewRequest() {
+  const reqType = document.getElementById('helm-req-type')?.value || '';
+  if (!reqType) { showToast('Please select a request type', 'error'); return; }
+
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+
+  if (reqType === 'attendance_backdated_change_tag') {
+    const date = document.getElementById('helm-req-date')?.value || '';
+    const reason = (document.getElementById('helm-req-reason')?.value || '').trim();
+
+    if (!date) { showToast('Please select the date to change', 'error'); return; }
+    if (!_helmRequestSelectedAgent) { showToast('Please select an agent', 'error'); return; }
+    if (!reason) { showToast('Please provide a reason for the change', 'error'); return; }
+
+    const agentName = _helmRequestSelectedAgent.name;
+    const agentOhr = _helmRequestSelectedAgent.ohr;
+    const readableDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Find the agent's supervisor
+    const agentEmp = HELM.employees.find(e => e.ohr_id === agentOhr);
+    const supervisorName = agentEmp ? (agentEmp.supervisor_name || '') : '';
+
+    // Create as a task with request metadata
+    const reqId = HELM._pendingReqId || ('REQ-' + Date.now().toString(36).toUpperCase());
+    const record = {
+      task_id: reqId,
+      title: `[Request] Attendance Backdated Change Tag — ${agentName}`,
+      description: `Request Type: Attendance Backdated Change Tag\nAgent: ${agentName} (${agentOhr})\nDate: ${readableDate}\nReason: ${reason}\n\nRequested by: ${cu ? cu.full_name : 'Unknown'}`,
+      assigned_to_ohr: agentEmp && agentEmp.supervisor_ohr ? agentEmp.supervisor_ohr : (cu ? cu.ohr_id : ''),
+      assigned_to_name: supervisorName || (cu ? cu.full_name : ''),
+      assigned_to_pg: agentEmp ? (agentEmp.planning_group || '') : '',
+      assigned_by_ohr: cu ? cu.ohr_id : '',
+      assigned_by_name: cu ? cu.full_name : '',
+      due_date: '',
+      status: 'Open',
+      priority: 'Medium',
+      entity: 'Anchor Tardiness',
+      entity_id: agentOhr,
+      attachments: ''
+    };
+
+    try {
+      const resp = await fetch(`${IO_API_BASE}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(record)
+      });
+      if (!resp.ok) throw new Error('Failed to create request');
+      const created = await resp.json();
+
+      showToast('Request submitted successfully', 'success');
+
+      // Create notification for the request
+      if (typeof createNotification === 'function') {
+        createNotification({
+          type: 'task_assigned',
+          title: 'New Request: Attendance Change Tag',
+          message: `${reqId}: ${agentName} — Backdated change tag for ${readableDate}. Requested by ${cu ? cu.full_name : 'Unknown'}.`
+        });
+      }
+
+      helmCloseForm();
+      await helmFetchTasks();
+    } catch (e) {
+      showToast('Failed to submit request: ' + e.message, 'error');
+    }
+  }
+}

@@ -529,58 +529,63 @@
             </div>
           </div>
 
-          <!-- Side-by-side: Billing Code Reference (narrow) + Compliance Doughnut Chart -->
+          <!-- Side-by-side: Billing Code Reference + YTD Compliance + Stacked Prediction Charts -->
           <div class="billing-side-panels">
-            <!-- Billing Code Reference (narrow) -->
+            <!-- Billing Code Reference (wider) -->
             <div class="card admin-card billing-ref-card">
               <div class="card-header">
                 <span class="card-title">BILLING CODE REFERENCE</span>
               </div>
               <div class="admin-card-body">
                 <table class="data-table admin-preview-table" style="font-size:12px;" id="billing-code-ref-table">
-                  <thead><tr><th>PG</th><th>Role</th><th>Code</th><th>Target Hrs</th></tr></thead>
+                  <thead><tr><th>PG</th><th>Role</th><th>Code</th><th style="white-space:nowrap;">Target Hrs</th></tr></thead>
                   <tbody id="billing-code-ref-body">
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- YTD Compliance Doughnut Chart -->
-            <div class="card admin-card billing-doughnut-card">
-              <div class="card-header">
-                <span class="card-title">YTD COMPLIANCE — 100% THRESHOLD</span>
+            <!-- Right column: YTD Compliance + 3 prediction charts stacked -->
+            <div class="billing-right-stack">
+              <!-- YTD Compliance Doughnut Chart -->
+              <div class="card admin-card">
+                <div class="card-header">
+                  <span class="card-title">YTD COMPLIANCE — 100% THRESHOLD</span>
+                </div>
+                <div class="admin-card-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;">
+                  <canvas id="billing-compliance-doughnut" width="200" height="200"></canvas>
+                </div>
+                <div id="billing-doughnut-legend" style="padding:8px 16px 12px;font-size:12px;color:var(--text-secondary);"></div>
               </div>
-              <div class="admin-card-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;">
-                <canvas id="billing-compliance-doughnut" width="200" height="200"></canvas>
-              </div>
-              <div id="billing-doughnut-legend" style="padding:8px 16px 12px;font-size:12px;color:var(--text-secondary);"></div>
-            </div>
-          </div>
 
-          <!-- Analytics: UPL / LATE / PL Reason Trends & Prediction -->
-          <div class="billing-analytics-section">
-            <div class="card admin-card">
-              <div class="card-header">
-                <span class="card-title">UPL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
+              <!-- UPL Reason Trends -->
+              <div class="card admin-card">
+                <div class="card-header">
+                  <span class="card-title">UPL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
+                </div>
+                <div class="admin-card-body">
+                  <canvas id="billing-upl-trends-chart" height="200"></canvas>
+                </div>
               </div>
-              <div class="admin-card-body">
-                <canvas id="billing-upl-trends-chart" height="220"></canvas>
+
+              <!-- LATE Reason Trends -->
+              <div class="card admin-card">
+                <div class="card-header">
+                  <span class="card-title">LATE REASON TRENDS &amp; 3-MONTH PREDICTION</span>
+                </div>
+                <div class="admin-card-body">
+                  <canvas id="billing-late-trends-chart" height="200"></canvas>
+                </div>
               </div>
-            </div>
-            <div class="card admin-card">
-              <div class="card-header">
-                <span class="card-title">LATE REASON TRENDS &amp; 3-MONTH PREDICTION</span>
-              </div>
-              <div class="admin-card-body">
-                <canvas id="billing-late-trends-chart" height="220"></canvas>
-              </div>
-            </div>
-            <div class="card admin-card">
-              <div class="card-header">
-                <span class="card-title">PL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
-              </div>
-              <div class="admin-card-body">
-                <canvas id="billing-pl-trends-chart" height="220"></canvas>
+
+              <!-- PL Reason Trends -->
+              <div class="card admin-card">
+                <div class="card-header">
+                  <span class="card-title">PL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
+                </div>
+                <div class="admin-card-body">
+                  <canvas id="billing-pl-trends-chart" height="200"></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -1126,6 +1131,10 @@
               <button class="btn btn-primary btn-sm" id="helm-new-btn" onclick="helmShowNewForm()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 New Task
+              </button>
+              <button class="btn btn-outline btn-sm" id="helm-new-request-btn" onclick="helmShowNewRequestForm()" style="margin-left:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                New Request
               </button>
             </div>
 
