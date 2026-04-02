@@ -7,6 +7,7 @@
 const HELM = {
   tasks: [],
   filtered: [],
+  filteredReceived: [],
   approvals: [],
   filteredApprovals: [],
   employees: [],
@@ -14,6 +15,7 @@ const HELM = {
   currentBoardTab: 'tasks',
   currentSubpage: 'board',
   page: 1,
+  receivedPage: 1,
   pageSize: 25,
   approvalsPage: 1,
   editingId: null,
@@ -53,6 +55,7 @@ async function initHelm(view) {
   const sub = subMap[view] || 'board';
   if (sub === 'board') {
     helmApplyFilters();
+    helmApplyReceivedFilters();
     helmApplyApprovalsFilters();
   }
   else if (sub === 'analytics') helmRenderAnalytics();
@@ -91,6 +94,7 @@ async function helmFetchTasks() {
 
   if (loading) loading.style.display = 'none';
   helmApplyFilters();
+  helmApplyReceivedFilters();
 }
 
 async function helmFetchEmployees() {
@@ -120,21 +124,29 @@ function helmSwitchTab(tab) {
 // ===== Board Tab Switcher =====
 
 function helmSwitchBoardTab(tab) {
-  // Both tables are always visible side-by-side now
+  // All three tables are always visible side-by-side now
   HELM.currentBoardTab = tab;
-  // Ensure both panels are visible
+  // Ensure all panels are visible
   const tasksPanel = document.getElementById('helm-tab-tasks');
+  const receivedPanel = document.getElementById('helm-tab-received');
   const approvalsPanel = document.getElementById('helm-tab-approvals');
   if (tasksPanel) tasksPanel.style.display = '';
+  if (receivedPanel) receivedPanel.style.display = '';
   if (approvalsPanel) approvalsPanel.style.display = '';
-  // Refresh the approvals table
+  // Refresh all tables
+  helmApplyReceivedFilters();
   helmApplyApprovalsFilters();
 }
 
 function helmApplyFilters() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  // Filter only task records (not requests)
+  // Filter only task records (not requests) where current user is the creator
   let data = HELM.tasks.filter(t => t.record_type !== 'request');
+
+  // Tasks Given: only tasks created by the current user
+  if (cu && cu.ohr_id) {
+    data = data.filter(t => (t.assigned_by_ohr || '') === cu.ohr_id);
+  }
 
   // Status filter
   const statusFilter = document.getElementById('helm-filter-status')?.value || 'All';
@@ -154,34 +166,10 @@ function helmApplyFilters() {
   }
 
   HELM.filtered = data;
-  helmRenderStats();
   helmRenderTable();
 }
 
-// ===== Stats =====
-
-function helmRenderStats() {
-  const el = document.getElementById('helm-stats');
-  if (!el) return;
-  const total = HELM.filtered.length;
-  const open = HELM.filtered.filter(t => t.status === 'Open').length;
-  const inProgress = HELM.filtered.filter(t => t.status === 'In Progress').length;
-  const completed = HELM.filtered.filter(t => t.status === 'Completed').length;
-  const overdue = HELM.filtered.filter(t => {
-    if (!t.due_date || t.status === 'Completed' || t.status === 'Cancelled') return false;
-    return new Date(t.due_date) < new Date();
-  }).length;
-
-  el.innerHTML = `
-    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:${HELM.STATUS_COLORS['Open']}">${open}</div><div class="stat-label">Open</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:${HELM.STATUS_COLORS['In Progress']}">${inProgress}</div><div class="stat-label">In Progress</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:${HELM.STATUS_COLORS['Completed']}">${completed}</div><div class="stat-label">Completed</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:#EF4444">${overdue}</div><div class="stat-label">Overdue</div></div>
-  `;
-}
-
-// ===== Table Rendering =====
+// ===== Table Rendering (Tasks Given) =====
 
 function helmRenderTable() {
   const thead = document.getElementById('helm-table-head');
@@ -236,6 +224,99 @@ function helmRenderPagination() {
       <button class="btn btn-outline btn-xs" ${HELM.page <= 1 ? 'disabled' : ''} onclick="HELM.page--;helmRenderTable();">Prev</button>
       <span class="pagination-page">${HELM.page} / ${totalPages}</span>
       <button class="btn btn-outline btn-xs" ${HELM.page >= totalPages ? 'disabled' : ''} onclick="HELM.page++;helmRenderTable();">Next</button>
+    </div>
+  `;
+}
+
+// ===== Tasks Received: Filter, Render, Pagination =====
+
+function helmApplyReceivedFilters() {
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  // Filter only task records (not requests) where current user is an assignee
+  let data = HELM.tasks.filter(t => t.record_type !== 'request');
+
+  // Tasks Received: only tasks assigned to the current user
+  if (cu && cu.ohr_id) {
+    data = data.filter(t => {
+      const assignedOhrs = (t.assigned_to_ohr || '').split(',').map(s => s.trim());
+      return assignedOhrs.includes(cu.ohr_id);
+    });
+  }
+
+  // Status filter
+  const statusFilter = document.getElementById('helm-received-filter-status')?.value || 'All';
+  if (statusFilter !== 'All') {
+    data = data.filter(t => t.status === statusFilter);
+  }
+
+  // Search
+  const search = (document.getElementById('helm-received-search')?.value || '').toLowerCase().trim();
+  if (search) {
+    data = data.filter(t =>
+      (t.title || '').toLowerCase().includes(search) ||
+      (t.task_id || '').toLowerCase().includes(search) ||
+      (t.assigned_to_name || '').toLowerCase().includes(search) ||
+      (t.assigned_by_name || '').toLowerCase().includes(search)
+    );
+  }
+
+  HELM.filteredReceived = data;
+  helmRenderReceivedTable();
+}
+
+function helmRenderReceivedTable() {
+  const thead = document.getElementById('helm-received-table-head');
+  const tbody = document.getElementById('helm-received-table-body');
+  if (!thead || !tbody) return;
+
+  thead.innerHTML = `<tr>
+    <th>Task ID</th>
+    <th>Title</th>
+    <th>Assigned By</th>
+    <th>Status</th>
+    <th>Due Date</th>
+  </tr>`;
+
+  const start = (HELM.receivedPage - 1) * HELM.pageSize;
+  const pageData = HELM.filteredReceived.slice(start, start + HELM.pageSize);
+
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--fg-muted);">No tasks found</td></tr>';
+    helmRenderReceivedPagination();
+    return;
+  }
+
+  tbody.innerHTML = pageData.map(t => {
+    const statusColor = HELM.STATUS_COLORS[t.status] || 'var(--fg-muted)';
+    const isOverdue = t.due_date && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due_date) < new Date();
+    const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
+
+    return `<tr class="data-row" onclick="helmOpenDetail('${escapeAttr(t.task_id)}')">
+      <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
+      <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
+      <td>${escapeHtml(t.assigned_by_name || '\u2014')}</td>
+      <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '\u2014')}</span></td>
+      <td style="${isOverdue ? 'color:var(--error);font-weight:600;' : ''}">${dueStr}${isOverdue ? ' (Overdue)' : ''}</td>
+    </tr>`;
+  }).join('');
+
+  helmRenderReceivedPagination();
+}
+
+function helmRenderReceivedPagination() {
+  const el = document.getElementById('helm-received-pagination');
+  if (!el) return;
+  const total = HELM.filteredReceived.length;
+  const totalPages = Math.ceil(total / HELM.pageSize) || 1;
+  const start = (HELM.receivedPage - 1) * HELM.pageSize + 1;
+  const end = Math.min(HELM.receivedPage * HELM.pageSize, total);
+
+  el.innerHTML = `
+    <span class="pagination-info">${total > 0 ? start + '\u2013' + end + ' of ' + total : '0 tasks'}</span>
+    <div class="pagination-btns">
+      <button class="btn btn-outline btn-xs" ${HELM.receivedPage <= 1 ? 'disabled' : ''} onclick="HELM.receivedPage--;helmRenderReceivedTable();">Prev</button>
+      <span class="pagination-page">${HELM.receivedPage} / ${totalPages}</span>
+      <button class="btn btn-outline btn-xs" ${HELM.receivedPage >= totalPages ? 'disabled' : ''} onclick="HELM.receivedPage++;helmRenderReceivedTable();">Next</button>
     </div>
   `;
 }

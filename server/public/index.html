@@ -1159,11 +1159,11 @@
               </button>
             </div>
 
-            <!-- Side-by-side: Tasks & Approvals -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-              <!-- Tasks Panel -->
+            <!-- Side-by-side: Tasks Given, Tasks Received & Approvals -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+              <!-- Tasks Given Panel -->
               <div id="helm-tab-tasks" style="min-width:0;">
-                <h3 style="font-size:14px;font-weight:700;color:var(--fg);margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.5px;">Tasks</h3>
+                <h3 style="font-size:14px;font-weight:700;color:var(--fg);margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.5px;">Tasks Given</h3>
                 <div class="module-filters" id="helm-filters" style="margin-bottom:8px;">
                   <div class="filter-group">
                     <label class="filter-label">Status:</label>
@@ -1192,6 +1192,35 @@
                   </table>
                 </div>
                 <div class="module-pagination" id="helm-pagination"></div>
+              </div>
+
+              <!-- Tasks Received Panel -->
+              <div id="helm-tab-received" style="min-width:0;">
+                <h3 style="font-size:14px;font-weight:700;color:var(--fg);margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.5px;">Tasks Received</h3>
+                <div class="module-filters" id="helm-received-filters" style="margin-bottom:8px;">
+                  <div class="filter-group">
+                    <label class="filter-label">Status:</label>
+                    <select class="form-select form-select-sm" id="helm-received-filter-status" onchange="helmApplyReceivedFilters()">
+                      <option value="All">All Statuses</option>
+                      <option value="Open">Open</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <label class="filter-label">Search:</label>
+                    <input type="text" class="form-input form-input-sm" id="helm-received-search" placeholder="Title, ID..." oninput="helmApplyReceivedFilters()" style="max-width:160px;">
+                  </div>
+                </div>
+
+                <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+                  <table class="data-table module-table" id="helm-received-table" style="font-size:12px;">
+                    <thead id="helm-received-table-head"></thead>
+                    <tbody id="helm-received-table-body"></tbody>
+                  </table>
+                </div>
+                <div class="module-pagination" id="helm-received-pagination"></div>
               </div>
 
               <!-- Approvals Panel -->

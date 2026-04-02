@@ -609,3 +609,12 @@
 - [x] Helm nav group now auto-expands on login and session restore (both paths)
 - [x] Previously only Anchor was auto-expanded; now both Anchor and Helm expand by default
 - [x] All 211 tests passing
+
+## Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals (Apr 3)
+- [x] Rename "Tasks" table to "Tasks Given" — show only tasks where current user is the creator (assigned_by)
+- [x] Add new "Tasks Received" table between Tasks Given and Approvals — show tasks where current user is in Assigned To
+- [x] Each table has its own filters (status dropdown + search), table rendering, and pagination
+- [x] Tasks Given shows Assigned To column; Tasks Received shows Assigned By column
+- [x] Approvals table maintained as-is
+- [x] Layout changed from 2-column to 3-column grid
+- [x] All 225 tests passing (14 new tests added)
