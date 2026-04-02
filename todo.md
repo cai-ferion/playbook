@@ -546,3 +546,10 @@
 
 ## Batch 31e — Extend Breakdown Table Height (Apr 3)
 - [x] Removed max-height:300px constraint so table extends to fill available space
+
+## Batch 32 — Fix UPL/LATE/PL Trend & Prediction Charts (Apr 3)
+- [x] Root cause: April (incomplete month with only 5 records) was included in regression, pulling predictions to near-zero
+- [x] Fix: exclude current incomplete month from linear regression; only use completed months (Jan-Mar) for trend calculation
+- [x] Predictions now realistic: UPL Apr=275/May=158/Jun=41, LATE Apr=187/May=159/Jun=132, PL Apr=233/May=174/Jun=114
+- [x] Current incomplete month excluded from actual data display; prediction line starts from last completed month
+- [x] All 211 tests passing

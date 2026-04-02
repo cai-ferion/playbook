@@ -555,6 +555,7 @@ function renderReasonTrendsChartFromAgg(trendsData, tagFilter, canvasId, chartVa
   // Build sorted month labels from Jan to current month
   const year = new Date().getFullYear();
   const currentMonth = new Date().getMonth(); // 0-indexed
+  const currentDay = new Date().getDate();
   const months = [];
   const counts = [];
   for (let m = 0; m <= currentMonth; m++) {
@@ -563,33 +564,53 @@ function renderReasonTrendsChartFromAgg(trendsData, tagFilter, canvasId, chartVa
     counts.push(monthCounts[key] || 0);
   }
 
-  // Simple linear regression for 3-month prediction
-  const n = counts.length;
+  // Separate completed months from the current (incomplete) month.
+  // Only use completed months for regression to avoid skewing predictions.
+  // A month is considered "complete" if it's before the current month,
+  // or if we're on the last day of the current month.
+  const isCurrentMonthComplete = currentDay >= 28 && currentMonth === new Date(year, currentMonth + 1, 0).getDate();
+  const completedCounts = isCurrentMonthComplete ? [...counts] : counts.slice(0, -1);
+  const hasPartialMonth = !isCurrentMonthComplete && counts.length > 0;
+
+  // Linear regression on COMPLETED months only
+  const nc = completedCounts.length;
   let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < nc; i++) {
     sumX += i;
-    sumY += counts[i];
-    sumXY += i * counts[i];
+    sumY += completedCounts[i];
+    sumXY += i * completedCounts[i];
     sumX2 += i * i;
   }
-  const slope = n > 1 ? (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX) : 0;
-  const intercept = n > 0 ? (sumY - slope * sumX) / n : 0;
+  const slope = nc > 1 ? (nc * sumXY - sumX * sumY) / (nc * sumX2 - sumX * sumX) : 0;
+  const intercept = nc > 0 ? (sumY - slope * sumX) / nc : 0;
 
-  // Generate 3 future months
+  // Prediction starts from the current month (if incomplete) or next month
+  // If current month is incomplete, predict it + 2 more = 3 predicted months
+  // If current month is complete, predict next 3 months
+  const predStartIdx = hasPartialMonth ? nc : nc; // regression index for first prediction
+  const predMonthStart = hasPartialMonth ? currentMonth : currentMonth + 1;
+  const predCount = hasPartialMonth ? 3 : 3;
+
   const predictionMonths = [];
   const predictionCounts = [];
-  for (let i = 1; i <= 3; i++) {
-    const futureM = currentMonth + i;
+  for (let i = 0; i < predCount; i++) {
+    const futureM = predMonthStart + i;
     const futureYear = year + Math.floor(futureM / 12);
     const futureMonth = futureM % 12;
     const key = `${futureYear}-${String(futureMonth + 1).padStart(2, '0')}`;
     predictionMonths.push(key);
-    predictionCounts.push(Math.max(0, Math.round(slope * (n + i - 1) + intercept)));
+    predictionCounts.push(Math.max(0, Math.round(slope * (predStartIdx + i) + intercept)));
   }
 
-  // Format month labels as "Jan", "Feb", etc.
+  // Format month labels as "Jan '26", etc.
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const allLabels = [...months, ...predictionMonths].map(m => {
+
+  // For display: show completed months + prediction months
+  // If there's a partial month, exclude it from actual and include it in prediction range
+  const displayMonths = hasPartialMonth ? months.slice(0, -1) : months;
+  const displayCounts = hasPartialMonth ? counts.slice(0, -1) : counts;
+  const allLabelKeys = [...displayMonths, ...predictionMonths];
+  const allLabels = allLabelKeys.map(m => {
     const parts = m.split('-');
     return monthNames[parseInt(parts[1]) - 1] + ' ' + parts[0].substring(2);
   });
@@ -603,8 +624,10 @@ function renderReasonTrendsChartFromAgg(trendsData, tagFilter, canvasId, chartVa
   const color = colors[tagFilter] || colors['UPL'];
 
   // Build datasets
-  const actualData = [...counts, ...Array(3).fill(null)];
-  const predData = [...Array(n > 0 ? n - 1 : 0).fill(null), counts.length > 0 ? counts[counts.length - 1] : 0, ...predictionCounts];
+  const nDisplay = displayCounts.length;
+  const actualData = [...displayCounts, ...Array(predCount).fill(null)];
+  // Prediction line connects from last actual point
+  const predData = [...Array(nDisplay > 0 ? nDisplay - 1 : 0).fill(null), nDisplay > 0 ? displayCounts[nDisplay - 1] : 0, ...predictionCounts];
 
   window[chartVarName] = new Chart(canvas, {
     type: 'line',
