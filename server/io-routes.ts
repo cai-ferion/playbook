@@ -176,17 +176,17 @@ router.get("/attendance", async (req: Request, res: Response) => {
       else conditions.push(eq(ioAttendance.tag, String(tag)));
     }
     if (tag_in) {
-      const tags = String(tag_in).split(",");
+      const tags = String(tag_in).split("|");
       conditions.push(inArray(ioAttendance.tag, tags));
     }
-    // Server-side multi-value filters
-    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split(",")));
-    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split(",")));
-    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split(",")));
-    if (billing_code_in) conditions.push(inArray(ioAttendance.billing_code, String(billing_code_in).split(",")));
-    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split(",")));
-    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split(",")));
-    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split(",")));
+    // Server-side multi-value filters (pipe-delimited to support names with commas)
+    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
+    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
+    if (billing_code_in) conditions.push(inArray(ioAttendance.billing_code, String(billing_code_in).split("|")));
+    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
+    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
+    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
     if (blanks_only === "true") {
       conditions.push(or(
         sql`${ioAttendance.tag} IS NULL`,

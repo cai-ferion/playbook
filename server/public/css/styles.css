@@ -3710,7 +3710,7 @@ body {
 }
 
 .chip-text {
-  max-width: 220px;
+  max-width: 360px;
   overflow: hidden;
   text-overflow: ellipsis;
 }

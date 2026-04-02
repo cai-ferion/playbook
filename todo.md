@@ -482,3 +482,20 @@
 - [x] Change locking to lock rows for the day before current day and earlier (not current day)
 - [x] Keep the 11:00 AM cutoff mechanism (locks apply after 11:00 AM PHT)
 - [x] Example: If today is 04/02/26, after 11 AM lock 04/01/26 and before; current day (04/02/26) stays editable
+
+## Batch 28 — Revisions (Apr 3)
+
+### Anchor - Input Portal: Date Range Filter Width
+- [x] Extend the date range filter chip so the full date range text is visible (max-width 220px → 360px)
+
+### Anchor - Input Portal: Billing Code Descriptions
+- [x] In "Edit Billing Code" dropdown, show code description beside each option (e.g. "MA (S-ABF; Agent)", "MS (S-ABF; Operational SME)", "SV (Any; Team Lead)")
+- [x] Format: CODE (Planning Group; Role) — if no role, use "Any"
+
+### Helm - Task Board: New Request Name Field
+- [x] Change "Name" field in New Request form — search input hides after selection, shows on clear (single-select UX)
+
+### Anchor - Input Portal: Omnibar Filter Bug
+- [x] Fix FLM filter: comma in names broke comma delimiter — switched all filters to pipe (|) delimiter
+- [x] Fix Agent filter: same pipe delimiter fix + employeeLookup fallback for value picker
+- [x] Verified all filters: FLM=38 rows, Agent=2 rows, Tag UPL|LATE=5 rows — all working

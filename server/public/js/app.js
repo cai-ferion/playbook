@@ -1332,6 +1332,29 @@ function isRowLocked(record) {
   return false;
 }
 
+// ===== Billing Code Description Lookup =====
+const BILLING_CODE_DESC_MAP = {
+  'MA': 'S-ABF; Agent',
+  'MS': 'S-ABF; Operational SME',
+  'MQ': 'S-ABF; QA',
+  'SA': 'S-ABF; Team Lead',
+  'CA': 'CS-ABF; Agent',
+  'CS': 'CS-ABF; Operational SME',
+  'CQ': 'CS-ABF; QA',
+  'SC': 'CS-ABF; Team Lead',
+  'SO': 'CSO_CTR; Any',
+  'FA': 'FAD_CTR; Any',
+  'RM': 'RM_CTR; Any',
+  'SM': 'SME_CTR; Any',
+  'QP': 'QPE_CTR; Any',
+  'SV': 'Any; Team Lead',
+  'TR': 'Any; Trainer',
+  'SR': 'RM_CTR; Team Lead',
+};
+function getBillingCodeDesc(code) {
+  return BILLING_CODE_DESC_MAP[code] || code;
+}
+
 // ===== Billing Code Edit Functions =====
 
 let bcEditPendingChanges = {}; // ohr -> { newCode, records: [indices] }
@@ -1362,14 +1385,14 @@ function initBillingCodeEdit() {
     agentSelect.appendChild(opt);
   }
 
-  // Populate billing code dropdown
+  // Populate billing code dropdown with descriptions
   const codeSelect = document.getElementById('bc-edit-new-code');
   const allCodes = [...new Set(appState.records.map(r => r.billingCode).filter(Boolean))].sort();
   codeSelect.innerHTML = '<option value="">\u2014 Select \u2014</option>';
   for (const code of allCodes) {
     const opt = document.createElement('option');
     opt.value = code;
-    opt.textContent = code;
+    opt.textContent = code + ' (' + getBillingCodeDesc(code) + ')';
     codeSelect.appendChild(opt);
   }
 
@@ -1390,7 +1413,7 @@ function onBcEditAgentChange() {
     for (const code of allCodes) {
       const opt = document.createElement('option');
       opt.value = code;
-      opt.textContent = code;
+      opt.textContent = code + ' (' + getBillingCodeDesc(code) + ')';
       codeSelect.appendChild(opt);
     }
     return;
@@ -1408,7 +1431,7 @@ function onBcEditAgentChange() {
   for (const code of filteredCodes) {
     const opt = document.createElement('option');
     opt.value = code;
-    opt.textContent = code;
+    opt.textContent = code + ' (' + getBillingCodeDesc(code) + ')';
     codeSelect.appendChild(opt);
   }
 }

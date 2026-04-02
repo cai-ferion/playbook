@@ -916,7 +916,7 @@ function helmSelectRequestAgent(ohr, name) {
   }
   helmToggleRequestAgentDropdown(false);
   const searchInput = document.getElementById('helm-req-agent-search');
-  if (searchInput) searchInput.value = '';
+  if (searchInput) { searchInput.value = ''; searchInput.style.display = 'none'; }
   helmUpdateCurrentTag();
 }
 
@@ -969,6 +969,8 @@ function helmClearRequestAgent() {
   _helmRequestSelectedAgent = null;
   const chipEl = document.getElementById('helm-req-agent-chip');
   if (chipEl) chipEl.innerHTML = '';
+  const searchInput = document.getElementById('helm-req-agent-search');
+  if (searchInput) searchInput.style.display = '';
 }
 
 // Close request agent dropdown when clicking outside

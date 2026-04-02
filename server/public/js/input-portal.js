@@ -142,8 +142,30 @@ function renderOmnibarFilterValuePicker() {
     return;
   }
 
-  // Multi-select: gather unique values from records
-  const values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
+  // Multi-select: gather unique values
+  // For name-based fields, use employeeLookup when records are empty (server-side pagination)
+  let values;
+  const empFieldMap = {
+    agent: 'full_name', flm: 'supervisor_name',
+    actualPlanningGroup: 'planning_group', role: 'actual_role',
+    shiftTime: 'shift_time', status: 'employement_status',
+  };
+  if (appState.records.length === 0 && empFieldMap[field.recordKey] && typeof employeeLookup === 'object') {
+    const empField = empFieldMap[field.recordKey];
+    values = [...new Set(Object.values(employeeLookup).map(e => (e[empField] || '').trim()).filter(Boolean))].sort();
+  } else if (appState.records.length > 0) {
+    values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
+  } else {
+    values = [];
+  }
+  // For tag and billingCode, also try to get from current server page
+  if (values.length === 0 && typeof serverPagState !== 'undefined' && serverPagState.rows && serverPagState.rows.length > 0) {
+    values = [...new Set(serverPagState.rows.map(r => r[field.recordKey]).filter(Boolean))].sort();
+  }
+  // For tag field, always include TAG_OPTIONS as base
+  if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
+    values = [...new Set([...TAG_OPTIONS, ...values])].sort();
+  }
   const searchable = field.searchable || values.length > 15;
 
   let html = `<div class="omnibar-menu-title">${escapeHtml(field.label)}</div>`;
@@ -351,7 +373,7 @@ async function omnibarApplyView() {
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
       const paramKey = keyMap[f.key];
-      if (paramKey) filters[paramKey] = f.values.join(',');
+      if (paramKey) filters[paramKey] = f.values.join('|');
     }
     if (f.type === 'toggle' && f.key === 'blanks') {
       filters.blanks_only = true;
@@ -403,7 +425,7 @@ async function serverPageChange(newPage) {
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
       const paramKey = keyMap[f.key];
-      if (paramKey) filters[paramKey] = f.values.join(',');
+      if (paramKey) filters[paramKey] = f.values.join('|');
     }
     if (f.type === 'toggle' && f.key === 'blanks') {
       filters.blanks_only = true;
