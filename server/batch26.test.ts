@@ -57,25 +57,35 @@ describe("Batch 26 — Revisions", () => {
     });
   });
 
-  // 4. Billing Compliance doughnut chart fix
+  // 4. Billing Compliance doughnut chart — YTD per-week compliance
   describe("Billing Compliance Charts", () => {
-    it("should render doughnut from selected week data, not YTD", () => {
+    it("should render YTD doughnut from per-week data via renderYTDComplianceDoughnut", () => {
       const billingJs = fs.readFileSync(
         path.join(__dirname, "public/js/billing.js"),
         "utf-8"
       );
-      // Should build weekComplianceData from codeGroups and pass to renderComplianceDoughnut
-      expect(billingJs).toContain("weekComplianceData");
-      expect(billingJs).toContain("renderComplianceDoughnut(weekComplianceData)");
+      // Should fetch billing-ytd-weekly and render with renderYTDComplianceDoughnut
+      expect(billingJs).toContain("billing-ytd-weekly");
+      expect(billingJs).toContain("renderYTDComplianceDoughnut");
     });
 
-    it("should have WEEKLY COMPLIANCE title instead of YTD", () => {
+    it("should have YTD COMPLIANCE title for doughnut chart", () => {
       const html = fs.readFileSync(
         path.join(__dirname, "public/index.html"),
         "utf-8"
       );
-      expect(html).toContain("WEEKLY COMPLIANCE");
-      expect(html).not.toContain("YTD COMPLIANCE");
+      expect(html).toContain("YTD COMPLIANCE");
+    });
+
+    it("should compute PG-weeks passing/failing across all weeks", () => {
+      const billingJs = fs.readFileSync(
+        path.join(__dirname, "public/js/billing.js"),
+        "utf-8"
+      );
+      // Should group by week and iterate BILLING_CODE_ORDER per week
+      expect(billingJs).toContain("byWeek");
+      expect(billingJs).toContain("codeFailCount");
+      expect(billingJs).toContain("PG-wks");
     });
   });
 

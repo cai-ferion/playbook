@@ -1045,6 +1045,51 @@ router.get("/attendance/billing-ytd", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/io/attendance/billing-ytd-weekly?year=2026
+// Returns per-week per-billing-code aggregation for YTD compliance doughnut
+router.get("/attendance/billing-ytd-weekly", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const year = String(req.query.year || new Date().getFullYear());
+    const startDate = `${year}-01-01`;
+    const today = new Date();
+    const endDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // Excluded statuses (use snap_status from attendance table)
+    const excludedStatuses = ['Nesting', 'Attrition Backfill Training', 'Exit'];
+
+    // Get per-week per-billing-code: forecasted_p and ot_rendered
+    // Week is defined as Saturday-Friday. We use the Friday week-ending date.
+    // DAYOFWEEK: 1=Sun,2=Mon,...,7=Sat. Friday=6. We compute the Friday of each record's week.
+    const rows = await db.execute(sql`
+      SELECT
+        DATE_FORMAT(
+          DATE_ADD(a.log_date, INTERVAL ((6 - DAYOFWEEK(a.log_date) + 7) % 7) DAY),
+          '%Y-%m-%d'
+        ) AS week_ending,
+        a.billing_code,
+        SUM(CASE WHEN a.tag IN ('P', 'LATE', '') OR a.tag IS NULL THEN 1 ELSE 0 END) AS forecasted_p,
+        SUM(COALESCE(a.ot_hours, 0)) AS ot_rendered
+      FROM io_attendance a
+      WHERE a.log_date >= ${startDate}
+        AND a.log_date <= ${endDate}
+        AND (a.snap_status IS NULL OR a.snap_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
+        AND a.billing_code IS NOT NULL
+        AND a.billing_code != ''
+      GROUP BY week_ending, a.billing_code
+      ORDER BY week_ending, a.billing_code
+    `);
+
+    const data = Array.isArray(rows) ? (Array.isArray(rows[0]) ? rows[0] : rows) : [];
+    res.json({ weeks: data });
+  } catch (err: any) {
+    console.error("[IO API] billing-ytd-weekly error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // Billing Target Hours
 // ============================================================

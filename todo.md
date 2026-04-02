@@ -515,3 +515,12 @@
 - [x] Update omnibar filter empFieldMap to use srt_status instead of employement_status for Status filter
 - [x] Final distribution: Production=41,310, Nesting=751, Exit=911, Active=0, Inactive=0 (3,410 records with null/empty srt_status from source data)
 - [x] All 210 tests passing across 12 test files
+
+## Batch 30 — Billing Compliance YTD Chart Fix (Apr 3)
+- [x] Fix YTD chart to show correct ratio: (count of PG-weeks passing 100%) / (total PG-weeks YTD)
+- [x] Added new server endpoint /api/io/attendance/billing-ytd-weekly for per-week per-billing-code aggregation
+- [x] Rewrote doughnut chart to use renderYTDComplianceDoughnut (iterates all weeks, counts PG-week pass/fail)
+- [x] YTD now correctly shows 81.8% (126/154 PG-weeks passing) instead of 100%
+- [x] Legend shows which billing codes fail most often with week counts
+- [x] Updated chart title to "YTD COMPLIANCE — 100% THRESHOLD"
+- [x] All 211 tests passing across 12 test files

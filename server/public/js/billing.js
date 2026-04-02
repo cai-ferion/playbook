@@ -108,7 +108,7 @@ async function initBillingCompliance() {
   // Always load/reload the selected week's data (await to ensure rendering completes)
   await loadBillingCompliance();
 
-  // Also load YTD analytics (trends only - doughnut uses selected week data)
+  // Load YTD analytics: doughnut (per-week compliance) + trend charts
   loadBillingYTDAnalytics();
 }
 
@@ -292,20 +292,27 @@ function renderBillingComplianceTable(tableData) {
 // ===================================================================
 
 /**
- * Load YTD billing analytics using server-side aggregation endpoint.
- * Returns pre-computed compliance and trend data instead of fetching all records.
+ * Load YTD billing analytics using server-side aggregation endpoints.
+ * The doughnut chart uses per-week per-billing-code data to compute
+ * the ratio: (PG-weeks passing 100%) / (total PG-weeks YTD).
+ * Trend charts use the monthly aggregation endpoint.
  */
 async function loadBillingYTDAnalytics() {
   const year = new Date().getFullYear();
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/attendance/billing-ytd?year=${year}`);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const result = await resp.json();
-    const compliance = result.compliance || [];
-    const trends = result.trends || [];
+    // Fetch per-week per-billing-code data for YTD doughnut
+    const weeklyResp = await fetch(`${IO_API_BASE}/attendance/billing-ytd-weekly?year=${year}`);
+    if (!weeklyResp.ok) throw new Error(`HTTP ${weeklyResp.status}`);
+    const weeklyResult = await weeklyResp.json();
+    const weeklyData = weeklyResult.weeks || [];
+    renderYTDComplianceDoughnut(weeklyData);
 
-    renderComplianceDoughnut(compliance);
+    // Fetch monthly trends for UPL/LATE/PL charts
+    const trendResp = await fetch(`${IO_API_BASE}/attendance/billing-ytd?year=${year}`);
+    if (!trendResp.ok) throw new Error(`HTTP ${trendResp.status}`);
+    const trendResult = await trendResp.json();
+    const trends = trendResult.trends || [];
     renderReasonTrendsChartFromAgg(trends, 'UPL', 'billing-upl-trends-chart', 'billingUplTrendsChart');
     renderReasonTrendsChartFromAgg(trends, 'LATE', 'billing-late-trends-chart', 'billingLateTrendsChart');
     renderReasonTrendsChartFromAgg(trends, 'PL', 'billing-pl-trends-chart', 'billingPlTrendsChart');
@@ -315,41 +322,51 @@ async function loadBillingYTDAnalytics() {
 }
 
 /**
- * Render the YTD compliance doughnut chart from pre-aggregated server data.
- * @param {Array} complianceData - [{billing_code, forecasted_p, ot_rendered}]
+ * Render the YTD compliance doughnut chart.
+ * Calculates: (count of PG-weeks passing 100%) / (total PG-weeks YTD).
+ * @param {Array} weeklyData - [{week_ending, billing_code, forecasted_p, ot_rendered}]
  */
-function renderComplianceDoughnut(complianceData) {
+function renderYTDComplianceDoughnut(weeklyData) {
   const canvas = document.getElementById('billing-compliance-doughnut');
   const legendEl = document.getElementById('billing-doughnut-legend');
   if (!canvas) return;
 
-  // Build lookup from aggregated data
-  const codeGroups = {};
-  for (const r of complianceData) {
+  // Group data by week_ending -> billing_code
+  const byWeek = {};
+  for (const r of weeklyData) {
+    const we = r.week_ending;
     const code = (r.billing_code || '').trim();
     if (!code) continue;
-    codeGroups[code] = {
+    if (!byWeek[we]) byWeek[we] = {};
+    byWeek[we][code] = {
       forecastedP: parseInt(r.forecasted_p) || 0,
       otRendered: parseFloat(r.ot_rendered) || 0,
     };
   }
 
+  // Count passing/failing PG-weeks across all weeks
   let passing = 0;
   let failing = 0;
-  const details = [];
+  // Track which codes fail most often for the legend
+  const codeFailCount = {};
+  const codeWeekCount = {};
 
-  for (const code of BILLING_CODE_ORDER) {
-    const target = BILLING_TARGET_HOURS[code];
-    if (!target) continue;
-    const data = codeGroups[code] || { forecastedP: 0, otRendered: 0 };
-    const totalPayload = (data.forecastedP * 7.5) + data.otRendered;
-    const pct = (totalPayload / target) * 100;
-    if (pct >= 100) {
-      passing++;
-      details.push({ code, pct, status: 'pass' });
-    } else {
-      failing++;
-      details.push({ code, pct, status: 'fail' });
+  for (const we of Object.keys(byWeek).sort()) {
+    for (const code of BILLING_CODE_ORDER) {
+      const target = BILLING_TARGET_HOURS[code];
+      if (!target) continue;
+      const data = byWeek[we][code] || { forecastedP: 0, otRendered: 0 };
+      const totalPayload = (data.forecastedP * 7.5) + data.otRendered;
+      const pct = (totalPayload / target) * 100;
+      if (!codeWeekCount[code]) codeWeekCount[code] = 0;
+      if (!codeFailCount[code]) codeFailCount[code] = 0;
+      codeWeekCount[code]++;
+      if (pct >= 100) {
+        passing++;
+      } else {
+        failing++;
+        codeFailCount[code]++;
+      }
     }
   }
 
@@ -361,6 +378,7 @@ function renderComplianceDoughnut(complianceData) {
 
   const total = passing + failing;
   const passPct = total > 0 ? ((passing / total) * 100).toFixed(1) : '0.0';
+  const totalWeeks = Object.keys(byWeek).length;
 
   billingDoughnutChart = new Chart(canvas, {
     type: 'doughnut',
@@ -383,7 +401,7 @@ function renderComplianceDoughnut(complianceData) {
           callbacks: {
             label: function(ctx) {
               const val = ctx.raw;
-              return `${ctx.label}: ${val} code${val !== 1 ? 's' : ''}`;
+              return `${ctx.label}: ${val} PG-week${val !== 1 ? 's' : ''}`;
             }
           }
         }
@@ -403,22 +421,35 @@ function renderComplianceDoughnut(complianceData) {
         ctx.fillText(`${passPct}%`, cx, cy - 8);
         ctx.font = '12px sans-serif';
         ctx.fillStyle = '#6b7280';
-        ctx.fillText(`${passing}/${total} codes`, cx, cy + 14);
+        ctx.fillText(`${passing}/${total} PG-wks`, cx, cy + 14);
         ctx.restore();
       }
     }]
   });
 
-  // Legend details
+  // Legend: show codes that failed most often
   if (legendEl) {
-    const failingCodes = details.filter(d => d.status === 'fail');
+    const failingCodes = Object.entries(codeFailCount)
+      .filter(([_, cnt]) => cnt > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([code, cnt]) => `${BILLING_CODE_LABELS[code] || code} (${cnt}/${codeWeekCount[code]} wks)`);
     if (failingCodes.length > 0) {
-      legendEl.innerHTML = '<strong style="color:#ef4444;">Below 100%:</strong> ' +
-        failingCodes.map(d => `${BILLING_CODE_LABELS[d.code] || d.code} (${d.pct.toFixed(1)}%)`).join(', ');
+      legendEl.innerHTML = `<strong style="color:#ef4444;">Below 100% (${totalWeeks} wks YTD):</strong> ` + failingCodes.join(', ');
     } else {
-      legendEl.innerHTML = '<strong style="color:#22c55e;">All billing codes are meeting the 100% threshold.</strong>';
+      legendEl.innerHTML = '<strong style="color:#22c55e;">All billing codes met 100% every week YTD.</strong>';
     }
   }
+}
+
+/**
+ * Render the selected-week compliance doughnut chart (called from loadBillingCompliance).
+ * This is the per-week view showing which codes pass/fail for the selected week.
+ * @param {Array} complianceData - [{billing_code, forecasted_p, ot_rendered}]
+ */
+function renderComplianceDoughnut(complianceData) {
+  // The YTD doughnut is rendered separately by renderYTDComplianceDoughnut.
+  // This function is intentionally a no-op now — the doughnut always shows YTD data.
+  // The selected week's pass/fail is visible in the compliance table itself.
 }
 
 /**
