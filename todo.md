@@ -499,3 +499,7 @@
 - [x] Fix FLM filter: comma in names broke comma delimiter — switched all filters to pipe (|) delimiter
 - [x] Fix Agent filter: same pipe delimiter fix + employeeLookup fallback for value picker
 - [x] Verified all filters: FLM=38 rows, Agent=2 rows, Tag UPL|LATE=5 rows — all working
+
+## Batch 28b — Date Range Filter Fix (Apr 3)
+- [x] Removed max-width limit on chip-text, now uses white-space:nowrap so full dates always visible
+- [x] Widened date input fields to min-width:140px so full dates are visible

@@ -7,12 +7,12 @@ const ROOT = join(__dirname, "..");
 describe("Batch 28 — Input Portal & Helm Fixes", () => {
   // 1. Date range chip width
   describe("Date range filter chip width", () => {
-    it("chip-text max-width should be wider than 220px", () => {
+    it("chip-text should use white-space:nowrap (no truncation)", () => {
       const css = readFileSync(join(ROOT, "server/public/css/styles.css"), "utf-8");
-      const match = css.match(/\.chip-text\s*\{[^}]*max-width:\s*(\d+)px/);
-      expect(match).toBeTruthy();
-      const width = parseInt(match![1], 10);
-      expect(width).toBeGreaterThanOrEqual(300);
+      const chipTextBlock = css.match(/\.chip-text\s*\{[^}]*\}/)?.[0] || '';
+      expect(chipTextBlock).toContain("white-space");
+      expect(chipTextBlock).toContain("nowrap");
+      expect(chipTextBlock).not.toContain("max-width");
     });
   });
 
