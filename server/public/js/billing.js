@@ -45,6 +45,7 @@ let billingDropdownInitialized = false;
 
 // YTD doughnut state
 let _ytdWeeklyDataCache = null;
+let _ytdWeekDayCountsCache = null;
 let _ytdCurrentThreshold = 100;
 let _ytdBreakdownVisible = false;
 
@@ -311,7 +312,8 @@ async function loadBillingYTDAnalytics() {
     if (!weeklyResp.ok) throw new Error(`HTTP ${weeklyResp.status}`);
     const weeklyResult = await weeklyResp.json();
     _ytdWeeklyDataCache = weeklyResult.weeks || [];
-    renderYTDComplianceDoughnut(_ytdWeeklyDataCache, _ytdCurrentThreshold);
+    _ytdWeekDayCountsCache = weeklyResult.weekDayCounts || {};
+    renderYTDComplianceDoughnut(_ytdWeeklyDataCache, _ytdCurrentThreshold, _ytdWeekDayCountsCache);
 
     // Fetch monthly trends for UPL/LATE/PL charts
     const trendResp = await fetch(`${IO_API_BASE}/attendance/billing-ytd?year=${year}`);
@@ -340,7 +342,7 @@ function switchYTDThreshold(threshold) {
   if (titleEl) titleEl.textContent = `YTD COMPLIANCE \u2014 ${threshold}% THRESHOLD`;
   // Re-render with cached data
   if (_ytdWeeklyDataCache) {
-    renderYTDComplianceDoughnut(_ytdWeeklyDataCache, threshold);
+    renderYTDComplianceDoughnut(_ytdWeeklyDataCache, threshold, _ytdWeekDayCountsCache);
   }
 }
 
@@ -363,9 +365,10 @@ function toggleYTDBreakdown() {
  * @param {Array} weeklyData - [{week_ending, billing_code, forecasted_p, ot_rendered}]
  * @param {number} threshold - compliance threshold percentage (98, 100, or 102)
  */
-function renderYTDComplianceDoughnut(weeklyData, threshold) {
+function renderYTDComplianceDoughnut(weeklyData, threshold, weekDayCounts) {
   threshold = threshold || 100;
   const thresholdDecimal = threshold / 100;
+  weekDayCounts = weekDayCounts || {};
   const canvas = document.getElementById('billing-compliance-doughnut');
   const breakdownEl = document.getElementById('billing-ytd-breakdown');
   if (!canvas) return;
@@ -396,12 +399,16 @@ function renderYTDComplianceDoughnut(weeklyData, threshold) {
   for (const we of sortedWeeks) {
     weekFailures[we] = [];
     weekResults[we] = {};
+    // Pro-rate target hours for partial weeks (e.g., first/last week of year)
+    const dayCount = parseInt(weekDayCounts[we]) || 7;
+    const proRateFactor = dayCount / 7;
     for (const code of BILLING_CODE_ORDER) {
       const target = BILLING_TARGET_HOURS[code];
       if (!target) continue;
+      const adjustedTarget = target * proRateFactor;
       const data = byWeek[we][code] || { forecastedP: 0, otRendered: 0 };
       const totalPayload = (data.forecastedP * 7.5) + data.otRendered;
-      const pct = (totalPayload / target) * 100;
+      const pct = (totalPayload / adjustedTarget) * 100;
       if (!codeWeekCount[code]) codeWeekCount[code] = 0;
       if (!codeFailCount[code]) codeFailCount[code] = 0;
       codeWeekCount[code]++;

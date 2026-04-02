@@ -1063,6 +1063,29 @@ router.get("/attendance/billing-ytd-weekly", async (req: Request, res: Response)
     // Get per-week per-billing-code: forecasted_p and ot_rendered
     // Week is defined as Saturday-Friday. We use the Friday week-ending date.
     // DAYOFWEEK: 1=Sun,2=Mon,...,7=Sat. Friday=6. We compute the Friday of each record's week.
+    // First get the distinct day count per week for pro-rating partial weeks
+    const dayCountRows = await db.execute(sql`
+      SELECT
+        DATE_FORMAT(
+          DATE_ADD(a.log_date, INTERVAL ((6 - DAYOFWEEK(a.log_date) + 7) % 7) DAY),
+          '%Y-%m-%d'
+        ) AS week_ending,
+        COUNT(DISTINCT a.log_date) AS day_count
+      FROM io_attendance a
+      WHERE a.log_date >= ${startDate}
+        AND a.log_date <= ${endDate}
+        AND (a.snap_status IS NULL OR a.snap_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
+        AND a.billing_code IS NOT NULL
+        AND a.billing_code != ''
+      GROUP BY week_ending
+      ORDER BY week_ending
+    `);
+    const dayCountData = Array.isArray(dayCountRows) ? (Array.isArray(dayCountRows[0]) ? dayCountRows[0] : dayCountRows) : [];
+    const weekDayCounts: Record<string, number> = {};
+    for (const r of dayCountData as any[]) {
+      weekDayCounts[r.week_ending] = parseInt(r.day_count) || 7;
+    }
+
     const rows = await db.execute(sql`
       SELECT
         DATE_FORMAT(
@@ -1083,7 +1106,7 @@ router.get("/attendance/billing-ytd-weekly", async (req: Request, res: Response)
     `);
 
     const data = Array.isArray(rows) ? (Array.isArray(rows[0]) ? rows[0] : rows) : [];
-    res.json({ weeks: data });
+    res.json({ weeks: data, weekDayCounts });
   } catch (err: any) {
     console.error("[IO API] billing-ytd-weekly error:", err);
     res.status(500).json({ error: err.message });
