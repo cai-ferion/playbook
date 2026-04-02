@@ -481,7 +481,7 @@ function renderYTDComplianceDoughnut(weeklyData, threshold) {
       return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
     }
 
-    let html = '<div style="max-height:300px;overflow:auto;" id="billing-ytd-breakdown-inner">';
+    let html = '<div style="overflow:auto;" id="billing-ytd-breakdown-inner">';
     html += '<table class="billing-ytd-breakdown-table">';
     html += '<thead><tr><th class="ytd-sticky-col ytd-sticky-header" style="text-align:left;min-width:60px;z-index:3;">Week</th>';
     for (const code of BILLING_CODE_ORDER) {

@@ -543,3 +543,6 @@
 - [x] Remove the toggle button — table always visible
 - [x] Freeze first column (Week) when scrolling horizontally
 - [x] Ensure header row and first column have opaque backgrounds (solid colors, no transparency)
+
+## Batch 31e — Extend Breakdown Table Height (Apr 3)
+- [x] Removed max-height:300px constraint so table extends to fill available space
