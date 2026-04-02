@@ -506,3 +506,12 @@
 
 ## Batch 28c — Date Range Picker Popout Width (Apr 3)
 - [x] Widened omnibar popout menu from 320px to 520px so date range picker fits without scrolling
+
+## Batch 29 — Status Column Fix (Apr 3)
+- [x] Fix "Status" column in Input Portal to show SRT Status (Production/Nesting/Exit) instead of Employee Status (Active/Nesting/Inactive)
+- [x] Backfill snap_status in io_attendance from io_employees.srt_status (41,911 rows updated via JOIN)
+- [x] Fix 127 remaining Inactive records (3 employees not in io_employees: 740032254, 740044548, 740053516) — set to Exit
+- [x] Update normalizeRecord to prefer snap_status from attendance record, fallback to emp.srt_status
+- [x] Update omnibar filter empFieldMap to use srt_status instead of employement_status for Status filter
+- [x] Final distribution: Production=41,310, Nesting=751, Exit=911, Active=0, Inactive=0 (3,410 records with null/empty srt_status from source data)
+- [x] All 210 tests passing across 12 test files

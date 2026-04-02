@@ -1305,6 +1305,24 @@ router.post("/gchat-notify-task", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/io/backfill-snap-status — one-time backfill snap_status from io_employees.srt_status
+router.post("/backfill-snap-status", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const result = await db.execute(sql`
+      UPDATE io_attendance a
+      JOIN io_employees e ON a.ohr_id = e.ohr_id
+      SET a.snap_status = e.srt_status
+      WHERE e.srt_status IS NOT NULL AND e.srt_status != ''
+    `);
+    res.json({ ok: true, message: "snap_status backfilled from io_employees.srt_status", affectedRows: (result as any)[0]?.affectedRows });
+  } catch (err: any) {
+    console.error("[IO API] backfill-snap-status error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");

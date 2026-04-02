@@ -148,7 +148,7 @@ function renderOmnibarFilterValuePicker() {
   const empFieldMap = {
     agent: 'full_name', flm: 'supervisor_name',
     actualPlanningGroup: 'planning_group', role: 'actual_role',
-    shiftTime: 'shift_time', status: 'employement_status',
+    shiftTime: 'shift_time', status: 'srt_status',
   };
   if (appState.records.length === 0 && empFieldMap[field.recordKey] && typeof employeeLookup === 'object') {
     const empField = empFieldMap[field.recordKey];
