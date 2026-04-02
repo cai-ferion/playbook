@@ -582,3 +582,6 @@
 - [x] Right-align the Role column in Asset Inventory table (both inline widget and fullscreen)
 - [x] Add Expand button to Asset Inventory with fullscreen modal overlay (same as Shift Breakdown / Shrink Details)
 - [x] All 211 tests passing
+
+## Batch 35b — Shrink Details Height Alignment (Apr 3)
+- [x] Match Shrink Details card height to Asset Inventory card — both cards use flex column layout with grid stretch alignment

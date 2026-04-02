@@ -1568,7 +1568,17 @@ body {
 
 /* ===== Shrink Details Expand ===== */
 .shrink-details-card {
-  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.shrink-details-card .card-header {
+  flex-shrink: 0;
+}
+
+.shrink-details-card #agent-list {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .expand-btn {

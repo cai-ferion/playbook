@@ -480,15 +480,15 @@
 
           <!-- Asset Inventory + Shrink Details side by side -->
           <div class="dash-row">
-            <div class="card" style="flex:1;min-width:0;">
-              <div class="card-header">
+            <div class="card" style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div class="card-header" style="flex-shrink:0;">
                 <span class="card-title">ASSET INVENTORY & ENDORSEMENT</span>
                 <button class="expand-btn" onclick="expandAssetInventory()">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
                   Expand
                 </button>
               </div>
-              <div id="asset-inventory-widget" style="max-height:500px;overflow-y:auto;"></div>
+              <div id="asset-inventory-widget" style="flex:1;overflow-y:auto;"></div>
             </div>
             <div class="card shrink-details-card" style="flex:1;min-width:0;">
               <div class="card-header">
@@ -498,7 +498,7 @@
                   Expand
                 </button>
               </div>
-              <div id="agent-list" style="max-height:500px;overflow-y:auto;"></div>
+              <div id="agent-list" style="flex:1;overflow-y:auto;"></div>
             </div>
           </div>
         </div>
