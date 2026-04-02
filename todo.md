@@ -622,3 +622,10 @@
 ## Batch 40b — Remove Assigned By column from Tasks Received (Apr 3)
 - [x] Remove "Assigned By" column from Tasks Received table header and body
 - [x] All 225 tests passing
+
+## Batch 40c — Verify Tasks Received shows all assigned tasks (Apr 3)
+- [x] Verified helmApplyReceivedFilters correctly matches current user's ohr_id in assigned_to_ohr field
+- [x] Verified task creation stores assigned_to_ohr as comma-separated string from multi-select picker
+- [x] Added .trim() and filter(Boolean) for robust whitespace/empty-string handling
+- [x] Added fallback to empty list when no user is logged in (both Tasks Given and Tasks Received)
+- [x] All 225 tests passing

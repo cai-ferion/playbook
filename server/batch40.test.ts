@@ -59,19 +59,32 @@ describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals
       expect(helmJs).toContain("receivedPage: 1");
     });
 
-    it("helmApplyFilters filters by assigned_by_ohr (Tasks Given)", () => {
+    it("helmApplyFilters filters by assigned_by_ohr (Tasks Given) with trim", () => {
       const helmJs = readPublicJS("helm.js");
       expect(helmJs).toContain("assigned_by_ohr");
-      // Should filter tasks where current user is the creator
-      expect(helmJs).toMatch(/data\s*=\s*data\.filter\(t\s*=>\s*\(t\.assigned_by_ohr/);
+      // Should filter tasks where current user is the creator, with trim for robustness
+      const givenSection = helmJs.substring(
+        helmJs.indexOf("function helmApplyFilters()"),
+        helmJs.indexOf("// ===== Table Rendering")
+      );
+      expect(givenSection).toContain(".trim()");
+      // Shows nothing when no user is logged in
+      expect(givenSection).toContain("data = [];");
     });
 
-    it("helmApplyReceivedFilters function exists and filters by assigned_to_ohr", () => {
+    it("helmApplyReceivedFilters function exists and filters by assigned_to_ohr with trim and filter(Boolean)", () => {
       const helmJs = readPublicJS("helm.js");
       expect(helmJs).toContain("function helmApplyReceivedFilters()");
-      expect(helmJs).toContain("assigned_to_ohr");
-      // Should split comma-separated OHRs and check for current user
-      expect(helmJs).toContain("split(',')");
+      const receivedFilterSection = helmJs.substring(
+        helmJs.indexOf("function helmApplyReceivedFilters()"),
+        helmJs.indexOf("function helmRenderReceivedTable()")
+      );
+      // Should split comma-separated OHRs, trim, and filter empty strings
+      expect(receivedFilterSection).toContain("split(',')");
+      expect(receivedFilterSection).toContain(".trim()");
+      expect(receivedFilterSection).toContain("filter(Boolean)");
+      // Shows nothing when no user is logged in
+      expect(receivedFilterSection).toContain("data = [];");
     });
 
     it("helmRenderReceivedTable function exists with 4 columns (no Assigned By)", () => {

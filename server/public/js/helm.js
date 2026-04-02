@@ -145,7 +145,10 @@ function helmApplyFilters() {
 
   // Tasks Given: only tasks created by the current user
   if (cu && cu.ohr_id) {
-    data = data.filter(t => (t.assigned_by_ohr || '') === cu.ohr_id);
+    data = data.filter(t => (t.assigned_by_ohr || '').trim() === cu.ohr_id.trim());
+  } else {
+    // No user logged in — show nothing
+    data = [];
   }
 
   // Status filter
@@ -237,10 +240,14 @@ function helmApplyReceivedFilters() {
 
   // Tasks Received: only tasks assigned to the current user
   if (cu && cu.ohr_id) {
+    const myOhr = cu.ohr_id.trim();
     data = data.filter(t => {
-      const assignedOhrs = (t.assigned_to_ohr || '').split(',').map(s => s.trim());
-      return assignedOhrs.includes(cu.ohr_id);
+      const assignedOhrs = (t.assigned_to_ohr || '').split(',').map(s => s.trim()).filter(Boolean);
+      return assignedOhrs.includes(myOhr);
     });
+  } else {
+    // No user logged in — show nothing
+    data = [];
   }
 
   // Status filter
