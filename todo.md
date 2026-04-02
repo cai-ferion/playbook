@@ -503,3 +503,6 @@
 ## Batch 28b — Date Range Filter Fix (Apr 3)
 - [x] Removed max-width limit on chip-text, now uses white-space:nowrap so full dates always visible
 - [x] Widened date input fields to min-width:140px so full dates are visible
+
+## Batch 28c — Date Range Picker Popout Width (Apr 3)
+- [x] Widened omnibar popout menu from 320px to 520px so date range picker fits without scrolling

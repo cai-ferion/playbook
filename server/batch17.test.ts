@@ -104,7 +104,7 @@ describe("Batch 17 — Revisions", () => {
 
     it("should have omnibar-menu with fixed width", () => {
       const menuBlock = stylesCss.match(/\.omnibar-menu\s*\{[^}]+\}/)?.[0] || "";
-      expect(menuBlock).toContain("width: 320px");
+      expect(menuBlock).toContain("width: 520px");
     });
   });
 });
