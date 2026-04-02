@@ -534,3 +534,6 @@
 
 ## Batch 31b — Threshold Button Styling Fix (Apr 3)
 - [x] Fix inactive threshold buttons to appear grayed out instead of white/invisible
+
+## Batch 31c — Active Threshold Button Fix (Apr 3)
+- [x] Fix active (selected) threshold button appearing white — changed to solid dark gray (#4b5563) instead of accent color

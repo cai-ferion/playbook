@@ -2635,9 +2635,9 @@ body {
   opacity: 0.9;
 }
 .billing-threshold-btn.active {
-  background: var(--accent);
+  background: #4b5563;
   color: #fff;
-  border-color: var(--accent);
+  border-color: #4b5563;
   opacity: 1;
 }
 .billing-ytd-breakdown-table {
