@@ -1191,6 +1191,82 @@ router.post("/gchat-notify-supervisor", async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// GChat Notification: Task Assignment
+// ============================================================
+router.post("/gchat-notify-task", async (req: Request, res: Response) => {
+  try {
+    const { task_id, title, description, assigned_by, due_date, assignees } = req.body;
+    if (!task_id || !title || !assignees || !Array.isArray(assignees)) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    let queued = 0;
+    let skipped = 0;
+
+    for (const assignee of assignees) {
+      // Find assignee's gchat_space_id
+      const [emp] = await db.select().from(ioEmployees)
+        .where(eq(ioEmployees.ohr_id, assignee.ohr))
+        .limit(1);
+
+      if (!emp || !emp.gchat_space_id) {
+        console.warn(`[GChat] Assignee "${assignee.name}" (${assignee.ohr}) has no gchat_space_id`);
+        skipped++;
+        continue;
+      }
+
+      const cardJson = JSON.stringify([{
+        cardId: `task_${task_id}_${assignee.ohr}`,
+        card: {
+          header: {
+            title: "New Task Assigned",
+            subtitle: task_id,
+            imageUrl: "https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/task_alt/default/48px.svg",
+            imageType: "CIRCLE"
+          },
+          sections: [
+            {
+              header: "Task Details",
+              widgets: [
+                { decoratedText: { topLabel: "Title", text: title } },
+                ...(description ? [{ decoratedText: { topLabel: "Description", text: description.substring(0, 200) } }] : []),
+                { decoratedText: { topLabel: "Assigned By", text: assigned_by } },
+                ...(due_date ? [{ decoratedText: { topLabel: "Due Date", text: due_date } }] : []),
+                { decoratedText: { topLabel: "Assigned", text: new Date().toLocaleString("en-US", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) } }
+              ]
+            }
+          ]
+        }
+      }]);
+
+      const fallbackText = `[${task_id}] Task Assigned: ${title}\nAssigned by: ${assigned_by}${due_date ? '\nDue: ' + due_date : ''}`;
+
+      await db.insert(ioGchatQueue).values({
+        type: "task_assigned",
+        target_space_id: emp.gchat_space_id,
+        target_name: assignee.name,
+        card_json: cardJson,
+        fallback_text: fallbackText,
+        status: "pending",
+        metadata: JSON.stringify({ task_id, title, assigned_by, due_date, assignee_ohr: assignee.ohr, assignee_name: assignee.name }),
+        created_at: new Date().toISOString(),
+      });
+
+      queued++;
+    }
+
+    console.log(`[GChat Queue] Task ${task_id}: ${queued} queued, ${skipped} skipped`);
+    res.json({ queued, skipped });
+  } catch (err: any) {
+    console.error("[GChat Queue] Task notification error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");

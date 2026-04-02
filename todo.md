@@ -399,3 +399,30 @@
 - [x] Helm Task Board: Split into two tables — "Tasks" and "Approvals" (requests route to Approvals)
 - [x] Backdate tag change request: Create notification for supervisor (title, date, requester)
 - [x] Backdate tag change request: Send GChat card to supervisor with Approve/Reject buttons (queue-based, every 5 min)
+
+## Batch 24 — Multi-Module Revisions
+
+### Helm - Task Board
+- [x] Make Helm Task Board visible to all roles except Agents
+- [x] Delete task with Task ID: TK-c912d7a0
+- [x] Add GChat notification queue entry when tasks are assigned (sent to assignees)
+
+### Notification Bar Redesign
+- [x] Clean up empty/broken notifications (Jan 1, 1970 entries with no content)
+- [x] Redesign notification bar: brief/concise alert overview, card detail view on clickor notification details on click
+- [x] Make notifications briefer and more concise in the alert bar
+
+### Notification Triggers
+- [x] Add notification on saving attendance records (timestamp, users, brief explanation)
+- [x] Add notification on changing billing code (timestamp, users, brief explanation)
+- [ - [x] Add notification on backdate tag change request (timestamp, users, brief explanation)ion)
+
+### Haven - Analytics
+- [x] Hide Helm Analytics page except for admin OHR 740045023
+
+### Regimen
+- [x] Add GChat ID column to Regimen roster table
+- [x] Add GChat ID field to Regimen detail card view (below Workday ID)
+
+### GChat Queue
+- [ ] When processing GChat queue, only show request summary in chat (not full notification contents)

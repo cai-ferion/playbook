@@ -411,11 +411,19 @@ async function handleLogin() {
     const billingNav = document.getElementById('nav-billing');
     if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
-    // Compass, Sandbox, Haven, Helm, Horizon — visible ONLY to admin OHR (under development)
-    ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm', 'nav-group-horizon'].forEach(id => {
+    // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
+    ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
     });
+
+    // Helm — visible to all except Agents
+    const helmNav = document.getElementById('nav-group-helm');
+    if (helmNav) helmNav.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) ? 'none' : '';
+
+    // Helm Analytics — admin only
+    const helmAnalyticsNav = document.getElementById('nav-helm-analytics');
+    if (helmAnalyticsNav) helmAnalyticsNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
     // Regimen (Roster) — admin only
     const regimenNav = document.getElementById('nav-regimen');
@@ -542,11 +550,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const billingNav2 = document.getElementById('nav-billing');
       if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
-      // Compass, Sandbox, Haven, Helm, Horizon — visible ONLY to admin OHR (under development)
-      ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-helm', 'nav-group-horizon'].forEach(id => {
+      // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
+      ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
       });
+
+      // Helm — visible to all except Agents
+      const helmNav2 = document.getElementById('nav-group-helm');
+      if (helmNav2) helmNav2.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) ? 'none' : '';
 
       // Regimen — admin only
       const regimenNav2 = document.getElementById('nav-regimen');
@@ -1427,8 +1439,8 @@ function applyBillingCodeEditToPending() {
     showToast(`Billing code changed to "${newCode}" for ${count} record(s) of ${agentName} (${startDate} to ${endDate}). Click Save Changes to persist.`, 'success');
     renderInputTable();
     const oldCode = document.getElementById('bc-edit-current')?.textContent || '';
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'billing_code_edit', title: 'Billing Code Changed', message: `${agentName}: code changed to ${newCode} for ${count} records (${startDate} to ${endDate})` }).catch(() => {});
+    if (typeof notifyBillingCodeChange === 'function') {
+      notifyBillingCodeChange(agentName, oldCode, newCode, count).catch(() => {});
     }
   } else {
     showToast('No records needed updating in the specified date range.', 'info');

@@ -469,10 +469,46 @@ async function helmSubmitNew() {
     const created = await resp.json();
 
     showToast('Task created successfully', 'success');
+
+    // Create targeted in-app notification for each assignee
     if (typeof createNotification === 'function') {
-      createNotification({ type: 'task_assigned', title: 'New Task Assigned',
-        message: `${created.task_id}: "${title}" assigned to ${assigneeNames}` });
+      for (const assignee of _helmSelectedAssignees) {
+        createNotification({
+          type: 'task_assigned',
+          title: 'Task Assigned',
+          message: `"${title}" assigned to you`,
+          target_ohr: assignee.ohr,
+          metadata: JSON.stringify({
+            taskId: created.task_id,
+            taskTitle: title,
+            assignedBy: cu ? cu.full_name : 'Unknown',
+            dueDate: record.due_date || ''
+          })
+        });
+      }
     }
+
+    // Queue GChat notification for each assignee
+    try {
+      await fetch(`${IO_API_BASE}/gchat-notify-task`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_id: created.task_id,
+          title: title,
+          description: record.description || '',
+          assigned_by: cu ? cu.full_name : 'Unknown',
+          due_date: record.due_date || '',
+          assignees: _helmSelectedAssignees.map(a => ({
+            ohr: a.ohr,
+            name: a.name
+          }))
+        })
+      });
+    } catch (gchatErr) {
+      console.warn('GChat task notification queue failed:', gchatErr);
+    }
+
     helmCloseForm();
     await helmFetchTasks();
   } catch (e) {
@@ -979,10 +1015,18 @@ async function helmSubmitNewRequest() {
       // Create targeted notification for the supervisor
       if (typeof createNotification === 'function' && supervisorOhr) {
         createNotification({
-          type: 'backdate_tag_request',
-          title: 'Backdate Tag Change Request',
-          message: `${reqId}: ${agentName} — Backdated change tag for ${readableDate}. Requested by ${cu ? cu.full_name : 'Unknown'}.`,
-          target_ohr: supervisorOhr
+          type: 'backdate_request',
+          title: 'Backdate Tag Change',
+          message: `${agentName} · ${readableDate} · Requested by ${cu ? cu.full_name : 'Unknown'}`,
+          target_ohr: supervisorOhr,
+          metadata: JSON.stringify({
+            requestId: reqId,
+            agentName: agentName,
+            requestDate: readableDate,
+            newTag: newTag || '',
+            reason: reason || '',
+            requesterName: cu ? cu.full_name : 'Unknown'
+          })
         });
       }
 
