@@ -437,9 +437,11 @@ async function handleLogin() {
     initDashboardMultiSelects();
     await loadDataOptimized();
     startRefreshTimer();
-    // Auto-expand Anchor nav group
+    // Auto-expand Anchor and Helm nav groups
     const anchorGroup = document.getElementById('nav-group-anchor');
     if (anchorGroup) anchorGroup.classList.add('expanded');
+    const helmGroup = document.getElementById('nav-group-helm');
+    if (helmGroup) helmGroup.classList.add('expanded');
     // Route to Risk Intelligence for non-Agents, Compass for Agents (all Anchor pages hidden from Agents)
     if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
       switchView('input');
@@ -576,9 +578,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       initDashboardMultiSelects();
       await loadDataOptimized();
       startRefreshTimer();
-      // Auto-expand Anchor nav group
+      // Auto-expand Anchor and Helm nav groups
       const anchorGroup2 = document.getElementById('nav-group-anchor');
       if (anchorGroup2) anchorGroup2.classList.add('expanded');
+      const helmGroup2 = document.getElementById('nav-group-helm');
+      if (helmGroup2) helmGroup2.classList.add('expanded');
       // Route to Risk Intelligence for non-Agents, Compass for Agents (all Anchor pages hidden from Agents)
       if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
         switchView('input');

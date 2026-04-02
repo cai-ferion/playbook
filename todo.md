@@ -604,3 +604,8 @@
 - [x] Week 01/02 now shows MA=108.4% (was 31.0%), MS=103.3% (was 29.5%), CA=104.6% (was 29.9%)
 - [x] Week 04/03 now shows MA=104.6% (was 89.6%), CS=102.5% (was 87.8%)
 - [x] All 211 tests passing
+
+## Batch 39 — Helm Default Expanded Tabs (Apr 3)
+- [x] Helm nav group now auto-expands on login and session restore (both paths)
+- [x] Previously only Anchor was auto-expanded; now both Anchor and Helm expand by default
+- [x] All 211 tests passing
