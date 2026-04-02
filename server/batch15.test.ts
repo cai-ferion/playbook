@@ -69,26 +69,28 @@ describe("Batch 15 Changes", () => {
     });
   });
 
-  // 4. Daily summary notification (migrated from CSV email to in-app)
-  describe("Auto-notifier - Daily Summary Notification", () => {
-    it("should have daily summary cron job in auto-mailer.ts", () => {
+  // 4. UPL/LATE notifications with GChat queue (daily summary removed in Batch 26)
+  describe("Auto-notifier - UPL/LATE with GChat Queue", () => {
+    it("should have UPL/LATE notification logic and GChat queue in auto-mailer.ts", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      expect(autoMailer).toContain("sendDailySummaryNotification");
-      // Should NOT have email addresses anymore
+      expect(autoMailer).toContain("sendUplLateNotifications");
+      expect(autoMailer).toContain("ioGchatQueue");
+      // Should NOT have email addresses or old email services
       expect(autoMailer).not.toContain("ge-co-miswfmteam@meta.com");
       expect(autoMailer).not.toContain("resend");
       expect(autoMailer).not.toContain("brevo");
+      // Daily summary should be removed
+      expect(autoMailer).not.toContain("sendDailySummaryNotification");
     });
 
-    it("should filter by current date for summary", () => {
+    it("should filter by current date for UPL/LATE", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      // Should filter attendance by today's date
       expect(autoMailer).toContain("today");
     });
 
@@ -98,6 +100,16 @@ describe("Batch 15 Changes", () => {
         "utf-8"
       );
       expect(autoMailer).toContain("send-notifications");
+    });
+
+    it("should build GChat rich card for UPL/LATE notices", () => {
+      const autoMailer = fs.readFileSync(
+        path.join(__dirname, "auto-mailer.ts"),
+        "utf-8"
+      );
+      expect(autoMailer).toContain("buildUplLateGchatCard");
+      expect(autoMailer).toContain("Action Required");
+      expect(autoMailer).toContain("Attendance Details");
     });
   });
 

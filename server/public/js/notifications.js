@@ -14,7 +14,7 @@ const notifState = {
 };
 
 // ===== Sidebar Mode Toggle =====
-let _sidebarMode = 'nav'; // 'nav' | 'notifications'
+let _sidebarMode = 'notifications'; // 'nav' | 'notifications'
 
 function setSidebarMode(mode) {
   _sidebarMode = mode;
@@ -522,4 +522,6 @@ async function notifyTaskAssigned(taskId, taskTitle, assignees) {
 function initNotifications() {
   loadNotifications();
   startNotifPolling(30000);
+  // Default sidebar to Alerts (notifications) tab on login
+  setSidebarMode('notifications');
 }

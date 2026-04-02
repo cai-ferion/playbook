@@ -440,3 +440,38 @@
 
 ### GChat Templates
 - [x] Send sample GChat rich card templates for all notification types to admin (740045023)
+
+## Batch 26 — Revisions (Apr 2)
+
+### Navigation & Defaults
+- [x] Default sidebar to "Alerts" tab instead of "Menu" on login for all users
+- [x] Change default landing page to Anchor - Risk Intelligence for all users
+- [x] Reorder Anchor sub-pages: Risk Intelligence, Dashboard, Billing Compliance, Input Portal
+
+### Audit Trail Fix
+- [x] Fix audit timeline showing "by System" — should show the actual user who made the change
+- [x] Add audit log entry when a row is locked for editing (lock event)
+
+### Helm - Task Board
+- [x] Align "Assign To" input width to match "Description" field in New Task form
+- [x] Remove the stats bar (Total/Open/In Progress/Completed/Overdue/Pending/Approved/Rejected counts) from Task Board
+- [x] Remove duplicate filter bars from Task Board
+
+### Anchor - Billing Compliance Charts
+- [x] Fix doughnut chart — now uses selected week's data instead of YTD (shows failing planning groups correctly)
+- [x] UPL/LATE/PL trend charts use actual monthly data from server (Jan-Apr data confirmed working)
+
+### Anchor - Dashboard
+- [x] Add "Asset Inventory & Endorsement" widget to Dashboard (left of Shrink Details)
+- [x] Widget shows Present count by Role (Agent/SME/FLM) and Shift Time (Midshift/GY Shift)
+- [x] Chromebook/Mac and Yubikey columns copy the Present count value
+
+### GChat Notification Cards
+- [x] Redesign UPL/LATE GChat card to match provided template (Notification header, Attendance Details section, Action Required section, Playbook Reporting footer)
+- [x] Update Action Required text: "Please coordinate with your supervisor, {supervisor_name}, regarding this attendance record. If you believe this tag was applied in error, you may request for your supervisor to change this."
+- [x] Remove the black-boxed section (supervisor shift/PG info) from UPL/LATE card
+- [x] Remove Daily Attendance Summary card and discontinue from GChat notification queue
+- [x] Keep Backdate Request card as-is
+
+### Helm - New Request Form
+- [x] Limit "New Tag" dropdown options to only the tags available in Input Portal Tag dropdown (P, LATE, UPL, PL, ML, WO, NYO, EXIT)

@@ -271,8 +271,8 @@ function helmShowNewForm() {
       <div class="form-field">
         <label class="form-label">Assign To <span class="required">*</span></label>
         <div id="helm-assignee-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
-        <div class="searchable-select" id="helm-assignee-wrapper">
-          <input type="text" class="form-input" id="helm-assignee-search" placeholder="Search and select employees..." autocomplete="off" onclick="helmToggleAssigneeDropdown(true)" oninput="helmFilterAssignees()">
+        <div class="searchable-select" id="helm-assignee-wrapper" style="width:100%;">
+          <input type="text" class="form-input" id="helm-assignee-search" placeholder="Search and select employees..." autocomplete="off" onclick="helmToggleAssigneeDropdown(true)" oninput="helmFilterAssignees()" style="width:100%;">
           <div class="searchable-select-dropdown" id="helm-assignee-dropdown" style="display:none;max-height:200px;overflow-y:auto;">
             ${HELM.employees.map(e => `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmToggleAssigneeMulti('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`).join('')}
           </div>
@@ -932,8 +932,8 @@ async function helmUpdateCurrentTag() {
     return;
   }
 
-  // All possible attendance tags
-  const ALL_TAGS = ['P', 'A', 'LATE', 'UPL', 'PL', 'SL', 'EL', 'ML', 'BL', 'VL', 'WO', 'SA', 'EXIT', 'LWOP', 'SUS', 'NCNS'];
+  // Use only the tags available in the Input Portal Tag dropdown
+  const PORTAL_TAGS = (typeof TAG_OPTIONS !== 'undefined') ? TAG_OPTIONS : ['P', 'LATE', 'UPL', 'PL', 'ML', 'WO', 'NYO', 'EXIT'];
   let currentTag = '';
 
   try {
@@ -957,7 +957,7 @@ async function helmUpdateCurrentTag() {
   // Populate New Tag dropdown excluding current tag
   if (newTagSelect) {
     let opts = '<option value="">\u2014 Select New Tag \u2014</option>';
-    for (const tag of ALL_TAGS) {
+    for (const tag of PORTAL_TAGS) {
       if (tag === currentTag) continue;
       opts += `<option value="${tag}">${tag}</option>`;
     }

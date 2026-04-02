@@ -108,7 +108,7 @@ async function initBillingCompliance() {
   // Always load/reload the selected week's data (await to ensure rendering completes)
   await loadBillingCompliance();
 
-  // Also load YTD analytics (doughnut + trends)
+  // Also load YTD analytics (trends only - doughnut uses selected week data)
   loadBillingYTDAnalytics();
 }
 
@@ -122,23 +122,18 @@ async function loadBillingCompliance() {
     showToast('Please select a week ending date.', 'info');
     return;
   }
-
   const loadingEl = document.getElementById('billing-compliance-loading');
   const tableEl = document.getElementById('billing-compliance-table');
   if (loadingEl) loadingEl.style.display = 'flex';
   if (tableEl) tableEl.style.display = 'none';
-
   try {
     const friDate = new Date(selectedDate + 'T00:00:00');
     const satDate = new Date(friDate);
     satDate.setDate(friDate.getDate() - 6);
     const startISO = satDate.getFullYear() + '-' + String(satDate.getMonth() + 1).padStart(2, '0') + '-' + String(satDate.getDate()).padStart(2, '0');
-
     await ensureDataForRange(startISO, selectedDate);
-
     const satTime = satDate.getTime();
     const friTime = friDate.getTime();
-
     const weekRecords = appState.records.filter(r => {
       if (!r.date) return false;
       const rDate = new Date(r.date + 'T00:00:00');
@@ -147,7 +142,6 @@ async function loadBillingCompliance() {
       if (EXCLUDED_STATUSES.includes(r.status)) return false;
       return true;
     });
-
     const codeGroups = {};
     for (const r of weekRecords) {
       const code = (r.billingCode || '').trim();
@@ -161,7 +155,13 @@ async function loadBillingCompliance() {
       if (tag === 'PL') codeGroups[code].plCount++;
       if (r.ot && !isNaN(parseFloat(r.ot))) codeGroups[code].otRendered += parseFloat(r.ot);
     }
-
+    // Build compliance data for the doughnut chart from the selected week
+    const weekComplianceData = Object.entries(codeGroups).map(([code, data]) => ({
+      billing_code: code,
+      forecasted_p: String(data.forecastedP),
+      ot_rendered: data.otRendered,
+    }));
+    renderComplianceDoughnut(weekComplianceData);
     const tableData = [];
     for (const code of BILLING_CODE_ORDER) {
       const data = codeGroups[code] || { forecastedP: 0, otRendered: 0, uplCount: 0, plCount: 0 };

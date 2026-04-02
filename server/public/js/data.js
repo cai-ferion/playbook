@@ -621,9 +621,14 @@ async function saveRecords(edits) {
       if (edit.ot_hours !== undefined) payload.ot_hours = edit.ot_hours;
       if (edit.billing_code !== undefined) payload.billing_code = edit.billing_code;
 
+      const actorHeaders = {};
+      if (typeof currentUser !== 'undefined' && currentUser) {
+        actorHeaders['x-actor-ohr'] = currentUser.ohr_id || '';
+        actorHeaders['x-actor-name'] = currentUser.full_name || '';
+      }
       const resp = await fetch(`${IO_API_BASE}/attendance/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...actorHeaders },
         body: JSON.stringify(payload)
       });
 

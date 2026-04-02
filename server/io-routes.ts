@@ -330,6 +330,24 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
         }
       }
     }
+    // Audit lock/unlock events
+    if (updates.is_locked !== undefined) {
+      const oldLocked = current.is_locked ? "true" : "false";
+      const newLocked = updates.is_locked ? "true" : "false";
+      if (oldLocked !== newLocked) {
+        auditEntries.push({
+          record_type: "attendance",
+          record_id: recordId,
+          action: updates.is_locked ? "lock" : "unlock",
+          field_name: "is_locked",
+          old_value: oldLocked,
+          new_value: newLocked,
+          actor_ohr: actorOhr,
+          actor_name: actorName,
+          timestamp: now,
+        });
+      }
+    }
 
     // Apply update
     await db.update(ioAttendance).set(updates).where(eq(ioAttendance.id, recordId));
