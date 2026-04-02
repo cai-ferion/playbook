@@ -92,12 +92,12 @@ describe("Batch 15 Changes", () => {
       expect(autoMailer).toContain("today");
     });
 
-    it("should have manual trigger endpoint for daily summary", () => {
+    it("should have manual trigger endpoint for notifications", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      expect(autoMailer).toContain("send-daily-summary");
+      expect(autoMailer).toContain("send-notifications");
     });
   });
 

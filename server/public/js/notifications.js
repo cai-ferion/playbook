@@ -59,6 +59,7 @@ async function createNotification({ type, title, message, target_ohr, target_rol
     target_role: target_role || 'all',
     metadata: JSON.stringify(metadata),
     is_read: false,
+    created_at: new Date().toISOString(),
   };
   try {
     const resp = await fetch(`${IO_API_BASE}/notifications`, {

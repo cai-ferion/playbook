@@ -1141,69 +1141,68 @@
               </button>
             </div>
 
-            <!-- Tab Switcher: Tasks / Approvals -->
-            <div id="helm-board-tabs" style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid var(--border);">
-              <button class="module-tab active" data-board-tab="tasks" onclick="helmSwitchBoardTab('tasks')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Tasks</button>
-              <button class="module-tab" data-board-tab="approvals" onclick="helmSwitchBoardTab('approvals')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);">Approvals</button>
-            </div>
+            <!-- Side-by-side: Tasks & Approvals -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+              <!-- Tasks Panel -->
+              <div id="helm-tab-tasks" style="min-width:0;">
+                <h3 style="font-size:14px;font-weight:700;color:var(--fg);margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.5px;">Tasks</h3>
+                <div class="module-filters" id="helm-filters" style="margin-bottom:8px;">
+                  <div class="filter-group">
+                    <label class="filter-label">Status:</label>
+                    <select class="form-select form-select-sm" id="helm-filter-status" onchange="helmApplyFilters()">
+                      <option value="All">All Statuses</option>
+                      <option value="Open">Open</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <label class="filter-label">Search:</label>
+                    <input type="text" class="form-input form-input-sm" id="helm-search" placeholder="Title, ID..." oninput="helmApplyFilters()" style="max-width:160px;">
+                  </div>
+                </div>
+                <div class="loading-overlay" id="helm-loading" style="display:none;">
+                  <div class="spinner"></div>
+                  <div class="loading-text">Loading Tasks...</div>
+                </div>
+                <div class="module-stats" id="helm-stats"></div>
+                <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+                  <table class="data-table module-table" id="helm-table" style="font-size:12px;">
+                    <thead id="helm-table-head"></thead>
+                    <tbody id="helm-table-body"></tbody>
+                  </table>
+                </div>
+                <div class="module-pagination" id="helm-pagination"></div>
+              </div>
 
-            <!-- Tasks Tab Content -->
-            <div id="helm-tab-tasks">
-              <div class="module-filters" id="helm-filters">
-                <div class="filter-group">
-                  <label class="filter-label">Status:</label>
-                  <select class="form-select form-select-sm" id="helm-filter-status" onchange="helmApplyFilters()">
-                    <option value="All">All Statuses</option>
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
+              <!-- Approvals Panel -->
+              <div id="helm-tab-approvals" style="min-width:0;">
+                <h3 style="font-size:14px;font-weight:700;color:var(--fg);margin:0 0 10px 0;text-transform:uppercase;letter-spacing:0.5px;">Approvals</h3>
+                <div class="module-filters" id="helm-approvals-filters" style="margin-bottom:8px;">
+                  <div class="filter-group">
+                    <label class="filter-label">Status:</label>
+                    <select class="form-select form-select-sm" id="helm-approvals-filter-status" onchange="helmApplyApprovalsFilters()">
+                      <option value="All">All</option>
+                      <option value="Pending" selected>Pending</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <label class="filter-label">Search:</label>
+                    <input type="text" class="form-input form-input-sm" id="helm-approvals-search" placeholder="Request ID..." oninput="helmApplyApprovalsFilters()" style="max-width:160px;">
+                  </div>
                 </div>
-                <div class="filter-group">
-                  <label class="filter-label">Search:</label>
-                  <input type="text" class="form-input form-input-sm" id="helm-search" placeholder="Title, ID, or name..." oninput="helmApplyFilters()">
+                <div class="module-stats" id="helm-approvals-stats"></div>
+                <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+                  <table class="data-table module-table" id="helm-approvals-table" style="font-size:12px;">
+                    <thead id="helm-approvals-table-head"></thead>
+                    <tbody id="helm-approvals-table-body"></tbody>
+                  </table>
                 </div>
+                <div class="module-pagination" id="helm-approvals-pagination"></div>
               </div>
-              <div class="loading-overlay" id="helm-loading" style="display:none;">
-                <div class="spinner"></div>
-                <div class="loading-text">Loading Tasks...</div>
-              </div>
-              <div class="module-stats" id="helm-stats"></div>
-              <div class="module-table-wrapper">
-                <table class="data-table module-table" id="helm-table">
-                  <thead id="helm-table-head"></thead>
-                  <tbody id="helm-table-body"></tbody>
-                </table>
-              </div>
-              <div class="module-pagination" id="helm-pagination"></div>
-            </div>
-
-            <!-- Approvals Tab Content -->
-            <div id="helm-tab-approvals" style="display:none;">
-              <div class="module-filters" id="helm-approvals-filters">
-                <div class="filter-group">
-                  <label class="filter-label">Status:</label>
-                  <select class="form-select form-select-sm" id="helm-approvals-filter-status" onchange="helmApplyApprovalsFilters()">
-                    <option value="All">All</option>
-                    <option value="Pending" selected>Pending</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label class="filter-label">Search:</label>
-                  <input type="text" class="form-input form-input-sm" id="helm-approvals-search" placeholder="Request ID, name..." oninput="helmApplyApprovalsFilters()">
-                </div>
-              </div>
-              <div class="module-stats" id="helm-approvals-stats"></div>
-              <div class="module-table-wrapper">
-                <table class="data-table module-table" id="helm-approvals-table">
-                  <thead id="helm-approvals-table-head"></thead>
-                  <tbody id="helm-approvals-table-body"></tbody>
-                </table>
-              </div>
-              <div class="module-pagination" id="helm-approvals-pagination"></div>
             </div>
           </div>
 

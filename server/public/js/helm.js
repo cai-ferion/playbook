@@ -120,16 +120,15 @@ function helmSwitchTab(tab) {
 // ===== Board Tab Switcher =====
 
 function helmSwitchBoardTab(tab) {
+  // Both tables are always visible side-by-side now
   HELM.currentBoardTab = tab;
-  document.querySelectorAll('#helm-board-tabs .module-tab').forEach(btn => {
-    const isActive = btn.getAttribute('data-board-tab') === tab;
-    btn.classList.toggle('active', isActive);
-    btn.style.borderBottomColor = isActive ? 'var(--primary)' : 'transparent';
-    btn.style.color = isActive ? 'var(--primary)' : 'var(--fg-muted)';
-  });
-  document.getElementById('helm-tab-tasks').style.display = tab === 'tasks' ? '' : 'none';
-  document.getElementById('helm-tab-approvals').style.display = tab === 'approvals' ? '' : 'none';
-  if (tab === 'approvals') helmApplyApprovalsFilters();
+  // Ensure both panels are visible
+  const tasksPanel = document.getElementById('helm-tab-tasks');
+  const approvalsPanel = document.getElementById('helm-tab-approvals');
+  if (tasksPanel) tasksPanel.style.display = '';
+  if (approvalsPanel) approvalsPanel.style.display = '';
+  // Refresh the approvals table
+  helmApplyApprovalsFilters();
 }
 
 function helmApplyFilters() {
@@ -856,6 +855,12 @@ function helmShowNewRequestForm() {
           <span id="helm-req-current-tag" style="display:inline-block;padding:6px 12px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--fg-muted);min-width:60px;">—</span>
         </div>
         <div class="form-field">
+          <label class="form-label">New Tag <span class="required">*</span></label>
+          <select class="form-input" id="helm-req-new-tag" style="max-width:220px;">
+            <option value="">— Select New Tag —</option>
+          </select>
+        </div>
+        <div class="form-field">
           <label class="form-label">Reason for Change <span class="required">*</span></label>
           <textarea class="form-textarea" id="helm-req-reason" rows="4" placeholder="Explain why the tag needs to be changed for this date..." style="width:100%;resize:vertical;"></textarea>
         </div>
@@ -917,16 +922,27 @@ function helmSelectRequestAgent(ohr, name) {
 
 async function helmUpdateCurrentTag() {
   const tagEl = document.getElementById('helm-req-current-tag');
+  const newTagSelect = document.getElementById('helm-req-new-tag');
   if (!tagEl) return;
   const date = document.getElementById('helm-req-date')?.value || '';
   const agent = _helmRequestSelectedAgent;
-  if (!date || !agent) { tagEl.textContent = '\u2014'; return; }
+  if (!date || !agent) {
+    tagEl.textContent = '\u2014';
+    if (newTagSelect) newTagSelect.innerHTML = '<option value="">\u2014 Select New Tag \u2014</option>';
+    return;
+  }
+
+  // All possible attendance tags
+  const ALL_TAGS = ['P', 'A', 'LATE', 'UPL', 'PL', 'SL', 'EL', 'ML', 'BL', 'VL', 'WO', 'SA', 'EXIT', 'LWOP', 'SUS', 'NCNS'];
+  let currentTag = '';
+
   try {
     const resp = await fetch(`${IO_API_BASE}/attendance?ohr_id=${agent.ohr}&log_date=${date}&limit=1`);
     if (!resp.ok) { tagEl.textContent = '\u2014'; return; }
     const records = await resp.json();
     if (records.length > 0 && records[0].tag) {
-      tagEl.textContent = records[0].tag;
+      currentTag = records[0].tag;
+      tagEl.textContent = currentTag;
       tagEl.style.color = 'var(--fg)';
       tagEl.style.fontWeight = '600';
     } else {
@@ -936,6 +952,16 @@ async function helmUpdateCurrentTag() {
     }
   } catch (e) {
     tagEl.textContent = '\u2014';
+  }
+
+  // Populate New Tag dropdown excluding current tag
+  if (newTagSelect) {
+    let opts = '<option value="">\u2014 Select New Tag \u2014</option>';
+    for (const tag of ALL_TAGS) {
+      if (tag === currentTag) continue;
+      opts += `<option value="${tag}">${tag}</option>`;
+    }
+    newTagSelect.innerHTML = opts;
   }
 }
 
@@ -963,8 +989,11 @@ async function helmSubmitNewRequest() {
     const date = document.getElementById('helm-req-date')?.value || '';
     const reason = (document.getElementById('helm-req-reason')?.value || '').trim();
 
+    const newTag = document.getElementById('helm-req-new-tag')?.value || '';
+
     if (!date) { showToast('Please select the date to change', 'error'); return; }
     if (!_helmRequestSelectedAgent) { showToast('Please select an agent', 'error'); return; }
+    if (!newTag) { showToast('Please select the new tag', 'error'); return; }
     if (!reason) { showToast('Please provide a reason for the change', 'error'); return; }
 
     const agentName = _helmRequestSelectedAgent.name;
@@ -987,7 +1016,7 @@ async function helmSubmitNewRequest() {
     const record = {
       task_id: reqId,
       title: `[Request] Attendance Backdated Change Tag — ${agentName}`,
-      description: `Request Type: Attendance Backdated Change Tag\nAgent: ${agentName} (${agentOhr})\nDate: ${readableDate}\nReason: ${reason}\n\nRequested by: ${cu ? cu.full_name : 'Unknown'}`,
+      description: `Request Type: Attendance Backdated Change Tag\nAgent: ${agentName} (${agentOhr})\nDate: ${readableDate}\nNew Tag: ${newTag}\nReason: ${reason}\n\nRequested by: ${cu ? cu.full_name : 'Unknown'}`,
       assigned_to_ohr: supervisorOhr || (cu ? cu.ohr_id : ''),
       assigned_to_name: supervisorName || (cu ? cu.full_name : ''),
       assigned_to_pg: agentEmp ? (agentEmp.planning_group || '') : '',
@@ -1040,6 +1069,7 @@ async function helmSubmitNewRequest() {
             agent_name: agentName,
             agent_ohr: agentOhr,
             date: readableDate,
+            new_tag: newTag,
             reason: reason,
             requester_name: cu ? cu.full_name : 'Unknown',
             requester_ohr: cu ? cu.ohr_id : '',

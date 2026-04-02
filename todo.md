@@ -426,3 +426,17 @@
 
 ### GChat Queue
 - [ ] When processing GChat queue, only show request summary in chat (not full notification contents)
+
+## Batch 25 — Fixes & Enhancements (Apr 2)
+
+### Fixes
+- [x] Fix: Attendance save notification shows N/A for timestamp (added created_at to server + client)
+- [x] Fix: Helm Analytics page not properly hidden for non-admin users (added to second visibility block)
+
+### Helm - Task Board
+- [x] Add "New Tag" picker to backdate request form (exclude current tag from choices)
+- [x] Ensure GChat rich card notification sent to supervisor on backdate request (with New Tag in payload)
+- [x] Refactor Task Board: side-by-side Tasks and Approvals tables (not tabs)
+
+### GChat Templates
+- [x] Send sample GChat rich card templates for all notification types to admin (740045023)

@@ -529,7 +529,9 @@ router.post("/notifications", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    await db.insert(ioNotifications).values(req.body);
+    const body = { ...req.body };
+    if (!body.created_at) body.created_at = new Date().toISOString();
+    await db.insert(ioNotifications).values(body);
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] notifications POST error:", err);
@@ -1106,7 +1108,7 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
 
 router.post("/gchat-notify-supervisor", async (req: Request, res: Response) => {
   try {
-    const { request_id, agent_name, agent_ohr, date, reason, requester_name, requester_ohr, supervisor_name } = req.body;
+    const { request_id, agent_name, agent_ohr, date, new_tag, reason, requester_name, requester_ohr, supervisor_name } = req.body;
     if (!request_id || !supervisor_name) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -1140,6 +1142,7 @@ router.post("/gchat-notify-supervisor", async (req: Request, res: Response) => {
             widgets: [
               { decoratedText: { topLabel: "Agent", text: `${agent_name} (${agent_ohr})` } },
               { decoratedText: { topLabel: "Date", text: date } },
+              { decoratedText: { topLabel: "New Tag", text: new_tag || "N/A" } },
               { decoratedText: { topLabel: "Requested By", text: requester_name } },
               { decoratedText: { topLabel: "Reason", text: reason || "No reason provided" } },
               { decoratedText: { topLabel: "Submitted", text: new Date().toLocaleString("en-US", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) } }
@@ -1169,7 +1172,7 @@ router.post("/gchat-notify-supervisor", async (req: Request, res: Response) => {
       }
     }]);
 
-    const fallbackText = `[${request_id}] Backdate Tag Change Request\nAgent: ${agent_name}\nDate: ${date}\nRequested by: ${requester_name}\nReason: ${reason}`;
+    const fallbackText = `[${request_id}] Backdate Tag Change Request\nAgent: ${agent_name}\nDate: ${date}\nNew Tag: ${new_tag || 'N/A'}\nRequested by: ${requester_name}\nReason: ${reason}`;
 
     // Insert into queue
     await db.insert(ioGchatQueue).values({

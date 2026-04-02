@@ -560,6 +560,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const helmNav2 = document.getElementById('nav-group-helm');
       if (helmNav2) helmNav2.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) ? 'none' : '';
 
+      // Helm Analytics — admin only
+      const helmAnalyticsNav2 = document.getElementById('nav-helm-analytics');
+      if (helmAnalyticsNav2) helmAnalyticsNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
+
       // Regimen — admin only
       const regimenNav2 = document.getElementById('nav-regimen');
       if (regimenNav2) regimenNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';

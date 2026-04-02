@@ -135,7 +135,7 @@ describe('Batch 22 — Helm New Request Button', () => {
   });
 
   it('request submission creates a notification', () => {
-    expect(helm).toContain("title: 'New Request: Attendance Change Tag'");
+    expect(helm).toContain("title: 'Backdate Tag Change'");
   });
 });
 
