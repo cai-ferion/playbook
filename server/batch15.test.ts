@@ -65,7 +65,7 @@ describe("Batch 15 Changes", () => {
         "utf-8"
       );
       // Should have date-based lock in bulk-tag
-      expect(ioRoutes).toContain("Date-based lock: past dates locked");
+      expect(ioRoutes).toContain("Date-based lock");
     });
   });
 

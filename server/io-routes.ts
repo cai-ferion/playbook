@@ -292,14 +292,23 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Record is locked and cannot be edited" });
     }
 
-    // Date-based lock enforcement: past dates are always locked (except admin)
+    // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin)
     if (actorOhr !== "740045023") {
       const now = new Date();
       const phtTime = new Date(now.getTime() + 8 * 60 * 60000);
+      const phtHour = phtTime.getUTCHours();
       const todayPHT = phtTime.toISOString().slice(0, 10);
+      const yesterdayD = new Date(phtTime);
+      yesterdayD.setUTCDate(yesterdayD.getUTCDate() - 1);
+      const yesterdayPHT = yesterdayD.toISOString().slice(0, 10);
       const recordDate = current.log_date || '';
-      if (recordDate < todayPHT) {
-        return res.status(403).json({ error: "Past dates are locked and cannot be edited" });
+      // Dates before yesterday are always locked
+      if (recordDate < yesterdayPHT) {
+        return res.status(403).json({ error: "Date-based lock: past dates locked for editing" });
+      }
+      // Yesterday is locked after 11 AM PHT
+      if (recordDate === yesterdayPHT && phtHour >= 11) {
+        return res.status(403).json({ error: "Date-based lock: previous day locked after 11 AM PHT" });
       }
     }
 
@@ -798,12 +807,20 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
         continue;
       }
 
-      // Date-based lock: past dates locked (except admin)
+      // Date-based lock: yesterday and earlier locked after 11 AM PHT (except admin)
       if (actor_ohr !== "740045023") {
         const nowD = new Date();
         const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
-        const todayStr = phtD.toISOString().slice(0, 10);
-        if ((record.log_date || '') < todayStr) {
+        const phtHourD = phtD.getUTCHours();
+        const yesterdayBulk = new Date(phtD);
+        yesterdayBulk.setUTCDate(yesterdayBulk.getUTCDate() - 1);
+        const yesterdayStr = yesterdayBulk.toISOString().slice(0, 10);
+        const recDate = record.log_date || '';
+        if (recDate < yesterdayStr) {
+          locked++;
+          continue;
+        }
+        if (recDate === yesterdayStr && phtHourD >= 11) {
           locked++;
           continue;
         }

@@ -475,3 +475,10 @@
 
 ### Helm - New Request Form
 - [x] Limit "New Tag" dropdown options to only the tags available in Input Portal Tag dropdown (P, LATE, UPL, PL, ML, WO, NYO, EXIT)
+
+## Batch 27 — Revisions (Apr 2)
+
+### Anchor - Input Portal Locking
+- [x] Change locking to lock rows for the day before current day and earlier (not current day)
+- [x] Keep the 11:00 AM cutoff mechanism (locks apply after 11:00 AM PHT)
+- [x] Example: If today is 04/02/26, after 11 AM lock 04/01/26 and before; current day (04/02/26) stays editable

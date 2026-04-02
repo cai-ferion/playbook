@@ -667,7 +667,7 @@ function renderTableRow(item) {
 
   // Checkbox cell
   const checkboxCell = locked
-    ? `<td class="col-checkbox cell-readonly"><span class="lock-icon" title="Locked after 11 AM PHT">&#128274;</span></td>`
+    ? `<td class="col-checkbox cell-readonly"><span class="lock-icon" title="Locked (previous day, after 11 AM PHT)">&#128274;</span></td>`
     : `<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="${globalIdx}" ${isSelected ? 'checked' : ''} onchange="bulkToggleRow(${globalIdx}, this.checked)"></td>`;
 
   // Audit icon cell
