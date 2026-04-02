@@ -1092,6 +1092,26 @@ async function helmSubmitNewRequest() {
 }
 
 
+// ===== Helper: Extract request type from title =====
+
+/**
+ * Extract just the request type from a task title.
+ * Title format: "[Request] Attendance Backdated Change Tag — Agent Name"
+ * Returns: "Attendance Backdated Change Tag"
+ */
+function helmExtractRequestType(title) {
+  if (!title) return '—';
+  // Remove [Request] prefix
+  let t = title.replace(/^\[Request\]\s*/, '');
+  // Remove " — Name" suffix (everything after the em-dash)
+  const dashIdx = t.indexOf(' \u2014 ');
+  if (dashIdx > 0) t = t.substring(0, dashIdx);
+  // Also handle regular dash
+  const regDashIdx = t.indexOf(' — ');
+  if (regDashIdx > 0) t = t.substring(0, regDashIdx);
+  return t.trim() || '—';
+}
+
 // ===== Approvals Tab =====
 
 const HELM_APPROVAL_COLORS = {
@@ -1149,11 +1169,11 @@ function helmRenderApprovalsTable() {
 
   thead.innerHTML = `<tr>
     <th>Request ID</th>
-    <th>Title</th>
+    <th>Request Type</th>
     <th>Requested By</th>
     <th>Assigned To</th>
     <th>Status</th>
-    <th>Date</th>
+    <th>Request Date</th>
   </tr>`;
 
   const start = (HELM.approvalsPage - 1) * HELM.pageSize;
@@ -1172,7 +1192,7 @@ function helmRenderApprovalsTable() {
 
     return `<tr class="data-row" onclick="helmOpenApprovalDetail('${escapeAttr(t.task_id)}')">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
-      <td><span style="font-weight:500;">${escapeHtml((t.title || '').replace('[Request] ', ''))}</span></td>
+      <td><span style="font-weight:500;">${escapeHtml(helmExtractRequestType(t.title))}</span></td>
       <td>${escapeHtml(t.assigned_by_name || '—')}</td>
       <td>${escapeHtml(t.assigned_to_name || '—')}</td>
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(approvalStatus)}</span></td>
@@ -1220,15 +1240,11 @@ function helmOpenApprovalDetail(taskId) {
   formTitle.innerHTML = `<span>${escapeHtml(task.task_id)}</span>`;
 
   let html = '<div class="detail-section"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Request Details</h4>';
-  html += `<div class="detail-row"><span class="detail-label">Title</span><span class="detail-value" style="font-weight:600;">${escapeHtml((task.title || '').replace('[Request] ', ''))}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Request Type</span><span class="detail-value" style="font-weight:600;">${escapeHtml(helmExtractRequestType(task.title))}</span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Approval Status</span><span class="detail-value"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${statusColor};display:inline-block;"></span><strong style="color:${statusColor};">${escapeHtml(approvalStatus)}</strong></span></span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Requested By</span><span class="detail-value">${escapeHtml(task.assigned_by_name || '—')}</span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Assigned To</span><span class="detail-value">${escapeHtml(task.assigned_to_name || '—')}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Created</span><span class="detail-value">${createdStr}</span></div>`;
-
-  if (task.description) {
-    html += `<div class="detail-row"><span class="detail-label">Description</span><span class="detail-value detail-multiline" style="white-space:pre-wrap;">${escapeHtml(task.description)}</span></div>`;
-  }
+  html += `<div class="detail-row"><span class="detail-label">Request Date</span><span class="detail-value">${createdStr}</span></div>`;
   html += '</div>';
 
   // Comments section
@@ -1265,16 +1281,25 @@ function helmOpenApprovalDetail(taskId) {
 
 async function helmApproveRequest(taskId, decision) {
   try {
+    const task = HELM.tasks.find(t => t.task_id === taskId);
+    if (!task) throw new Error('Task not found');
+
+    // Update the task's approval status (keep status as Open so it stays visible)
     const resp = await fetch(`${IO_API_BASE}/tasks/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         approval_status: decision,
-        status: decision === 'Approved' ? 'Completed' : 'Cancelled',
         completed_date: new Date().toISOString()
       })
     });
-    if (!resp.ok) throw new Error('Failed');
+    if (!resp.ok) throw new Error('Failed to update request status');
+
+    // If Approved, apply the new tag to the attendance record
+    if (decision === 'Approved') {
+      await helmApplyApprovedTagChange(task);
+    }
+    // If Rejected, do nothing to attendance — old tag is retained
 
     showToast(`Request ${decision.toLowerCase()} successfully`, 'success');
     helmCloseForm();
@@ -1282,5 +1307,69 @@ async function helmApproveRequest(taskId, decision) {
     helmApplyApprovalsFilters();
   } catch (e) {
     showToast('Failed to update request: ' + e.message, 'error');
+  }
+}
+
+/**
+ * Apply the approved tag change to the attendance record.
+ * Parses the description to extract agent OHR, date, and new tag.
+ */
+async function helmApplyApprovedTagChange(task) {
+  const desc = task.description || '';
+  // Extract agent OHR from description: "Agent: Name (OHR)"
+  const ohrMatch = desc.match(/Agent:.*?\((\d+)\)/);
+  // Extract date from description: "Date: Wed, Apr 1, 2026" or similar
+  const dateMatch = desc.match(/Date:\s*(.+?)\n/);
+  // Extract new tag from description: "New Tag: LATE"
+  const tagMatch = desc.match(/New Tag:\s*(.+?)\n/);
+
+  if (!ohrMatch || !dateMatch || !tagMatch) {
+    console.warn('Could not parse request description for tag change:', desc);
+    return;
+  }
+
+  const agentOhr = ohrMatch[1];
+  const newTag = tagMatch[1].trim();
+  const dateStr = dateMatch[1].trim();
+
+  // Parse the date string to YYYY-MM-DD format
+  const parsedDate = new Date(dateStr);
+  if (isNaN(parsedDate.getTime())) {
+    console.warn('Could not parse date:', dateStr);
+    return;
+  }
+  const logDate = parsedDate.toISOString().slice(0, 10);
+
+  // Find the attendance record for this agent and date
+  const searchResp = await fetch(`${IO_API_BASE}/attendance?ohr_id=${agentOhr}&log_date=${logDate}&limit=1`);
+  if (!searchResp.ok) {
+    console.warn('Could not find attendance record');
+    return;
+  }
+  const records = await searchResp.json();
+  const rows = records.data || records;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    console.warn('No attendance record found for', agentOhr, logDate);
+    return;
+  }
+
+  const record = rows[0];
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+
+  // Update the attendance record's tag
+  const updateResp = await fetch(`${IO_API_BASE}/attendance/${record.id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-actor-ohr': cu ? cu.ohr_id : '',
+      'x-actor-name': cu ? cu.full_name : 'System'
+    },
+    body: JSON.stringify({ tag: newTag })
+  });
+
+  if (!updateResp.ok) {
+    const errData = await updateResp.json().catch(() => ({}));
+    console.warn('Failed to update attendance tag:', errData.error || 'Unknown error');
+    showToast('Approved but could not update attendance tag: ' + (errData.error || 'Unknown error'), 'warning');
   }
 }

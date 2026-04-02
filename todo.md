@@ -553,3 +553,13 @@
 - [x] Predictions now realistic: UPL Apr=275/May=158/Jun=41, LATE Apr=187/May=159/Jun=132, PL Apr=233/May=174/Jun=114
 - [x] Current incomplete month excluded from actual data display; prediction line starts from last completed month
 - [x] All 211 tests passing
+
+## Batch 33 — Card Details Approvals Table Revisions (Apr 3)
+- [x] Rename "Title" column to "Request Type" — shows only type (e.g., "Attendance Backdated Change Tag"), no employee name
+- [x] Rename "Created" column to "Request Date"
+- [x] Remove "Description" field from detail view
+- [x] Fix "Reject" — updates approval_status to Rejected, record stays in table, old tag retained on attendance
+- [x] Fix "Approve" — updates approval_status to Approved, record stays in table, applies new tag to attendance record via API
+- [x] Added helmExtractRequestType() helper to parse title format
+- [x] Added helmApplyApprovedTagChange() to parse description and update attendance record on approval
+- [x] All 211 tests passing
