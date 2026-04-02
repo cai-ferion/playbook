@@ -1018,7 +1018,7 @@ async function helmSubmitNewRequest() {
     const record = {
       task_id: reqId,
       title: `[Request] Attendance Backdated Change Tag — ${agentName}`,
-      description: `Request Type: Attendance Backdated Change Tag\nAgent: ${agentName} (${agentOhr})\nDate: ${readableDate}\nNew Tag: ${newTag}\nReason: ${reason}\n\nRequested by: ${cu ? cu.full_name : 'Unknown'}`,
+      description: `Request Type: Attendance Backdated Change Tag\nAgent: ${agentName} (${agentOhr})\nDate: ${readableDate}\nPrevious Tag: ${document.getElementById('helm-req-current-tag')?.textContent || '—'}\nNew Tag: ${newTag}\nReason: ${reason}\n\nRequested by: ${cu ? cu.full_name : 'Unknown'}`,
       assigned_to_ohr: supervisorOhr || (cu ? cu.ohr_id : ''),
       assigned_to_name: supervisorName || (cu ? cu.full_name : ''),
       assigned_to_pg: agentEmp ? (agentEmp.planning_group || '') : '',
@@ -1171,7 +1171,6 @@ function helmRenderApprovalsTable() {
     <th>Request ID</th>
     <th>Request Type</th>
     <th>Requested By</th>
-    <th>Assigned To</th>
     <th>Status</th>
     <th>Request Date</th>
   </tr>`;
@@ -1180,7 +1179,7 @@ function helmRenderApprovalsTable() {
   const pageData = HELM.filteredApprovals.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-muted);">No requests found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--fg-muted);">No requests found</td></tr>';
     helmRenderApprovalsPagination();
     return;
   }
@@ -1194,7 +1193,6 @@ function helmRenderApprovalsTable() {
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
       <td><span style="font-weight:500;">${escapeHtml(helmExtractRequestType(t.title))}</span></td>
       <td>${escapeHtml(t.assigned_by_name || '—')}</td>
-      <td>${escapeHtml(t.assigned_to_name || '—')}</td>
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(approvalStatus)}</span></td>
       <td>${createdStr}</td>
     </tr>`;
@@ -1243,7 +1241,22 @@ function helmOpenApprovalDetail(taskId) {
   html += `<div class="detail-row"><span class="detail-label">Request Type</span><span class="detail-value" style="font-weight:600;">${escapeHtml(helmExtractRequestType(task.title))}</span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Approval Status</span><span class="detail-value"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${statusColor};display:inline-block;"></span><strong style="color:${statusColor};">${escapeHtml(approvalStatus)}</strong></span></span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Requested By</span><span class="detail-value">${escapeHtml(task.assigned_by_name || '—')}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Assigned To</span><span class="detail-value">${escapeHtml(task.assigned_to_name || '—')}</span></div>`;
+
+  // Parse description for Attendance Backdated Change Tag specific fields
+  if (task.request_type === 'attendance_backdated_change_tag' && task.description) {
+    const descLines = task.description.split('\n');
+    let agentName = '—', dateChanged = '—', prevTag = '—', newTag = '—';
+    for (const line of descLines) {
+      if (line.startsWith('Agent:')) agentName = line.replace('Agent:', '').trim().replace(/\s*\(\d+\)$/, '');
+      if (line.startsWith('Date:')) dateChanged = line.replace('Date:', '').trim();
+      if (line.startsWith('Previous Tag:')) prevTag = line.replace('Previous Tag:', '').trim();
+      if (line.startsWith('New Tag:')) newTag = line.replace('New Tag:', '').trim();
+    }
+    html += `<div class="detail-row"><span class="detail-label">Employee</span><span class="detail-value" style="font-weight:600;">${escapeHtml(agentName)}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Date Changed</span><span class="detail-value">${escapeHtml(dateChanged)}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Tag Change</span><span class="detail-value"><span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px;">${escapeHtml(prevTag)}</span> <span style="color:var(--fg-muted);margin:0 4px;">→</span> <span style="background:#dcfce7;color:#16a34a;padding:2px 8px;border-radius:4px;font-weight:600;font-size:12px;">${escapeHtml(newTag)}</span></span></div>`;
+  }
+
   html += `<div class="detail-row"><span class="detail-label">Request Date</span><span class="detail-value">${createdStr}</span></div>`;
   html += '</div>';
 

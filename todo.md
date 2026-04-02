@@ -566,3 +566,12 @@
 
 ## Batch 33b — Bug: Rejected request not showing in Approvals table (Apr 3)
 - [x] Fix rejected request not appearing — default filter was set to "Pending" (selected), changed to "All" so all statuses show by default
+
+## Batch 34 — Approvals Detail & Table Revisions (Apr 3)
+- [x] Remove "Assigned To" column from the approvals table listing (5 columns → 5 columns)
+- [x] In card details view for Attendance Backdated Change Tag: remove "Assigned To"
+- [x] Add "Employee" field (parsed from description Agent line, OHR stripped)
+- [x] Add "Date Changed" field (parsed from description Date line)
+- [x] Add "Tag Change" field showing Previous Tag → New Tag with color-coded badges (red/green)
+- [x] Updated request creation to also store Previous Tag in description for future requests
+- [x] All 211 tests passing
