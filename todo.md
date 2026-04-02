@@ -563,3 +563,6 @@
 - [x] Added helmExtractRequestType() helper to parse title format
 - [x] Added helmApplyApprovedTagChange() to parse description and update attendance record on approval
 - [x] All 211 tests passing
+
+## Batch 33b — Bug: Rejected request not showing in Approvals table (Apr 3)
+- [x] Fix rejected request not appearing — default filter was set to "Pending" (selected), changed to "All" so all statuses show by default
