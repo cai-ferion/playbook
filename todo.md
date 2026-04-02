@@ -575,3 +575,10 @@
 - [x] Add "Tag Change" field showing Previous Tag → New Tag with color-coded badges (red/green)
 - [x] Updated request creation to also store Previous Tag in description for future requests
 - [x] All 211 tests passing
+
+## Batch 35 — Anchor Dashboard Layout & Asset Inventory Fixes (Apr 3)
+- [x] Match Shift Breakdown and Supervisor Wise section heights (align-items:stretch + flex layout on flm-card)
+- [x] Remove duplicate "ASSET INVENTORY & ENDORSEMENT" header row inside the table (kept only the card-header title)
+- [x] Right-align the Role column in Asset Inventory table (both inline widget and fullscreen)
+- [x] Add Expand button to Asset Inventory with fullscreen modal overlay (same as Shift Breakdown / Shrink Details)
+- [x] All 211 tests passing

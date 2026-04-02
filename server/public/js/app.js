@@ -1903,22 +1903,71 @@ function renderAssetInventory(records) {
     });
   }
   let html = `<table class="data-table" style="font-size:12px;width:100%;">`;
-  html += `<thead><tr style="background:var(--primary);color:#fff;"><th colspan="4" style="text-align:center;padding:8px;font-size:13px;font-weight:700;">Asset Inventory & Endorsement</th></tr>`;
-  html += `<tr style="background:var(--bg-subtle);"><th style="text-align:center;padding:6px;">Date</th><th colspan="3" style="text-align:center;padding:6px;font-weight:700;">${escapeHtml(dateStr)}</th></tr></thead>`;
+  html += `<thead><tr style="background:var(--bg-subtle);"><th style="text-align:center;padding:6px;">Date</th><th colspan="3" style="text-align:center;padding:6px;font-weight:700;">${escapeHtml(dateStr)}</th></tr></thead>`;
   html += '<tbody>';
   for (const shift of shifts) {
     const roles = sortRoles(Object.keys(shiftData[shift]));
     // Shift header row
     html += `<tr style="background:var(--primary);color:#fff;"><th style="padding:6px;">Shift Time</th><th colspan="3" style="text-align:center;padding:6px;font-weight:700;">${escapeHtml(shift)}</th></tr>`;
-    html += `<tr style="background:var(--bg-subtle);font-weight:600;"><td style="padding:6px;text-align:center;">Role</td><td style="padding:6px;text-align:center;">Present</td><td style="padding:6px;text-align:center;">Chromebook/Mac</td><td style="padding:6px;text-align:center;">Yubikey</td></tr>`;
+    html += `<tr style="background:var(--bg-subtle);font-weight:600;"><td style="padding:6px;text-align:right;">Role</td><td style="padding:6px;text-align:center;">Present</td><td style="padding:6px;text-align:center;">Chromebook/Mac</td><td style="padding:6px;text-align:center;">Yubikey</td></tr>`;
     for (const role of roles) {
       const d = shiftData[shift][role];
       // Chromebook/Mac and Yubikey columns mirror Present count
-      html += `<tr><td style="padding:6px;font-weight:500;text-align:center;">${escapeHtml(role)} |</td><td style="padding:6px;text-align:center;">${d.present}</td><td style="padding:6px;text-align:center;">${d.present}</td><td style="padding:6px;text-align:center;">${d.present}</td></tr>`;
+      html += `<tr><td style="padding:6px;font-weight:500;text-align:right;">${escapeHtml(role)} |</td><td style="padding:6px;text-align:center;">${d.present}</td><td style="padding:6px;text-align:center;">${d.present}</td><td style="padding:6px;text-align:center;">${d.present}</td></tr>`;
     }
   }
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+function buildAssetInventoryHTML(records) {
+  const today = new Date();
+  const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  const shiftData = {};
+  for (const r of records) {
+    const shift = r.shiftTime || 'Unknown';
+    const role = r.role || 'Unknown';
+    const tag = getEffectiveTag(r.tag);
+    if (!shiftData[shift]) shiftData[shift] = {};
+    if (!shiftData[shift][role]) shiftData[shift][role] = { present: 0 };
+    if (tag === 'P' || tag === 'LATE') shiftData[shift][role].present++;
+  }
+  const shifts = Object.keys(shiftData).sort();
+  if (shifts.length === 0) return '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No data available</div>';
+  const roleOrder = ['Agent', 'Operational SME', 'Quality & Policy Expert', 'Team Lead', 'Trainer'];
+  function sortRoles(roles) {
+    return roles.sort((a, b) => {
+      const ia = roleOrder.indexOf(a) === -1 ? 999 : roleOrder.indexOf(a);
+      const ib = roleOrder.indexOf(b) === -1 ? 999 : roleOrder.indexOf(b);
+      return ia - ib;
+    });
+  }
+  let html = `<table class="data-table" style="font-size:12px;width:100%;">`;
+  html += `<thead><tr style="background:var(--bg-subtle);"><th style="text-align:center;padding:6px;">Date</th><th colspan="3" style="text-align:center;padding:6px;font-weight:700;">${escapeHtml(dateStr)}</th></tr></thead>`;
+  html += '<tbody>';
+  for (const shift of shifts) {
+    const roles = sortRoles(Object.keys(shiftData[shift]));
+    html += `<tr style="background:var(--primary);color:#fff;"><th style="padding:6px;">Shift Time</th><th colspan="3" style="text-align:center;padding:6px;font-weight:700;">${escapeHtml(shift)}</th></tr>`;
+    html += `<tr style="background:var(--bg-subtle);font-weight:600;"><td style="padding:6px;text-align:right;">Role</td><td style="padding:6px;text-align:center;">Present</td><td style="padding:6px;text-align:center;">Chromebook/Mac</td><td style="padding:6px;text-align:center;">Yubikey</td></tr>`;
+    for (const role of roles) {
+      const d = shiftData[shift][role];
+      html += `<tr><td style="padding:6px;font-weight:500;text-align:right;">${escapeHtml(role)} |</td><td style="padding:6px;text-align:center;">${d.present}</td><td style="padding:6px;text-align:center;">${d.present}</td><td style="padding:6px;text-align:center;">${d.present}</td></tr>`;
+    }
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function expandAssetInventory() {
+  const records = getFilteredDashboardRecords();
+  const overlay = document.getElementById('asset-fullscreen');
+  const body = document.getElementById('asset-fullscreen-body');
+  body.innerHTML = buildAssetInventoryHTML(records);
+  overlay.style.display = 'flex';
+}
+
+function closeAssetFullscreen() {
+  document.getElementById('asset-fullscreen').style.display = 'none';
 }
 
 function renderAgentList(records) {

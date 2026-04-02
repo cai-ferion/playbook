@@ -470,7 +470,7 @@
               </div>
               <div id="shift-breakdown"></div>
             </div>
-            <div class="card flm-card" style="overflow-y:auto;max-height:800px;">
+            <div class="card flm-card" style="overflow-y:auto;">
               <div class="card-header">
                 <span class="card-title">SUPERVISOR WISE</span>
               </div>
@@ -483,6 +483,10 @@
             <div class="card" style="flex:1;min-width:0;">
               <div class="card-header">
                 <span class="card-title">ASSET INVENTORY & ENDORSEMENT</span>
+                <button class="expand-btn" onclick="expandAssetInventory()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Expand
+                </button>
               </div>
               <div id="asset-inventory-widget" style="max-height:500px;overflow-y:auto;"></div>
             </div>
@@ -1370,6 +1374,19 @@
       </div>
       <div class="modal-body" id="shrink-fullscreen-body"></div>
       <div class="modal-footer" id="shrink-pagination"></div>
+    </div>
+  </div>
+
+  <!-- Modal Asset Inventory Overlay -->
+  <div class="modal-overlay" id="asset-fullscreen" style="display:none;" onclick="closeAssetFullscreen()">
+    <div class="modal-dialog modal-autosize" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>ASSET INVENTORY & ENDORSEMENT</h3>
+        <button class="modal-close-btn" onclick="closeAssetFullscreen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="asset-fullscreen-body"></div>
     </div>
   </div>
 
