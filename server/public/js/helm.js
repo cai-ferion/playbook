@@ -272,7 +272,6 @@ function helmRenderReceivedTable() {
   thead.innerHTML = `<tr>
     <th>Task ID</th>
     <th>Title</th>
-    <th>Assigned By</th>
     <th>Status</th>
     <th>Due Date</th>
   </tr>`;
@@ -281,7 +280,7 @@ function helmRenderReceivedTable() {
   const pageData = HELM.filteredReceived.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--fg-muted);">No tasks found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:32px;color:var(--fg-muted);">No tasks found</td></tr>';
     helmRenderReceivedPagination();
     return;
   }
@@ -294,7 +293,6 @@ function helmRenderReceivedTable() {
     return `<tr class="data-row" onclick="helmOpenDetail('${escapeAttr(t.task_id)}')">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
       <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
-      <td>${escapeHtml(t.assigned_by_name || '\u2014')}</td>
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '\u2014')}</span></td>
       <td style="${isOverdue ? 'color:var(--error);font-weight:600;' : ''}">${dueStr}${isOverdue ? ' (Overdue)' : ''}</td>
     </tr>`;

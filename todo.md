@@ -618,3 +618,7 @@
 - [x] Approvals table maintained as-is
 - [x] Layout changed from 2-column to 3-column grid
 - [x] All 225 tests passing (14 new tests added)
+
+## Batch 40b — Remove Assigned By column from Tasks Received (Apr 3)
+- [x] Remove "Assigned By" column from Tasks Received table header and body
+- [x] All 225 tests passing

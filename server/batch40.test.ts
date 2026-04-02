@@ -74,13 +74,23 @@ describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals
       expect(helmJs).toContain("split(',')");
     });
 
-    it("helmRenderReceivedTable function exists and renders Assigned By column", () => {
+    it("helmRenderReceivedTable function exists with 4 columns (no Assigned By)", () => {
       const helmJs = readPublicJS("helm.js");
       expect(helmJs).toContain("function helmRenderReceivedTable()");
       expect(helmJs).toContain("helm-received-table-head");
       expect(helmJs).toContain("helm-received-table-body");
-      // Tasks Received shows "Assigned By" instead of "Assigned To"
-      expect(helmJs).toContain("<th>Assigned By</th>");
+      // Tasks Received should NOT have Assigned By column
+      const receivedSection = helmJs.substring(
+        helmJs.indexOf("function helmRenderReceivedTable()"),
+        helmJs.indexOf("function helmRenderReceivedPagination()")
+      );
+      expect(receivedSection).not.toContain("<th>Assigned By</th>");
+      expect(receivedSection).toContain("<th>Task ID</th>");
+      expect(receivedSection).toContain("<th>Title</th>");
+      expect(receivedSection).toContain("<th>Status</th>");
+      expect(receivedSection).toContain("<th>Due Date</th>");
+      // colspan should be 4 not 5
+      expect(receivedSection).toContain('colspan="4"');
     });
 
     it("helmRenderReceivedPagination function exists", () => {
