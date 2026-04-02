@@ -585,3 +585,15 @@
 
 ## Batch 35b — Shrink Details Height Alignment (Apr 3)
 - [x] Match Shrink Details card height to Asset Inventory card — both cards use flex column layout with grid stretch alignment
+
+## Batch 36 — Scheduled DB→Sheets Sync (Apr 3)
+- [x] Investigated ATTEND_26 sheet: 46,382 rows, 17 columns (A-Q), dates through Apr 30
+- [x] Built DB→Sheets sync script (db_to_sheets_sync.py): fetches DB records from Apr 1+, matches by ID, updates existing rows, appends new ones
+- [x] Tested manually: 11,580 records synced in 24 batches (~40 seconds), all rows updated correctly
+- [x] Scheduled task: runs at 3:30 PM PHT and 11:00 PM PHT daily (cron fires 4x but script is idempotent)
+
+## Batch 37 — Asset Inventory Exclude RECALL_MEASUREMENT_CTR (Apr 3)
+- [x] Exclude employees with "RECALL_MEASUREMENT_CTR" in complete_planning_group from Present count in Asset Inventory
+- [x] Added completePlanningGroup to normalizeRecord from employee lookup
+- [x] Updated both renderAssetInventory and buildAssetInventoryHTML (fullscreen) with the exclusion filter
+- [x] All 211 tests passing

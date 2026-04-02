@@ -473,6 +473,7 @@ function normalizeRecord(att) {
     actualPlanningGroup: (att.snap_planning_group || emp.planning_group || '').trim(),
     shiftTime: (att.snap_shift_time || emp.shift_time || '').trim(),
     status: (att.snap_status || emp.srt_status || '').trim(),
+    completePlanningGroup: (emp.complete_planning_group || '').trim(),
     weekEnding: dateStr ? getWeekEnding(dateStr) : '',
     month: dateStr ? getMonthName(dateStr) : '',
     concat: dateStr ? generateConcat(dateStr, (att.ohr_id || '').toString().trim()) : '',
