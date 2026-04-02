@@ -524,3 +524,10 @@
 - [x] Legend shows which billing codes fail most often with week counts
 - [x] Updated chart title to "YTD COMPLIANCE — 100% THRESHOLD"
 - [x] All 211 tests passing across 12 test files
+
+## Batch 31 — Billing Compliance Enhancements (Apr 3)
+- [x] Add weekly breakdown table below doughnut chart showing which billing codes failed each week
+- [x] Collapsible table with checkmark/percentage per code per week, color-coded pass/fail
+- [x] Add threshold selector (98%/100%/102%) to toggle the doughnut compliance calculation
+- [x] Threshold buttons update title, doughnut, legend, and breakdown table instantly from cached data
+- [x] All 211 tests passing across 12 test files

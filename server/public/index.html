@@ -556,15 +556,22 @@
               </div>
             </div>
 
-            <!-- YTD Compliance Doughnut Chart (original size) -->
+            <!-- YTD Compliance Doughnut Chart with threshold selector -->
             <div class="card admin-card billing-doughnut-card">
-              <div class="card-header">
-                <span class="card-title">YTD COMPLIANCE — 100% THRESHOLD</span>
+              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <span class="card-title" id="billing-ytd-title">YTD COMPLIANCE — 100% THRESHOLD</span>
+                <div class="billing-threshold-selector" style="display:flex;gap:4px;">
+                  <button class="billing-threshold-btn" data-threshold="98" onclick="switchYTDThreshold(98)">98%</button>
+                  <button class="billing-threshold-btn active" data-threshold="100" onclick="switchYTDThreshold(100)">100%</button>
+                  <button class="billing-threshold-btn" data-threshold="102" onclick="switchYTDThreshold(102)">102%</button>
+                </div>
               </div>
               <div class="admin-card-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;">
                 <canvas id="billing-compliance-doughnut" width="280" height="280"></canvas>
               </div>
               <div id="billing-doughnut-legend" style="padding:8px 16px 12px;font-size:12px;color:var(--text-secondary);"></div>
+              <!-- Weekly breakdown table (collapsed by default) -->
+              <div id="billing-ytd-breakdown" style="display:none;padding:0 12px 12px;"></div>
             </div>
 
             <!-- Right column: 3 prediction charts stacked -->

@@ -8,17 +8,17 @@ describe("Batch 17 — Revisions", () => {
     const billingJs = fs.readFileSync(path.join(__dirname, "../server/public/js/billing.js"), "utf-8");
     const indexHtml = fs.readFileSync(path.join(__dirname, "../server/public/index.html"), "utf-8");
 
-    it("should use 100% threshold instead of 95%", () => {
-      expect(billingJs).toContain("pct >= 100");
+    it("should use configurable threshold instead of 95%", () => {
+      expect(billingJs).toContain("pct >= threshold");
       expect(billingJs).not.toContain("pct >= 95");
     });
 
-    it("should display 100% labels in doughnut chart", () => {
-      expect(billingJs).toContain("Passing (100%)");
-      expect(billingJs).toContain("Below 100%");
+    it("should support threshold selector with 98/100/102 options", () => {
+      expect(billingJs).toContain("switchYTDThreshold");
+      expect(billingJs).toContain("_ytdCurrentThreshold");
     });
 
-    it("should show 100% THRESHOLD in HTML title", () => {
+    it("should show 100% THRESHOLD in HTML title by default", () => {
       expect(indexHtml).toContain("100% THRESHOLD");
       expect(indexHtml).not.toContain("95% THRESHOLD");
     });

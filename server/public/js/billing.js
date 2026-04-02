@@ -43,6 +43,11 @@ let billingPlTrendsChart = null;
 // Track whether the billing dropdown has been initialized
 let billingDropdownInitialized = false;
 
+// YTD doughnut state
+let _ytdWeeklyDataCache = null;
+let _ytdCurrentThreshold = 100;
+let _ytdBreakdownVisible = false;
+
 /**
  * Generate all Friday week endings for the current year.
  */
@@ -294,7 +299,7 @@ function renderBillingComplianceTable(tableData) {
 /**
  * Load YTD billing analytics using server-side aggregation endpoints.
  * The doughnut chart uses per-week per-billing-code data to compute
- * the ratio: (PG-weeks passing 100%) / (total PG-weeks YTD).
+ * the ratio: (PG-weeks passing threshold%) / (total PG-weeks YTD).
  * Trend charts use the monthly aggregation endpoint.
  */
 async function loadBillingYTDAnalytics() {
@@ -305,8 +310,8 @@ async function loadBillingYTDAnalytics() {
     const weeklyResp = await fetch(`${IO_API_BASE}/attendance/billing-ytd-weekly?year=${year}`);
     if (!weeklyResp.ok) throw new Error(`HTTP ${weeklyResp.status}`);
     const weeklyResult = await weeklyResp.json();
-    const weeklyData = weeklyResult.weeks || [];
-    renderYTDComplianceDoughnut(weeklyData);
+    _ytdWeeklyDataCache = weeklyResult.weeks || [];
+    renderYTDComplianceDoughnut(_ytdWeeklyDataCache, _ytdCurrentThreshold);
 
     // Fetch monthly trends for UPL/LATE/PL charts
     const trendResp = await fetch(`${IO_API_BASE}/attendance/billing-ytd?year=${year}`);
@@ -322,13 +327,48 @@ async function loadBillingYTDAnalytics() {
 }
 
 /**
- * Render the YTD compliance doughnut chart.
- * Calculates: (count of PG-weeks passing 100%) / (total PG-weeks YTD).
- * @param {Array} weeklyData - [{week_ending, billing_code, forecasted_p, ot_rendered}]
+ * Switch the YTD doughnut threshold and re-render.
  */
-function renderYTDComplianceDoughnut(weeklyData) {
+function switchYTDThreshold(threshold) {
+  _ytdCurrentThreshold = threshold;
+  // Update button active state
+  document.querySelectorAll('.billing-threshold-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.threshold) === threshold);
+  });
+  // Update title
+  const titleEl = document.getElementById('billing-ytd-title');
+  if (titleEl) titleEl.textContent = `YTD COMPLIANCE \u2014 ${threshold}% THRESHOLD`;
+  // Re-render with cached data
+  if (_ytdWeeklyDataCache) {
+    renderYTDComplianceDoughnut(_ytdWeeklyDataCache, threshold);
+  }
+}
+
+/**
+ * Toggle the weekly breakdown table visibility.
+ */
+function toggleYTDBreakdown() {
+  const inner = document.getElementById('billing-ytd-breakdown-inner');
+  if (!inner) return;
+  _ytdBreakdownVisible = !_ytdBreakdownVisible;
+  inner.style.display = _ytdBreakdownVisible ? 'block' : 'none';
+  // Update toggle button text
+  const btn = document.querySelector('.billing-ytd-toggle-btn');
+  if (btn) btn.textContent = _ytdBreakdownVisible ? '\u25B2 Hide Weekly Breakdown' : '\u25BC Show Weekly Breakdown';
+}
+
+/**
+ * Render the YTD compliance doughnut chart with configurable threshold.
+ * Calculates: (count of PG-weeks passing threshold%) / (total PG-weeks YTD).
+ * @param {Array} weeklyData - [{week_ending, billing_code, forecasted_p, ot_rendered}]
+ * @param {number} threshold - compliance threshold percentage (98, 100, or 102)
+ */
+function renderYTDComplianceDoughnut(weeklyData, threshold) {
+  threshold = threshold || 100;
+  const thresholdDecimal = threshold / 100;
   const canvas = document.getElementById('billing-compliance-doughnut');
   const legendEl = document.getElementById('billing-doughnut-legend');
+  const breakdownEl = document.getElementById('billing-ytd-breakdown');
   if (!canvas) return;
 
   // Group data by week_ending -> billing_code
@@ -347,11 +387,16 @@ function renderYTDComplianceDoughnut(weeklyData) {
   // Count passing/failing PG-weeks across all weeks
   let passing = 0;
   let failing = 0;
-  // Track which codes fail most often for the legend
   const codeFailCount = {};
   const codeWeekCount = {};
+  // Detailed breakdown: weekFailures[we] = [{code, pct}]
+  const weekFailures = {};
+  const weekResults = {}; // weekResults[we][code] = { pct, pass }
+  const sortedWeeks = Object.keys(byWeek).sort();
 
-  for (const we of Object.keys(byWeek).sort()) {
+  for (const we of sortedWeeks) {
+    weekFailures[we] = [];
+    weekResults[we] = {};
     for (const code of BILLING_CODE_ORDER) {
       const target = BILLING_TARGET_HOURS[code];
       if (!target) continue;
@@ -361,11 +406,14 @@ function renderYTDComplianceDoughnut(weeklyData) {
       if (!codeWeekCount[code]) codeWeekCount[code] = 0;
       if (!codeFailCount[code]) codeFailCount[code] = 0;
       codeWeekCount[code]++;
-      if (pct >= 100) {
+      const pass = pct >= threshold;
+      weekResults[we][code] = { pct, pass };
+      if (pass) {
         passing++;
       } else {
         failing++;
         codeFailCount[code]++;
+        weekFailures[we].push({ code, pct });
       }
     }
   }
@@ -378,12 +426,12 @@ function renderYTDComplianceDoughnut(weeklyData) {
 
   const total = passing + failing;
   const passPct = total > 0 ? ((passing / total) * 100).toFixed(1) : '0.0';
-  const totalWeeks = Object.keys(byWeek).length;
+  const totalWeeks = sortedWeeks.length;
 
   billingDoughnutChart = new Chart(canvas, {
     type: 'doughnut',
     data: {
-      labels: ['Passing (100%)', 'Below 100%'],
+      labels: [`Passing (${threshold}%)`, `Below ${threshold}%`],
       datasets: [{
         data: [passing, failing],
         backgroundColor: ['#22c55e', '#ef4444'],
@@ -434,16 +482,65 @@ function renderYTDComplianceDoughnut(weeklyData) {
       .sort((a, b) => b[1] - a[1])
       .map(([code, cnt]) => `${BILLING_CODE_LABELS[code] || code} (${cnt}/${codeWeekCount[code]} wks)`);
     if (failingCodes.length > 0) {
-      legendEl.innerHTML = `<strong style="color:#ef4444;">Below 100% (${totalWeeks} wks YTD):</strong> ` + failingCodes.join(', ');
+      legendEl.innerHTML = `<strong style="color:#ef4444;">Below ${threshold}% (${totalWeeks} wks YTD):</strong> ` + failingCodes.join(', ');
     } else {
-      legendEl.innerHTML = '<strong style="color:#22c55e;">All billing codes met 100% every week YTD.</strong>';
+      legendEl.innerHTML = `<strong style="color:#22c55e;">All billing codes met ${threshold}% every week YTD.</strong>`;
     }
+  }
+
+  // Build weekly breakdown table
+  if (breakdownEl) {
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    // Format week ending as MM/DD
+    function fmtWE(we) {
+      const d = new Date(we + 'T00:00:00');
+      return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    let html = '<button class="billing-ytd-toggle-btn" onclick="toggleYTDBreakdown()">';
+    html += _ytdBreakdownVisible ? '\u25B2 Hide Weekly Breakdown' : '\u25BC Show Weekly Breakdown';
+    html += '</button>';
+    html += '<div style="' + (_ytdBreakdownVisible ? '' : 'display:none;') + 'max-height:300px;overflow:auto;margin-top:8px;" id="billing-ytd-breakdown-inner">';
+    html += '<table class="billing-ytd-breakdown-table">';
+    html += '<thead><tr><th style="text-align:left;min-width:60px;">Week</th>';
+    for (const code of BILLING_CODE_ORDER) {
+      if (!BILLING_TARGET_HOURS[code]) continue;
+      html += `<th title="${BILLING_CODE_LABELS[code] || code}">${code}</th>`;
+    }
+    html += '<th>Score</th></tr></thead><tbody>';
+
+    for (const we of sortedWeeks) {
+      html += `<tr><td style="text-align:left;font-weight:600;white-space:nowrap;">${fmtWE(we)}</td>`;
+      let weekPass = 0;
+      let weekTotal = 0;
+      for (const code of BILLING_CODE_ORDER) {
+        if (!BILLING_TARGET_HOURS[code]) continue;
+        const res = weekResults[we][code];
+        weekTotal++;
+        if (res && res.pass) {
+          weekPass++;
+          html += `<td class="ytd-pass" title="${(BILLING_CODE_LABELS[code] || code)}: ${res.pct.toFixed(1)}%">\u2713</td>`;
+        } else {
+          const pctStr = res ? res.pct.toFixed(1) + '%' : '0.0%';
+          html += `<td class="ytd-fail" title="${(BILLING_CODE_LABELS[code] || code)}: ${pctStr}">${pctStr}</td>`;
+        }
+      }
+      const weekPct = weekTotal > 0 ? ((weekPass / weekTotal) * 100).toFixed(0) : '0';
+      const scoreClass = weekPass === weekTotal ? 'ytd-pass' : 'ytd-fail';
+      html += `<td class="${scoreClass}">${weekPass}/${weekTotal}</td></tr>`;
+    }
+
+    html += '</tbody></table></div>';
+
+    // We need to preserve the toggle state. Replace only the breakdown container content.
+    breakdownEl.style.display = 'block';
+    breakdownEl.innerHTML = html;
   }
 }
 
 /**
  * Render the selected-week compliance doughnut chart (called from loadBillingCompliance).
- * This is the per-week view showing which codes pass/fail for the selected week.
+ * This is now a no-op — the doughnut always shows YTD data.
  * @param {Array} complianceData - [{billing_code, forecasted_p, ot_rendered}]
  */
 function renderComplianceDoughnut(complianceData) {
