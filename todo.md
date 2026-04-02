@@ -531,3 +531,6 @@
 - [x] Add threshold selector (98%/100%/102%) to toggle the doughnut compliance calculation
 - [x] Threshold buttons update title, doughnut, legend, and breakdown table instantly from cached data
 - [x] All 211 tests passing across 12 test files
+
+## Batch 31b — Threshold Button Styling Fix (Apr 3)
+- [x] Fix inactive threshold buttons to appear grayed out instead of white/invisible
