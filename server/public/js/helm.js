@@ -7,11 +7,15 @@
 const HELM = {
   tasks: [],
   filtered: [],
+  approvals: [],
+  filteredApprovals: [],
   employees: [],
   currentTab: 'all',
+  currentBoardTab: 'tasks',
   currentSubpage: 'board',
   page: 1,
   pageSize: 25,
+  approvalsPage: 1,
   editingId: null,
 
   STATUSES: ['Open', 'In Progress', 'Completed', 'Cancelled'],
@@ -47,7 +51,10 @@ async function initHelm(view) {
   await helmFetchTasks();
   const subMap = { 'helm-board': 'board', 'helm-analytics': 'analytics' };
   const sub = subMap[view] || 'board';
-  if (sub === 'board') helmApplyFilters();
+  if (sub === 'board') {
+    helmApplyFilters();
+    helmApplyApprovalsFilters();
+  }
   else if (sub === 'analytics') helmRenderAnalytics();
 }
 
@@ -110,9 +117,25 @@ function helmSwitchTab(tab) {
 
 // ===== Filters =====
 
+// ===== Board Tab Switcher =====
+
+function helmSwitchBoardTab(tab) {
+  HELM.currentBoardTab = tab;
+  document.querySelectorAll('#helm-board-tabs .module-tab').forEach(btn => {
+    const isActive = btn.getAttribute('data-board-tab') === tab;
+    btn.classList.toggle('active', isActive);
+    btn.style.borderBottomColor = isActive ? 'var(--primary)' : 'transparent';
+    btn.style.color = isActive ? 'var(--primary)' : 'var(--fg-muted)';
+  });
+  document.getElementById('helm-tab-tasks').style.display = tab === 'tasks' ? '' : 'none';
+  document.getElementById('helm-tab-approvals').style.display = tab === 'approvals' ? '' : 'none';
+  if (tab === 'approvals') helmApplyApprovalsFilters();
+}
+
 function helmApplyFilters() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  let data = [...HELM.tasks];
+  // Filter only task records (not requests)
+  let data = HELM.tasks.filter(t => t.record_type !== 'request');
 
   // Status filter
   const statusFilter = document.getElementById('helm-filter-status')?.value || 'All';
@@ -779,18 +802,22 @@ function helmShowNewRequestForm() {
       <!-- Attendance Backdated Change Tag fields -->
       <div id="helm-req-attendance-fields">
         <div class="form-field">
-          <label class="form-label">Date to Change <span class="required">*</span></label>
-          <input type="date" class="form-input" id="helm-req-date" style="width:100%;">
+          <label class="form-label">Date <span class="required">*</span></label>
+          <input type="date" class="form-input" id="helm-req-date" style="max-width:220px;" onchange="helmUpdateCurrentTag()">
         </div>
         <div class="form-field">
-          <label class="form-label">Agent <span class="required">*</span></label>
+          <label class="form-label">Name <span class="required">*</span></label>
           <div id="helm-req-agent-chip" style="margin-bottom:6px;"></div>
           <div class="searchable-select" id="helm-req-agent-wrapper">
-            <input type="text" class="form-input" id="helm-req-agent-search" placeholder="Search for an agent..." autocomplete="off" onclick="helmToggleRequestAgentDropdown(true)" oninput="helmFilterRequestAgents()">
+            <input type="text" class="form-input" id="helm-req-agent-search" placeholder="Search for an employee..." autocomplete="off" onclick="helmToggleRequestAgentDropdown(true)" oninput="helmFilterRequestAgents()" style="max-width:320px;">
             <div class="searchable-select-dropdown" id="helm-req-agent-dropdown" style="display:none;max-height:200px;overflow-y:auto;">
               ${employeeOptions}
             </div>
           </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Current Tag</label>
+          <span id="helm-req-current-tag" style="display:inline-block;padding:6px 12px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--fg-muted);min-width:60px;">—</span>
         </div>
         <div class="form-field">
           <label class="form-label">Reason for Change <span class="required">*</span></label>
@@ -802,7 +829,7 @@ function helmShowNewRequestForm() {
 
   formFooter.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit Request</button>
+    <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit</button>
   `;
 
   overlay.style.display = 'flex';
@@ -849,6 +876,31 @@ function helmSelectRequestAgent(ohr, name) {
   helmToggleRequestAgentDropdown(false);
   const searchInput = document.getElementById('helm-req-agent-search');
   if (searchInput) searchInput.value = '';
+  helmUpdateCurrentTag();
+}
+
+async function helmUpdateCurrentTag() {
+  const tagEl = document.getElementById('helm-req-current-tag');
+  if (!tagEl) return;
+  const date = document.getElementById('helm-req-date')?.value || '';
+  const agent = _helmRequestSelectedAgent;
+  if (!date || !agent) { tagEl.textContent = '\u2014'; return; }
+  try {
+    const resp = await fetch(`${IO_API_BASE}/attendance?ohr_id=${agent.ohr}&log_date=${date}&limit=1`);
+    if (!resp.ok) { tagEl.textContent = '\u2014'; return; }
+    const records = await resp.json();
+    if (records.length > 0 && records[0].tag) {
+      tagEl.textContent = records[0].tag;
+      tagEl.style.color = 'var(--fg)';
+      tagEl.style.fontWeight = '600';
+    } else {
+      tagEl.textContent = '(blank)';
+      tagEl.style.color = 'var(--fg-muted)';
+      tagEl.style.fontWeight = 'normal';
+    }
+  } catch (e) {
+    tagEl.textContent = '\u2014';
+  }
 }
 
 function helmClearRequestAgent() {
@@ -887,22 +939,29 @@ async function helmSubmitNewRequest() {
     const agentEmp = HELM.employees.find(e => e.ohr_id === agentOhr);
     const supervisorName = agentEmp ? (agentEmp.supervisor_name || '') : '';
 
-    // Create as a task with request metadata
+    // Find supervisor OHR from employees list by matching supervisor_name
+    let supervisorOhr = '';
+    if (supervisorName) {
+      const supEmp = HELM.employees.find(e => e.full_name === supervisorName);
+      if (supEmp) supervisorOhr = supEmp.ohr_id;
+    }
+
+    // Create as a request with approval metadata
     const reqId = HELM._pendingReqId || ('REQ-' + Date.now().toString(36).toUpperCase());
     const record = {
       task_id: reqId,
       title: `[Request] Attendance Backdated Change Tag — ${agentName}`,
       description: `Request Type: Attendance Backdated Change Tag\nAgent: ${agentName} (${agentOhr})\nDate: ${readableDate}\nReason: ${reason}\n\nRequested by: ${cu ? cu.full_name : 'Unknown'}`,
-      assigned_to_ohr: agentEmp && agentEmp.supervisor_ohr ? agentEmp.supervisor_ohr : (cu ? cu.ohr_id : ''),
+      assigned_to_ohr: supervisorOhr || (cu ? cu.ohr_id : ''),
       assigned_to_name: supervisorName || (cu ? cu.full_name : ''),
       assigned_to_pg: agentEmp ? (agentEmp.planning_group || '') : '',
       assigned_by_ohr: cu ? cu.ohr_id : '',
       assigned_by_name: cu ? cu.full_name : '',
       due_date: '',
       status: 'Open',
-      priority: 'Medium',
-      entity: 'Anchor Tardiness',
-      entity_id: agentOhr,
+      record_type: 'request',
+      request_type: 'attendance_backdated_change_tag',
+      approval_status: 'Pending',
       attachments: ''
     };
 
@@ -917,19 +976,235 @@ async function helmSubmitNewRequest() {
 
       showToast('Request submitted successfully', 'success');
 
-      // Create notification for the request
-      if (typeof createNotification === 'function') {
+      // Create targeted notification for the supervisor
+      if (typeof createNotification === 'function' && supervisorOhr) {
         createNotification({
-          type: 'task_assigned',
-          title: 'New Request: Attendance Change Tag',
-          message: `${reqId}: ${agentName} — Backdated change tag for ${readableDate}. Requested by ${cu ? cu.full_name : 'Unknown'}.`
+          type: 'backdate_tag_request',
+          title: 'Backdate Tag Change Request',
+          message: `${reqId}: ${agentName} — Backdated change tag for ${readableDate}. Requested by ${cu ? cu.full_name : 'Unknown'}.`,
+          target_ohr: supervisorOhr
         });
+      }
+
+      // Send GChat notification to supervisor
+      try {
+        await fetch(`${IO_API_BASE}/gchat-notify-supervisor`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            request_id: reqId,
+            agent_name: agentName,
+            agent_ohr: agentOhr,
+            date: readableDate,
+            reason: reason,
+            requester_name: cu ? cu.full_name : 'Unknown',
+            requester_ohr: cu ? cu.ohr_id : '',
+            supervisor_name: supervisorName
+          })
+        });
+      } catch (gchatErr) {
+        console.warn('GChat notification failed:', gchatErr);
       }
 
       helmCloseForm();
       await helmFetchTasks();
+      helmSwitchBoardTab('approvals');
     } catch (e) {
       showToast('Failed to submit request: ' + e.message, 'error');
     }
+  }
+}
+
+
+// ===== Approvals Tab =====
+
+const HELM_APPROVAL_COLORS = {
+  'Pending': '#F59E0B',
+  'Approved': '#22C55E',
+  'Rejected': '#EF4444'
+};
+
+function helmApplyApprovalsFilters() {
+  // Filter only request records
+  let data = HELM.tasks.filter(t => t.record_type === 'request');
+
+  // Approval status filter
+  const statusFilter = document.getElementById('helm-approvals-filter-status')?.value || 'All';
+  if (statusFilter !== 'All') {
+    data = data.filter(t => (t.approval_status || 'Pending') === statusFilter);
+  }
+
+  // Search
+  const search = (document.getElementById('helm-approvals-search')?.value || '').toLowerCase().trim();
+  if (search) {
+    data = data.filter(t =>
+      (t.title || '').toLowerCase().includes(search) ||
+      (t.task_id || '').toLowerCase().includes(search) ||
+      (t.assigned_by_name || '').toLowerCase().includes(search) ||
+      (t.assigned_to_name || '').toLowerCase().includes(search)
+    );
+  }
+
+  HELM.filteredApprovals = data;
+  helmRenderApprovalsStats();
+  helmRenderApprovalsTable();
+}
+
+function helmRenderApprovalsStats() {
+  const el = document.getElementById('helm-approvals-stats');
+  if (!el) return;
+  const total = HELM.filteredApprovals.length;
+  const pending = HELM.filteredApprovals.filter(t => (t.approval_status || 'Pending') === 'Pending').length;
+  const approved = HELM.filteredApprovals.filter(t => t.approval_status === 'Approved').length;
+  const rejected = HELM.filteredApprovals.filter(t => t.approval_status === 'Rejected').length;
+
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['Pending']}">${pending}</div><div class="stat-label">Pending</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['Approved']}">${approved}</div><div class="stat-label">Approved</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['Rejected']}">${rejected}</div><div class="stat-label">Rejected</div></div>
+  `;
+}
+
+function helmRenderApprovalsTable() {
+  const thead = document.getElementById('helm-approvals-table-head');
+  const tbody = document.getElementById('helm-approvals-table-body');
+  if (!thead || !tbody) return;
+
+  thead.innerHTML = `<tr>
+    <th>Request ID</th>
+    <th>Title</th>
+    <th>Requested By</th>
+    <th>Assigned To</th>
+    <th>Status</th>
+    <th>Date</th>
+  </tr>`;
+
+  const start = (HELM.approvalsPage - 1) * HELM.pageSize;
+  const pageData = HELM.filteredApprovals.slice(start, start + HELM.pageSize);
+
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-muted);">No requests found</td></tr>';
+    helmRenderApprovalsPagination();
+    return;
+  }
+
+  tbody.innerHTML = pageData.map(t => {
+    const approvalStatus = t.approval_status || 'Pending';
+    const statusColor = HELM_APPROVAL_COLORS[approvalStatus] || 'var(--fg-muted)';
+    const createdStr = t.created_at ? new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+    return `<tr class="data-row" onclick="helmOpenApprovalDetail('${escapeAttr(t.task_id)}')">
+      <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
+      <td><span style="font-weight:500;">${escapeHtml((t.title || '').replace('[Request] ', ''))}</span></td>
+      <td>${escapeHtml(t.assigned_by_name || '—')}</td>
+      <td>${escapeHtml(t.assigned_to_name || '—')}</td>
+      <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(approvalStatus)}</span></td>
+      <td>${createdStr}</td>
+    </tr>`;
+  }).join('');
+
+  helmRenderApprovalsPagination();
+}
+
+function helmRenderApprovalsPagination() {
+  const el = document.getElementById('helm-approvals-pagination');
+  if (!el) return;
+  const total = HELM.filteredApprovals.length;
+  const totalPages = Math.ceil(total / HELM.pageSize) || 1;
+  const start = (HELM.approvalsPage - 1) * HELM.pageSize + 1;
+  const end = Math.min(HELM.approvalsPage * HELM.pageSize, total);
+
+  el.innerHTML = `
+    <span class="pagination-info">${total > 0 ? start + '–' + end + ' of ' + total : '0 requests'}</span>
+    <div class="pagination-btns">
+      <button class="btn btn-outline btn-xs" ${HELM.approvalsPage <= 1 ? 'disabled' : ''} onclick="HELM.approvalsPage--;helmRenderApprovalsTable();">Prev</button>
+      <span class="pagination-page">${HELM.approvalsPage} / ${totalPages}</span>
+      <button class="btn btn-outline btn-xs" ${HELM.approvalsPage >= totalPages ? 'disabled' : ''} onclick="HELM.approvalsPage++;helmRenderApprovalsTable();">Next</button>
+    </div>
+  `;
+}
+
+// ===== Approval Detail View =====
+
+function helmOpenApprovalDetail(taskId) {
+  const task = HELM.tasks.find(t => t.task_id === taskId);
+  if (!task) return;
+  HELM.editingId = taskId;
+
+  const formTitle = document.getElementById('helm-form-title');
+  const formBody = document.getElementById('helm-form-body');
+  const formFooter = document.getElementById('helm-form-footer');
+  const overlay = document.getElementById('helm-form-overlay');
+
+  const approvalStatus = task.approval_status || 'Pending';
+  const statusColor = HELM_APPROVAL_COLORS[approvalStatus] || 'var(--fg-muted)';
+  const createdStr = task.created_at ? new Date(task.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+
+  formTitle.innerHTML = `<span>${escapeHtml(task.task_id)}</span>`;
+
+  let html = '<div class="detail-section"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Request Details</h4>';
+  html += `<div class="detail-row"><span class="detail-label">Title</span><span class="detail-value" style="font-weight:600;">${escapeHtml((task.title || '').replace('[Request] ', ''))}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Approval Status</span><span class="detail-value"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${statusColor};display:inline-block;"></span><strong style="color:${statusColor};">${escapeHtml(approvalStatus)}</strong></span></span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Requested By</span><span class="detail-value">${escapeHtml(task.assigned_by_name || '—')}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Assigned To</span><span class="detail-value">${escapeHtml(task.assigned_to_name || '—')}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Created</span><span class="detail-value">${createdStr}</span></div>`;
+
+  if (task.description) {
+    html += `<div class="detail-row"><span class="detail-label">Description</span><span class="detail-value detail-multiline" style="white-space:pre-wrap;">${escapeHtml(task.description)}</span></div>`;
+  }
+  html += '</div>';
+
+  // Comments section
+  html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Comments</h4>';
+  html += '<div id="helm-comments-list" style="margin-bottom:12px;"><div style="text-align:center;padding:12px;color:var(--fg-muted);font-size:12px;">Loading comments...</div></div>';
+  html += `<div style="display:flex;gap:8px;align-items:flex-start;">
+    <textarea class="form-input" id="helm-comment-input" rows="2" placeholder="Add a comment..." style="flex:1;resize:vertical;font-size:13px;"></textarea>
+    <button class="btn btn-primary btn-sm" onclick="helmSubmitComment()" style="white-space:nowrap;">Post</button>
+  </div>`;
+  html += '</div>';
+
+  formBody.innerHTML = html;
+
+  // Footer: Approve/Reject buttons if Pending
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  let footerHtml = '';
+  if (approvalStatus === 'Pending') {
+    footerHtml += `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;" onclick="helmApproveRequest('${escapeAttr(taskId)}','Approved')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
+      Approve
+    </button>`;
+    footerHtml += ` <button class="btn btn-sm" style="background:#EF4444;color:#fff;border:none;" onclick="helmApproveRequest('${escapeAttr(taskId)}','Rejected')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Reject
+    </button>`;
+  } else {
+    footerHtml += `<span style="font-size:12px;color:${statusColor};font-weight:600;">${approvalStatus}</span>`;
+  }
+  formFooter.innerHTML = footerHtml;
+
+  overlay.style.display = 'flex';
+  helmLoadComments(taskId);
+}
+
+async function helmApproveRequest(taskId, decision) {
+  try {
+    const resp = await fetch(`${IO_API_BASE}/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        approval_status: decision,
+        status: decision === 'Approved' ? 'Completed' : 'Cancelled',
+        completed_date: new Date().toISOString()
+      })
+    });
+    if (!resp.ok) throw new Error('Failed');
+
+    showToast(`Request ${decision.toLowerCase()} successfully`, 'success');
+    helmCloseForm();
+    await helmFetchTasks();
+    helmApplyApprovalsFilters();
+  } catch (e) {
+    showToast('Failed to update request: ' + e.message, 'error');
   }
 }

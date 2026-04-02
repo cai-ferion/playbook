@@ -132,16 +132,6 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
         metadata: JSON.stringify({ attendance_id: record.id, tag: record.tag, date: record.log_date }),
       });
 
-      // Also notify admin
-      await createNotification(db, {
-        type: record.tag === "UPL" ? "upl_admin" : "late_admin",
-        title: `${record.tag}: ${agentName} — ${readableDate}`,
-        message: `${agentName} has been tagged as ${tagLabel} for ${readableDate}.\n\nReason: ${record.reason || "Not specified"}\nRemarks: ${record.remarks || "No additional remarks"}`,
-        actor_name: "Playbook System",
-        target_ohr: ADMIN_OHR,
-        metadata: JSON.stringify({ attendance_id: record.id, tag: record.tag, date: record.log_date, agent_ohr: record.ohr_id }),
-      });
-
       sent++;
     } catch (err: any) {
       console.error(`[AutoNotifier] Error creating notification for OHR ${record.ohr_id}: ${err.message}`);
@@ -233,17 +223,7 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
-  // Schedule: 11:00 PM PHT = 15:00 UTC — daily summary
-  cron.schedule("0 15 * * *", async () => {
-    console.log("[AutoNotifier] Triggered: 11:00 PM PHT daily summary");
-    try {
-      await sendDailySummaryNotification(db);
-    } catch (err) {
-      console.error("[AutoNotifier] Cron error (daily summary):", err);
-    }
-  });
-
-  console.log("[AutoNotifier] Scheduled: 2:30 AM PHT, 11:30 AM PHT (UPL/LATE), 11:00 PM PHT (daily summary)");
+  console.log("[AutoNotifier] Scheduled: 2:30 AM PHT, 11:30 AM PHT (UPL/LATE)");
 
   // Manual trigger for UPL/LATE notifications
   app.post("/api/io/send-notifications", async (req, res) => {
@@ -260,16 +240,5 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
-  // Manual trigger for daily summary
-  app.post("/api/io/send-daily-summary", async (req, res) => {
-    try {
-      await sendDailySummaryNotification(db);
-      res.json({ success: true, message: "Daily summary notification created" });
-    } catch (err: any) {
-      console.error("[AutoNotifier] Daily summary trigger error:", err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/send-daily-summary");
+  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications");
 }

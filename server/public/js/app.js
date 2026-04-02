@@ -1278,7 +1278,7 @@ function renderInputPagination(currentPage, totalPages) {
 /**
  * Check if a row should be locked based on:
  * - Past dates are always locked
- * - Current date is editable only after 11:00 AM PHT
+ * - Current date is editable before 11:00 AM PHT, locked after
  * - Future dates are not locked
  * - Exempt: OHR 740045023 and actual_role = 'Manager'
  */
@@ -1302,9 +1302,9 @@ function isRowLocked(record) {
     return true;
   }
 
-  // Current date: editable only after 11:00 AM PHT
+  // Current date: editable before 11:00 AM PHT, locked after
   if (record.date === todayPHT) {
-    return phtHour < 11; // locked if before 11 AM
+    return phtHour >= 11; // locked if 11 AM or later
   }
 
   // Future dates are not locked

@@ -51,20 +51,9 @@ async function anchorAnalyticsRefresh() {
     const empResp = await fetch(`${IO_API_BASE}/employees?employement_status=Active&limit=3000`);
     const employees = await empResp.json();
 
-    // Role-based filtering
-    let filteredData = aaData;
-    let filteredEmployees = Array.isArray(employees) ? employees : [];
-    if (currentUser && currentUser.actual_role === 'Team Lead' && currentUser.ohr_id !== '740045023') {
-      const myAgents = filteredEmployees.filter(e => e.sup_ohr === currentUser.ohr_id).map(e => e.ohr_id);
-      filteredData = aaData.filter(r => myAgents.includes(r.ohr_id));
-      filteredEmployees = filteredEmployees.filter(e => e.sup_ohr === currentUser.ohr_id);
-    } else if (currentUser && currentUser.actual_role === 'Manager' && currentUser.ohr_id !== '740045023') {
-      const myPGs = (currentUser.complete_planning_group || currentUser.planning_group || '').split(',').map(s => s.trim()).filter(Boolean);
-      if (myPGs.length > 0) {
-        filteredData = aaData.filter(r => myPGs.includes(r.planning_group));
-        filteredEmployees = filteredEmployees.filter(e => myPGs.includes(e.planning_group));
-      }
-    }
+    // All roles see all data (no role-based filtering)
+    const filteredData = aaData;
+    const filteredEmployees = Array.isArray(employees) ? employees : [];
 
     renderAnchorAnalytics(filteredData, filteredEmployees, month);
   } catch (err) {

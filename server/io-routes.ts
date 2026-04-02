@@ -16,6 +16,7 @@ import {
   ioAuditLog,
   ioTasks,
   ioTaskComments,
+  ioGchatQueue,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
@@ -1095,6 +1096,97 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
     res.send(csv);
   } catch (err: any) {
     console.error("[IO API] attendance export error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// GChat Notification Queue — Backdate Tag Change Request
+// ============================================================
+
+router.post("/gchat-notify-supervisor", async (req: Request, res: Response) => {
+  try {
+    const { request_id, agent_name, agent_ohr, date, reason, requester_name, requester_ohr, supervisor_name } = req.body;
+    if (!request_id || !supervisor_name) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    // Find supervisor's gchat_space_id
+    const [supervisor] = await db.select().from(ioEmployees)
+      .where(eq(ioEmployees.full_name, supervisor_name))
+      .limit(1);
+
+    if (!supervisor || !supervisor.gchat_space_id) {
+      console.warn(`[GChat] Supervisor "${supervisor_name}" has no gchat_space_id`);
+      return res.json({ queued: false, reason: "Supervisor has no GChat space ID" });
+    }
+
+    // Build the rich card JSON
+    const cardJson = JSON.stringify([{
+      cardId: `backdate_${request_id}`,
+      card: {
+        header: {
+          title: "Backdate Tag Change Request",
+          subtitle: request_id,
+          imageUrl: "https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/assignment_late/default/48px.svg",
+          imageType: "CIRCLE"
+        },
+        sections: [
+          {
+            header: "Request Details",
+            widgets: [
+              { decoratedText: { topLabel: "Agent", text: `${agent_name} (${agent_ohr})` } },
+              { decoratedText: { topLabel: "Date", text: date } },
+              { decoratedText: { topLabel: "Requested By", text: requester_name } },
+              { decoratedText: { topLabel: "Reason", text: reason || "No reason provided" } },
+              { decoratedText: { topLabel: "Submitted", text: new Date().toLocaleString("en-US", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) } }
+            ]
+          },
+          {
+            widgets: [
+              {
+                buttonList: {
+                  buttons: [
+                    {
+                      text: "\u2705 Approve",
+                      color: { red: 0.13, green: 0.77, blue: 0.37, alpha: 1 },
+                      onClick: { openLink: { url: `${process.env.VITE_OAUTH_PORTAL_URL || ''}` } }
+                    },
+                    {
+                      text: "\u274C Reject",
+                      color: { red: 0.94, green: 0.27, blue: 0.27, alpha: 1 },
+                      onClick: { openLink: { url: `${process.env.VITE_OAUTH_PORTAL_URL || ''}` } }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }]);
+
+    const fallbackText = `[${request_id}] Backdate Tag Change Request\nAgent: ${agent_name}\nDate: ${date}\nRequested by: ${requester_name}\nReason: ${reason}`;
+
+    // Insert into queue
+    await db.insert(ioGchatQueue).values({
+      type: "backdate_tag_request",
+      target_space_id: supervisor.gchat_space_id,
+      target_name: supervisor_name,
+      card_json: cardJson,
+      fallback_text: fallbackText,
+      status: "pending",
+      metadata: JSON.stringify({ request_id, agent_name, agent_ohr, date, requester_name, requester_ohr, supervisor_name }),
+      created_at: new Date().toISOString(),
+    });
+
+    console.log(`[GChat Queue] Notification queued for supervisor ${supervisor_name} (space: ${supervisor.gchat_space_id})`);
+    res.json({ queued: true, supervisor: supervisor_name, space_id: supervisor.gchat_space_id });
+  } catch (err: any) {
+    console.error("[GChat Queue] Error:", err);
     res.status(500).json({ error: err.message });
   }
 });

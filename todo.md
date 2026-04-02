@@ -364,3 +364,38 @@
 - [x] Implemented: no actions (final phase)
 - [x] Removed Approved - Final Review status (no longer used)
 - [x] Added sandboxShowTrainerStatusPopout with current-status filtering
+
+## Daily Google Sheet Sync
+
+- [x] Build incremental sync script: export current day's DB records to ATTEND_26 sheet
+- [x] Schedule recurring task at 2:30 AM and 5:30 AM Philippine Time (GMT+8)
+
+## ROSTER Google Sheet Sync
+
+- [x] Read io_employees schema and determine columns for ROSTER sheet
+- [x] Build ROSTER sync script (full overwrite each run)
+- [x] Run initial sync to populate the blank ROSTER sheet (403 employees)
+- [x] Add ROSTER sync to the daily 2:30 AM / 5:30 AM PHT schedule
+- [x] Apps Script emailer column indices already match — no changes needed
+
+## GChat UPL/LATE Rich Card Notification System
+
+- [ ] Build script to query DB for today's UPL/LATE attendance records
+- [ ] Build rich card payloads with red (UPL) / amber (LATE) themes
+- [ ] Look up employee DM spaces and send cards via Google Chat MCP
+- [ ] Schedule daily runs at 2:30 AM and 11:30 AM PHT
+- [x] Add gchat_space_id column to io_employees table (VARCHAR 100, nullable)
+- [x] Import 403 Google Chat space IDs into io_employees.gchat_space_id (385 with IDs, 18 NULL)
+- [x] Dashboard: Remove role-based data scoping — all roles see all data (Team Lead, Manager, Trainer, Operational SME, Admin)
+- [x] Reverse sync: Read ATTEND_26 sheet for April 1-3 records and sync to Playbook DB
+- [x] Schedule reverse sync to run until April 3, then switch to normal DB→Sheets from April 4
+- [x] Fix: Current date attendance locked before 11 AM PHT — should be editable before 11 AM, locked after
+- [x] Input Portal: Put Start Date and End Date filter on one line (inline layout)
+- [x] Remove UPL/LATE admin alerts and daily attendance summary notifications (keep employee UPL/LATE notices)
+- [x] Fix: Billing Code edit — added Apply button to stage changes to pendingEdits before Save
+- [x] Helm Task Board: Copy "New Task" button styling to "New Request" button
+- [x] Helm Task Board: New Request form — add "Current Tag" field after Name showing current tag
+- [x] Helm Task Board: New Request form — rename Agent to Name, Date to Change to Date, shorten field bar, rename Submit Request to Submit
+- [x] Helm Task Board: Split into two tables — "Tasks" and "Approvals" (requests route to Approvals)
+- [x] Backdate tag change request: Create notification for supervisor (title, date, requester)
+- [x] Backdate tag change request: Send GChat card to supervisor with Approve/Reject buttons (queue-based, every 5 min)

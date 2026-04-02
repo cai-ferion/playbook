@@ -64,6 +64,7 @@ export const ioEmployees = mysqlTable("io_employees", {
   billing_code: varchar("billing_code", { length: 100 }),
   password: varchar("password", { length: 255 }),
   is_locked: boolean("is_locked").default(false),
+  gchat_space_id: varchar("gchat_space_id", { length: 100 }),
 });
 
 export type IoEmployee = typeof ioEmployees.$inferSelect;
@@ -207,6 +208,23 @@ export const ioNotifications = mysqlTable("io_notifications", {
 export type IoNotification = typeof ioNotifications.$inferSelect;
 export type InsertIoNotification = typeof ioNotifications.$inferInsert;
 
+export const ioGchatQueue = mysqlTable("io_gchat_queue", {
+  id: int("id").autoincrement().primaryKey(),
+  type: varchar("type", { length: 100 }).notNull(),
+  target_space_id: varchar("target_space_id", { length: 100 }),
+  target_name: varchar("target_name", { length: 255 }),
+  card_json: text("card_json").notNull(),
+  fallback_text: text("fallback_text"),
+  status: varchar("status", { length: 20 }).default("pending"),
+  metadata: text("metadata"),
+  created_at: varchar("created_at", { length: 64 }),
+  sent_at: varchar("sent_at", { length: 64 }),
+  error_message: text("error_message"),
+});
+
+export type IoGchatQueue = typeof ioGchatQueue.$inferSelect;
+export type InsertIoGchatQueue = typeof ioGchatQueue.$inferInsert;
+
 export const ioInsights = mysqlTable("io_insights", {
   id: int("id").autoincrement().primaryKey(),
   insight_id: varchar("insight_id", { length: 50 }),
@@ -311,11 +329,13 @@ export const ioTasks = mysqlTable("io_tasks", {
   assigned_by_name: varchar("assigned_by_name", { length: 255 }),
   due_date: varchar("due_date", { length: 64 }),
   completed_date: varchar("completed_date", { length: 64 }),
+   record_type: varchar("record_type", { length: 50 }).default("task"),
+  request_type: varchar("request_type", { length: 100 }),
+  approval_status: varchar("approval_status", { length: 50 }),
   attachments: text("attachments"),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
 });
-
 export type IoTask = typeof ioTasks.$inferSelect;
 export type InsertIoTask = typeof ioTasks.$inferInsert;
 

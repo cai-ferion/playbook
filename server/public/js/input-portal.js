@@ -132,16 +132,12 @@ function renderOmnibarFilterValuePicker() {
     const today = getTodayStr();
     menu.innerHTML = `
       <div class="omnibar-menu-title">Date Range</div>
-      <div class="omnibar-date-picker">
-        <div class="filter-group">
-          <label class="filter-label">Start:</label>
-          <input type="date" class="form-input form-input-sm" id="omni-date-start" value="${today}">
-        </div>
-        <div class="filter-group">
-          <label class="filter-label">End:</label>
-          <input type="date" class="form-input form-input-sm" id="omni-date-end" value="${today}">
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); omnibarAddDateFilter()">Add</button>
+      <div class="omnibar-date-picker" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding:8px 12px;">
+        <label class="filter-label" style="margin:0;white-space:nowrap;font-size:12px;">Start:</label>
+        <input type="date" class="form-input form-input-sm" id="omni-date-start" value="${today}" style="min-width:0;flex:1;">
+        <label class="filter-label" style="margin:0;white-space:nowrap;font-size:12px;">End:</label>
+        <input type="date" class="form-input form-input-sm" id="omni-date-end" value="${today}" style="min-width:0;flex:1;">
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); omnibarAddDateFilter()" style="white-space:nowrap;">Add</button>
       </div>`;
     return;
   }
