@@ -2642,7 +2642,8 @@ body {
 }
 .billing-ytd-breakdown-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 11px;
 }
 .billing-ytd-breakdown-table th,
@@ -2651,38 +2652,40 @@ body {
   text-align: center;
   border: 1px solid var(--border);
 }
-.billing-ytd-breakdown-table th {
-  background: var(--bg-secondary);
-  font-weight: 600;
-  color: var(--fg);
+/* Sticky header row */
+.billing-ytd-breakdown-table .ytd-sticky-header {
   position: sticky;
   top: 0;
+  z-index: 2;
+  background: #e5e7eb;
+  font-weight: 600;
+  color: var(--fg, #1a1c1f);
+}
+/* Sticky first column */
+.billing-ytd-breakdown-table .ytd-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f3f4f6;
+}
+/* Corner cell (header + first col) gets highest z-index */
+.billing-ytd-breakdown-table .ytd-sticky-col.ytd-sticky-header {
+  z-index: 3;
+  background: #e5e7eb;
 }
 .billing-ytd-breakdown-table td.ytd-pass {
-  background: rgba(34, 197, 94, 0.15);
+  background: #dcfce7;
   color: #16a34a;
   font-weight: 600;
 }
 .billing-ytd-breakdown-table td.ytd-fail {
-  background: rgba(239, 68, 68, 0.15);
+  background: #fee2e2;
   color: #dc2626;
   font-weight: 600;
 }
-.billing-ytd-toggle-btn {
-  display: block;
-  width: 100%;
-  padding: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  border: none;
-  border-top: 1px solid var(--border);
-  background: var(--bg-primary);
-  color: var(--accent);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.billing-ytd-toggle-btn:hover {
-  background: var(--bg-secondary);
+/* Ensure sticky first column cells override pass/fail bg */
+.billing-ytd-breakdown-table td.ytd-sticky-col {
+  background: #f3f4f6;
 }
 .billing-right-stack {
   flex: 1;

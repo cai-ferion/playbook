@@ -367,7 +367,6 @@ function renderYTDComplianceDoughnut(weeklyData, threshold) {
   threshold = threshold || 100;
   const thresholdDecimal = threshold / 100;
   const canvas = document.getElementById('billing-compliance-doughnut');
-  const legendEl = document.getElementById('billing-doughnut-legend');
   const breakdownEl = document.getElementById('billing-ytd-breakdown');
   if (!canvas) return;
 
@@ -475,42 +474,24 @@ function renderYTDComplianceDoughnut(weeklyData, threshold) {
     }]
   });
 
-  // Legend: show codes that failed most often
-  if (legendEl) {
-    const failingCodes = Object.entries(codeFailCount)
-      .filter(([_, cnt]) => cnt > 0)
-      .sort((a, b) => b[1] - a[1])
-      .map(([code, cnt]) => `${BILLING_CODE_LABELS[code] || code} (${cnt}/${codeWeekCount[code]} wks)`);
-    if (failingCodes.length > 0) {
-      legendEl.innerHTML = `<strong style="color:#ef4444;">Below ${threshold}% (${totalWeeks} wks YTD):</strong> ` + failingCodes.join(', ');
-    } else {
-      legendEl.innerHTML = `<strong style="color:#22c55e;">All billing codes met ${threshold}% every week YTD.</strong>`;
-    }
-  }
-
-  // Build weekly breakdown table
+  // Build weekly breakdown table (always visible, no toggle)
   if (breakdownEl) {
-    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    // Format week ending as MM/DD
     function fmtWE(we) {
       const d = new Date(we + 'T00:00:00');
       return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
     }
 
-    let html = '<button class="billing-ytd-toggle-btn" onclick="toggleYTDBreakdown()">';
-    html += _ytdBreakdownVisible ? '\u25B2 Hide Weekly Breakdown' : '\u25BC Show Weekly Breakdown';
-    html += '</button>';
-    html += '<div style="' + (_ytdBreakdownVisible ? '' : 'display:none;') + 'max-height:300px;overflow:auto;margin-top:8px;" id="billing-ytd-breakdown-inner">';
+    let html = '<div style="max-height:300px;overflow:auto;" id="billing-ytd-breakdown-inner">';
     html += '<table class="billing-ytd-breakdown-table">';
-    html += '<thead><tr><th style="text-align:left;min-width:60px;">Week</th>';
+    html += '<thead><tr><th class="ytd-sticky-col ytd-sticky-header" style="text-align:left;min-width:60px;z-index:3;">Week</th>';
     for (const code of BILLING_CODE_ORDER) {
       if (!BILLING_TARGET_HOURS[code]) continue;
-      html += `<th title="${BILLING_CODE_LABELS[code] || code}">${code}</th>`;
+      html += `<th class="ytd-sticky-header" title="${BILLING_CODE_LABELS[code] || code}">${code}</th>`;
     }
-    html += '<th>Score</th></tr></thead><tbody>';
+    html += '<th class="ytd-sticky-header">Score</th></tr></thead><tbody>';
 
     for (const we of sortedWeeks) {
-      html += `<tr><td style="text-align:left;font-weight:600;white-space:nowrap;">${fmtWE(we)}</td>`;
+      html += `<tr><td class="ytd-sticky-col" style="text-align:left;font-weight:600;white-space:nowrap;">${fmtWE(we)}</td>`;
       let weekPass = 0;
       let weekTotal = 0;
       for (const code of BILLING_CODE_ORDER) {
@@ -531,9 +512,6 @@ function renderYTDComplianceDoughnut(weeklyData, threshold) {
     }
 
     html += '</tbody></table></div>';
-
-    // We need to preserve the toggle state. Replace only the breakdown container content.
-    breakdownEl.style.display = 'block';
     breakdownEl.innerHTML = html;
   }
 }

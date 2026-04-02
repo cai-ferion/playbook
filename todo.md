@@ -537,3 +537,9 @@
 
 ## Batch 31c — Active Threshold Button Fix (Apr 3)
 - [x] Fix active (selected) threshold button appearing white — changed to solid dark gray (#4b5563) instead of accent color
+
+## Batch 31d — Billing Doughnut Table Cleanup (Apr 3)
+- [x] Remove legend text ("Below X%...") below the doughnut chart
+- [x] Remove the toggle button — table always visible
+- [x] Freeze first column (Week) when scrolling horizontally
+- [x] Ensure header row and first column have opaque backgrounds (solid colors, no transparency)
