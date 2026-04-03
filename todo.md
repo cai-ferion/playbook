@@ -629,3 +629,18 @@
 - [x] Added .trim() and filter(Boolean) for robust whitespace/empty-string handling
 - [x] Added fallback to empty list when no user is logged in (both Tasks Given and Tasks Received)
 - [x] All 225 tests passing
+
+## Batch 41 — Roster WO/PL Import & Sync Pause
+
+- [x] Reviewed all sync processes — no automated DB-to-GSheet sync exists in the server code
+- [x] Parsed roster file: 2,522 WO/PL entries (2,336 WO + 186 PL) for April 4-24, 2026
+- [x] Batch imported into io_attendance: 2,468 existing records updated, 36 new records inserted
+- [x] All WO/PL records locked: 2,318 WO locked, 197 PL locked (100%)
+- [x] Employee snapshots populated for all new records
+
+## Batch 42 — Helm Task Board Loading Screen
+
+- [x] Hide all Task Board content (tables, filters, buttons) while loading
+- [x] Show only a centered loading spinner/screen until data is fully loaded
+- [x] Reveal content once data fetch completes
+- [x] All 225 tests passing

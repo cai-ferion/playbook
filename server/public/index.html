@@ -1148,6 +1148,13 @@
         <div class="module-page">
           <!-- Sub-page: Task Board -->
           <div id="helm-sub-board">
+            <!-- Full-page loading screen -->
+            <div id="helm-board-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;">
+              <div class="spinner"></div>
+              <div class="loading-text" style="margin-top:12px;">Loading Task Board...</div>
+            </div>
+            <!-- Board content (hidden until loaded) -->
+            <div id="helm-board-content" style="display:none;">
             <div class="module-header-right" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
               <button class="btn btn-primary btn-sm" id="helm-new-btn" onclick="helmShowNewForm()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1180,10 +1187,7 @@
                     <input type="text" class="form-input form-input-sm" id="helm-search" placeholder="Title, ID..." oninput="helmApplyFilters()" style="max-width:160px;">
                   </div>
                 </div>
-                <div class="loading-overlay" id="helm-loading" style="display:none;">
-                  <div class="spinner"></div>
-                  <div class="loading-text">Loading Tasks...</div>
-                </div>
+
 
                 <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
                   <table class="data-table module-table" id="helm-table" style="font-size:12px;">
@@ -1252,6 +1256,7 @@
               </div>
             </div>
           </div>
+          </div><!-- end helm-board-content -->
 
           <!-- New/Edit Form -->
           <div class="module-form-overlay" id="helm-form-overlay" style="display:none;">

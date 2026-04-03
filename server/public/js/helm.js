@@ -79,8 +79,10 @@ function helmSwitchSubpage(subpage) {
 // ===== Data Fetching =====
 
 async function helmFetchTasks() {
-  const loading = document.getElementById('helm-loading');
-  if (loading) loading.style.display = 'flex';
+  const boardLoading = document.getElementById('helm-board-loading');
+  const boardContent = document.getElementById('helm-board-content');
+  if (boardLoading) boardLoading.style.display = 'flex';
+  if (boardContent) boardContent.style.display = 'none';
 
   try {
     const url = `${IO_API_BASE}/tasks?limit=2000`;
@@ -92,7 +94,8 @@ async function helmFetchTasks() {
     HELM.tasks = [];
   }
 
-  if (loading) loading.style.display = 'none';
+  if (boardLoading) boardLoading.style.display = 'none';
+  if (boardContent) boardContent.style.display = '';
   helmApplyFilters();
   helmApplyReceivedFilters();
 }
