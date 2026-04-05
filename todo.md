@@ -792,3 +792,7 @@
 - [x] Server tracks submissions vs open_count per week
 - [x] Client pre-check updated to use open_count logic
 - [x] All 248 tests passing
+## Batch 61 — Open OT Form Success Toast
+- [x] Add success toast when OM clicks "Open OT Form" (already implemented)
+- [x] Fixed open-form endpoint timeout: batched 93+ notification inserts instead of sequential
+- [x] All 248 tests passing

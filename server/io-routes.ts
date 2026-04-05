@@ -1624,23 +1624,25 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
       a.actual_role === "Agent" &&
       !(a.complete_planning_group || "").includes("RECALL_MEASUREMENT_CTR")
     );
-    // Create in-app notifications for each eligible agent
-    let notifCount = 0;
-    for (const agent of eligibleAgents) {
-      await db.insert(ioNotifications).values({
-        type: "ot_form_open",
-        title: "OT Request Form Open",
-        message: `OT requests are now open for ${planning_group}. You may submit a new OT request.`,
-        actor_ohr: opened_by_ohr || "",
-        actor_name: opened_by || "",
-        target_ohr: agent.ohr_id,
-        metadata: JSON.stringify({ planning_group }),
-        is_read: false,
-        created_at: now,
-      });
-      notifCount++;
-      // Queue GChat notification if agent has gchat_space_id
-      if (agent.gchat_space_id) {
+    // Batch create in-app notifications for all eligible agents
+    const notifValues = eligibleAgents.map((agent: any) => ({
+      type: "ot_form_open",
+      title: "OT Request Form Open",
+      message: `OT requests are now open for ${planning_group}. You may submit a new OT request.`,
+      actor_ohr: opened_by_ohr || "",
+      actor_name: opened_by || "",
+      target_ohr: agent.ohr_id,
+      metadata: JSON.stringify({ planning_group }),
+      is_read: false,
+      created_at: now,
+    }));
+    if (notifValues.length > 0) {
+      await db.insert(ioNotifications).values(notifValues);
+    }
+    // Batch queue GChat notifications for agents with gchat_space_id
+    const gchatValues = eligibleAgents
+      .filter((a: any) => a.gchat_space_id)
+      .map((agent: any) => {
         const cardJson = JSON.stringify({
           cardsV2: [{
             cardId: `ot-form-open-${agent.ohr_id}`,
@@ -1654,7 +1656,7 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
             }
           }]
         });
-        await db.insert(ioGchatQueue).values({
+        return {
           type: "ot_form_open",
           target_space_id: agent.gchat_space_id,
           target_name: agent.full_name || "",
@@ -1663,10 +1665,12 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
           status: "pending",
           metadata: JSON.stringify({ planning_group, ohr_id: agent.ohr_id }),
           created_at: now,
-        });
-      }
+        };
+      });
+    if (gchatValues.length > 0) {
+      await db.insert(ioGchatQueue).values(gchatValues);
     }
-    res.json({ ok: true, notifications_sent: notifCount, planning_group });
+    res.json({ ok: true, notifications_sent: notifValues.length, planning_group });
   } catch (err: any) {
     console.error("[IO API] ot-requests/open-form error:", err);
     res.status(500).json({ error: err.message });
