@@ -722,3 +722,6 @@
 - [x] Ensure OT fields display correctly on form open for agents
 - [x] Compile list of all in-app notification triggers
 - [x] All 248 tests passing
+## Batch 50b — OT Request Form Title for Agents
+- [x] Show "OT Request" title in the New Request form for agents when dropdown is hidden
+- [x] All 248 tests passing

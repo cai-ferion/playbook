@@ -939,6 +939,7 @@ function helmShowNewRequestForm() {
   const agentAutoOT = isAgent;
   formBody.innerHTML = `
     <div class="form-section">
+      ${agentAutoOT ? '<div style="margin-bottom:12px;"><span style="font-size:15px;font-weight:600;color:var(--fg);letter-spacing:0.3px;">OT Request</span></div>' : ''}
       <div class="form-field" ${agentAutoOT ? 'style="display:none;"' : ''}>
         <label class="form-label">Request Type <span class="required">*</span></label>
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
