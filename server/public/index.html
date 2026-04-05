@@ -544,6 +544,14 @@
             </div>
           </div>
 
+          <!-- Tab switcher -->
+          <div class="billing-tab-bar" style="display:flex;gap:0;margin:16px 0 0 0;border-bottom:2px solid var(--border);">
+            <button class="billing-tab-btn active" data-tab="billing-dashboard" onclick="switchBillingTab('billing-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--fg);cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;transition:all 0.2s;">Billing Dashboard</button>
+            <button class="billing-tab-btn" data-tab="ot-dashboard" onclick="switchBillingTab('ot-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">OT Dashboard</button>
+          </div>
+
+          <!-- Tab 1: Billing Dashboard -->
+          <div id="billing-tab-billing-dashboard" class="billing-tab-content" style="margin-top:16px;">
           <!-- Side-by-side: Billing Code Reference + YTD Compliance + Stacked Prediction Charts -->
           <div class="billing-side-panels">
             <!-- Billing Code Reference (wider) -->
@@ -610,6 +618,18 @@
               </div>
             </div>
           </div>
+          </div><!-- end billing-tab-billing-dashboard -->
+
+          <!-- Tab 2: OT Dashboard -->
+          <div id="billing-tab-ot-dashboard" class="billing-tab-content" style="display:none;margin-top:16px;">
+            <div style="display:flex;align-items:center;justify-content:center;min-height:300px;color:var(--text-secondary);font-size:14px;">
+              <div style="text-align:center;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;margin-bottom:12px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <p style="margin:0;font-weight:600;">OT Dashboard</p>
+                <p style="margin:4px 0 0;font-size:12px;opacity:0.7;">Coming soon — OT scheme data will appear here.</p>
+              </div>
+            </div>
+          </div><!-- end billing-tab-ot-dashboard -->
 
         </div>
       </div>

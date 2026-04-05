@@ -644,3 +644,29 @@
 - [x] Show only a centered loading spinner/screen until data is fully loaded
 - [x] Reveal content once data fetch completes
 - [x] All 225 tests passing
+
+## Batch 43 — Data Cleanup
+
+- [x] Updated 50 blank statuses to "Pending SME Review" for QA Feedback coaching logs
+- [x] io_attendance: 0 pre-2026 rows (already clean)
+- [x] io_coaching: deleted 2,831 pre-2026 rows (13 remaining)
+- [x] io_coaching_ztp: 0 pre-2026 rows (already clean)
+- [x] io_insights: 0 pre-2026 rows (already clean)
+- [x] io_tasks / io_task_comments: 0 pre-2026 rows (already clean)
+- [x] io_notifications: 0 pre-2026 rows (already clean)
+- [x] io_audit_log: 0 pre-2026 rows (already clean)
+- [x] io_leaves / io_gchat_queue: 0 pre-2026 rows (already clean)
+- [x] Verified: 0 pre-2026 rows remaining across all tables
+
+## Batch 44 — Input Portal Data Cleanup
+
+- [x] Removed all attendance rows for Polimetla, Ravikiran (OHR 703212987) — 6 rows deleted
+- [x] Removed all attendance rows for 6 Manager-role employees — 36 rows total deleted
+- [x] Checked Aspera, Brianna (OHR 740049320) — she has 120 attendance rows, records present through Apr 30
+
+## Batch 45 — Billing Compliance Tabs
+
+- [x] Add two-tab layout below the first table in Billing Compliance
+- [x] Tab 1 "Billing Dashboard" — contains existing charts and tables
+- [x] Tab 2 "OT Dashboard" — empty placeholder with clock icon and "Coming soon" message
+- [x] All 225 tests passing

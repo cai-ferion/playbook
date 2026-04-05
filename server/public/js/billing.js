@@ -5,6 +5,22 @@
  * Week: Saturday start → Friday end
  */
 
+// ===== Billing Tab Switching =====
+function switchBillingTab(tabId) {
+  // Hide all tab content
+  document.querySelectorAll('.billing-tab-content').forEach(el => el.style.display = 'none');
+  // Show selected tab
+  const target = document.getElementById('billing-tab-' + tabId);
+  if (target) target.style.display = '';
+  // Update tab button styles
+  document.querySelectorAll('.billing-tab-btn').forEach(btn => {
+    const isActive = btn.dataset.tab === tabId;
+    btn.classList.toggle('active', isActive);
+    btn.style.color = isActive ? 'var(--fg)' : 'var(--text-secondary)';
+    btn.style.borderBottomColor = isActive ? 'var(--accent)' : 'transparent';
+  });
+}
+
 // ===== Billing Code Label Mapping (display order) =====
 const BILLING_CODE_LABELS = {
   'MA': 'S-ABF [Agent]',
