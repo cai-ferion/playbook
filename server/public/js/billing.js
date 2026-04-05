@@ -907,7 +907,7 @@ function otDashRender() {
   let html = '';
   OT_DASH.filteredRequests.forEach(r => {
     const submittedDate = r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
-    const approvedDate = r.approved_at ? new Date(r.approved_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+    const approvedDate = r.applied_date ? new Date(r.applied_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
     const statusColor = r.status === 'approved' ? 'var(--accent)' : 'var(--fg)';
     const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);' : '';
 
@@ -986,7 +986,11 @@ async function otDashApply() {
       throw new Error(errData.error || 'Failed to approve OT requests');
     }
     const result = await resp.json();
-    showToast(`Approved ${result.total_approved} request(s) — ${result.total_hours_approved} hours for ${pg}`, 'success');
+    let toastMsg = `Applied ${result.approved_count} request(s) — ${result.total_hours_approved} hours for ${pg}`;
+    if (result.waitlisted_count > 0) {
+      toastMsg += `. ${result.waitlisted_count} request(s) kept waitlisted (no available day).`;
+    }
+    showToast(toastMsg, 'success');
 
     // Clear hours input
     if (hoursInput) hoursInput.value = '';

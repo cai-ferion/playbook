@@ -1482,7 +1482,53 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
   }
 });
 
+// Helper: parse work_off string (e.g. "Mon - Tue") into day-of-week numbers (0=Sun, 1=Mon, ..., 6=Sat)
+function parseWorkOffDays(workOff: string): number[] {
+  if (!workOff) return [];
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return workOff.split(/\s*-\s*/).map(d => dayMap[d.trim()]).filter(d => d !== undefined);
+}
+
+// Helper: check if a date string (YYYY-MM-DD) falls within any approved leave
+function isOnLeave(dateStr: string, leaves: any[]): boolean {
+  for (const lv of leaves) {
+    if (lv.status !== 'approved' && lv.status !== 'Approved') continue;
+    const start = lv.start_date || '';
+    const end = lv.end_date || '';
+    if (start && end && dateStr >= start && dateStr <= end) return true;
+    if (start && !end && dateStr === start) return true;
+  }
+  return false;
+}
+
+// Helper: find a valid OT day in next week for an agent
+// Returns YYYY-MM-DD or null if no valid day found
+function findOtDay(nextMonday: Date, workOffDays: number[], agentLeaves: any[]): string | null {
+  const weekDates: { date: Date; dateStr: string; dow: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(nextMonday);
+    d.setUTCDate(d.getUTCDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    weekDates.push({ date: d, dateStr, dow: d.getUTCDay() });
+  }
+  // Forward pass: Mon to Sun
+  for (const wd of weekDates) {
+    if (workOffDays.includes(wd.dow)) continue;
+    if (isOnLeave(wd.dateStr, agentLeaves)) continue;
+    return wd.dateStr;
+  }
+  // Backward pass: Sun to Mon
+  for (let i = weekDates.length - 1; i >= 0; i--) {
+    const wd = weekDates[i];
+    if (workOffDays.includes(wd.dow)) continue;
+    if (isOnLeave(wd.dateStr, agentLeaves)) continue;
+    return wd.dateStr;
+  }
+  return null; // No valid day found
+}
+
 // POST /ot-requests/approve — OM approves OT requests for a planning group (FIFO)
+// OT is applied to NEXT WEEK, on a day the agent is not on work off or leave
 router.post("/ot-requests/approve", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -1503,60 +1549,103 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "No pending OT requests for this planning group" });
     }
     const now = new Date().toISOString();
-    const todayDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const nowDate = new Date();
+
+    // Calculate next week's Monday
+    const dayOfWeek = nowDate.getUTCDay(); // 0=Sun
+    const daysToNextMon = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
+    const nextMonday = new Date(nowDate);
+    nextMonday.setUTCDate(nextMonday.getUTCDate() + daysToNextMon);
+    nextMonday.setUTCHours(0, 0, 0, 0);
+    // Next Sunday
+    const nextSunday = new Date(nextMonday);
+    nextSunday.setUTCDate(nextSunday.getUTCDate() + 6);
+    const nextMondayStr = nextMonday.toISOString().split('T')[0];
+    const nextSundayStr = nextSunday.toISOString().split('T')[0];
+
+    // Pre-fetch all employees in this PG for work_off data
+    const allEmployees = await db.select().from(ioEmployees)
+      .where(eq(ioEmployees.planning_group, planning_group));
+    const empMap = new Map(allEmployees.map((e: any) => [e.ohr_id, e]));
+
+    // Pre-fetch all approved leaves for next week for agents in this PG
+    const allLeaves = await db.select().from(ioLeaves)
+      .where(eq(ioLeaves.planning_group, planning_group));
+    // Filter to leaves that overlap with next week
+    const nextWeekLeaves = allLeaves.filter((lv: any) => {
+      if (lv.status !== 'approved' && lv.status !== 'Approved') return false;
+      const start = lv.start_date || '';
+      const end = lv.end_date || start;
+      return start <= nextSundayStr && end >= nextMondayStr;
+    });
+
     let hoursRemaining = hoursNeeded;
     const approved: any[] = [];
-    for (const req of pending) {
+    const waitlisted: any[] = [];
+
+    for (const otReq of pending) {
       if (hoursRemaining <= 0) break;
-      const reqHours = parseFloat(req.requested_hours);
-      if (reqHours <= hoursRemaining) {
-        // Approve this request
-        await db.update(ioOtRequests)
-          .set({ status: "approved", approved_at: now, applied_date: todayDate, approved_by: approved_by || "", approved_by_ohr: approved_by_ohr || "" })
-          .where(eq(ioOtRequests.id, req.id));
-        // Write OT to attendance for today
-        const attRows = await db.select().from(ioAttendance)
-          .where(and(eq(ioAttendance.ohr_id, req.ohr_id), eq(ioAttendance.log_date, todayDate)));
-        if (attRows.length > 0) {
-          await db.update(ioAttendance)
-            .set({ ot_hours: String(reqHours) })
-            .where(eq(ioAttendance.id, attRows[0].id));
-        } else {
-          // Create attendance record for today with OT
-          const emp = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, req.ohr_id));
-          const e = emp[0];
-          const attId = crypto.randomBytes(8).toString("hex");
-          await db.insert(ioAttendance).values({
-            id: attId,
-            ohr_id: req.ohr_id,
-            log_date: todayDate,
-            ot_hours: String(reqHours),
-            created_at: now,
-            snap_full_name: e?.full_name || req.agent_name,
-            snap_supervisor: e?.supervisor_name || "",
-            snap_planning_group: e?.planning_group || "",
-            snap_shift_time: e?.shift_time || "",
-            snap_actual_role: e?.actual_role || "",
-            snap_billing_name: e?.billing_name || "",
-            snap_status: e?.srt_status || "",
-          });
-        }
-        // Audit log
-        await db.insert(ioAuditLog).values({
-          record_type: "ot_request",
-          record_id: req.request_id,
-          action: "approved",
-          field_name: "status",
-          old_value: "pending",
-          new_value: "approved",
-          actor_ohr: approved_by_ohr || "",
-          actor_name: approved_by || "",
-          timestamp: now,
-          metadata: JSON.stringify({ ot_hours: reqHours, applied_date: todayDate, planning_group }),
-        });
-        hoursRemaining -= reqHours;
-        approved.push({ request_id: req.request_id, ohr_id: req.ohr_id, agent_name: req.agent_name, hours: reqHours });
+      const reqHours = parseFloat(otReq.requested_hours);
+      if (reqHours > hoursRemaining) continue;
+
+      const emp = empMap.get(otReq.ohr_id);
+      const workOffDays = parseWorkOffDays(emp?.work_off || '');
+      const agentLeaves = nextWeekLeaves.filter((lv: any) => lv.ohr_id === otReq.ohr_id);
+
+      const appliedDate = findOtDay(nextMonday, workOffDays, agentLeaves);
+
+      if (!appliedDate) {
+        // No valid day — keep waitlisted
+        waitlisted.push({ request_id: otReq.request_id, ohr_id: otReq.ohr_id, agent_name: otReq.agent_name, hours: reqHours, reason: 'No available day (all days are work off or on leave)' });
+        continue;
       }
+
+      // Approve this request and apply to the found date
+      await db.update(ioOtRequests)
+        .set({ status: "approved", approved_at: now, applied_date: appliedDate, approved_by: approved_by || "", approved_by_ohr: approved_by_ohr || "" })
+        .where(eq(ioOtRequests.id, otReq.id));
+
+      // Write OT to attendance for the applied date
+      const attRows = await db.select().from(ioAttendance)
+        .where(and(eq(ioAttendance.ohr_id, otReq.ohr_id), eq(ioAttendance.log_date, appliedDate)));
+      if (attRows.length > 0) {
+        await db.update(ioAttendance)
+          .set({ ot_hours: String(reqHours) })
+          .where(eq(ioAttendance.id, attRows[0].id));
+      } else {
+        const e = emp;
+        const attId = crypto.randomBytes(8).toString("hex");
+        await db.insert(ioAttendance).values({
+          id: attId,
+          ohr_id: otReq.ohr_id,
+          log_date: appliedDate,
+          ot_hours: String(reqHours),
+          created_at: now,
+          snap_full_name: e?.full_name || otReq.agent_name,
+          snap_supervisor: e?.supervisor_name || "",
+          snap_planning_group: e?.planning_group || "",
+          snap_shift_time: e?.shift_time || "",
+          snap_actual_role: e?.actual_role || "",
+          snap_billing_name: e?.billing_name || "",
+          snap_status: e?.srt_status || "",
+        });
+      }
+
+      // Audit log
+      await db.insert(ioAuditLog).values({
+        record_type: "ot_request",
+        record_id: otReq.request_id,
+        action: "approved",
+        field_name: "status",
+        old_value: "pending",
+        new_value: "approved",
+        actor_ohr: approved_by_ohr || "",
+        actor_name: approved_by || "",
+        timestamp: now,
+        metadata: JSON.stringify({ ot_hours: reqHours, applied_date: appliedDate, planning_group }),
+      });
+      hoursRemaining -= reqHours;
+      approved.push({ request_id: otReq.request_id, ohr_id: otReq.ohr_id, agent_name: otReq.agent_name, hours: reqHours, applied_date: appliedDate });
     }
     // Close OT form for this planning group after approval
     await db.update(ioOtConfig)
@@ -1567,7 +1656,9 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
       approved_count: approved.length,
       total_hours_approved: approved.reduce((sum: number, a: any) => sum + a.hours, 0),
       hours_remaining: Math.max(0, hoursRemaining),
+      waitlisted_count: waitlisted.length,
       approved,
+      waitlisted,
     });
   } catch (err: any) {
     console.error("[IO API] ot-requests/approve error:", err);

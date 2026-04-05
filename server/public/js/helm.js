@@ -1005,9 +1005,32 @@ async function helmShowNewRequestForm() {
 
   // For agents: auto-select OT Request, hide dropdown, show OT fields immediately
   const agentAutoOT = isAgent;
+
+  // Calculate next week's ending (Sunday) for the OT reservation info
+  const _now = new Date();
+  const _dayOfWeek = _now.getUTCDay(); // 0=Sun
+  // Next Monday
+  const _daysToNextMon = _dayOfWeek === 0 ? 1 : (8 - _dayOfWeek);
+  const _nextMonday = new Date(_now);
+  _nextMonday.setUTCDate(_nextMonday.getUTCDate() + _daysToNextMon);
+  // Next Sunday = next Monday + 6
+  const _nextSunday = new Date(_nextMonday);
+  _nextSunday.setUTCDate(_nextSunday.getUTCDate() + 6);
+  const _weMonth = String(_nextSunday.getUTCMonth() + 1).padStart(2, '0');
+  const _weDay = String(_nextSunday.getUTCDate()).padStart(2, '0');
+  const _nextWeekEnding = `${_weMonth}/${_weDay}`;
+  // Also format next Monday for display
+  const _nwmMonth = String(_nextMonday.getUTCMonth() + 1).padStart(2, '0');
+  const _nwmDay = String(_nextMonday.getUTCDate()).padStart(2, '0');
+  const _nextWeekStart = `${_nwmMonth}/${_nwmDay}`;
+
   formBody.innerHTML = `
     <div class="form-section">
       ${agentAutoOT ? '<div style="margin-bottom:12px;"><span style="font-size:15px;font-weight:600;color:var(--fg);letter-spacing:0.3px;">OT Request</span></div>' : ''}
+      ${agentAutoOT ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div style="font-size:13px;color:#1e40af;line-height:1.5;">This OT request will be <strong>waitlisted for next week</strong> (${_nextWeekStart} – ${_nextWeekEnding}). Week Ending: <strong>${_nextWeekEnding}</strong>.</div>
+      </div>` : ''}
       <div class="form-field" ${agentAutoOT ? 'style="display:none;"' : ''}>
         <label class="form-label">Request Type <span class="required">*</span></label>
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">

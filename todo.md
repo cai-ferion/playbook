@@ -796,3 +796,11 @@
 - [x] Add success toast when OM clicks "Open OT Form" (already implemented)
 - [x] Fixed open-form endpoint timeout: batched 93+ notification inserts instead of sequential
 - [x] All 248 tests passing
+## Batch 62 — OT Next-Week Reservation + Smart Apply Logic
+- [x] Show in OT Request form that the request is for next week with actual Week Ending date
+- [x] Apply OT to a day when agent is NOT on work off or leave (forward first, then backward)
+- [x] If no valid day found in the week, keep request waitlisted
+- [x] Update OT Dashboard apply logic with smart day selection
+- [x] Renamed "Approved Date" to "Applied Date" in OT Dashboard
+- [x] Updated toast to show waitlisted count
+- [x] All 248 tests passing
