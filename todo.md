@@ -821,3 +821,6 @@
 - [x] Root cause: initNotifications() was never called — notification polling never started
 - [x] Added initNotifications() calls in both login handler and session restore
 - [x] All 248 tests passing
+
+## Batch 66 — Reduce Notification Polling Interval
+- [x] Change notification polling interval from 30s to 10s for faster alert delivery

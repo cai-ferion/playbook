@@ -135,7 +135,7 @@ async function loadNotifications() {
   }
 }
 
-function startNotifPolling(intervalMs = 30000) {
+function startNotifPolling(intervalMs = 10000) {
   if (notifState.pollInterval) clearInterval(notifState.pollInterval);
   notifState.pollInterval = setInterval(loadNotifications, intervalMs);
 }
@@ -453,7 +453,7 @@ async function notifyAbsentTag(agentName, agentOhr, date) {
 
 function initNotifications() {
   loadNotifications();
-  startNotifPolling(30000);
+  startNotifPolling(10000);
   // Default sidebar to Alerts (notifications) tab on login
   setSidebarMode('notifications');
 }
