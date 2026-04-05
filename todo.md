@@ -778,3 +778,8 @@
 - [x] Show "Waitlisted" for pending OT requests (amber badge)
 - [x] Show "Applied" after OM clicks Apply (green badge)
 - [x] All 248 tests passing
+## Batch 59 — OT Apply Validation: Insufficient Waitlisted Hours
+- [x] Show error if OM enters more OT hours than total waitlisted requests can cover
+- [x] Advise OM to reopen the OT form to collect more requests
+- [x] Also handles zero waitlisted requests case
+- [x] All 248 tests passing

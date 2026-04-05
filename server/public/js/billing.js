@@ -956,6 +956,18 @@ async function otDashApply() {
   const hours = hoursInput ? parseFloat(hoursInput.value) : 0;
   if (!hours || hours <= 0) { showToast('Please enter the number of OT hours needed', 'error'); return; }
 
+  // Check if there are enough waitlisted hours to cover the request
+  const waitlistedRequests = OT_DASH.filteredRequests.filter(r => r.status === 'pending');
+  const totalWaitlistedHours = waitlistedRequests.reduce((sum, r) => sum + parseFloat(r.requested_hours || 0), 0);
+  if (totalWaitlistedHours === 0) {
+    showToast('No waitlisted OT requests available. Please reopen the OT form to collect new requests from agents.', 'error');
+    return;
+  }
+  if (hours > totalWaitlistedHours) {
+    showToast(`Insufficient waitlisted hours. Only ${totalWaitlistedHours} hour(s) available from ${waitlistedRequests.length} request(s). Please reopen the OT form to collect more requests.`, 'error');
+    return;
+  }
+
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
 
   try {
