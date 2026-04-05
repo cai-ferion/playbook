@@ -691,3 +691,8 @@
 - [x] Add summary cards: Pending Requests | Pending Hours | Approved Today
 - [x] Audit trail for approval actions (io_audit_log)
 - [x] 23 new tests written — all 248 tests passing
+
+## Batch 46b — OT Dashboard Cleanup
+
+- [x] Removed summary cards (Pending Requests, Pending Hours, Approved Today) from OT Dashboard
+- [x] All 248 tests passing

@@ -891,19 +891,6 @@ function otDashRender() {
   const tbody = document.getElementById('ot-dash-table-body');
   if (!tbody) return;
 
-  const pending = OT_DASH.filteredRequests.filter(r => r.status === 'pending');
-  const approved = OT_DASH.filteredRequests.filter(r => r.status === 'approved');
-  const today = new Date().toISOString().slice(0, 10);
-  const approvedToday = approved.filter(r => r.approved_at && r.approved_at.slice(0, 10) === today);
-
-  // Update summary cards
-  const pendingCountEl = document.getElementById('ot-dash-pending-count');
-  const pendingHoursEl = document.getElementById('ot-dash-pending-hours');
-  const approvedTodayEl = document.getElementById('ot-dash-approved-today');
-  if (pendingCountEl) pendingCountEl.textContent = pending.length;
-  if (pendingHoursEl) pendingHoursEl.textContent = pending.reduce((sum, r) => sum + parseFloat(r.requested_hours || 0), 0).toFixed(1);
-  if (approvedTodayEl) approvedTodayEl.textContent = approvedToday.reduce((sum, r) => sum + parseFloat(r.requested_hours || 0), 0).toFixed(1);
-
   if (OT_DASH.filteredRequests.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
     return;
