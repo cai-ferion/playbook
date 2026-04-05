@@ -767,3 +767,9 @@
 - [x] Add server-side validation to reject duplicate OT requests (week-based check)
 - [x] Server returns 409 with clear error message; client already shows server errors
 - [x] All 248 tests passing
+## Batch 57 — Already Submitted Indicator on New Request Form
+- [x] Pre-check if agent already submitted OT this week when opening New Request form
+- [x] Show "Already Submitted" indicator with existing request details instead of form fields
+- [x] Shows request ID, hours, submitted date, and status
+- [x] Respects OM re-open logic (allows resubmit if form opened after last submission)
+- [x] All 248 tests passing

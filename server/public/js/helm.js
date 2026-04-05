@@ -905,7 +905,7 @@ const HELM_REQUEST_TYPES = [
 
 var _helmRequestSelectedAgent = null;
 
-function helmShowNewRequestForm() {
+async function helmShowNewRequestForm() {
   const formTitle = document.getElementById('helm-form-title');
   const formBody = document.getElementById('helm-form-body');
   const formFooter = document.getElementById('helm-form-footer');
@@ -921,6 +921,72 @@ function helmShowNewRequestForm() {
   // Filter request types: hide Attendance Backdated Change Tag from agents
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+
+  // Pre-check: if agent, check if they already submitted an OT request this week
+  if (isAgent && cu) {
+    try {
+      const otResp = await fetch(`${IO_API_BASE}/ot-requests?ohr_id=${encodeURIComponent(cu.ohr_id)}`);
+      if (otResp.ok) {
+        const otRequests = await otResp.json();
+        // Calculate current week boundaries (Mon-Sun)
+        const now = new Date();
+        const dayOfWeek = now.getUTCDay();
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const weekStart = new Date(now);
+        weekStart.setUTCDate(weekStart.getUTCDate() - diffToMonday);
+        weekStart.setUTCHours(0, 0, 0, 0);
+        const thisWeekRequests = otRequests.filter(r => new Date(r.submitted_at) >= weekStart);
+        if (thisWeekRequests.length > 0) {
+          // Check if OM re-opened form after the last submission
+          const lastReq = thisWeekRequests.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
+          let canResubmit = false;
+          const myEmp = HELM.employees.find(e => e.ohr_id === cu.ohr_id);
+          const agentPg = myEmp ? (myEmp.planning_group || '') : '';
+          try {
+            const configResp = await fetch(`${IO_API_BASE}/ot-config`);
+            if (configResp.ok) {
+              const configs = await configResp.json();
+              const pgConfig = configs.find(c => c.planning_group === agentPg);
+              if (pgConfig && pgConfig.ot_form_open && pgConfig.updated_at) {
+                const formOpenedAt = new Date(pgConfig.updated_at).getTime();
+                const lastSubmittedAt = new Date(lastReq.submitted_at).getTime();
+                if (formOpenedAt > lastSubmittedAt) canResubmit = true;
+              }
+            }
+          } catch (e) { /* ignore */ }
+
+          if (!canResubmit) {
+            // Show "Already Submitted" indicator
+            const submittedDate = new Date(lastReq.submitted_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+            const statusLabel = (lastReq.status || 'pending').charAt(0).toUpperCase() + (lastReq.status || 'pending').slice(1);
+            const statusColor = statusLabel === 'Approved' ? '#16a34a' : statusLabel === 'Rejected' ? '#dc2626' : 'var(--fg-muted)';
+            formTitle.textContent = 'OT Request';
+            formBody.innerHTML = `
+              <div style="text-align:center;padding:24px 16px;">
+                <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <h3 style="font-size:16px;font-weight:700;color:var(--fg);margin-bottom:8px;">Already Submitted This Week</h3>
+                <p style="font-size:13px;color:var(--fg-muted);margin-bottom:20px;line-height:1.5;">You have already submitted an OT request for this week.<br>Only one OT request per week is allowed.</p>
+                <div style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:left;max-width:320px;margin:0 auto;">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);margin-bottom:10px;font-weight:600;">Your Request Details</div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Request ID</span><span style="font-size:13px;font-weight:600;font-family:monospace;color:var(--primary);">${escapeHtml(lastReq.request_id)}</span></div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Requested Hours</span><span style="font-size:13px;font-weight:600;">${escapeHtml(String(lastReq.requested_hours))} hr(s)</span></div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Submitted</span><span style="font-size:13px;">${submittedDate}</span></div>
+                  <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--fg-muted);">Status</span><span style="font-size:13px;font-weight:600;color:${statusColor};">${escapeHtml(statusLabel)}</span></div>
+                </div>
+              </div>
+            `;
+            formFooter.innerHTML = `<button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Close</button>`;
+            overlay.style.display = 'flex';
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to pre-check OT requests:', e);
+    }
+  }
   const filteredRequestTypes = isAgent
     ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
     : HELM_REQUEST_TYPES;
