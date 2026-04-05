@@ -835,12 +835,12 @@ var OT_DASH = {
 };
 
 async function otDashInit() {
-  // Hide approval controls for non-OM users (only OHR 740030270 can see them)
-  const OT_APPROVER_OHR = '740030270';
+  // Show approval controls for OM (740030270) and Senior Manager (703212987)
+  const OT_APPROVER_OHRS = ['740030270', '703212987'];
   const approvalControls = document.getElementById('ot-dash-approval-controls');
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   if (approvalControls) {
-    approvalControls.style.display = (cu && cu.ohr_id === OT_APPROVER_OHR) ? 'flex' : 'none';
+    approvalControls.style.display = (cu && OT_APPROVER_OHRS.includes(cu.ohr_id)) ? 'flex' : 'none';
   }
 
   // Populate planning group dropdown from employees (exclude RECALL_MEASUREMENT_CTR)

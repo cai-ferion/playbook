@@ -824,3 +824,10 @@
 
 ## Batch 66 — Reduce Notification Polling Interval
 - [x] Change notification polling interval from 30s to 10s for faster alert delivery
+
+## Batch 67 — OT Process Deck, Email Draft, Senior Manager Capabilities
+- [x] Clear all OT test data from the database
+- [x] Grant OHR 703212987 (Senior Manager) OM-level capabilities in OT process
+- [x] Grant OHR 703212987 OM-level capabilities in Anchor processes (already has Manager role = same access)
+- [ ] Create OT process presentation deck for all employees
+- [ ] Draft announcement email for OT process rollout

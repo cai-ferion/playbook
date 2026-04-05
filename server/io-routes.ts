@@ -1810,19 +1810,22 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
       is_read: false,
       created_at: now,
     }));
-    // Notif #5: On re-open, also notify OM Jenifer Rosales (740030270)
+    // Notif #5: On re-open, also notify OM Jenifer Rosales (740030270) and Senior Manager Polimetla (703212987)
     if (isReopen) {
-      notifValues.push({
-        type: "ot_form_reopen",
-        title: "OT Form Reopened",
-        message: `The OT form has been reopened for ${planning_group} by ${opened_by || 'OM'}.`,
-        actor_ohr: opened_by_ohr || "",
-        actor_name: opened_by || "",
-        target_ohr: "740030270",
-        metadata: JSON.stringify({ planning_group, is_reopen: true }),
-        is_read: false,
-        created_at: now,
-      });
+      const omNotifyOhrs = ["740030270", "703212987"];
+      for (const omOhr of omNotifyOhrs) {
+        notifValues.push({
+          type: "ot_form_reopen",
+          title: "OT Form Reopened",
+          message: `The OT form has been reopened for ${planning_group} by ${opened_by || 'OM'}.`,
+          actor_ohr: opened_by_ohr || "",
+          actor_name: opened_by || "",
+          target_ohr: omOhr,
+          metadata: JSON.stringify({ planning_group, is_reopen: true }),
+          is_read: false,
+          created_at: now,
+        });
+      }
     }
     if (notifValues.length > 0) {
       await db.insert(ioNotifications).values(notifValues);
