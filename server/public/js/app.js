@@ -444,6 +444,7 @@ async function handleLogin() {
     if (helmGroup) helmGroup.classList.add('expanded');
     // Default sidebar to Alerts (notifications) for all users
     if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+    if (typeof initNotifications === 'function') initNotifications();
     // Route to Helm Task Board for Agents, Risk Intelligence for others
     if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
       switchView('helm-board');
@@ -586,9 +587,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const helmGroup2 = document.getElementById('nav-group-helm');
       if (helmGroup2) helmGroup2.classList.add('expanded');
       // Default sidebar to Alerts (notifications) for all users
-      if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
-      // Route to Helm Task Board for Agents, Risk Intelligence for others
-      if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
+if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+       if (typeof initNotifications === 'function') initNotifications();
+       // Route to Helm Task Board for Agents, Risk Intelligence for others
+       if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
         switchView('helm-board');
       } else {
         switchView('alerts');

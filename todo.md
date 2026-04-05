@@ -816,3 +816,8 @@
 - [x] Fixed helmSwitchBoardTab re-showing Tasks Given panel for agents
 - [x] Added OT notification icons and colors to Alerts panel (5 new types)
 - [x] All 248 tests passing
+## Batch 65 — Fix OT Submission Alert Not Appearing
+- [x] Fix: OT request submission not creating in-app notification (alert) for requester
+- [x] Root cause: initNotifications() was never called — notification polling never started
+- [x] Added initNotifications() calls in both login handler and session restore
+- [x] All 248 tests passing
