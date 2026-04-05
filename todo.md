@@ -717,3 +717,8 @@
 ## Batch 49 — Hide Backdated Change Tag from Agents
 - [x] Remove "Attendance Backdated Change Tag" option from New Request form for agents
 - [x] All 248 tests passing
+## Batch 50 — Auto-Select OT Request for Agents
+- [x] Auto-select OT Request and hide dropdown for agents in New Request form
+- [x] Ensure OT fields display correctly on form open for agents
+- [x] Compile list of all in-app notification triggers
+- [x] All 248 tests passing

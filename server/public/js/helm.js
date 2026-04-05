@@ -935,9 +935,11 @@ function helmShowNewRequestForm() {
     `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmSelectRequestAgent('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)} (${escapeHtml(e.ohr_id)})</div>`
   ).join('');
 
+  // For agents: auto-select OT Request, hide dropdown, show OT fields immediately
+  const agentAutoOT = isAgent;
   formBody.innerHTML = `
     <div class="form-section">
-      <div class="form-field">
+      <div class="form-field" ${agentAutoOT ? 'style="display:none;"' : ''}>
         <label class="form-label">Request Type <span class="required">*</span></label>
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
           ${typeOptions}
@@ -945,7 +947,7 @@ function helmShowNewRequestForm() {
       </div>
 
       <!-- OT Request fields -->
-      <div id="helm-req-ot-fields" style="display:none;">
+      <div id="helm-req-ot-fields" style="${agentAutoOT ? '' : 'display:none;'}">
         <div class="form-field">
           <label class="form-label">How many OT hours are you willing to render? <span class="required">*</span></label>
           <select class="form-input" id="helm-req-ot-hours" style="max-width:220px;">
@@ -959,7 +961,7 @@ function helmShowNewRequestForm() {
       </div>
 
       <!-- Attendance Backdated Change Tag fields -->
-      <div id="helm-req-attendance-fields">
+      <div id="helm-req-attendance-fields" style="${agentAutoOT ? 'display:none;' : ''}">
         <div class="form-field">
           <label class="form-label">Date <span class="required">*</span></label>
           <input type="date" class="form-input" id="helm-req-date" style="max-width:220px;" onchange="helmUpdateCurrentTag()">
