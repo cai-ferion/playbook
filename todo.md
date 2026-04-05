@@ -696,3 +696,9 @@
 
 - [x] Removed summary cards (Pending Requests, Pending Hours, Approved Today) from OT Dashboard
 - [x] All 248 tests passing
+
+## Batch 46c — OT Dashboard Approval Controls
+
+- [x] Move "Open OT Form" button to the right of the "Apply" button (removed margin-left:auto)
+- [x] Restrict approval controls section to OHR 740030270 (OM/approver) only
+- [x] All 248 tests passing

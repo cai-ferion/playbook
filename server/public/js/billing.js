@@ -835,6 +835,14 @@ var OT_DASH = {
 };
 
 async function otDashInit() {
+  // Hide approval controls for non-OM users (only OHR 740030270 can see them)
+  const OT_APPROVER_OHR = '740030270';
+  const approvalControls = document.getElementById('ot-dash-approval-controls');
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  if (approvalControls) {
+    approvalControls.style.display = (cu && cu.ohr_id === OT_APPROVER_OHR) ? 'flex' : 'none';
+  }
+
   // Populate planning group dropdown from employees (exclude RECALL_MEASUREMENT_CTR)
   try {
     const resp = await fetch(`${IO_API_BASE}/employees`);

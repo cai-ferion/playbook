@@ -624,7 +624,7 @@
           <div id="billing-tab-ot-dashboard" class="billing-tab-content" style="display:none;margin-top:16px;">
 
             <!-- Approval controls -->
-            <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:16px;flex-wrap:wrap;padding:16px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;">
+            <div id="ot-dash-approval-controls" style="display:flex;align-items:flex-end;gap:12px;margin-bottom:16px;flex-wrap:wrap;padding:16px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;">
               <div style="flex:0 0 auto;">
                 <label style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Planning Group <span style="color:var(--danger);">*</span></label>
                 <select class="form-input" id="ot-dash-pg-select" onchange="otDashOnPgChange()" style="min-width:200px;">
@@ -636,7 +636,7 @@
                 <input type="number" class="form-input" id="ot-dash-hours-input" placeholder="e.g. 10" min="0.5" step="0.5" style="width:120px;">
               </div>
               <button class="btn btn-primary btn-sm" id="ot-dash-apply-btn" onclick="otDashApply()" disabled style="opacity:0.5;cursor:not-allowed;">Apply</button>
-              <button class="btn btn-outline btn-sm" id="ot-dash-open-form-btn" onclick="otDashOpenForm()" style="margin-left:auto;">Open OT Form</button>
+              <button class="btn btn-outline btn-sm" id="ot-dash-open-form-btn" onclick="otDashOpenForm()">Open OT Form</button>
             </div>
 
             <!-- OT Requests table -->
