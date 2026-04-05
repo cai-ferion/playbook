@@ -749,3 +749,6 @@
 - [x] OT request detail view shows hours, planning group, approval info
 - [x] After OT submission, auto-refreshes and switches to Approvals tab
 - [x] All 248 tests passing
+## Batch 53 — Remove Comments from OT Request Detail
+- [x] Hide Comments section in approval detail view for agents and OT Request category
+- [x] All 248 tests passing

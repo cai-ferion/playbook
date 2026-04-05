@@ -1499,14 +1499,18 @@ function helmOpenApprovalDetail(taskId) {
   html += `<div class="detail-row"><span class="detail-label">Request Date</span><span class="detail-value">${createdStr}</span></div>`;
   html += '</div>';
 
-  // Comments section
-  html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Comments</h4>';
-  html += '<div id="helm-comments-list" style="margin-bottom:12px;"><div style="text-align:center;padding:12px;color:var(--fg-muted);font-size:12px;">Loading comments...</div></div>';
-  html += `<div style="display:flex;gap:8px;align-items:flex-start;">
-    <textarea class="form-input" id="helm-comment-input" rows="2" placeholder="Add a comment..." style="flex:1;resize:vertical;font-size:13px;"></textarea>
-    <button class="btn btn-primary btn-sm" onclick="helmSubmitComment()" style="white-space:nowrap;">Post</button>
-  </div>`;
-  html += '</div>';
+  // Comments section — hidden for agents and OT requests
+  const _cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const _isAgentView = _cu && _cu.actual_role === 'Agent' && _cu.ohr_id !== '740045023';
+  if (!_isAgentView && !task._isOtRequest) {
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Comments</h4>';
+    html += '<div id="helm-comments-list" style="margin-bottom:12px;"><div style="text-align:center;padding:12px;color:var(--fg-muted);font-size:12px;">Loading comments...</div></div>';
+    html += `<div style="display:flex;gap:8px;align-items:flex-start;">
+      <textarea class="form-input" id="helm-comment-input" rows="2" placeholder="Add a comment..." style="flex:1;resize:vertical;font-size:13px;"></textarea>
+      <button class="btn btn-primary btn-sm" onclick="helmSubmitComment()" style="white-space:nowrap;">Post</button>
+    </div>`;
+    html += '</div>';
+  }
 
   formBody.innerHTML = html;
 
@@ -1527,7 +1531,10 @@ function helmOpenApprovalDetail(taskId) {
   formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
-  helmLoadComments(taskId);
+  // Only load comments if the comments section is shown
+  if (!_isAgentView && !task._isOtRequest) {
+    helmLoadComments(taskId);
+  }
 }
 
 async function helmApproveRequest(taskId, decision) {
