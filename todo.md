@@ -829,5 +829,8 @@
 - [x] Clear all OT test data from the database
 - [x] Grant OHR 703212987 (Senior Manager) OM-level capabilities in OT process
 - [x] Grant OHR 703212987 OM-level capabilities in Anchor processes (already has Manager role = same access)
-- [ ] Create OT process presentation deck for all employees
-- [ ] Draft announcement email for OT process rollout
+- [x] Create OT process presentation deck for all employees
+- [x] Draft announcement email for OT process rollout
+
+## Batch 68 — OT Status Display Change
+- [x] Change OT request status to "Approved" on Task Board and OT Dashboard when OT has been applied

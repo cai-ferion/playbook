@@ -911,7 +911,7 @@ function otDashRender() {
     const statusColor = r.status === 'approved' ? 'var(--accent)' : 'var(--fg)';
     const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);' : '';
 
-    const statusLabel = r.status === 'approved' ? 'Applied' : 'Waitlisted';
+    const statusLabel = r.status === 'approved' ? 'Approved' : 'Waitlisted';
     const statusBadgeBg = r.status === 'approved' ? 'rgba(22,163,74,0.1)' : 'rgba(234,179,8,0.1)';
     const statusBadgeColor = r.status === 'approved' ? '#16a34a' : '#b45309';
 
