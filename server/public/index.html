@@ -83,18 +83,18 @@
         <div class="sidebar-subtitle">Operational Platform &middot; 2026</div>
         <!-- Sidebar Mode Toggle -->
         <div class="sidebar-mode-toggle" id="sidebar-mode-toggle">
-          <button class="sidebar-toggle-btn active" id="sidebar-toggle-nav" onclick="setSidebarMode('nav')" title="Navigation">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-nav" onclick="setSidebarMode('nav')" title="Navigation">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             Menu
           </button>
-          <button class="sidebar-toggle-btn" id="sidebar-toggle-notif" onclick="setSidebarMode('notifications')" title="Notifications">
+          <button class="sidebar-toggle-btn active" id="sidebar-toggle-notif" onclick="setSidebarMode('notifications')" title="Notifications">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             Alerts
             <span class="sidebar-notif-badge" id="sidebar-notif-badge" style="display:none;">0</span>
           </button>
         </div>
       </div>
-      <nav class="sidebar-nav" style="overflow:hidden;">
+      <nav class="sidebar-nav" style="overflow:hidden;display:none;">
         <div class="sidebar-nav-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-bottom:8px;">
         <!-- Anchor Section (Collapsible) -->
         <div class="nav-group" id="nav-group-anchor">
@@ -242,7 +242,7 @@
         </div>
       </nav>
       <!-- Sidebar Notification Panel (hidden by default, shown when toggled) -->
-      <div class="sidebar-notif-panel" id="sidebar-notif-panel" style="display:none;">
+      <div class="sidebar-notif-panel" id="sidebar-notif-panel" style="display:flex;">
         <div class="sidebar-notif-header">
           <div class="sidebar-notif-actions">
             <button class="notif-action-btn" onclick="markAllNotificationsRead()" title="Mark all as read">

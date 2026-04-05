@@ -710,3 +710,7 @@
 - [x] Grid switches from 3-column to 2-column for agents (Tasks Received + Approvals)
 - [x] Agents still see New Request button, Tasks Received, and Approvals
 - [x] All 248 tests passing
+## Batch 48 — Default Page & Nav Bar for Agents
+- [x] Make Helm Task Board the default starting page for Agents
+- [x] Ensure left nav bar defaults to Alerts view (not Menu) for all users
+- [x] All 248 tests passing

@@ -417,9 +417,9 @@ async function handleLogin() {
       if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
     });
 
-    // Helm — visible to all except Agents
+    // Helm — visible to all (agents see Task Board only)
     const helmNav = document.getElementById('nav-group-helm');
-    if (helmNav) helmNav.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) ? 'none' : '';
+    if (helmNav) helmNav.style.display = '';
 
     // Helm Analytics — admin only
     const helmAnalyticsNav = document.getElementById('nav-helm-analytics');
@@ -442,9 +442,11 @@ async function handleLogin() {
     if (anchorGroup) anchorGroup.classList.add('expanded');
     const helmGroup = document.getElementById('nav-group-helm');
     if (helmGroup) helmGroup.classList.add('expanded');
-    // Route to Risk Intelligence for non-Agents, Compass for Agents (all Anchor pages hidden from Agents)
+    // Default sidebar to Alerts (notifications) for all users
+    if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+    // Route to Helm Task Board for Agents, Risk Intelligence for others
     if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
-      switchView('input');
+      switchView('helm-board');
     } else {
       switchView('alerts');
     }
@@ -558,9 +560,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
       });
 
-      // Helm — visible to all except Agents
+      // Helm — visible to all (agents see Task Board only)
       const helmNav2 = document.getElementById('nav-group-helm');
-      if (helmNav2) helmNav2.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) ? 'none' : '';
+      if (helmNav2) helmNav2.style.display = '';
 
       // Helm Analytics — admin only
       const helmAnalyticsNav2 = document.getElementById('nav-helm-analytics');
@@ -583,9 +585,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (anchorGroup2) anchorGroup2.classList.add('expanded');
       const helmGroup2 = document.getElementById('nav-group-helm');
       if (helmGroup2) helmGroup2.classList.add('expanded');
-      // Route to Risk Intelligence for non-Agents, Compass for Agents (all Anchor pages hidden from Agents)
+      // Default sidebar to Alerts (notifications) for all users
+      if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+      // Route to Helm Task Board for Agents, Risk Intelligence for others
       if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
-        switchView('input');
+        switchView('helm-board');
       } else {
         switchView('alerts');
       }
