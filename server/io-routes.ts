@@ -1429,7 +1429,7 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
     if (!validHours.includes(String(requested_hours))) {
       return res.status(400).json({ error: "requested_hours must be 1, 1.5, 2, or 2.5" });
     }
-    // Check for existing request by this agent in the current week (Mon-Sun)
+    // Check for existing requests by this agent in the current week (Mon-Sun)
     const now = new Date().toISOString();
     const nowDate = new Date(now);
     const dayOfWeek = nowDate.getUTCDay(); // 0=Sun, 1=Mon, ...
@@ -1444,21 +1444,25 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
         eq(ioOtRequests.ohr_id, ohr_id),
         gte(ioOtRequests.submitted_at, weekStartISO)
       ));
-    if (existingThisWeek.length > 0) {
-      // Allow re-request only if OM re-opened the OT form AFTER the last submission
-      const lastSubmission = existingThisWeek.sort((a: any, b: any) => 
-        new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
-      )[0];
+    const submissionCount = existingThisWeek.length;
+
+    if (submissionCount > 0) {
+      // Agent already submitted at least once this week.
+      // Check how many times OM opened the form this week (open_count).
+      // Allowed submissions = 1 (initial) + open_count for this week.
       const config = await db.select().from(ioOtConfig)
-        .where(and(eq(ioOtConfig.planning_group, planning_group || ""), eq(ioOtConfig.ot_form_open, true)));
-      if (config.length === 0) {
-        return res.status(409).json({ error: "You have already submitted an OT request this week. Only one request per week is allowed." });
+        .where(eq(ioOtConfig.planning_group, planning_group || ""));
+      let openCount = 0;
+      if (config.length > 0) {
+        // Only count opens from the current week
+        const configWeekStart = config[0].week_start || "";
+        if (configWeekStart === weekStartISO) {
+          openCount = config[0].open_count || 0;
+        }
       }
-      // Check if the form was opened after the last submission
-      const formUpdatedAt = config[0].updated_at ? new Date(config[0].updated_at).getTime() : 0;
-      const lastSubmittedAt = new Date(lastSubmission.submitted_at).getTime();
-      if (formUpdatedAt <= lastSubmittedAt) {
-        return res.status(409).json({ error: "You have already submitted an OT request this week. Only one request per week is allowed." });
+      const maxAllowed = 1 + openCount; // 1 initial + 1 per OM re-open
+      if (submissionCount >= maxAllowed) {
+        return res.status(409).json({ error: "You have already submitted an OT request this week. Please wait for your manager to reopen the OT form for additional submissions." });
       }
     }
     const requestId = "OT-" + crypto.randomBytes(4).toString("hex");
@@ -1581,16 +1585,34 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "planning_group is required" });
     }
     const now = new Date().toISOString();
-    // Upsert config row
+    // Calculate current week start (Mon-Sun)
+    const nowDate = new Date(now);
+    const dayOfWeek = nowDate.getUTCDay();
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(nowDate);
+    weekStart.setUTCDate(weekStart.getUTCDate() - diffToMonday);
+    weekStart.setUTCHours(0, 0, 0, 0);
+    const weekStartISO = weekStart.toISOString();
+
+    // Upsert config row with open_count tracking
     const existing = await db.select().from(ioOtConfig).where(eq(ioOtConfig.planning_group, planning_group));
     if (existing.length > 0) {
+      const currentWeekStart = existing[0].week_start || "";
+      let newOpenCount = 1;
+      if (currentWeekStart === weekStartISO) {
+        // Same week — increment open_count
+        newOpenCount = (existing[0].open_count || 0) + 1;
+      }
+      // If different week, reset to 1
       await db.update(ioOtConfig)
-        .set({ ot_form_open: true, updated_at: now, updated_by: opened_by || "" })
+        .set({ ot_form_open: true, open_count: newOpenCount, week_start: weekStartISO, updated_at: now, updated_by: opened_by || "" })
         .where(eq(ioOtConfig.planning_group, planning_group));
     } else {
       await db.insert(ioOtConfig).values({
         planning_group,
         ot_form_open: true,
+        open_count: 1,
+        week_start: weekStartISO,
         updated_at: now,
         updated_by: opened_by || "",
       });

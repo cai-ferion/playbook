@@ -937,7 +937,8 @@ async function helmShowNewRequestForm() {
         weekStart.setUTCHours(0, 0, 0, 0);
         const thisWeekRequests = otRequests.filter(r => new Date(r.submitted_at) >= weekStart);
         if (thisWeekRequests.length > 0) {
-          // Check if OM re-opened form after the last submission
+          // Check if agent has used all allowed submissions
+          // Allowed = 1 (initial) + open_count for this week
           const lastReq = thisWeekRequests.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
           let canResubmit = false;
           const myEmp = HELM.employees.find(e => e.ohr_id === cu.ohr_id);
@@ -947,10 +948,14 @@ async function helmShowNewRequestForm() {
             if (configResp.ok) {
               const configs = await configResp.json();
               const pgConfig = configs.find(c => c.planning_group === agentPg);
-              if (pgConfig && pgConfig.ot_form_open && pgConfig.updated_at) {
-                const formOpenedAt = new Date(pgConfig.updated_at).getTime();
-                const lastSubmittedAt = new Date(lastReq.submitted_at).getTime();
-                if (formOpenedAt > lastSubmittedAt) canResubmit = true;
+              if (pgConfig) {
+                // Check if open_count is from this week
+                let openCount = 0;
+                if (pgConfig.week_start === weekStart.toISOString()) {
+                  openCount = pgConfig.open_count || 0;
+                }
+                const maxAllowed = 1 + openCount;
+                if (thisWeekRequests.length < maxAllowed) canResubmit = true;
               }
             }
           } catch (e) { /* ignore */ }
@@ -1292,22 +1297,6 @@ async function helmSubmitNewRequest() {
     if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
       showToast('OT requests are not available for your planning group', 'error');
       return;
-    }
-
-    // Check if OT form is open for this agent's planning group
-    const agentPg = myEmp ? (myEmp.planning_group || '') : '';
-    try {
-      const configResp = await fetch(`${IO_API_BASE}/ot-config`);
-      if (configResp.ok) {
-        const configs = await configResp.json();
-        const pgConfig = configs.find(c => c.planning_group === agentPg);
-        if (!pgConfig || !pgConfig.ot_form_open) {
-          showToast('OT requests are currently closed for your planning group. Please wait for your manager to open the form.', 'error');
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to check OT form status:', e);
     }
 
     try {

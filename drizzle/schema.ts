@@ -378,6 +378,8 @@ export const ioOtConfig = mysqlTable("io_ot_config", {
   id: int("id").autoincrement().primaryKey(),
   planning_group: varchar("planning_group", { length: 100 }).notNull(),
   ot_form_open: boolean("ot_form_open").default(false).notNull(),
+  open_count: int("open_count").default(0).notNull(),
+  week_start: varchar("week_start", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
   updated_by: varchar("updated_by", { length: 255 }),
 });

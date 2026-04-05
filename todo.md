@@ -783,3 +783,12 @@
 - [x] Advise OM to reopen the OT form to collect more requests
 - [x] Also handles zero waitlisted requests case
 - [x] All 248 tests passing
+## Batch 60 — OT Form Auto-Open on Saturdays + OM Re-Open as Limit Increase
+- [x] Remove requirement for OM to open OT form before first submission
+- [x] Auto-open OT form every Saturday at 1:00 AM Manila time (first submission always allowed, no cron needed)
+- [x] Agents blocked after submitting once per week (one-per-week rule)
+- [x] OM "Open OT Form" click increases the limit by 1 (allows additional submission)
+- [x] Added open_count and week_start columns to io_ot_config
+- [x] Server tracks submissions vs open_count per week
+- [x] Client pre-check updated to use open_count logic
+- [x] All 248 tests passing
