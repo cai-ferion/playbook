@@ -888,7 +888,8 @@ function helmCalcAvgCompletion() {
 // ===== New Request Form =====
 
 const HELM_REQUEST_TYPES = [
-  { value: 'attendance_backdated_change_tag', label: 'Attendance Backdated Change Tag' }
+  { value: 'attendance_backdated_change_tag', label: 'Attendance Backdated Change Tag' },
+  { value: 'ot_request', label: 'OT Request' }
 ];
 
 var _helmRequestSelectedAgent = null;
@@ -921,6 +922,20 @@ function helmShowNewRequestForm() {
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
           ${typeOptions}
         </select>
+      </div>
+
+      <!-- OT Request fields -->
+      <div id="helm-req-ot-fields" style="display:none;">
+        <div class="form-field">
+          <label class="form-label">How many OT hours are you willing to render? <span class="required">*</span></label>
+          <select class="form-input" id="helm-req-ot-hours" style="max-width:220px;">
+            <option value="">— Select Hours —</option>
+            <option value="1">1 hour</option>
+            <option value="1.5">1.5 hours</option>
+            <option value="2">2 hours</option>
+            <option value="2.5">2.5 hours</option>
+          </select>
+        </div>
       </div>
 
       <!-- Attendance Backdated Change Tag fields -->
@@ -968,8 +983,12 @@ function helmShowNewRequestForm() {
 function helmOnRequestTypeChange() {
   const type = document.getElementById('helm-req-type')?.value || '';
   const attendanceFields = document.getElementById('helm-req-attendance-fields');
+  const otFields = document.getElementById('helm-req-ot-fields');
   if (attendanceFields) {
     attendanceFields.style.display = (type === 'attendance_backdated_change_tag') ? '' : 'none';
+  }
+  if (otFields) {
+    otFields.style.display = (type === 'ot_request') ? '' : 'none';
   }
 }
 
@@ -1176,6 +1195,55 @@ async function helmSubmitNewRequest() {
       helmSwitchBoardTab('approvals');
     } catch (e) {
       showToast('Failed to submit request: ' + e.message, 'error');
+    }
+  } else if (reqType === 'ot_request') {
+    const otHours = document.getElementById('helm-req-ot-hours')?.value || '';
+    if (!otHours) { showToast('Please select the number of OT hours', 'error'); return; }
+    if (!cu) { showToast('You must be logged in to submit an OT request', 'error'); return; }
+
+    // Check if this agent is RECALL_MEASUREMENT_CTR (excluded from OT system)
+    const myEmp = HELM.employees.find(e => e.ohr_id === cu.ohr_id);
+    if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+      showToast('OT requests are not available for your planning group', 'error');
+      return;
+    }
+
+    // Check if OT form is open for this agent's planning group
+    const agentPg = myEmp ? (myEmp.planning_group || '') : '';
+    try {
+      const configResp = await fetch(`${IO_API_BASE}/ot-config`);
+      if (configResp.ok) {
+        const configs = await configResp.json();
+        const pgConfig = configs.find(c => c.planning_group === agentPg);
+        if (!pgConfig || !pgConfig.ot_form_open) {
+          showToast('OT requests are currently closed for your planning group. Please wait for your manager to open the form.', 'error');
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to check OT form status:', e);
+    }
+
+    try {
+      const resp = await fetch(`${IO_API_BASE}/ot-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ohr_id: cu.ohr_id,
+          agent_name: cu.full_name || '',
+          planning_group: myEmp ? (myEmp.planning_group || '') : '',
+          requested_hours: otHours
+        })
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to submit OT request');
+      }
+      const result = await resp.json();
+      showToast(`OT Request submitted successfully (${otHours} hours)`, 'success');
+      helmCloseForm();
+    } catch (e) {
+      showToast(e.message || 'Failed to submit OT request', 'error');
     }
   }
 }

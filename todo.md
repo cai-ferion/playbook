@@ -670,3 +670,24 @@
 - [x] Tab 1 "Billing Dashboard" — contains existing charts and tables
 - [x] Tab 2 "OT Dashboard" — empty placeholder with clock icon and "Coming soon" message
 - [x] All 225 tests passing
+
+## Batch 46 — OT Request & Approval System
+
+- [x] Create io_ot_requests DB table (id, request_id, ohr_id, agent_name, planning_group, requested_hours, status, submitted_at, approved_at, applied_date, approved_by, approved_by_ohr)
+- [x] Create io_ot_config DB table (id, planning_group, ot_form_open, updated_at, updated_by)
+- [x] Add API endpoints: POST /ot-requests, GET /ot-requests, POST /ot-requests/approve, POST /ot-requests/open-form, GET /ot-config
+- [x] Add "OT Request" category to New Request form in Task Board (helm.js)
+- [x] OT Request form: single field — hours dropdown (1, 1.5, 2, 2.5)
+- [x] Prevent duplicate pending OT requests per agent (server-side check)
+- [x] Agent must wait for OM to open form before submitting (checks ot_config)
+- [x] Exclude RECALL_MEASUREMENT_CTR employees from OT request form
+- [x] Build OT Dashboard table in Billing Compliance (Date Submitted, Agent Name, Planning Group, Requested Hours, Approved Date)
+- [x] Add Planning Group dropdown filter (Apply button grayed out until PG selected)
+- [x] Add OT hours needed input field + Apply button for FIFO auto-approval
+- [x] On Apply: approve FIFO, write OT to attendance for today, fill Approved Date, close form
+- [x] Add "Open OT Form" button — sends in-app + GChat notification to eligible agents
+- [x] Lock OT column in Input Portal for all employees except RECALL_MEASUREMENT_CTR
+- [x] Hide tab bar in Billing Compliance for RECALL_MEASUREMENT_CTR employees
+- [x] Add summary cards: Pending Requests | Pending Hours | Approved Today
+- [x] Audit trail for approval actions (io_audit_log)
+- [x] 23 new tests written — all 248 tests passing

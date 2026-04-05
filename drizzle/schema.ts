@@ -351,3 +351,36 @@ export const ioTaskComments = mysqlTable("io_task_comments", {
 
 export type IoTaskComment = typeof ioTaskComments.$inferSelect;
 export type InsertIoTaskComment = typeof ioTaskComments.$inferInsert;
+
+// ============================================================
+// OT Request & Approval System
+// ============================================================
+
+export const ioOtRequests = mysqlTable("io_ot_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  request_id: varchar("request_id", { length: 50 }).notNull(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  agent_name: varchar("agent_name", { length: 255 }).notNull(),
+  planning_group: varchar("planning_group", { length: 100 }),
+  requested_hours: varchar("requested_hours", { length: 10 }).notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(),
+  submitted_at: varchar("submitted_at", { length: 64 }).notNull(),
+  approved_at: varchar("approved_at", { length: 64 }),
+  applied_date: varchar("applied_date", { length: 30 }),
+  approved_by: varchar("approved_by", { length: 255 }),
+  approved_by_ohr: varchar("approved_by_ohr", { length: 20 }),
+});
+
+export type IoOtRequest = typeof ioOtRequests.$inferSelect;
+export type InsertIoOtRequest = typeof ioOtRequests.$inferInsert;
+
+export const ioOtConfig = mysqlTable("io_ot_config", {
+  id: int("id").autoincrement().primaryKey(),
+  planning_group: varchar("planning_group", { length: 100 }).notNull(),
+  ot_form_open: boolean("ot_form_open").default(false).notNull(),
+  updated_at: varchar("updated_at", { length: 64 }),
+  updated_by: varchar("updated_by", { length: 255 }),
+});
+
+export type IoOtConfig = typeof ioOtConfig.$inferSelect;
+export type InsertIoOtConfig = typeof ioOtConfig.$inferInsert;

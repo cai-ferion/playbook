@@ -724,6 +724,11 @@ function renderTableRow(item) {
       </select></td>`;
     }
     if (col.key === 'ot') {
+      // OT column is locked for all employees EXCEPT RECALL_MEASUREMENT_CTR
+      const isRecall = (record.completePlanningGroup || '').includes('RECALL_MEASUREMENT_CTR');
+      if (!isRecall) {
+        return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;
+      }
       return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
     }
     if (col.key === 'remarks') {

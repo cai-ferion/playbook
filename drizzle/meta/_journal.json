@@ -22,6 +22,13 @@
       "when": 1774973883366,
       "tag": "0002_naive_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1775393455867,
+      "tag": "0003_same_anthem",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,8 @@ import {
   ioTasks,
   ioTaskComments,
   ioGchatQueue,
+  ioOtRequests,
+  ioOtConfig,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
@@ -1387,6 +1389,257 @@ router.post("/backfill-snap-status", async (req: Request, res: Response) => {
     res.json({ ok: true, message: "snap_status backfilled from io_employees.srt_status", affectedRows: (result as any)[0]?.affectedRows });
   } catch (err: any) {
     console.error("[IO API] backfill-snap-status error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// OT Request & Approval System
+// ============================================================
+
+// GET /ot-requests — list OT requests (optionally filter by planning_group, status, ohr_id)
+router.get("/ot-requests", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { planning_group, status, ohr_id } = req.query;
+    const conditions: any[] = [];
+    if (planning_group) conditions.push(eq(ioOtRequests.planning_group, planning_group as string));
+    if (status) conditions.push(eq(ioOtRequests.status, status as string));
+    if (ohr_id) conditions.push(eq(ioOtRequests.ohr_id, ohr_id as string));
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const rows = await db.select().from(ioOtRequests).where(where).orderBy(asc(ioOtRequests.submitted_at));
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] ot-requests GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /ot-requests — agent submits an OT request
+router.post("/ot-requests", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { ohr_id, agent_name, planning_group, requested_hours } = req.body;
+    if (!ohr_id || !requested_hours) {
+      return res.status(400).json({ error: "ohr_id and requested_hours are required" });
+    }
+    const validHours = ["1", "1.5", "2", "2.5"];
+    if (!validHours.includes(String(requested_hours))) {
+      return res.status(400).json({ error: "requested_hours must be 1, 1.5, 2, or 2.5" });
+    }
+    // Check for existing pending request by this agent
+    const existing = await db.select().from(ioOtRequests)
+      .where(and(eq(ioOtRequests.ohr_id, ohr_id), eq(ioOtRequests.status, "pending")));
+    if (existing.length > 0) {
+      // Check if OT form is open for their planning group (allowing re-request)
+      const config = await db.select().from(ioOtConfig)
+        .where(and(eq(ioOtConfig.planning_group, planning_group || ""), eq(ioOtConfig.ot_form_open, true)));
+      if (config.length === 0) {
+        return res.status(409).json({ error: "You already have a pending OT request. Please wait for approval." });
+      }
+    }
+    const requestId = "OT-" + crypto.randomBytes(4).toString("hex");
+    const now = new Date().toISOString();
+    await db.insert(ioOtRequests).values({
+      request_id: requestId,
+      ohr_id,
+      agent_name: agent_name || "",
+      planning_group: planning_group || "",
+      requested_hours: String(requested_hours),
+      status: "pending",
+      submitted_at: now,
+    });
+    res.status(201).json({ ok: true, request_id: requestId });
+  } catch (err: any) {
+    console.error("[IO API] ot-requests POST error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /ot-requests/approve — OM approves OT requests for a planning group (FIFO)
+router.post("/ot-requests/approve", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { planning_group, ot_hours_needed, approved_by, approved_by_ohr } = req.body;
+    if (!planning_group || !ot_hours_needed) {
+      return res.status(400).json({ error: "planning_group and ot_hours_needed are required" });
+    }
+    const hoursNeeded = parseFloat(ot_hours_needed);
+    if (isNaN(hoursNeeded) || hoursNeeded <= 0) {
+      return res.status(400).json({ error: "ot_hours_needed must be a positive number" });
+    }
+    // Get pending requests for this PG, sorted by submitted_at ASC (FIFO)
+    const pending = await db.select().from(ioOtRequests)
+      .where(and(eq(ioOtRequests.planning_group, planning_group), eq(ioOtRequests.status, "pending")))
+      .orderBy(asc(ioOtRequests.submitted_at));
+    if (pending.length === 0) {
+      return res.status(404).json({ error: "No pending OT requests for this planning group" });
+    }
+    const now = new Date().toISOString();
+    const todayDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    let hoursRemaining = hoursNeeded;
+    const approved: any[] = [];
+    for (const req of pending) {
+      if (hoursRemaining <= 0) break;
+      const reqHours = parseFloat(req.requested_hours);
+      if (reqHours <= hoursRemaining) {
+        // Approve this request
+        await db.update(ioOtRequests)
+          .set({ status: "approved", approved_at: now, applied_date: todayDate, approved_by: approved_by || "", approved_by_ohr: approved_by_ohr || "" })
+          .where(eq(ioOtRequests.id, req.id));
+        // Write OT to attendance for today
+        const attRows = await db.select().from(ioAttendance)
+          .where(and(eq(ioAttendance.ohr_id, req.ohr_id), eq(ioAttendance.log_date, todayDate)));
+        if (attRows.length > 0) {
+          await db.update(ioAttendance)
+            .set({ ot_hours: String(reqHours) })
+            .where(eq(ioAttendance.id, attRows[0].id));
+        } else {
+          // Create attendance record for today with OT
+          const emp = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, req.ohr_id));
+          const e = emp[0];
+          const attId = crypto.randomBytes(8).toString("hex");
+          await db.insert(ioAttendance).values({
+            id: attId,
+            ohr_id: req.ohr_id,
+            log_date: todayDate,
+            ot_hours: String(reqHours),
+            created_at: now,
+            snap_full_name: e?.full_name || req.agent_name,
+            snap_supervisor: e?.supervisor_name || "",
+            snap_planning_group: e?.planning_group || "",
+            snap_shift_time: e?.shift_time || "",
+            snap_actual_role: e?.actual_role || "",
+            snap_billing_name: e?.billing_name || "",
+            snap_status: e?.srt_status || "",
+          });
+        }
+        // Audit log
+        await db.insert(ioAuditLog).values({
+          record_type: "ot_request",
+          record_id: req.request_id,
+          action: "approved",
+          field_name: "status",
+          old_value: "pending",
+          new_value: "approved",
+          actor_ohr: approved_by_ohr || "",
+          actor_name: approved_by || "",
+          timestamp: now,
+          metadata: JSON.stringify({ ot_hours: reqHours, applied_date: todayDate, planning_group }),
+        });
+        hoursRemaining -= reqHours;
+        approved.push({ request_id: req.request_id, ohr_id: req.ohr_id, agent_name: req.agent_name, hours: reqHours });
+      }
+    }
+    // Close OT form for this planning group after approval
+    await db.update(ioOtConfig)
+      .set({ ot_form_open: false, updated_at: now, updated_by: approved_by || "" })
+      .where(eq(ioOtConfig.planning_group, planning_group));
+    res.json({
+      ok: true,
+      approved_count: approved.length,
+      total_hours_approved: approved.reduce((sum: number, a: any) => sum + a.hours, 0),
+      hours_remaining: Math.max(0, hoursRemaining),
+      approved,
+    });
+  } catch (err: any) {
+    console.error("[IO API] ot-requests/approve error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /ot-requests/open-form — OM opens OT form for a planning group (sends notifications)
+router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { planning_group, opened_by, opened_by_ohr } = req.body;
+    if (!planning_group) {
+      return res.status(400).json({ error: "planning_group is required" });
+    }
+    const now = new Date().toISOString();
+    // Upsert config row
+    const existing = await db.select().from(ioOtConfig).where(eq(ioOtConfig.planning_group, planning_group));
+    if (existing.length > 0) {
+      await db.update(ioOtConfig)
+        .set({ ot_form_open: true, updated_at: now, updated_by: opened_by || "" })
+        .where(eq(ioOtConfig.planning_group, planning_group));
+    } else {
+      await db.insert(ioOtConfig).values({
+        planning_group,
+        ot_form_open: true,
+        updated_at: now,
+        updated_by: opened_by || "",
+      });
+    }
+    // Get all agents in this planning group (exclude RECALL_MEASUREMENT_CTR)
+    const agents = await db.select().from(ioEmployees)
+      .where(eq(ioEmployees.planning_group, planning_group));
+    const eligibleAgents = agents.filter((a: any) =>
+      a.actual_role === "Agent" &&
+      !(a.complete_planning_group || "").includes("RECALL_MEASUREMENT_CTR")
+    );
+    // Create in-app notifications for each eligible agent
+    let notifCount = 0;
+    for (const agent of eligibleAgents) {
+      await db.insert(ioNotifications).values({
+        type: "ot_form_open",
+        title: "OT Request Form Open",
+        message: `OT requests are now open for ${planning_group}. You may submit a new OT request.`,
+        actor_ohr: opened_by_ohr || "",
+        actor_name: opened_by || "",
+        target_ohr: agent.ohr_id,
+        metadata: JSON.stringify({ planning_group }),
+        is_read: false,
+        created_at: now,
+      });
+      notifCount++;
+      // Queue GChat notification if agent has gchat_space_id
+      if (agent.gchat_space_id) {
+        const cardJson = JSON.stringify({
+          cardsV2: [{
+            cardId: `ot-form-open-${agent.ohr_id}`,
+            card: {
+              header: { title: "OT Request Form Open", subtitle: planning_group, imageUrl: "", imageType: "CIRCLE" },
+              sections: [{
+                widgets: [
+                  { textParagraph: { text: `OT requests are now open for <b>${planning_group}</b>. You may submit a new OT request in the Task Board.` } },
+                ]
+              }]
+            }
+          }]
+        });
+        await db.insert(ioGchatQueue).values({
+          type: "ot_form_open",
+          target_space_id: agent.gchat_space_id,
+          target_name: agent.full_name || "",
+          card_json: cardJson,
+          fallback_text: `OT requests are now open for ${planning_group}. Submit your OT request in the Task Board.`,
+          status: "pending",
+          metadata: JSON.stringify({ planning_group, ohr_id: agent.ohr_id }),
+          created_at: now,
+        });
+      }
+    }
+    res.json({ ok: true, notifications_sent: notifCount, planning_group });
+  } catch (err: any) {
+    console.error("[IO API] ot-requests/open-form error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /ot-config — get OT form open/closed state for all planning groups
+router.get("/ot-config", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const rows = await db.select().from(ioOtConfig);
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] ot-config GET error:", err);
     res.status(500).json({ error: err.message });
   }
 });

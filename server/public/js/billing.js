@@ -132,6 +132,34 @@ async function initBillingCompliance() {
 
   // Load YTD analytics: doughnut (per-week compliance) + trend charts
   loadBillingYTDAnalytics();
+
+  // Hide tab bar for RECALL_MEASUREMENT_CTR employees
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  if (cu) {
+    try {
+      const empResp = await fetch(`${IO_API_BASE}/employees`);
+      if (empResp.ok) {
+        const allEmps = await empResp.json();
+        const myEmp = allEmps.find(e => e.ohr_id === cu.ohr_id);
+        if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+          // Hide tab bar — they only see the Billing Dashboard content without tabs
+          const tabBar = document.querySelector('.billing-tab-bar');
+          if (tabBar) tabBar.style.display = 'none';
+          // Ensure Billing Dashboard tab is visible
+          const billingTab = document.getElementById('billing-tab-billing-dashboard');
+          if (billingTab) billingTab.style.display = '';
+          const otTab = document.getElementById('billing-tab-ot-dashboard');
+          if (otTab) otTab.style.display = 'none';
+          return; // Skip OT Dashboard init
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to check employee planning group:', e);
+    }
+  }
+
+  // Initialize OT Dashboard
+  await otDashInit();
 }
 
 /**
@@ -791,5 +819,196 @@ async function billingUpdateTargetHours(code, value) {
   } catch (e) {
     console.error('Failed to save target hours:', e);
     showToast('Failed to save target hours', 'error');
+  }
+}
+
+
+// ============================================================
+// OT Dashboard — Request Table, Approval, Open Form
+// ============================================================
+
+var OT_DASH = {
+  requests: [],
+  filteredRequests: [],
+  selectedPg: '',
+  planningGroups: []
+};
+
+async function otDashInit() {
+  // Populate planning group dropdown from employees (exclude RECALL_MEASUREMENT_CTR)
+  try {
+    const resp = await fetch(`${IO_API_BASE}/employees`);
+    if (resp.ok) {
+      const employees = await resp.json();
+      const pgSet = new Set();
+      employees.forEach(e => {
+        if (e.planning_group && !(e.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+          pgSet.add(e.planning_group);
+        }
+      });
+      OT_DASH.planningGroups = Array.from(pgSet).sort();
+      const select = document.getElementById('ot-dash-pg-select');
+      if (select) {
+        let opts = '<option value="">— Select Planning Group —</option>';
+        OT_DASH.planningGroups.forEach(pg => {
+          opts += `<option value="${escapeAttr(pg)}">${escapeHtml(pg)}</option>`;
+        });
+        select.innerHTML = opts;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load planning groups for OT Dashboard:', e);
+  }
+  await otDashFetchRequests();
+}
+
+async function otDashFetchRequests() {
+  try {
+    const resp = await fetch(`${IO_API_BASE}/ot-requests`);
+    if (!resp.ok) throw new Error('Failed to fetch OT requests');
+    OT_DASH.requests = await resp.json();
+    otDashApplyFilter();
+  } catch (e) {
+    console.error('Failed to fetch OT requests:', e);
+    OT_DASH.requests = [];
+    otDashApplyFilter();
+  }
+}
+
+function otDashApplyFilter() {
+  const pg = OT_DASH.selectedPg;
+  if (pg) {
+    OT_DASH.filteredRequests = OT_DASH.requests.filter(r => r.planning_group === pg);
+  } else {
+    OT_DASH.filteredRequests = [...OT_DASH.requests];
+  }
+  // Sort by created_at ascending (FIFO — earliest first)
+  OT_DASH.filteredRequests.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  otDashRender();
+}
+
+function otDashRender() {
+  const tbody = document.getElementById('ot-dash-table-body');
+  if (!tbody) return;
+
+  const pending = OT_DASH.filteredRequests.filter(r => r.status === 'pending');
+  const approved = OT_DASH.filteredRequests.filter(r => r.status === 'approved');
+  const today = new Date().toISOString().slice(0, 10);
+  const approvedToday = approved.filter(r => r.approved_at && r.approved_at.slice(0, 10) === today);
+
+  // Update summary cards
+  const pendingCountEl = document.getElementById('ot-dash-pending-count');
+  const pendingHoursEl = document.getElementById('ot-dash-pending-hours');
+  const approvedTodayEl = document.getElementById('ot-dash-approved-today');
+  if (pendingCountEl) pendingCountEl.textContent = pending.length;
+  if (pendingHoursEl) pendingHoursEl.textContent = pending.reduce((sum, r) => sum + parseFloat(r.requested_hours || 0), 0).toFixed(1);
+  if (approvedTodayEl) approvedTodayEl.textContent = approvedToday.reduce((sum, r) => sum + parseFloat(r.requested_hours || 0), 0).toFixed(1);
+
+  if (OT_DASH.filteredRequests.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  OT_DASH.filteredRequests.forEach(r => {
+    const submittedDate = r.created_at ? new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+    const approvedDate = r.approved_at ? new Date(r.approved_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+    const statusColor = r.status === 'approved' ? 'var(--accent)' : 'var(--fg)';
+    const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);' : '';
+
+    html += `<tr style="${rowBg}">
+      <td style="padding:8px 12px;">${submittedDate}</td>
+      <td style="padding:8px 12px;">${escapeHtml(r.agent_name || '—')}</td>
+      <td style="padding:8px 12px;">${escapeHtml(r.planning_group || '—')}</td>
+      <td style="padding:8px 12px;text-align:center;font-weight:600;">${r.requested_hours}</td>
+      <td style="padding:8px 12px;color:${statusColor};">${approvedDate}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function otDashOnPgChange() {
+  const select = document.getElementById('ot-dash-pg-select');
+  OT_DASH.selectedPg = select ? select.value : '';
+
+  // Enable/disable Apply button based on planning group selection
+  const applyBtn = document.getElementById('ot-dash-apply-btn');
+  if (applyBtn) {
+    if (OT_DASH.selectedPg) {
+      applyBtn.disabled = false;
+      applyBtn.style.opacity = '1';
+      applyBtn.style.cursor = 'pointer';
+    } else {
+      applyBtn.disabled = true;
+      applyBtn.style.opacity = '0.5';
+      applyBtn.style.cursor = 'not-allowed';
+    }
+  }
+
+  otDashApplyFilter();
+}
+
+async function otDashApply() {
+  const pg = OT_DASH.selectedPg;
+  if (!pg) { showToast('Please select a Planning Group first', 'error'); return; }
+
+  const hoursInput = document.getElementById('ot-dash-hours-input');
+  const hours = hoursInput ? parseFloat(hoursInput.value) : 0;
+  if (!hours || hours <= 0) { showToast('Please enter the number of OT hours needed', 'error'); return; }
+
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/ot-requests/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        planning_group: pg,
+        ot_hours_needed: hours,
+        approved_by: cu ? cu.full_name : '',
+        approved_by_ohr: cu ? cu.ohr_id : ''
+      })
+    });
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to approve OT requests');
+    }
+    const result = await resp.json();
+    showToast(`Approved ${result.total_approved} request(s) — ${result.total_hours_approved} hours for ${pg}`, 'success');
+
+    // Clear hours input
+    if (hoursInput) hoursInput.value = '';
+
+    // Refresh the table
+    await otDashFetchRequests();
+  } catch (e) {
+    showToast(e.message || 'Failed to approve OT requests', 'error');
+  }
+}
+
+async function otDashOpenForm() {
+  const pg = OT_DASH.selectedPg;
+  if (!pg) { showToast('Please select a Planning Group first', 'error'); return; }
+
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/ot-requests/open-form`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        planning_group: pg,
+        opened_by: cu ? cu.full_name : '',
+        opened_by_ohr: cu ? cu.ohr_id : ''
+      })
+    });
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error || 'Failed to open OT form');
+    }
+    const result = await resp.json();
+    showToast(`OT form opened for ${pg} — ${result.notifications_sent} agent(s) notified`, 'success');
+  } catch (e) {
+    showToast(e.message || 'Failed to open OT form', 'error');
   }
 }
