@@ -725,3 +725,18 @@
 ## Batch 50b — OT Request Form Title for Agents
 - [x] Show "OT Request" title in the New Request form for agents when dropdown is hidden
 - [x] All 248 tests passing
+## Batch 51 — Remove Unnecessary In-App Notifications
+- [x] Remove #3: Duplicate client-side task_assigned notification (helm.js)
+- [x] Remove #11: User login notification (notifyUserLogin)
+- [x] Remove #12: Coaching log issued notification (notifyCoachingIssued)
+- [x] Remove #13: All coaching dispute notifications (compass.js — 14 triggers)
+- [x] Remove #14-16: Leave filed/approved/rejected notifications (haven.js)
+- [x] Remove #17-18: Insight submitted/reviewed notifications (sandbox.js)
+- [x] Remove #19: Roster add/edit/delete notifications (roster.js)
+- [x] Remove #5: Attendance record save notification (notifyRecordSave)
+- [x] Remove #7: Billing code change notification (notifyBillingCodeChange)
+- [x] Remove #8: Billing file upload notification (notifyBillingFileUpload)
+- [x] Remove #9: SRT file upload notification (notifySrtUpload)
+- [x] Remove #21: System alert notification (notifySystemAlert)
+- [x] Updated batch22 test to reflect removal
+- [x] All 248 tests passing

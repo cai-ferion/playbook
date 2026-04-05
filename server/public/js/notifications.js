@@ -404,45 +404,7 @@ function showNotifDetailCard(n) {
 
 // ===== Notification Trigger Helpers =====
 
-async function notifyRecordSave(count, date) {
-  await createNotification({
-    type: 'record_save',
-    title: 'Attendance Saved',
-    message: `${count} record(s) saved for ${date || 'selected date'}.`,
-    metadata: { count, date },
-  });
-}
-
-async function notifySrtUpload(updated, fixed, failed) {
-  const parts = [];
-  if (fixed > 0) parts.push(`${fixed} SRT ID(s) fixed`);
-  if (updated > 0) parts.push(`${updated} status(es) updated`);
-  if (failed > 0) parts.push(`${failed} failed`);
-  await createNotification({
-    type: 'srt_upload',
-    title: 'SRT File Processed',
-    message: parts.join(', ') + '.',
-    metadata: { updated, fixed, failed },
-  });
-}
-
-async function notifyBillingCodeChange(agentName, oldCode, newCode, count) {
-  await createNotification({
-    type: 'billing_code_edit',
-    title: 'Billing Code Changed',
-    message: `${agentName}: ${oldCode || '—'} → ${newCode}`,
-    metadata: { agentName, oldCode, newCode, count: count || 1 },
-  });
-}
-
-async function notifyBillingFileUpload(count) {
-  await createNotification({
-    type: 'billing_change',
-    title: 'Billing Codes Updated',
-    message: `Billing code file applied: ${count} record(s) updated.`,
-    metadata: { count },
-  });
-}
+// Removed: notifyRecordSave, notifySrtUpload, notifyBillingCodeChange, notifyBillingFileUpload (Batch 51)
 
 async function notifyBackdateRequest(agentName, requestDate, newTag, reason) {
   // Get the supervisor OHR for the agent
@@ -465,32 +427,7 @@ async function notifyBackdateRequest(agentName, requestDate, newTag, reason) {
   });
 }
 
-async function notifyUserLogin() {
-  await createNotification({
-    type: 'login',
-    title: 'User Login',
-    message: `${currentUser.full_name} logged in.`,
-    metadata: { ohr_id: currentUser.ohr_id, role: currentUser.actual_role },
-  });
-}
-
-async function notifySystemAlert(title, message) {
-  await createNotification({
-    type: 'system_alert',
-    title,
-    message,
-    metadata: {},
-  });
-}
-
-async function notifyCoachingIssued(coacheeName, coachingType, coachingId, sessionGoal) {
-  await createNotification({
-    type: 'coaching_issued',
-    title: 'Coaching Log Issued',
-    message: `${coachingType} to ${coacheeName}${sessionGoal ? ': ' + sessionGoal : ''} (${coachingId})`,
-    metadata: { coacheeName, coachingType, coachingId, sessionGoal },
-  });
-}
+// Removed: notifyUserLogin, notifySystemAlert, notifyCoachingIssued (Batch 51)
 
 async function notifyAbsentTag(agentName, agentOhr, date) {
   await createNotification({
@@ -503,19 +440,7 @@ async function notifyAbsentTag(agentName, agentOhr, date) {
   });
 }
 
-async function notifyTaskAssigned(taskId, taskTitle, assignees) {
-  // Create notification for each assignee
-  const assigneeNames = assignees.map(a => a.name || a.full_name || 'Unknown');
-  for (const assignee of assignees) {
-    await createNotification({
-      type: 'task_assigned',
-      title: 'Task Assigned',
-      message: `"${taskTitle}" assigned to you`,
-      target_ohr: assignee.ohr_id || null,
-      metadata: { taskId, taskTitle, assigneeNames },
-    });
-  }
-}
+// Removed: notifyTaskAssigned (Batch 51 — server-side handles this)
 
 // ===== Initialization =====
 

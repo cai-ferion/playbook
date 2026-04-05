@@ -554,10 +554,6 @@ async function rosterSaveEdit() {
     if (!resp.ok) throw new Error('Failed to update employee');
 
     showToast('Employee updated successfully', 'success');
-    if (typeof createNotification === 'function') {
-      const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification({ type: 'roster_edit', title: 'Employee Updated', message: `${updates.full_name || ROSTER.editingId} record updated` });
-    }
     rosterCloseForm();
     await rosterFetchEmployees();
   } catch (e) {
@@ -642,10 +638,6 @@ async function rosterSaveNew() {
     }
 
     showToast('Employee added successfully', 'success');
-    if (typeof createNotification === 'function') {
-      const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification({ type: 'roster_add', title: 'Employee Added', message: `${record.full_name} (${record.ohr_id}) added to roster` });
-    }
     rosterCloseForm();
     await rosterFetchEmployees();
   } catch (e) {
@@ -670,10 +662,6 @@ async function rosterDeleteEmployee(ohrId) {
     if (!resp.ok) throw new Error('Failed to delete employee');
 
     showToast('Employee deleted', 'success');
-    if (typeof createNotification === 'function') {
-      const user = typeof currentUser !== 'undefined' ? currentUser : null;
-      createNotification({ type: 'roster_delete', title: 'Employee Deleted', message: `${emp ? emp.full_name : ohrId} removed from roster` });
-    }
     await rosterFetchEmployees();
   } catch (e) {
     console.error('Failed to delete employee:', e);

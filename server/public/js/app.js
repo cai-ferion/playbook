@@ -1478,10 +1478,7 @@ function applyBillingCodeEditToPending() {
   if (count > 0) {
     showToast(`Billing code changed to "${newCode}" for ${count} record(s) of ${agentName} (${startDate} to ${endDate}). Click Save Changes to persist.`, 'success');
     renderInputTable();
-    const oldCode = document.getElementById('bc-edit-current')?.textContent || '';
-    if (typeof notifyBillingCodeChange === 'function') {
-      notifyBillingCodeChange(agentName, oldCode, newCode, count).catch(() => {});
-    }
+
   } else {
     showToast('No records needed updating in the specified date range.', 'info');
   }
@@ -1578,9 +1575,6 @@ async function confirmSave() {
       appState.pendingEdits = {};
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
       renderInputTable();
-      // Notification trigger for record save
-      const dateFilter = document.getElementById('input-date')?.value || '';
-      notifyRecordSave(edits.length, dateFilter).catch(() => {});
 
       // Trigger absent alerts for agents tagged as absent-related tags
       try {

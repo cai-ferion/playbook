@@ -742,9 +742,6 @@ async function sandboxSubmitFinalApprove() {
     if (!resp.ok) throw new Error('Failed to update insight');
 
     showToast(`Insight approved → ${newStatus}`, 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'insight_review', title: 'Insight Approved', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${newStatus}` });
-    }
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();
@@ -825,9 +822,6 @@ async function sandboxReview(action) {
     if (!resp.ok) throw new Error('Failed to update insight');
 
     showToast('Insight updated successfully', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'insight_review', title: 'Insight Reviewed', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${updates.status}` });
-    }
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();
@@ -866,9 +860,6 @@ async function sandboxRejectWith(statusValue) {
     if (!resp.ok) throw new Error('Failed to reject insight');
 
     showToast('Insight rejected', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'insight_review', title: 'Insight Rejected', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${statusValue}` });
-    }
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();
@@ -962,9 +953,6 @@ async function sandboxSubmitTrainerStatus() {
     if (!resp.ok) throw new Error('Failed to update insight');
 
     showToast(`Status changed → ${newStatus}`, 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'insight_review', title: 'Insight Status Changed', message: `${ins.insight_id} — ${ins.title || ins.insight_title} → ${newStatus}` });
-    }
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();
@@ -1179,9 +1167,6 @@ async function sandboxSubmitNew() {
     if (!resp.ok) throw new Error('Failed to submit insight');
 
     showToast('Insight submitted successfully', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'insight_submit', title: 'New Insight Submitted', message: `${insightId} — ${title}` });
-    }
     sandboxCloseForm();
     await sandboxFetchInsights();
   } catch (e) {

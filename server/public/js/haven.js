@@ -298,9 +298,6 @@ async function havenQuickApprove(leaveId, tier) {
     if (!resp.ok) throw new Error('Failed to approve');
 
     showToast(`Leave approved (${tier.toUpperCase()})`, 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'leave_approve', title: 'Leave Approved', message: `${leaveId} for ${lv.full_name} → ${updates.status}` });
-    }
     await havenFetchLeaves();
   } catch (e) {
     showToast('Failed: ' + e.message, 'error');
@@ -339,9 +336,6 @@ async function havenQuickReject(leaveId, tier) {
     if (!resp.ok) throw new Error('Failed to reject');
 
     showToast('Leave rejected', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'leave_reject', title: 'Leave Rejected', message: `${leaveId} for ${lv.full_name} — Rejected: ${reason}` });
-    }
     await havenFetchLeaves();
   } catch (e) {
     showToast('Failed: ' + e.message, 'error');
@@ -513,9 +507,6 @@ async function havenSubmitNew() {
     if (!resp.ok) throw new Error('Failed to file leave');
 
     showToast('Leave request filed successfully', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'leave_file', title: 'Leave Request Filed', message: `${leaveId} — ${record.full_name} for ${date}` });
-    }
     havenCloseForm();
     await havenFetchLeaves();
   } catch (e) {

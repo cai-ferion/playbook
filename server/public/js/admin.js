@@ -530,10 +530,6 @@ async function applySrtChanges() {
     await loadEmployees();
   }
 
-  // Notification trigger for SRT upload
-  if (typeof notifySrtUpload === 'function') {
-    notifySrtUpload(success, srtFixed, failed).catch(() => {});
-  }
 
   cancelSrtUpload();
 }
@@ -786,10 +782,6 @@ async function applyBillingChanges() {
 
     cancelBillingUpload();
 
-    // Notification trigger for billing file upload
-    if (typeof notifyBillingFileUpload === 'function') {
-      notifyBillingFileUpload(success).catch(() => {});
-    }
   }, 500);
 }
 

@@ -901,9 +901,6 @@ async function compassDisputeAction(newStatus) {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Dispute action applied', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Update', message: `${log.coaching_id || log.id}: Status changed to ${update.status}` });
-    }
     compassCloseForm();
     await compassFetchLogs();
     if (COMPASS.currentSubpage === 'disputes') compassRenderKanban();
@@ -1804,12 +1801,7 @@ async function compassSubmitNew() {
 
     if (successCount > 0) {
       showToast(`${successCount} coaching log${successCount > 1 ? 's' : ''} created successfully${failCount > 0 ? ` (${failCount} failed)` : ''}`, failCount > 0 ? 'warning' : 'success');
-      // Create a notification for each coachee
-      if (typeof notifyCoachingIssued === 'function') {
-        for (let i = 0; i < coacheeList.length && i < createdIds.length; i++) {
-          notifyCoachingIssued(coacheeList[i].name, 'General Coaching', createdIds[i] || '', sessionGoal);
-        }
-      }
+
     } else {
       showToast('Failed to create coaching logs', 'error');
     }
@@ -1831,9 +1823,7 @@ async function compassSubmitNew() {
     const newId = created?.coaching_id || (Array.isArray(created) ? created[0]?.coaching_id : null) || created?.id;
 
     showToast('Coaching log created successfully', 'success');
-    if (typeof notifyCoachingIssued === 'function') {
-      notifyCoachingIssued(record.coachee, type, newId || '', sessionGoal);
-    }
+
     compassCloseForm();
     await compassFetchLogs();
   } catch (e) {
@@ -2563,9 +2553,6 @@ async function disputesSubmitDisputeMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown disputed successfully. Card moved to LV2.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown disputed by ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -2623,9 +2610,6 @@ async function disputesSubmitAcceptMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown accepted.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: Markdown accepted by ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -2678,9 +2662,6 @@ async function disputesQuickAction(newStatus) {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Dispute action applied', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Update', message: `${log.coaching_id || log.id}: Status changed to ${update.status}` });
-    }
     disputesCloseDetail();
     await compassFetchLogs();
     compassRenderKanban();
@@ -2883,9 +2864,6 @@ async function disputesSubmitRetainMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown retained. Card moved to LV3.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown retained by QA — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -2943,9 +2921,6 @@ async function disputesSubmitReverseMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown reversed by QA.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown reversed by QA — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3003,9 +2978,6 @@ async function disputesSubmitQADecisionAccepted() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('QA decision accepted.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Resolved', message: `${log.coaching_id || log.id}: QA decision accepted by SME — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3118,9 +3090,6 @@ async function disputesSubmitQADecisionRejected() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('QA decision rejected. Card moved to LV4 — Pending Trainer Decision.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Escalated', message: `${log.coaching_id || log.id}: QA decision rejected by SME, escalated to Trainer — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3218,9 +3187,6 @@ async function disputesSubmitLV5AcceptDecision() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Trainer decision accepted.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Trainer decision accepted by SME — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3277,9 +3243,6 @@ async function disputesSubmitLV5RejectDecision() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Trainer decision rejected. Card moved to LV6 — Pending QTP Manager Decision.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Escalated', message: `${log.coaching_id || log.id}: Trainer decision rejected by SME, escalated to QTP Manager — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3384,9 +3347,6 @@ async function disputesSubmitLV4RetainMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown retained by Trainer. Card moved to LV5.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute Update', message: `${log.coaching_id || log.id}: Markdown retained by Trainer — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3444,9 +3404,6 @@ async function disputesSubmitLV4ReverseMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown reversed by Trainer.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown reversed by Trainer — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3504,9 +3461,6 @@ async function disputesSubmitLV6ReverseMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown reversed by QTP Manager.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown reversed by QTP Manager — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3606,9 +3560,6 @@ async function disputesSubmitLV6RetainMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown retained by QTP Manager.', 'success');
-    if (typeof createNotification === 'function') {
-      createNotification({ type: 'coaching_dispute', title: 'Coaching Dispute', message: `${log.coaching_id || log.id}: Markdown retained by QTP Manager — ${actorName}` });
-    }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();

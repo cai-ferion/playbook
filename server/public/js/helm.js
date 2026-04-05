@@ -572,23 +572,6 @@ async function helmSubmitNew() {
 
     showToast('Task created successfully', 'success');
 
-    // Create targeted in-app notification for each assignee
-    if (typeof createNotification === 'function') {
-      for (const assignee of _helmSelectedAssignees) {
-        createNotification({
-          type: 'task_assigned',
-          title: 'Task Assigned',
-          message: `"${title}" assigned to you`,
-          target_ohr: assignee.ohr,
-          metadata: JSON.stringify({
-            taskId: created.task_id,
-            taskTitle: title,
-            assignedBy: cu ? cu.full_name : 'Unknown',
-            dueDate: record.due_date || ''
-          })
-        });
-      }
-    }
 
     // Queue GChat notification for each assignee
     try {

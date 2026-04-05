@@ -142,11 +142,13 @@ describe('Batch 22 — Helm New Request Button', () => {
 describe('Batch 22 — Regimen Roster Fix', () => {
   const roster = readPublicJS('roster.js');
 
-  it('roster.js has no syntax errors (createNotification calls are valid)', () => {
+  it('roster.js has no syntax errors (notification calls removed in Batch 51)', () => {
     // The old broken call had user?.ohr_id as positional args
     expect(roster).not.toContain('user?.ohr_id, user?.full_name)');
-    // The fixed call uses object syntax
-    expect(roster).toContain("type: 'roster_add'");
+    // Batch 51: roster notifications removed — verify they are gone
+    expect(roster).not.toContain("type: 'roster_add'");
+    expect(roster).not.toContain("type: 'roster_edit'");
+    expect(roster).not.toContain("type: 'roster_delete'");
   });
 
   it('rosterRenderTable function exists and renders ALL_COLUMNS', () => {
