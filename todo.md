@@ -834,3 +834,10 @@
 
 ## Batch 68 — OT Status Display Change
 - [x] Change OT request status to "Approved" on Task Board and OT Dashboard when OT has been applied
+
+## Batch 69 — Compass Full Visibility for TL
+- [x] Grant OHR 740045023 full visibility of all Compass records regardless of team hierarchy (already in place via isAdmin740 override)
+
+## Batch 70 — Compass Coaching Profile & Disputes Visibility for TL
+- [x] Grant OHR 740045023 full visibility of all logs in Coaching Profile page (already in place)
+- [x] Grant OHR 740045023 full visibility of all logs in Disputes Area page (already in place + fixed related logs search)

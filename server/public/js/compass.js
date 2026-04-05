@@ -1505,10 +1505,12 @@ function compassSearchParentLogs() {
   dropdown.style.left = rect.left + 'px';
   dropdown.style.width = rect.width + 'px';
 
-  // Search through logs where current user is the coach
+  // Search through logs where current user is the coach (admin sees all)
   const coach = typeof currentUser !== 'undefined' ? currentUser : null;
+  const isAdmin740 = coach && coach.ohr_id === '740045023';
   const myLogs = COMPASS.logs.filter(l => {
     if (!coach) return false;
+    if (isAdmin740) return true;
     return l.coach_ohr === coach.ohr_id;
   });
 
