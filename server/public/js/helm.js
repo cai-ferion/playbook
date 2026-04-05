@@ -1405,7 +1405,8 @@ function helmRenderApprovalsTable() {
   tbody.innerHTML = pageData.map(t => {
     const approvalStatus = t.approval_status || 'Pending';
     const statusColor = HELM_APPROVAL_COLORS[approvalStatus] || 'var(--fg-muted)';
-    const createdStr = t.created_at ? new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const dateVal = t.created_at || (t._otData && t._otData.submitted_at) || '';
+    const createdStr = dateVal ? new Date(dateVal).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
     return `<tr class="data-row" onclick="helmOpenApprovalDetail('${escapeAttr(t.task_id)}')">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
@@ -1455,7 +1456,8 @@ function helmOpenApprovalDetail(taskId) {
 
   const approvalStatus = task.approval_status || 'Pending';
   const statusColor = HELM_APPROVAL_COLORS[approvalStatus] || 'var(--fg-muted)';
-  const createdStr = task.created_at ? new Date(task.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+  const detailDateVal = task.created_at || (task._otData && task._otData.submitted_at) || '';
+  const createdStr = detailDateVal ? new Date(detailDateVal).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
 
   formTitle.innerHTML = `<span>${escapeHtml(task.task_id)}</span>`;
 

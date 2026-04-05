@@ -752,3 +752,7 @@
 ## Batch 53 — Remove Comments from OT Request Detail
 - [x] Hide Comments section in approval detail view for agents and OT Request category
 - [x] All 248 tests passing
+## Batch 54 — Fix Blank Date in OT Requests
+- [x] Fix blank "Date Submitted" column for OT requests in Approvals table
+- [x] Added fallback date from _otData.submitted_at in both table and detail view
+- [x] All 248 tests passing
