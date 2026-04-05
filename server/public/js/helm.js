@@ -157,11 +157,13 @@ function helmSwitchTab(tab) {
 function helmSwitchBoardTab(tab) {
   // All three tables are always visible side-by-side now
   HELM.currentBoardTab = tab;
-  // Ensure all panels are visible
+  // Ensure panels are visible (but keep Tasks Given hidden for agents)
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
   const tasksPanel = document.getElementById('helm-tab-tasks');
   const receivedPanel = document.getElementById('helm-tab-received');
   const approvalsPanel = document.getElementById('helm-tab-approvals');
-  if (tasksPanel) tasksPanel.style.display = '';
+  if (tasksPanel) tasksPanel.style.display = isAgent ? 'none' : '';
   if (receivedPanel) receivedPanel.style.display = '';
   if (approvalsPanel) approvalsPanel.style.display = '';
   // Refresh all tables

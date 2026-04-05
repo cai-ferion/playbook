@@ -810,3 +810,9 @@
 - [x] Notif #3: When OT has been applied, notify all agents with OT requests and their supervisors (include applied dat- [x] Notif #4: When OT approved but request is waitlisted, notify the OT requester- [x] Notif #5: When OT form has been reopened, notify all applicable agents and OM Jenifer Rosales (740030270)
 - [x] Differentiated first-open vs re-open messaging in notifications and GChat
 - [x] All 248 tests passing
+## Batch 64 — OT Submission View Fix & Alerts Panel Notifications
+- [x] Fix: After OT submission, Task Board incorrectly shows "Tasks Given" table for agents
+- [x] Verify OT notifications appear in the Alerts sidebar panel (not just toasts)
+- [x] Fixed helmSwitchBoardTab re-showing Tasks Given panel for agents
+- [x] Added OT notification icons and colors to Alerts panel (5 new types)
+- [x] All 248 tests passing
