@@ -921,7 +921,13 @@ function helmShowNewRequestForm() {
   HELM._pendingReqId = reqId;
   formTitle.textContent = reqId;
 
-  const typeOptions = HELM_REQUEST_TYPES.map(t =>
+  // Filter request types: hide Attendance Backdated Change Tag from agents
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const filteredRequestTypes = isAgent
+    ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
+    : HELM_REQUEST_TYPES;
+  const typeOptions = filteredRequestTypes.map(t =>
     `<option value="${escapeAttr(t.value)}">${escapeHtml(t.label)}</option>`
   ).join('');
 

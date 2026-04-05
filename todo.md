@@ -714,3 +714,6 @@
 - [x] Make Helm Task Board the default starting page for Agents
 - [x] Ensure left nav bar defaults to Alerts view (not Menu) for all users
 - [x] All 248 tests passing
+## Batch 49 — Hide Backdated Change Tag from Agents
+- [x] Remove "Attendance Backdated Change Tag" option from New Request form for agents
+- [x] All 248 tests passing
