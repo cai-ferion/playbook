@@ -773,3 +773,8 @@
 - [x] Shows request ID, hours, submitted date, and status
 - [x] Respects OM re-open logic (allows resubmit if form opened after last submission)
 - [x] All 248 tests passing
+## Batch 58 — OT Dashboard Status Column
+- [x] Add "Status" column to OT Dashboard table
+- [x] Show "Waitlisted" for pending OT requests (amber badge)
+- [x] Show "Applied" after OM clicks Apply (green badge)
+- [x] All 248 tests passing

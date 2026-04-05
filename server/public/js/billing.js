@@ -900,7 +900,7 @@ function otDashRender() {
   if (!tbody) return;
 
   if (OT_DASH.filteredRequests.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
     return;
   }
 
@@ -911,11 +911,16 @@ function otDashRender() {
     const statusColor = r.status === 'approved' ? 'var(--accent)' : 'var(--fg)';
     const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);' : '';
 
+    const statusLabel = r.status === 'approved' ? 'Applied' : 'Waitlisted';
+    const statusBadgeBg = r.status === 'approved' ? 'rgba(22,163,74,0.1)' : 'rgba(234,179,8,0.1)';
+    const statusBadgeColor = r.status === 'approved' ? '#16a34a' : '#b45309';
+
     html += `<tr style="${rowBg}">
       <td style="padding:8px 12px;">${submittedDate}</td>
       <td style="padding:8px 12px;">${escapeHtml(r.agent_name || '—')}</td>
       <td style="padding:8px 12px;">${escapeHtml(r.planning_group || '—')}</td>
       <td style="padding:8px 12px;text-align:center;font-weight:600;">${r.requested_hours}</td>
+      <td style="padding:8px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:${statusBadgeBg};color:${statusBadgeColor};">${statusLabel}</span></td>
       <td style="padding:8px 12px;color:${statusColor};">${approvedDate}</td>
     </tr>`;
   });
