@@ -890,8 +890,8 @@ function otDashApplyFilter() {
   } else {
     OT_DASH.filteredRequests = [...OT_DASH.requests];
   }
-  // Sort by created_at ascending (FIFO — earliest first)
-  OT_DASH.filteredRequests.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Sort by submitted_at ascending (FIFO — earliest first)
+  OT_DASH.filteredRequests.sort((a, b) => new Date(a.submitted_at || 0) - new Date(b.submitted_at || 0));
   otDashRender();
 }
 
@@ -906,7 +906,7 @@ function otDashRender() {
 
   let html = '';
   OT_DASH.filteredRequests.forEach(r => {
-    const submittedDate = r.created_at ? new Date(r.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+    const submittedDate = r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
     const approvedDate = r.approved_at ? new Date(r.approved_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
     const statusColor = r.status === 'approved' ? 'var(--accent)' : 'var(--fg)';
     const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);' : '';

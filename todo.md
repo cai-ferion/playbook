@@ -756,3 +756,8 @@
 - [x] Fix blank "Date Submitted" column for OT requests in Approvals table
 - [x] Added fallback date from _otData.submitted_at in both table and detail view
 - [x] All 248 tests passing
+## Batch 55 — Fix Blank Date in OT Dashboard
+- [x] Fix blank "Date Submitted" column in OT Dashboard table (Billing section)
+- [x] Changed from r.created_at to r.submitted_at (correct field from API)
+- [x] Also fixed sort to use submitted_at
+- [x] All 248 tests passing
