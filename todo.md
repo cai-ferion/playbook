@@ -761,3 +761,9 @@
 - [x] Changed from r.created_at to r.submitted_at (correct field from API)
 - [x] Also fixed sort to use submitted_at
 - [x] All 248 tests passing
+## Batch 56 — Prevent Duplicate OT Requests Per Week
+- [x] Prevent agents from submitting duplicate OT requests for the same week
+- [x] Allow new submission only if OM opens a new OT form AFTER last submission
+- [x] Add server-side validation to reject duplicate OT requests (week-based check)
+- [x] Server returns 409 with clear error message; client already shows server errors
+- [x] All 248 tests passing

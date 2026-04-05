@@ -1429,19 +1429,39 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
     if (!validHours.includes(String(requested_hours))) {
       return res.status(400).json({ error: "requested_hours must be 1, 1.5, 2, or 2.5" });
     }
-    // Check for existing pending request by this agent
-    const existing = await db.select().from(ioOtRequests)
-      .where(and(eq(ioOtRequests.ohr_id, ohr_id), eq(ioOtRequests.status, "pending")));
-    if (existing.length > 0) {
-      // Check if OT form is open for their planning group (allowing re-request)
+    // Check for existing request by this agent in the current week (Mon-Sun)
+    const now = new Date().toISOString();
+    const nowDate = new Date(now);
+    const dayOfWeek = nowDate.getUTCDay(); // 0=Sun, 1=Mon, ...
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(nowDate);
+    weekStart.setUTCDate(weekStart.getUTCDate() - diffToMonday);
+    weekStart.setUTCHours(0, 0, 0, 0);
+    const weekStartISO = weekStart.toISOString();
+
+    const existingThisWeek = await db.select().from(ioOtRequests)
+      .where(and(
+        eq(ioOtRequests.ohr_id, ohr_id),
+        gte(ioOtRequests.submitted_at, weekStartISO)
+      ));
+    if (existingThisWeek.length > 0) {
+      // Allow re-request only if OM re-opened the OT form AFTER the last submission
+      const lastSubmission = existingThisWeek.sort((a: any, b: any) => 
+        new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime()
+      )[0];
       const config = await db.select().from(ioOtConfig)
         .where(and(eq(ioOtConfig.planning_group, planning_group || ""), eq(ioOtConfig.ot_form_open, true)));
       if (config.length === 0) {
-        return res.status(409).json({ error: "You already have a pending OT request. Please wait for approval." });
+        return res.status(409).json({ error: "You have already submitted an OT request this week. Only one request per week is allowed." });
+      }
+      // Check if the form was opened after the last submission
+      const formUpdatedAt = config[0].updated_at ? new Date(config[0].updated_at).getTime() : 0;
+      const lastSubmittedAt = new Date(lastSubmission.submitted_at).getTime();
+      if (formUpdatedAt <= lastSubmittedAt) {
+        return res.status(409).json({ error: "You have already submitted an OT request this week. Only one request per week is allowed." });
       }
     }
     const requestId = "OT-" + crypto.randomBytes(4).toString("hex");
-    const now = new Date().toISOString();
     await db.insert(ioOtRequests).values({
       request_id: requestId,
       ohr_id,
