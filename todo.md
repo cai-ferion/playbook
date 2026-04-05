@@ -804,3 +804,9 @@
 - [x] Renamed "Approved Date" to "Applied Date" in OT Dashboard
 - [x] Updated toast to show waitlisted count
 - [x] All 248 tests passing
+## Batch 63 — OT Workflow In-App Notifications
+- [x] Notif #1: When an OT request is made, notify the requester
+- [x] Notif #2: When OT requesting opens (first time), notify all applicable agents (already existed)
+- [x] Notif #3: When OT has been applied, notify all agents with OT requests and their supervisors (include applied dat- [x] Notif #4: When OT approved but request is waitlisted, notify the OT requester- [x] Notif #5: When OT form has been reopened, notify all applicable agents and OM Jenifer Rosales (740030270)
+- [x] Differentiated first-open vs re-open messaging in notifications and GChat
+- [x] All 248 tests passing

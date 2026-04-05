@@ -1475,6 +1475,22 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
       status: "pending",
       submitted_at: now,
     });
+    // Notif #1: Notify the requester that their OT request was submitted
+    try {
+      await db.insert(ioNotifications).values({
+        type: "ot_request_submitted",
+        title: "OT Request Submitted",
+        message: `Your OT request (${requestId}) for ${requested_hours} hour(s) has been submitted and is waitlisted for next week.`,
+        actor_ohr: ohr_id,
+        actor_name: agent_name || "",
+        target_ohr: ohr_id,
+        metadata: JSON.stringify({ request_id: requestId, hours: requested_hours, planning_group }),
+        is_read: false,
+        created_at: now,
+      });
+    } catch (notifErr: any) {
+      console.error("[IO API] OT submit notification error:", notifErr.message);
+    }
     res.status(201).json({ ok: true, request_id: requestId });
   } catch (err: any) {
     console.error("[IO API] ot-requests POST error:", err);
@@ -1651,6 +1667,67 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
     await db.update(ioOtConfig)
       .set({ ot_form_open: false, updated_at: now, updated_by: approved_by || "" })
       .where(eq(ioOtConfig.planning_group, planning_group));
+
+    // Notif #3: Notify agents whose OT was applied + their supervisors
+    try {
+      const appliedNotifs: any[] = [];
+      for (const a of approved) {
+        const appliedDateFormatted = new Date(a.applied_date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        // Notify the agent
+        appliedNotifs.push({
+          type: "ot_applied",
+          title: "OT Request Applied",
+          message: `Your OT request (${a.request_id}) for ${a.hours} hour(s) has been applied on ${appliedDateFormatted}.`,
+          actor_ohr: approved_by_ohr || "",
+          actor_name: approved_by || "",
+          target_ohr: a.ohr_id,
+          metadata: JSON.stringify({ request_id: a.request_id, hours: a.hours, applied_date: a.applied_date, planning_group }),
+          is_read: false,
+          created_at: now,
+        });
+        // Notify the agent's supervisor
+        const emp = empMap.get(a.ohr_id);
+        if (emp?.supervisor_ohr) {
+          appliedNotifs.push({
+            type: "ot_applied",
+            title: "OT Applied — Agent Update",
+            message: `OT for ${a.agent_name} (${a.hours} hr) has been applied on ${appliedDateFormatted}.`,
+            actor_ohr: approved_by_ohr || "",
+            actor_name: approved_by || "",
+            target_ohr: emp.supervisor_ohr,
+            metadata: JSON.stringify({ request_id: a.request_id, agent_ohr: a.ohr_id, agent_name: a.agent_name, hours: a.hours, applied_date: a.applied_date, planning_group }),
+            is_read: false,
+            created_at: now,
+          });
+        }
+      }
+      if (appliedNotifs.length > 0) {
+        await db.insert(ioNotifications).values(appliedNotifs);
+      }
+    } catch (notifErr: any) {
+      console.error("[IO API] OT applied notification error:", notifErr.message);
+    }
+
+    // Notif #4: Notify agents whose OT request stayed waitlisted
+    try {
+      const waitlistNotifs = waitlisted.map((w: any) => ({
+        type: "ot_waitlisted",
+        title: "OT Request Waitlisted",
+        message: `Your OT request (${w.request_id}) for ${w.hours} hour(s) remains waitlisted. Reason: ${w.reason}`,
+        actor_ohr: approved_by_ohr || "",
+        actor_name: approved_by || "",
+        target_ohr: w.ohr_id,
+        metadata: JSON.stringify({ request_id: w.request_id, hours: w.hours, reason: w.reason, planning_group }),
+        is_read: false,
+        created_at: now,
+      }));
+      if (waitlistNotifs.length > 0) {
+        await db.insert(ioNotifications).values(waitlistNotifs);
+      }
+    } catch (notifErr: any) {
+      console.error("[IO API] OT waitlisted notification error:", notifErr.message);
+    }
+
     res.json({
       ok: true,
       approved_count: approved.length,
@@ -1687,14 +1764,16 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
 
     // Upsert config row with open_count tracking
     const existing = await db.select().from(ioOtConfig).where(eq(ioOtConfig.planning_group, planning_group));
+    let isReopen = false;
     if (existing.length > 0) {
       const currentWeekStart = existing[0].week_start || "";
       let newOpenCount = 1;
       if (currentWeekStart === weekStartISO) {
         // Same week — increment open_count
         newOpenCount = (existing[0].open_count || 0) + 1;
+        isReopen = true; // This is a re-open within the same week
       }
-      // If different week, reset to 1
+      // If different week, reset to 1 (first open of new week)
       await db.update(ioOtConfig)
         .set({ ot_form_open: true, open_count: newOpenCount, week_start: weekStartISO, updated_at: now, updated_by: opened_by || "" })
         .where(eq(ioOtConfig.planning_group, planning_group));
@@ -1716,17 +1795,35 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
       !(a.complete_planning_group || "").includes("RECALL_MEASUREMENT_CTR")
     );
     // Batch create in-app notifications for all eligible agents
+    const notifTitle = isReopen ? "OT Form Reopened" : "OT Request Form Open";
+    const notifMsg = isReopen
+      ? `The OT form has been reopened for ${planning_group}. You may submit an additional OT request.`
+      : `OT requests are now open for ${planning_group}. You may submit a new OT request.`;
     const notifValues = eligibleAgents.map((agent: any) => ({
-      type: "ot_form_open",
-      title: "OT Request Form Open",
-      message: `OT requests are now open for ${planning_group}. You may submit a new OT request.`,
+      type: isReopen ? "ot_form_reopen" : "ot_form_open",
+      title: notifTitle,
+      message: notifMsg,
       actor_ohr: opened_by_ohr || "",
       actor_name: opened_by || "",
       target_ohr: agent.ohr_id,
-      metadata: JSON.stringify({ planning_group }),
+      metadata: JSON.stringify({ planning_group, is_reopen: isReopen }),
       is_read: false,
       created_at: now,
     }));
+    // Notif #5: On re-open, also notify OM Jenifer Rosales (740030270)
+    if (isReopen) {
+      notifValues.push({
+        type: "ot_form_reopen",
+        title: "OT Form Reopened",
+        message: `The OT form has been reopened for ${planning_group} by ${opened_by || 'OM'}.`,
+        actor_ohr: opened_by_ohr || "",
+        actor_name: opened_by || "",
+        target_ohr: "740030270",
+        metadata: JSON.stringify({ planning_group, is_reopen: true }),
+        is_read: false,
+        created_at: now,
+      });
+    }
     if (notifValues.length > 0) {
       await db.insert(ioNotifications).values(notifValues);
     }
@@ -1738,10 +1835,12 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
           cardsV2: [{
             cardId: `ot-form-open-${agent.ohr_id}`,
             card: {
-              header: { title: "OT Request Form Open", subtitle: planning_group, imageUrl: "", imageType: "CIRCLE" },
+              header: { title: notifTitle, subtitle: planning_group, imageUrl: "", imageType: "CIRCLE" },
               sections: [{
                 widgets: [
-                  { textParagraph: { text: `OT requests are now open for <b>${planning_group}</b>. You may submit a new OT request in the Task Board.` } },
+                  { textParagraph: { text: isReopen
+                    ? `The OT form has been <b>reopened</b> for <b>${planning_group}</b>. You may submit an additional OT request in the Task Board.`
+                    : `OT requests are now open for <b>${planning_group}</b>. You may submit a new OT request in the Task Board.` } },
                 ]
               }]
             }
@@ -1752,7 +1851,9 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
           target_space_id: agent.gchat_space_id,
           target_name: agent.full_name || "",
           card_json: cardJson,
-          fallback_text: `OT requests are now open for ${planning_group}. Submit your OT request in the Task Board.`,
+          fallback_text: isReopen
+            ? `The OT form has been reopened for ${planning_group}. You may submit an additional OT request in the Task Board.`
+            : `OT requests are now open for ${planning_group}. Submit your OT request in the Task Board.`,
           status: "pending",
           metadata: JSON.stringify({ planning_group, ohr_id: agent.ohr_id }),
           created_at: now,
@@ -1761,7 +1862,7 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
     if (gchatValues.length > 0) {
       await db.insert(ioGchatQueue).values(gchatValues);
     }
-    res.json({ ok: true, notifications_sent: notifValues.length, planning_group });
+    res.json({ ok: true, notifications_sent: notifValues.length, planning_group, is_reopen: isReopen });
   } catch (err: any) {
     console.error("[IO API] ot-requests/open-form error:", err);
     res.status(500).json({ error: err.message });
