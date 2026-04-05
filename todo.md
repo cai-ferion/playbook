@@ -702,3 +702,11 @@
 - [x] Move "Open OT Form" button to the right of the "Apply" button (removed margin-left:auto)
 - [x] Restrict approval controls section to OHR 740030270 (OM/approver) only
 - [x] All 248 tests passing
+
+## Batch 47 — Helm Task Board Agent Visibility
+
+- [x] Hide "New Task" button from agents on Task Board
+- [x] Hide "Tasks Given" panel (heading, filters, table, pagination) from agents on Task Board
+- [x] Grid switches from 3-column to 2-column for agents (Tasks Received + Approvals)
+- [x] Agents still see New Request button, Tasks Received, and Approvals
+- [x] All 248 tests passing

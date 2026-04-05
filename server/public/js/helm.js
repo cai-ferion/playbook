@@ -96,6 +96,20 @@ async function helmFetchTasks() {
 
   if (boardLoading) boardLoading.style.display = 'none';
   if (boardContent) boardContent.style.display = '';
+
+  // Hide "New Task" button and "Tasks Given" panel from Agents
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const newTaskBtn = document.getElementById('helm-new-btn');
+  if (newTaskBtn) newTaskBtn.style.display = isAgent ? 'none' : '';
+  const tasksGivenPanel = document.getElementById('helm-tab-tasks');
+  if (tasksGivenPanel) tasksGivenPanel.style.display = isAgent ? 'none' : '';
+  // Switch to 2-column grid for agents, 3-column for others
+  const boardGrid = tasksGivenPanel ? tasksGivenPanel.parentElement : null;
+  if (boardGrid && boardGrid.style) {
+    boardGrid.style.gridTemplateColumns = isAgent ? '1fr 1fr' : '1fr 1fr 1fr';
+  }
+
   helmApplyFilters();
   helmApplyReceivedFilters();
 }
