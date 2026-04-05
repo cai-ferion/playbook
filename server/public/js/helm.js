@@ -10,6 +10,7 @@ const HELM = {
   filteredReceived: [],
   approvals: [],
   filteredApprovals: [],
+  otRequests: [],
   employees: [],
   currentTab: 'all',
   currentBoardTab: 'tasks',
@@ -92,6 +93,19 @@ async function helmFetchTasks() {
   } catch (e) {
     console.error('Helm fetch error:', e);
     HELM.tasks = [];
+  }
+
+  // Also fetch OT requests for the Approvals table
+  try {
+    const otResp = await fetch(`${IO_API_BASE}/ot-requests`);
+    if (otResp.ok) {
+      HELM.otRequests = await otResp.json();
+    } else {
+      HELM.otRequests = [];
+    }
+  } catch (e) {
+    console.error('Helm OT requests fetch error:', e);
+    HELM.otRequests = [];
   }
 
   if (boardLoading) boardLoading.style.display = 'none';
@@ -1248,6 +1262,8 @@ async function helmSubmitNewRequest() {
       const result = await resp.json();
       showToast(`OT Request submitted successfully (${otHours} hours)`, 'success');
       helmCloseForm();
+      await helmFetchTasks();
+      helmSwitchBoardTab('approvals');
     } catch (e) {
       showToast(e.message || 'Failed to submit OT request', 'error');
     }
@@ -1284,8 +1300,47 @@ const HELM_APPROVAL_COLORS = {
 };
 
 function helmApplyApprovalsFilters() {
-  // Filter only request records
-  let data = HELM.tasks.filter(t => t.record_type === 'request');
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+
+  // 1. Task-based requests (e.g., Attendance Backdated Change Tag)
+  let taskRequests = HELM.tasks.filter(t => t.record_type === 'request');
+
+  // 2. OT requests from io_ot_requests — normalize to same shape
+  let otRequests = (HELM.otRequests || []).map(ot => ({
+    task_id: ot.request_id,
+    title: '[Request] OT Request — ' + (ot.agent_name || ot.ohr_id),
+    request_type: 'ot_request',
+    record_type: 'request',
+    approval_status: (ot.status || 'pending').charAt(0).toUpperCase() + (ot.status || 'pending').slice(1),
+    assigned_by_name: ot.agent_name || ot.ohr_id,
+    assigned_by_ohr: ot.ohr_id,
+    created_at: ot.submitted_at,
+    description: `Request Type: OT Request\nAgent: ${ot.agent_name || ''} (${ot.ohr_id})\nRequested Hours: ${ot.requested_hours}\nPlanning Group: ${ot.planning_group || '—'}`,
+    _isOtRequest: true,
+    _otData: ot
+  }));
+
+  // For agents, only show their own requests
+  if (isAgent && cu) {
+    taskRequests = taskRequests.filter(t => {
+      // Show if the agent submitted it (assigned_by_ohr matches)
+      if (t.assigned_by_ohr === cu.ohr_id) return true;
+      // Also show if their name/ohr appears in description
+      if (t.description && t.description.includes(cu.ohr_id)) return true;
+      return false;
+    });
+    otRequests = otRequests.filter(ot => ot.assigned_by_ohr === cu.ohr_id);
+  }
+
+  let data = [...taskRequests, ...otRequests];
+
+  // Sort by created_at descending (newest first)
+  data.sort((a, b) => {
+    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return db - da;
+  });
 
   // Approval status filter
   const statusFilter = document.getElementById('helm-approvals-filter-status')?.value || 'All';
@@ -1385,7 +1440,11 @@ function helmRenderApprovalsPagination() {
 // ===== Approval Detail View =====
 
 function helmOpenApprovalDetail(taskId) {
-  const task = HELM.tasks.find(t => t.task_id === taskId);
+  // Search in both tasks and filteredApprovals (which includes OT requests)
+  let task = HELM.tasks.find(t => t.task_id === taskId);
+  if (!task) {
+    task = HELM.filteredApprovals.find(t => t.task_id === taskId);
+  }
   if (!task) return;
   HELM.editingId = taskId;
 
@@ -1404,6 +1463,23 @@ function helmOpenApprovalDetail(taskId) {
   html += `<div class="detail-row"><span class="detail-label">Request Type</span><span class="detail-value" style="font-weight:600;">${escapeHtml(helmExtractRequestType(task.title))}</span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Approval Status</span><span class="detail-value"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${statusColor};display:inline-block;"></span><strong style="color:${statusColor};">${escapeHtml(approvalStatus)}</strong></span></span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Requested By</span><span class="detail-value">${escapeHtml(task.assigned_by_name || '—')}</span></div>`;
+
+  // OT Request specific fields
+  if (task._isOtRequest && task._otData) {
+    const ot = task._otData;
+    html += `<div class="detail-row"><span class="detail-label">Requested Hours</span><span class="detail-value" style="font-weight:600;font-size:16px;">${escapeHtml(String(ot.requested_hours))} hr(s)</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Planning Group</span><span class="detail-value">${escapeHtml(ot.planning_group || '—')}</span></div>`;
+    if (ot.approved_at) {
+      const approvedStr = new Date(ot.approved_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      html += `<div class="detail-row"><span class="detail-label">Approved At</span><span class="detail-value">${escapeHtml(approvedStr)}</span></div>`;
+    }
+    if (ot.approved_by) {
+      html += `<div class="detail-row"><span class="detail-label">Approved By</span><span class="detail-value">${escapeHtml(ot.approved_by)}</span></div>`;
+    }
+    if (ot.applied_date) {
+      html += `<div class="detail-row"><span class="detail-label">Applied Date</span><span class="detail-value">${escapeHtml(ot.applied_date)}</span></div>`;
+    }
+  }
 
   // Parse description for Attendance Backdated Change Tag specific fields
   if (task.request_type === 'attendance_backdated_change_tag' && task.description) {
@@ -1434,10 +1510,11 @@ function helmOpenApprovalDetail(taskId) {
 
   formBody.innerHTML = html;
 
-  // Footer: Approve/Reject buttons if Pending
+  // Footer: Approve/Reject buttons if Pending (not for OT requests — those are managed via billing dashboard)
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
   let footerHtml = '';
-  if (approvalStatus === 'Pending') {
+  if (approvalStatus === 'Pending' && !task._isOtRequest && !isAgent) {
     footerHtml += `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;" onclick="helmApproveRequest('${escapeAttr(taskId)}','Approved')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
       Approve

@@ -740,3 +740,12 @@
 - [x] Remove #21: System alert notification (notifySystemAlert)
 - [x] Updated batch22 test to reflect removal
 - [x] All 248 tests passing
+## Batch 52 — OT Requests in Approvals Table
+- [x] Fix OT requests not showing in Approvals table on Task Board for agents
+- [x] Submitted OT requests should show as "Pending" in Approvals
+- [x] Approved OT requests should remain visible in Approvals
+- [x] OT requests merged from io_ot_requests into Approvals table
+- [x] Agents only see their own requests; non-agents see all
+- [x] OT request detail view shows hours, planning group, approval info
+- [x] After OT submission, auto-refreshes and switches to Approvals tab
+- [x] All 248 tests passing
