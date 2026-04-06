@@ -857,3 +857,6 @@
 - [x] Disputes: Reverse Markdown modal template (LV2, LV4, LV6) — warning icon + confirmation + Cancel/Save(green)
 - [x] Disputes: Reject Decision modal template (LV3, LV5) — plain title + remarks + attachments + Cancel/Save(red)
 - [x] Disputes: Accept Decision modal template (LV3, LV5) — plain title + checkmark + confirmation + Cancel/Save(green), no yellow box
+
+## Batch 73 — Hide OT Request for TLs/Managers
+- [x] Remove OT Request option from New Request form for Team Leaders and Managers

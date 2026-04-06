@@ -1011,9 +1011,15 @@ async function helmShowNewRequestForm() {
       console.warn('Failed to pre-check OT requests:', e);
     }
   }
+  // Filter request types based on role:
+  // - Agents: only see OT Request (hide Attendance Backdated Change Tag)
+  // - Team Leaders & Managers: only see Attendance Backdated Change Tag (hide OT Request)
+  const isTLOrManager = cu && (cu.actual_role === 'Team Leader' || cu.actual_role === 'Manager');
   const filteredRequestTypes = isAgent
     ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
-    : HELM_REQUEST_TYPES;
+    : isTLOrManager
+      ? HELM_REQUEST_TYPES.filter(t => t.value !== 'ot_request')
+      : HELM_REQUEST_TYPES;
   const typeOptions = filteredRequestTypes.map(t =>
     `<option value="${escapeAttr(t.value)}">${escapeHtml(t.label)}</option>`
   ).join('');
