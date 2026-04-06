@@ -844,3 +844,4 @@
 
 ## Batch 71 — OT Apply: Target Next Week Dates
 - [x] Update OT apply logic so approved OT is applied to nearest available day next week (Sat-Fri), skipping Work Off and PL dates
+- [x] Remove backward pass from findOtDay — if no forward Sat→Fri day found, waitlist the request

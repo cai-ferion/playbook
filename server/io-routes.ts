@@ -1527,20 +1527,13 @@ function findOtDay(nextSaturday: Date, workOffDays: number[], agentLeaves: any[]
     const dateStr = d.toISOString().split('T')[0];
     weekDates.push({ date: d, dateStr, dow: d.getUTCDay() });
   }
-  // Forward pass: Sat to Fri
+  // Forward pass: Sat to Fri — if no day found, return null (request will be waitlisted)
   for (const wd of weekDates) {
     if (workOffDays.includes(wd.dow)) continue;
     if (isOnLeave(wd.dateStr, agentLeaves)) continue;
     return wd.dateStr;
   }
-  // Backward pass: Fri to Sat
-  for (let i = weekDates.length - 1; i >= 0; i--) {
-    const wd = weekDates[i];
-    if (workOffDays.includes(wd.dow)) continue;
-    if (isOnLeave(wd.dateStr, agentLeaves)) continue;
-    return wd.dateStr;
-  }
-  return null; // No valid day found
+  return null; // No valid day found — request stays on waitlist
 }
 
 // POST /ot-requests/approve — OM approves OT requests for a planning group (FIFO)
