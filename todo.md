@@ -841,3 +841,6 @@
 ## Batch 70 — Compass Coaching Profile & Disputes Visibility for TL
 - [x] Grant OHR 740045023 full visibility of all logs in Coaching Profile page (already in place)
 - [x] Grant OHR 740045023 full visibility of all logs in Disputes Area page (already in place + fixed related logs search)
+
+## Batch 71 — OT Apply: Target Next Week Dates
+- [x] Update OT apply logic so approved OT is applied to nearest available day next week (Sat-Fri), skipping Work Off and PL dates

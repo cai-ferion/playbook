@@ -1517,23 +1517,23 @@ function isOnLeave(dateStr: string, leaves: any[]): boolean {
   return false;
 }
 
-// Helper: find a valid OT day in next week for an agent
+// Helper: find a valid OT day in next week (Sat–Fri) for an agent
 // Returns YYYY-MM-DD or null if no valid day found
-function findOtDay(nextMonday: Date, workOffDays: number[], agentLeaves: any[]): string | null {
+function findOtDay(nextSaturday: Date, workOffDays: number[], agentLeaves: any[]): string | null {
   const weekDates: { date: Date; dateStr: string; dow: number }[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(nextMonday);
+    const d = new Date(nextSaturday);
     d.setUTCDate(d.getUTCDate() + i);
     const dateStr = d.toISOString().split('T')[0];
     weekDates.push({ date: d, dateStr, dow: d.getUTCDay() });
   }
-  // Forward pass: Mon to Sun
+  // Forward pass: Sat to Fri
   for (const wd of weekDates) {
     if (workOffDays.includes(wd.dow)) continue;
     if (isOnLeave(wd.dateStr, agentLeaves)) continue;
     return wd.dateStr;
   }
-  // Backward pass: Sun to Mon
+  // Backward pass: Fri to Sat
   for (let i = weekDates.length - 1; i >= 0; i--) {
     const wd = weekDates[i];
     if (workOffDays.includes(wd.dow)) continue;
@@ -1567,17 +1567,17 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const nowDate = new Date();
 
-    // Calculate next week's Monday
-    const dayOfWeek = nowDate.getUTCDay(); // 0=Sun
-    const daysToNextMon = dayOfWeek === 0 ? 1 : (8 - dayOfWeek);
-    const nextMonday = new Date(nowDate);
-    nextMonday.setUTCDate(nextMonday.getUTCDate() + daysToNextMon);
-    nextMonday.setUTCHours(0, 0, 0, 0);
-    // Next Sunday
-    const nextSunday = new Date(nextMonday);
-    nextSunday.setUTCDate(nextSunday.getUTCDate() + 6);
-    const nextMondayStr = nextMonday.toISOString().split('T')[0];
-    const nextSundayStr = nextSunday.toISOString().split('T')[0];
+    // Calculate next week's Saturday (start of Sat–Fri operational week)
+    const dayOfWeek = nowDate.getUTCDay(); // 0=Sun, 6=Sat
+    const daysToNextSat = (6 - dayOfWeek + 7) % 7 || 7; // always jump to NEXT Saturday
+    const nextSaturday = new Date(nowDate);
+    nextSaturday.setUTCDate(nextSaturday.getUTCDate() + daysToNextSat);
+    nextSaturday.setUTCHours(0, 0, 0, 0);
+    // Next Friday (end of the Sat–Fri week)
+    const nextFriday = new Date(nextSaturday);
+    nextFriday.setUTCDate(nextFriday.getUTCDate() + 6);
+    const nextSaturdayStr = nextSaturday.toISOString().split('T')[0];
+    const nextFridayStr = nextFriday.toISOString().split('T')[0];
 
     // Pre-fetch all employees in this PG for work_off data
     const allEmployees = await db.select().from(ioEmployees)
@@ -1587,12 +1587,12 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
     // Pre-fetch all approved leaves for next week for agents in this PG
     const allLeaves = await db.select().from(ioLeaves)
       .where(eq(ioLeaves.planning_group, planning_group));
-    // Filter to leaves that overlap with next week
+    // Filter to leaves that overlap with next week (Sat–Fri)
     const nextWeekLeaves = allLeaves.filter((lv: any) => {
       if (lv.status !== 'approved' && lv.status !== 'Approved') return false;
       const start = lv.start_date || '';
       const end = lv.end_date || start;
-      return start <= nextSundayStr && end >= nextMondayStr;
+      return start <= nextFridayStr && end >= nextSaturdayStr;
     });
 
     let hoursRemaining = hoursNeeded;
@@ -1608,7 +1608,7 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
       const workOffDays = parseWorkOffDays(emp?.work_off || '');
       const agentLeaves = nextWeekLeaves.filter((lv: any) => lv.ohr_id === otReq.ohr_id);
 
-      const appliedDate = findOtDay(nextMonday, workOffDays, agentLeaves);
+      const appliedDate = findOtDay(nextSaturday, workOffDays, agentLeaves);
 
       if (!appliedDate) {
         // No valid day — keep waitlisted
