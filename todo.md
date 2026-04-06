@@ -880,3 +880,15 @@
 ## Batch 77 — QA Feedback Detail View Restructure
 - [x] Move L1-L5 + RCA Description from Session Details into a separate "Root Cause Analysis" section
 - [x] Add "Markdown Status" field under Root Cause Analysis section showing current dispute status
+
+## Batch 78 — Align io_attendance with ATTEND_26 Google Sheet
+- [x] Read ATTEND_26 sheet and export all data (46,382 rows)
+- [x] Compare with io_attendance table and identify differences (4,957 inserts, 3,231 updates, 24 deletes)
+- [x] Apply changes (inserts, updates, deletes) to align DB with sheet
+- [x] Double-check: re-read sheet and verify alignment (found & fixed missing snapshot fields on inserts)
+- [x] Triple-check: re-read sheet and verify alignment — 0 inserts, 0 updates, 0 deletes remaining
+
+## Batch 79 — Fix Billing Compliance % Discrepancy
+- [x] Diagnose why Actual Weekly Compliance % differs between G Sheet and Playbook (CA and RM target hours were outdated)
+- [x] Fix the compliance calculation formula in billing.js to match G Sheet (CA: 1665→2405, RM: 5476→4736)
+- [x] Fix Goal columns (98%, 100%, 102%) — automatically fixed by correcting target hours

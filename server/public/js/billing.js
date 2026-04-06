@@ -42,8 +42,8 @@ const BILLING_CODE_ORDER = ['MA', 'MS', 'MQ', 'CA', 'CS', 'CQ', 'RM', 'FA', 'SO'
 // ===== Target Hours Mapping =====
 const BILLING_TARGET_HOURS = {
   'MA': 3293, 'MS': 222, 'MQ': 148,
-  'CA': 1665, 'CS': 111, 'CQ': 74,
-  'SO': 185, 'FA': 185, 'RM': 5476,
+  'CA': 2405, 'CS': 111, 'CQ': 74,
+  'SO': 185, 'FA': 185, 'RM': 4736,
   'SM': 407, 'QP': 222,
 };
 
