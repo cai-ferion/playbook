@@ -860,3 +860,9 @@
 
 ## Batch 73 — Hide OT Request for TLs/Managers
 - [x] Remove OT Request option from New Request form for Team Leaders and Managers
+
+## Batch 74 — LV6 Disputes Template & Group Coaching Separation
+- [x] LV6 Retain Markdown: Use Retain template (Remarks + Attachments + Cancel/Save) with title "Retain Markdown"
+- [x] LV6 Reverse Markdown: Use same Retain template with title "Reverse Markdown" (not the confirmation-only template)
+- [x] LV6: After either decision, log goes back to agent for acknowledgement (status → Pending Acknowledgement)
+- [x] Compass: Separate Group Coaching from General Coaching sessions (already implemented — Group Coaching creates individual General Coaching records per coachee)

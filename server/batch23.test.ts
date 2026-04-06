@@ -107,12 +107,16 @@ describe('Batch 23 — Compass 6-Level Dispute Flow', () => {
   });
 
   // LV6 actions
-  it('LV6 Reverse Markdown sets status to Markdown Reversed - QTP Manager', () => {
-    expect(compass).toContain("status: 'Markdown Reversed - QTP Manager'");
+  it('LV6 Reverse Markdown sets status to Pending Acknowledgement (goes back to agent)', () => {
+    expect(compass).toContain('function disputesSubmitLV6ReverseMarkdown()');
+    // LV6 decisions now go to Pending Acknowledgement for agent acknowledgement
+    expect(compass).toContain("Markdown reversed by QTP Manager");
   });
 
-  it('LV6 Retain Markdown sets status to Markdown Retained - QTP Manager', () => {
-    expect(compass).toContain("status: 'Markdown Retained - QTP Manager'");
+  it('LV6 Retain Markdown sets status to Pending Acknowledgement (goes back to agent)', () => {
+    expect(compass).toContain('function disputesSubmitLV6RetainMarkdown()');
+    // LV6 decisions now go to Pending Acknowledgement for agent acknowledgement
+    expect(compass).toContain("Markdown retained by QTP Manager");
   });
 
   it('LV6 has dedicated popout functions', () => {

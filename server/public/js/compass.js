@@ -853,8 +853,8 @@ async function compassOpenDetail(coachingId) {
     // QTP Manager actions
     if (role === 'Manager' || isAdmin) {
       if (log.status === 'Trainer Decision Rejected') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - QTP Manager\')"  >Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - QTP Manager\')"  >Retain Markdown</button>';   }
+        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV6ReverseMarkdown()">Reverse Markdown</button>';
+        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV6RetainMarkdown()">Retain Markdown</button>';   }
     }
   }
 
@@ -3433,35 +3433,77 @@ function disputesShowLV6ReverseMarkdown() {
   const footerEl = document.getElementById('disputes-action-footer');
   const overlay = document.getElementById('disputes-action-overlay');
 
+  _disputeAttachedFiles = [];
+
   titleEl.textContent = 'Reverse Markdown';
   bodyEl.innerHTML = `
-    <div style="text-align:center;padding:24px 0 8px;">
-      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <p style="font-size:15px;color:var(--fg);margin-bottom:6px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
-      <p style="font-size:13px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
+    <div style="padding:8px 0;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
+      <textarea id="dispute-remarks-input" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for reversing this markdown..."></textarea>
     </div>
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Attachments</label>
+      <input type="file" id="dispute-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none" onchange="disputeHandleFileSelect(this)">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-file-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        Attach Files
+      </div>
+      <div id="dispute-file-list" style="margin-top:8px;"></div>
+      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
+    </div>
+    <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;">This log will be sent back to the coachee for acknowledgement after this decision.</div>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Save</button>
+    <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Save</button>
   `;
 
   overlay.style.display = 'flex';
 }
 
 async function disputesSubmitLV6ReverseMarkdown() {
+  const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
+  if (!remarks) {
+    showToast('Remarks are required', 'error');
+    return;
+  }
+
   const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
   if (!log) return;
+
+  let attachmentUrls = [];
+  for (const file of _disputeAttachedFiles) {
+    try {
+      const base64 = await fileToBase64(file);
+      const resp = await fetch(`${IO_API_BASE}/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64 })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        attachmentUrls.push({ name: file.name, url: result.url });
+      }
+    } catch (e) {
+      console.error('Failed to upload attachment:', e);
+    }
+  }
 
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const actorName = cu ? cu.full_name : 'Unknown';
   const timestamp = new Date().toLocaleString();
 
   const update = {
-    status: 'Markdown Reversed - QTP Manager',
-    qtp_manager_comments: (log.qtp_manager_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by QTP Manager.'
+    status: 'Pending Acknowledgement',
+    qtp_manager_comments: (log.qtp_manager_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown reversed by QTP Manager. ' + remarks
   };
+
+  if (attachmentUrls.length > 0) {
+    update.qtp_manager_comments += '\n[Attachments: ' + attachmentUrls.map(a => a.name).join(', ') + ']';
+    const existingAttachments = log.dispute_attachments ? JSON.parse(log.dispute_attachments || '[]') : [];
+    update.dispute_attachments = JSON.stringify([...existingAttachments, ...attachmentUrls]);
+  }
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
@@ -3472,7 +3514,7 @@ async function disputesSubmitLV6ReverseMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown reversed by QTP Manager.', 'success');
+    showToast('Markdown reversed by QTP Manager. Sent to coachee for acknowledgement.', 'success');
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3508,6 +3550,7 @@ function disputesShowLV6RetainMarkdown() {
       <div id="dispute-file-list" style="margin-top:8px;"></div>
       <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
     </div>
+    <div style="margin-top:12px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;">This log will be sent back to the coachee for acknowledgement after this decision.</div>
   `;
 
   footerEl.innerHTML = `
@@ -3551,8 +3594,8 @@ async function disputesSubmitLV6RetainMarkdown() {
   const actorName = cu ? cu.full_name : 'Unknown';
 
   const update = {
-    status: 'Markdown Retained - QTP Manager',
-    qtp_manager_comments: (log.qtp_manager_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
+    status: 'Pending Acknowledgement',
+    qtp_manager_comments: (log.qtp_manager_comments || '') + '\n[' + timestamp + ' \u2014 ' + actorName + '] Markdown retained by QTP Manager. ' + remarks
   };
 
   if (attachmentUrls.length > 0) {
@@ -3570,7 +3613,7 @@ async function disputesSubmitLV6RetainMarkdown() {
     });
     if (!resp.ok) throw new Error('Failed to update');
 
-    showToast('Markdown retained by QTP Manager.', 'success');
+    showToast('Markdown retained by QTP Manager. Sent to coachee for acknowledgement.', 'success');
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
