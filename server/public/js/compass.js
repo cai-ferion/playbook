@@ -161,6 +161,20 @@ function compassApplyFilters() {
 
   if (typeFilter !== 'All') allData = allData.filter(l => l.coaching_type === typeFilter);
   if (statusFilter !== 'All') allData = allData.filter(l => l.status === statusFilter);
+
+  // Hide QA Feedback logs with active dispute statuses from Coaching Profile
+  // (these remain visible in the Disputes Area kanban)
+  const QA_DISPUTE_HIDDEN_STATUSES = [
+    'Markdown Disputed - SME',
+    'Markdown Retained - QA',
+    'QA Decision Rejected - SME',
+    'Markdown Retained - Trainer',
+    'Trainer Decision Rejected - SME',
+  ];
+  allData = allData.filter(l => {
+    if (l.coaching_type !== 'QA Feedback') return true;
+    return !QA_DISPUTE_HIDDEN_STATUSES.includes(l.status);
+  });
   if (startDate) allData = allData.filter(l => l.coaching_date && l.coaching_date.slice(0, 10) >= startDate);
   if (endDate) allData = allData.filter(l => l.coaching_date && l.coaching_date.slice(0, 10) <= endDate);
   if (search) {

@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -386,3 +386,26 @@ export const ioOtConfig = mysqlTable("io_ot_config", {
 
 export type IoOtConfig = typeof ioOtConfig.$inferSelect;
 export type InsertIoOtConfig = typeof ioOtConfig.$inferInsert;
+
+// ============================================================
+// Productivity Hours (Horizon)
+// ============================================================
+export const ioProductivityHours = mysqlTable("io_productivity_hours", {
+  id: int("id").autoincrement().primaryKey(),
+  date: varchar("date", { length: 16 }).notNull(),          // YYYY-MM-DD
+  ohr: varchar("ohr", { length: 32 }).notNull(),
+  actual_projection: varchar("actual_projection", { length: 32 }).default("Actuals"),
+  available: decimal("available", { precision: 8, scale: 2 }).default("0"),
+  non_srt_production: decimal("non_srt_production", { precision: 8, scale: 2 }).default("0"),
+  fb_training: decimal("fb_training", { precision: 8, scale: 2 }).default("0"),
+  onboarding: decimal("onboarding", { precision: 8, scale: 2 }).default("0"),
+  coaching: decimal("coaching", { precision: 8, scale: 2 }).default("0"),
+  wellness_support: decimal("wellness_support", { precision: 8, scale: 2 }).default("0"),
+  team_meeting: decimal("team_meeting", { precision: 8, scale: 2 }).default("0"),
+  total_billable: decimal("total_billable", { precision: 8, scale: 2 }).default("0"),
+  delivered_hours: decimal("delivered_hours", { precision: 8, scale: 2 }).default("0"),
+  uploaded_at: varchar("uploaded_at", { length: 64 }),
+});
+
+export type IoProductivityHours = typeof ioProductivityHours.$inferSelect;
+export type InsertIoProductivityHours = typeof ioProductivityHours.$inferInsert;

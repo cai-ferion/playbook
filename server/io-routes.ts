@@ -1878,6 +1878,63 @@ router.get("/ot-config", async (req: Request, res: Response) => {
   }
 });
 
+// ===================== PRODUCTIVITY HOURS =====================
+
+// GET /productivity-hours — get productivity data for a date range
+router.get("/productivity-hours", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { start, end } = req.query;
+    if (!start || !end) return res.status(400).json({ error: "start and end query params required" });
+    const rows: any = await db.execute(
+      sql`SELECT ph.*, e.full_name, e.planning_group FROM io_productivity_hours ph LEFT JOIN io_employees e ON ph.ohr = e.ohr_id WHERE ph.date >= ${String(start)} AND ph.date <= ${String(end)} ORDER BY e.full_name, ph.date`
+    );
+    const data = Array.isArray(rows[0]) ? rows[0] : rows;
+    res.json(data);
+  } catch (err: any) {
+    console.error("[IO API] productivity-hours GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /productivity-hours/upload — bulk upsert productivity data
+router.post("/productivity-hours/upload", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: "No records provided" });
+    let inserted = 0;
+    let updated = 0;
+    for (const r of records) {
+      const result: any = await db.execute(
+        sql`INSERT INTO io_productivity_hours (date, ohr, actual_projection, available, non_srt_production, fb_training, onboarding, coaching, wellness_support, team_meeting, total_billable, delivered_hours)
+            VALUES (${r.date}, ${String(r.ohr)}, ${r.actual_projection || 'Actuals'}, ${r.available || 0}, ${r.non_srt_production || 0}, ${r.fb_training || 0}, ${r.onboarding || 0}, ${r.coaching || 0}, ${r.wellness_support || 0}, ${r.team_meeting || 0}, ${r.total_billable || 0}, ${r.delivered_hours || 0})
+            ON DUPLICATE KEY UPDATE
+              actual_projection = VALUES(actual_projection),
+              available = VALUES(available),
+              non_srt_production = VALUES(non_srt_production),
+              fb_training = VALUES(fb_training),
+              onboarding = VALUES(onboarding),
+              coaching = VALUES(coaching),
+              wellness_support = VALUES(wellness_support),
+              team_meeting = VALUES(team_meeting),
+              total_billable = VALUES(total_billable),
+              delivered_hours = VALUES(delivered_hours),
+              uploaded_at = CURRENT_TIMESTAMP`
+      );
+      const info = Array.isArray(result[0]) ? result[0] : result;
+      if (info.affectedRows === 1) inserted++;
+      else if (info.affectedRows === 2) updated++;
+    }
+    res.json({ success: true, inserted, updated, total: records.length });
+  } catch (err: any) {
+    console.error("[IO API] productivity-hours upload error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");

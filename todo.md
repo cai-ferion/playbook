@@ -866,3 +866,10 @@
 - [x] LV6 Reverse Markdown: Use same Retain template with title "Reverse Markdown" (not the confirmation-only template)
 - [x] LV6: After either decision, log goes back to agent for acknowledgement (status → Pending Acknowledgement)
 - [x] Compass: Separate Group Coaching from General Coaching sessions (already implemented — Group Coaching creates individual General Coaching records per coachee)
+
+## Batch 75 — Horizon Productivity, Coaching Import, QA Filter, Group Coaching Split
+- [x] Horizon: Build weekly agent productivity hours table from BillingHours template (1,445 records imported, Mar 28-31)
+- [x] Horizon: Add Admin Tools upload button for productivity hours data (.xlsb/.xlsx upload with batch upsert)
+- [x] Compass: Import new coaching logs from DS.COACHING.xlsx (1,894 records imported, total now 2,005)
+- [x] Compass: Filter out QA Feedback with dispute statuses from Coaching Profile page (5 statuses hidden)
+- [x] Compass: Convert existing Group Coaching records into individual General Coaching records (147 converted → 246 General Coaching)

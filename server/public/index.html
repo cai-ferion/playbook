@@ -748,6 +748,31 @@
             </div>
           </div>
 
+          <!-- Section 3: Productivity Hours Upload -->
+          <div class="admin-upload-row" style="margin-top:20px;">
+            <div class="card admin-card" style="width:100%;">
+              <div class="card-header">
+                <span class="card-title">UPLOAD PRODUCTIVITY HOURS</span>
+              </div>
+              <div class="admin-card-body">
+                <p class="admin-help">Upload BillingHours file (.xlsb/.xlsx) &mdash; Import weekly productivity hours from the RAW sheet. Existing records for the same date+agent are updated.</p>
+                <div class="admin-upload-area" id="prod-upload-area">
+                  <input type="file" id="prod-file-input" accept=".xlsb,.xlsx,.xls" style="display:none" onchange="handleProdFileSelect(event)">
+                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('prod-file-input').click()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload
+                  </button>
+                  <span class="admin-file-name" id="prod-file-name">No file selected</span>
+                </div>
+                <div class="admin-progress" id="prod-progress" style="display:none;">
+                  <div class="progress-bar"><div class="progress-fill" id="prod-progress-fill"></div></div>
+                  <span class="progress-text" id="prod-progress-text">Processing...</span>
+                </div>
+                <div class="admin-result" id="prod-result" style="display:none;"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- SRT Preview (full width below) -->
           <div class="admin-preview" id="srt-preview" style="display:none;">
             <h4>Preview: SRT Status Changes</h4>
@@ -1313,11 +1338,44 @@
             <div class="spinner"></div>
             <div class="loading-text">Loading Productivity Data...</div>
           </div>
+          <!-- Omnibar -->
+          <div class="filter-bar" style="margin-bottom:12px;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+              <span class="filter-label">Week Ending:</span>
+              <select class="form-select" id="prod-week-select" onchange="prodLoadWeek()" style="min-width:160px;"></select>
+              <span class="filter-label" style="margin-left:12px;">Planning Group:</span>
+              <select class="form-select" id="prod-pg-filter" onchange="prodApplyFilters()">
+                <option value="All">All Groups</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="prod-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Agents: 0</span>
+            </div>
+          </div>
           <div id="productivity-hrs-content">
-            <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 16px;opacity:0.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <h3 style="color:var(--text-primary);margin-bottom:8px;">Productivity Hours</h3>
-              <p>This module is under development. Productivity tracking data will be available here soon.</p>
+            <div class="module-table-wrapper">
+              <table class="data-table module-table" id="prod-table" style="font-size:12px;">
+                <thead>
+                  <tr>
+                    <th style="position:sticky;left:0;z-index:2;background:var(--bg-secondary);min-width:180px;">Agent Name</th>
+                    <th style="text-align:right;">Available</th>
+                    <th style="text-align:right;">Non-SRT Prod.</th>
+                    <th style="text-align:right;">FB Training</th>
+                    <th style="text-align:right;">Onboarding</th>
+                    <th style="text-align:right;">Coaching</th>
+                    <th style="text-align:right;">Wellness</th>
+                    <th style="text-align:right;">Team Mtg.</th>
+                    <th style="text-align:right;font-weight:700;">Total Billable</th>
+                    <th style="text-align:right;font-weight:700;">Delivered Hrs.</th>
+                  </tr>
+                </thead>
+                <tbody id="prod-table-body"></tbody>
+                <tfoot id="prod-table-foot"></tfoot>
+              </table>
+            </div>
+            <div id="prod-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;opacity:0.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <p>No productivity data available for the selected week.</p>
             </div>
           </div>
         </div>
@@ -1476,6 +1534,7 @@
   <script src="js/haven.js"></script>
   <script src="js/helm.js"></script>
   <script src="js/roster.js"></script>
+  <script src="js/horizon.js"></script>
   <script src="js/maintenance.js"></script>
 
   <!-- Maintenance Overlay -->
