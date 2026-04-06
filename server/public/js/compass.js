@@ -2788,25 +2788,25 @@ function disputesShowRetainMarkdown() {
 
   titleEl.textContent = 'Retain Markdown';
   bodyEl.innerHTML = `
-    <div style="margin-bottom:14px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Remarks <span style="color:var(--error);">*</span></label>
-      <textarea id="dispute-remarks-input" class="form-input" style="width:100%;min-height:80px;resize:vertical;font-size:13px;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
+    <div style="padding:8px 0;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
+      <textarea id="dispute-remarks-input" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
     </div>
-    <div style="margin-bottom:14px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Attachments</label>
-      <input type="file" id="dispute-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none" onchange="disputeUpdateFiles()">
-      <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('dispute-file-input').click()" style="display:flex;align-items:center;gap:6px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Attachments</label>
+      <input type="file" id="dispute-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none" onchange="disputeHandleFileSelect(this)">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-file-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
         Attach Files
-      </button>
-      <div id="dispute-file-list" style="margin-top:6px;"></div>
-      <p style="font-size:11px;color:var(--fg-subtle);margin-top:4px;">Optional. Accepts documents, spreadsheets, and images.</p>
+      </div>
+      <div id="dispute-file-list" style="margin-top:8px;"></div>
+      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
     </div>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-warning btn-sm" onclick="disputesSubmitRetainMarkdown()">Save</button>
+    <button class="btn btn-primary btn-sm" onclick="disputesSubmitRetainMarkdown()">Save</button>
   `;
 
   overlay.style.display = 'flex';
@@ -2885,10 +2885,10 @@ function disputesShowReverseMarkdown() {
 
   titleEl.textContent = 'Reverse Markdown';
   bodyEl.innerHTML = `
-    <div style="text-align:center;padding:16px 0;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <p style="font-size:14px;color:var(--fg);margin-bottom:4px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
-      <p style="font-size:12px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
+    <div style="text-align:center;padding:24px 0 8px;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p style="font-size:15px;color:var(--fg);margin-bottom:6px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
+      <p style="font-size:13px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
     </div>
   `;
 
@@ -2940,12 +2940,12 @@ function disputesShowQADecisionAccepted() {
   const footerEl = document.getElementById('disputes-action-footer');
   const overlay = document.getElementById('disputes-action-overlay');
 
-  titleEl.textContent = 'QA Decision Accepted';
+  titleEl.textContent = 'Accept Decision';
   bodyEl.innerHTML = `
-    <div style="text-align:center;padding:16px 0;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <p style="font-size:14px;color:var(--fg);margin-bottom:4px;font-weight:600;">Are you sure you want to accept the QA decision?</p>
-      <p style="font-size:12px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
+    <div style="text-align:center;padding:24px 0 8px;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <p style="font-size:15px;color:var(--fg);margin-bottom:6px;font-weight:600;">Are you sure you want to accept the decision?</p>
+      <p style="font-size:13px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
     </div>
   `;
 
@@ -2999,19 +2999,21 @@ function disputesShowQADecisionRejected() {
 
   _disputeAttachedFiles = [];
 
-  titleEl.textContent = 'QA Decision Rejected';
+  titleEl.textContent = 'Reject Decision';
   bodyEl.innerHTML = `
-    <div style="padding:16px 0;">
-      <label style="font-size:13px;font-weight:600;color:var(--fg);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
+    <div style="padding:8px 0;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
       <textarea id="dispute-remarks-input" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for rejecting the QA decision..."></textarea>
-      <label style="font-size:13px;font-weight:600;color:var(--fg);display:block;margin-top:16px;margin-bottom:6px;">Attachments</label>
+    </div>
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Attachments</label>
       <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-file-input').click()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
         Attach Files
       </div>
       <input type="file" id="dispute-file-input" multiple style="display:none;" onchange="disputeHandleFileSelect(this)" />
-      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
       <div id="dispute-file-list" style="margin-top:8px;"></div>
+      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
     </div>
   `;
 
@@ -3110,59 +3112,26 @@ function disputesShowLV5AcceptDecision() {
   const footerEl = document.getElementById('disputes-action-footer');
   const overlay = document.getElementById('disputes-action-overlay');
 
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Retain Markdown';
+  titleEl.textContent = 'Accept Decision';
   bodyEl.innerHTML = `
-    <div style="padding:16px 0;">
-      <label style="font-size:13px;font-weight:600;color:var(--fg);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
-      <textarea id="dispute-remarks-input" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
-      <label style="font-size:13px;font-weight:600;color:var(--fg);display:block;margin-top:16px;margin-bottom:6px;">Attachments</label>
-      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-file-input').click()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-        Attach Files
-      </div>
-      <input type="file" id="dispute-file-input" multiple style="display:none;" onchange="disputeHandleFileSelect(this)" />
-      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
-      <div id="dispute-file-list" style="margin-top:8px;"></div>
+    <div style="text-align:center;padding:24px 0 8px;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <p style="font-size:15px;color:var(--fg);margin-bottom:6px;font-weight:600;">Are you sure you want to accept the decision?</p>
+      <p style="font-size:13px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
     </div>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV5AcceptDecision()">Accept Decision</button>
+    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV5AcceptDecision()">Save</button>
   `;
 
   overlay.style.display = 'flex';
 }
 
 async function disputesSubmitLV5AcceptDecision() {
-  const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
-  if (!remarks) {
-    showToast('Remarks are required', 'error');
-    return;
-  }
-
   const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
   if (!log) return;
-
-  let attachmentUrls = [];
-  for (const file of _disputeAttachedFiles) {
-    try {
-      const base64 = await fileToBase64(file);
-      const resp = await fetch(`${IO_API_BASE}/upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64 })
-      });
-      if (resp.ok) {
-        const result = await resp.json();
-        attachmentUrls.push({ name: file.name, url: result.url });
-      }
-    } catch (e) {
-      console.error('Failed to upload attachment:', e);
-    }
-  }
 
   const timestamp = new Date().toLocaleString();
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
@@ -3170,14 +3139,8 @@ async function disputesSubmitLV5AcceptDecision() {
 
   const update = {
     status: 'Trainer Decision Accepted',
-    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
+    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Trainer decision accepted by SME.'
   };
-
-  if (attachmentUrls.length > 0) {
-    update.sme_qa_dispute_comments += '\n[Attachments: ' + attachmentUrls.map(a => a.name).join(', ') + ']';
-    const existingAttachments = log.dispute_attachments ? JSON.parse(log.dispute_attachments || '[]') : [];
-    update.dispute_attachments = JSON.stringify([...existingAttachments, ...attachmentUrls]);
-  }
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
@@ -3206,25 +3169,62 @@ function disputesShowLV5RejectDecision() {
   const footerEl = document.getElementById('disputes-action-footer');
   const overlay = document.getElementById('disputes-action-overlay');
 
-  titleEl.textContent = 'Reverse Markdown';
+  _disputeAttachedFiles = [];
+
+  titleEl.textContent = 'Reject Decision';
   bodyEl.innerHTML = `
-    <div style="padding:16px 0;">
-      <p style="font-size:13px;color:var(--fg);line-height:1.5;">Are you sure you want to reverse this markdown?</p>
-      <p style="font-size:12px;color:var(--fg-muted);margin-top:8px;">This log will now be sent to the coachee for acknowledgement.</p>
+    <div style="padding:8px 0;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
+      <textarea id="dispute-remarks-input" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for rejecting the decision..."></textarea>
+    </div>
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Attachments</label>
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-file-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        Attach Files
+      </div>
+      <input type="file" id="dispute-file-input" multiple style="display:none;" onchange="disputeHandleFileSelect(this)" />
+      <div id="dispute-file-list" style="margin-top:8px;"></div>
+      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
     </div>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-danger btn-sm" onclick="disputesSubmitLV5RejectDecision()">Reject Decision</button>
+    <button class="btn btn-danger btn-sm" onclick="disputesSubmitLV5RejectDecision()">Save</button>
   `;
 
   overlay.style.display = 'flex';
 }
 
 async function disputesSubmitLV5RejectDecision() {
+  const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
+  if (!remarks) {
+    showToast('Remarks are required', 'error');
+    return;
+  }
+
   const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(_disputesEditingId));
   if (!log) return;
+
+  // Upload attachments if any
+  let attachmentUrls = [];
+  for (const file of _disputeAttachedFiles) {
+    try {
+      const base64 = await fileToBase64(file);
+      const resp = await fetch(`${IO_API_BASE}/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64 })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        attachmentUrls.push({ name: file.name, url: result.url });
+      }
+    } catch (e) {
+      console.error('Failed to upload attachment:', e);
+    }
+  }
 
   const timestamp = new Date().toLocaleString();
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
@@ -3232,8 +3232,14 @@ async function disputesSubmitLV5RejectDecision() {
 
   const update = {
     status: 'Trainer Decision Rejected',
-    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Trainer decision rejected by SME. Escalated to QTP Manager.'
+    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] ' + remarks
   };
+
+  if (attachmentUrls.length > 0) {
+    update.sme_qa_dispute_comments += '\n[Attachments: ' + attachmentUrls.map(a => a.name).join(', ') + ']';
+    const existingAttachments = log.dispute_attachments ? JSON.parse(log.dispute_attachments || '[]') : [];
+    update.dispute_attachments = JSON.stringify([...existingAttachments, ...attachmentUrls]);
+  }
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
@@ -3265,23 +3271,27 @@ function disputesShowLV4RetainMarkdown() {
 
   _disputeAttachedFiles = [];
 
-  titleEl.textContent = 'Retain Markdown — Trainer Decision';
+  titleEl.textContent = 'Retain Markdown';
   bodyEl.innerHTML = `
-    <div style="margin-bottom:12px;">
-      <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Remarks <span style="color:var(--danger);">*</span></label>
-      <textarea id="dispute-lv4-retain-remarks" class="form-input" rows="4" placeholder="Explain why the markdown is being retained..." style="width:100%;resize:vertical;"></textarea>
+    <div style="padding:8px 0;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
+      <textarea id="dispute-lv4-retain-remarks" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
     </div>
-    <div style="margin-bottom:8px;">
-      <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Attachments (optional)</label>
-      <input type="file" id="dispute-lv4-retain-files" multiple style="font-size:12px;" onchange="disputeLV4RetainFilesChanged(this)">
-      <div id="dispute-lv4-retain-file-list" style="font-size:11px;color:var(--fg-muted);margin-top:4px;"></div>
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Attachments</label>
+      <input type="file" id="dispute-lv4-retain-files" multiple style="display:none;" onchange="disputeLV4RetainFilesChanged(this)">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-lv4-retain-files').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        Attach Files
+      </div>
+      <div id="dispute-lv4-retain-file-list" style="margin-top:8px;"></div>
+      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
     </div>
-    <p style="font-size:12px;color:var(--fg-muted);margin-top:8px;">This will set the status to <strong>Markdown Retained - Trainer</strong> and route to the SME for further decision.</p>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-warning btn-sm" onclick="disputesSubmitLV4RetainMarkdown()">Retain Markdown</button>
+    <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV4RetainMarkdown()">Save</button>
   `;
 
   overlay.style.display = 'flex';
@@ -3366,18 +3376,18 @@ function disputesShowLV4ReverseMarkdown() {
   const footerEl = document.getElementById('disputes-action-footer');
   const overlay = document.getElementById('disputes-action-overlay');
 
-  titleEl.textContent = 'Reverse Markdown — Trainer Decision';
+  titleEl.textContent = 'Reverse Markdown';
   bodyEl.innerHTML = `
-    <div style="text-align:center;padding:16px 0;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <p style="font-size:14px;color:var(--fg);margin-bottom:4px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
-      <p style="font-size:12px;color:var(--fg-muted);">Status will change to <strong>Markdown Accepted - Trainer</strong> and the log will be routed to the Coachee for acknowledgement.</p>
+    <div style="text-align:center;padding:24px 0 8px;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p style="font-size:15px;color:var(--fg);margin-bottom:6px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
+      <p style="font-size:13px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
     </div>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV4ReverseMarkdown()">Reverse Markdown</button>
+    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV4ReverseMarkdown()">Save</button>
   `;
 
   overlay.style.display = 'flex';
@@ -3423,18 +3433,18 @@ function disputesShowLV6ReverseMarkdown() {
   const footerEl = document.getElementById('disputes-action-footer');
   const overlay = document.getElementById('disputes-action-overlay');
 
-  titleEl.textContent = 'Reverse Markdown — QTP Manager';
+  titleEl.textContent = 'Reverse Markdown';
   bodyEl.innerHTML = `
-    <div style="text-align:center;padding:16px 0;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <p style="font-size:14px;color:var(--fg);margin-bottom:4px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
-      <p style="font-size:12px;color:var(--fg-muted);">This will set the status to <strong>Markdown Reversed - QTP Manager</strong>.</p>
+    <div style="text-align:center;padding:24px 0 8px;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p style="font-size:15px;color:var(--fg);margin-bottom:6px;font-weight:600;">Are you sure you want to reverse this markdown?</p>
+      <p style="font-size:13px;color:var(--fg-muted);">This log will now be sent to the coachee for acknowledgement.</p>
     </div>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Reverse Markdown</button>
+    <button class="btn btn-success btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Save</button>
   `;
 
   overlay.style.display = 'flex';
@@ -3482,28 +3492,27 @@ function disputesShowLV6RetainMarkdown() {
 
   _disputeAttachedFiles = [];
 
-  titleEl.textContent = 'Retain Markdown — QTP Manager';
+  titleEl.textContent = 'Retain Markdown';
   bodyEl.innerHTML = `
-    <div style="margin-bottom:14px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Remarks <span style="color:var(--error);">*</span></label>
-      <textarea id="dispute-remarks-input" class="form-input" style="width:100%;min-height:80px;resize:vertical;font-size:13px;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
+    <div style="padding:8px 0;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
+      <textarea id="dispute-remarks-input" rows="5" style="width:100%;background:var(--surface);color:var(--fg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit;" placeholder="Enter your remarks for retaining this markdown..."></textarea>
     </div>
-    <div style="margin-bottom:14px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Attachments</label>
-      <input type="file" id="dispute-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none" onchange="disputeUpdateFiles()">
-      <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('dispute-file-input').click()" style="display:flex;align-items:center;gap:6px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Attachments</label>
+      <input type="file" id="dispute-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp" style="display:none" onchange="disputeHandleFileSelect(this)">
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--primary);" onclick="document.getElementById('dispute-file-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
         Attach Files
-      </button>
-      <div id="dispute-file-list" style="margin-top:6px;"></div>
-      <p style="font-size:11px;color:var(--fg-subtle);margin-top:4px;">Optional. Accepts documents, spreadsheets, and images.</p>
+      </div>
+      <div id="dispute-file-list" style="margin-top:8px;"></div>
+      <p style="font-size:11px;color:var(--fg-muted);margin-top:6px;">Optional. Accepts documents, spreadsheets, and images.</p>
     </div>
-    <p style="font-size:12px;color:var(--fg-muted);margin-top:8px;">This will set the status to <strong>Markdown Retained - QTP Manager</strong>.</p>
   `;
 
   footerEl.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
-    <button class="btn btn-warning btn-sm" onclick="disputesSubmitLV6RetainMarkdown()">Retain Markdown</button>
+    <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV6RetainMarkdown()">Save</button>
   `;
 
   overlay.style.display = 'flex';

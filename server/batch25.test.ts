@@ -79,25 +79,27 @@ describe("Batch 25 — Fixes & Enhancements", () => {
     });
   });
 
-  // 5. Side-by-side Task Board
-  describe("Side-by-Side Task Board", () => {
-    it("HTML has side-by-side layout for Tasks and Approvals", () => {
+  // 5. Tabbed Task Board (updated from side-by-side in Batch 72)
+  describe("Tabbed Task Board", () => {
+    it("HTML has tabbed layout for Tasks Given, Received, and Approvals", () => {
       const html = readPublicHTML();
-      expect(html).toContain("Side-by-side");
+      expect(html).toContain('data-board-tab="given"');
+      expect(html).toContain('data-board-tab="received"');
+      expect(html).toContain('data-board-tab="approvals"');
       expect(html).toContain("helm-approvals-table");
     });
 
-    it("helm.js renders both tables without tab switching", () => {
+    it("helm.js has tab switching and approvals table rendering", () => {
       const helm = readPublicJS("helm.js");
-      expect(helm).toContain("side-by-side");
+      expect(helm).toContain("helmSwitchBoardTab");
       expect(helm).toContain("helm-approvals-table-head");
       expect(helm).toContain("helm-approvals-table-body");
     });
 
-    it("has approval filter controls", () => {
+    it("has page-level filter controls", () => {
       const html = readPublicHTML();
-      expect(html).toContain("helm-approvals-filter-status");
-      expect(html).toContain("helm-approvals-search");
+      expect(html).toContain('id="helm-filter-status"');
+      expect(html).toContain('id="helm-search"');
     });
   });
 });

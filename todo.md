@@ -845,3 +845,15 @@
 ## Batch 71 — OT Apply: Target Next Week Dates
 - [x] Update OT apply logic so approved OT is applied to nearest available day next week (Sat-Fri), skipping Work Off and PL dates
 - [x] Remove backward pass from findOtDay — if no forward Sat→Fri day found, waitlist the request
+
+## Batch 72 — Task Board Tabs, Alerts Style, Disputes Modals, Password Reset
+- [x] Task Board: Add tabs for Tasks Given, Tasks Received, Approvals (filters stay page-level)
+- [x] Approvals tab: Managers & 740045023 see all; TLs see their team; others see only own requests
+- [x] Tasks Given tab: Everyone sees only tasks they created
+- [x] Tasks Received tab: Everyone sees only tasks where they are in Assigned To; hide tab for 703212987
+- [x] Remove password for Jenifer Rosales (740030270) — already null, can sign up fresh
+- [x] Stylize the Alerts sidebar notification cards
+- [x] Disputes: Retain Markdown modal template (LV2, LV4, LV6) — remarks + attachments + Cancel/Save
+- [x] Disputes: Reverse Markdown modal template (LV2, LV4, LV6) — warning icon + confirmation + Cancel/Save(green)
+- [x] Disputes: Reject Decision modal template (LV3, LV5) — plain title + remarks + attachments + Cancel/Save(red)
+- [x] Disputes: Accept Decision modal template (LV3, LV5) — plain title + checkmark + confirmation + Cancel/Save(green), no yellow box

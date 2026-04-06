@@ -111,21 +111,24 @@ async function helmFetchTasks() {
   if (boardLoading) boardLoading.style.display = 'none';
   if (boardContent) boardContent.style.display = '';
 
-  // Hide "New Task" button and "Tasks Given" panel from Agents
+  // Role-based tab visibility
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const isSM = cu && cu.ohr_id === '703212987';
   const newTaskBtn = document.getElementById('helm-new-btn');
   if (newTaskBtn) newTaskBtn.style.display = isAgent ? 'none' : '';
-  const tasksGivenPanel = document.getElementById('helm-tab-tasks');
-  if (tasksGivenPanel) tasksGivenPanel.style.display = isAgent ? 'none' : '';
-  // Switch to 2-column grid for agents, 3-column for others
-  const boardGrid = tasksGivenPanel ? tasksGivenPanel.parentElement : null;
-  if (boardGrid && boardGrid.style) {
-    boardGrid.style.gridTemplateColumns = isAgent ? '1fr 1fr' : '1fr 1fr 1fr';
-  }
 
-  helmApplyFilters();
-  helmApplyReceivedFilters();
+  // Hide tab buttons based on role
+  const givenTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="given"]');
+  const receivedTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="received"]');
+  if (givenTabBtn) givenTabBtn.style.display = isAgent ? 'none' : '';
+  if (receivedTabBtn) receivedTabBtn.style.display = isSM ? 'none' : '';
+
+  // Set initial active tab based on role
+  let initialTab = 'given';
+  if (isAgent) initialTab = 'received';
+  else if (isSM) initialTab = 'given';
+  helmSwitchBoardTab(initialTab);
 }
 
 async function helmFetchEmployees() {
@@ -152,23 +155,39 @@ function helmSwitchTab(tab) {
 
 // ===== Filters =====
 
-// ===== Board Tab Switcher =====
+// Shared filter dispatcher — calls the right filter function for the active tab
+function helmApplyActiveTabFilters() {
+  const tab = HELM.currentBoardTab || 'given';
+  if (tab === 'given') helmApplyFilters();
+  else if (tab === 'received') helmApplyReceivedFilters();
+  else if (tab === 'approvals') helmApplyApprovalsFilters();
+}
+
+// ===== Board Tab Switcher (Tabbed layout) =====
 
 function helmSwitchBoardTab(tab) {
-  // All three tables are always visible side-by-side now
   HELM.currentBoardTab = tab;
-  // Ensure panels are visible (but keep Tasks Given hidden for agents)
-  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  // Toggle tab button active state
+  document.querySelectorAll('#helm-board-tabs .helm-board-tab').forEach(btn => {
+    const isActive = btn.dataset.boardTab === tab;
+    btn.classList.toggle('active', isActive);
+    btn.style.borderBottomColor = isActive ? 'var(--primary)' : 'transparent';
+    btn.style.color = isActive ? 'var(--primary)' : 'var(--fg-muted)';
+  });
+  // Show/hide panels
   const tasksPanel = document.getElementById('helm-tab-tasks');
   const receivedPanel = document.getElementById('helm-tab-received');
   const approvalsPanel = document.getElementById('helm-tab-approvals');
-  if (tasksPanel) tasksPanel.style.display = isAgent ? 'none' : '';
-  if (receivedPanel) receivedPanel.style.display = '';
-  if (approvalsPanel) approvalsPanel.style.display = '';
-  // Refresh all tables
-  helmApplyReceivedFilters();
-  helmApplyApprovalsFilters();
+  if (tasksPanel) tasksPanel.style.display = (tab === 'given') ? 'block' : 'none';
+  if (receivedPanel) receivedPanel.style.display = (tab === 'received') ? 'block' : 'none';
+  if (approvalsPanel) approvalsPanel.style.display = (tab === 'approvals') ? 'block' : 'none';
+  // Reset page-level filter to 'All' when switching tabs
+  const statusSel = document.getElementById('helm-filter-status');
+  if (statusSel) statusSel.value = 'All';
+  const searchInput = document.getElementById('helm-search');
+  if (searchInput) searchInput.value = '';
+  // Apply filters for the active tab
+  helmApplyActiveTabFilters();
 }
 
 function helmApplyFilters() {
@@ -176,21 +195,20 @@ function helmApplyFilters() {
   // Filter only task records (not requests) where current user is the creator
   let data = HELM.tasks.filter(t => t.record_type !== 'request');
 
-  // Tasks Given: only tasks created by the current user
+  // Tasks Given: EVERYONE sees only tasks they created
   if (cu && cu.ohr_id) {
     data = data.filter(t => (t.assigned_by_ohr || '').trim() === cu.ohr_id.trim());
   } else {
-    // No user logged in — show nothing
     data = [];
   }
 
-  // Status filter
+  // Page-level status filter
   const statusFilter = document.getElementById('helm-filter-status')?.value || 'All';
   if (statusFilter !== 'All') {
     data = data.filter(t => t.status === statusFilter);
   }
 
-  // Search
+  // Page-level search
   const search = (document.getElementById('helm-search')?.value || '').toLowerCase().trim();
   if (search) {
     data = data.filter(t =>
@@ -271,7 +289,7 @@ function helmApplyReceivedFilters() {
   // Filter only task records (not requests) where current user is an assignee
   let data = HELM.tasks.filter(t => t.record_type !== 'request');
 
-  // Tasks Received: only tasks assigned to the current user
+  // Tasks Received: EVERYONE sees only tasks where they are in "Assigned To"
   if (cu && cu.ohr_id) {
     const myOhr = cu.ohr_id.trim();
     data = data.filter(t => {
@@ -279,18 +297,17 @@ function helmApplyReceivedFilters() {
       return assignedOhrs.includes(myOhr);
     });
   } else {
-    // No user logged in — show nothing
     data = [];
   }
 
-  // Status filter
-  const statusFilter = document.getElementById('helm-received-filter-status')?.value || 'All';
+  // Page-level status filter
+  const statusFilter = document.getElementById('helm-filter-status')?.value || 'All';
   if (statusFilter !== 'All') {
     data = data.filter(t => t.status === statusFilter);
   }
 
-  // Search
-  const search = (document.getElementById('helm-received-search')?.value || '').toLowerCase().trim();
+  // Page-level search
+  const search = (document.getElementById('helm-search')?.value || '').toLowerCase().trim();
   if (search) {
     data = data.filter(t =>
       (t.title || '').toLowerCase().includes(search) ||
@@ -1381,7 +1398,10 @@ const HELM_APPROVAL_COLORS = {
 
 function helmApplyApprovalsFilters() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const role = cu ? cu.actual_role : '';
+  const myOhr = cu ? (cu.ohr_id || '').trim() : '';
+  const isManager = role === 'Manager' || myOhr === '740045023';
+  const isTL = role === 'Team Leader';
 
   // 1. Task-based requests (e.g., Attendance Backdated Change Tag)
   let taskRequests = HELM.tasks.filter(t => t.record_type === 'request');
@@ -1401,16 +1421,34 @@ function helmApplyApprovalsFilters() {
     _otData: ot
   }));
 
-  // For agents, only show their own requests
-  if (isAgent && cu) {
+  // Role-based visibility for Approvals:
+  // Managers & 740045023: see ALL items
+  // Team Leaders: see items from their team (supervisor_ohr matches)
+  // Anybody else (Agents, etc.): see only their own requests
+  if (isManager) {
+    // No filtering — see everything
+  } else if (isTL && cu) {
+    // TL sees requests from agents in their team
+    const teamOhrs = new Set(HELM.employees.filter(e => (e.supervisor_ohr || '').trim() === myOhr).map(e => (e.ohr_id || '').trim()));
+    teamOhrs.add(myOhr); // Include own requests too
     taskRequests = taskRequests.filter(t => {
-      // Show if the agent submitted it (assigned_by_ohr matches)
-      if (t.assigned_by_ohr === cu.ohr_id) return true;
-      // Also show if their name/ohr appears in description
-      if (t.description && t.description.includes(cu.ohr_id)) return true;
+      const submitterOhr = (t.assigned_by_ohr || '').trim();
+      if (teamOhrs.has(submitterOhr)) return true;
+      if (t.description && [...teamOhrs].some(ohr => t.description.includes(ohr))) return true;
       return false;
     });
-    otRequests = otRequests.filter(ot => ot.assigned_by_ohr === cu.ohr_id);
+    otRequests = otRequests.filter(ot => teamOhrs.has((ot.assigned_by_ohr || '').trim()));
+  } else if (cu) {
+    // Anybody else: only their own requests
+    taskRequests = taskRequests.filter(t => {
+      if ((t.assigned_by_ohr || '').trim() === myOhr) return true;
+      if (t.description && t.description.includes(myOhr)) return true;
+      return false;
+    });
+    otRequests = otRequests.filter(ot => (ot.assigned_by_ohr || '').trim() === myOhr);
+  } else {
+    taskRequests = [];
+    otRequests = [];
   }
 
   let data = [...taskRequests, ...otRequests];
@@ -1422,14 +1460,14 @@ function helmApplyApprovalsFilters() {
     return db - da;
   });
 
-  // Approval status filter
-  const statusFilter = document.getElementById('helm-approvals-filter-status')?.value || 'All';
+  // Page-level status filter
+  const statusFilter = document.getElementById('helm-filter-status')?.value || 'All';
   if (statusFilter !== 'All') {
     data = data.filter(t => (t.approval_status || 'Pending') === statusFilter);
   }
 
-  // Search
-  const search = (document.getElementById('helm-approvals-search')?.value || '').toLowerCase().trim();
+  // Page-level search
+  const search = (document.getElementById('helm-search')?.value || '').toLowerCase().trim();
   if (search) {
     data = data.filter(t =>
       (t.title || '').toLowerCase().includes(search) ||

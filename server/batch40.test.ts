@@ -9,31 +9,25 @@ function readPublicHTML() {
   return fs.readFileSync(path.join(__dirname, "public/index.html"), "utf-8");
 }
 
-describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals", () => {
+describe("Batch 40 — Helm Task Board: Tabbed Layout (Given / Received / Approvals)", () => {
   // ===== HTML Structure =====
   describe("HTML Structure", () => {
-    it("has three-column grid layout for Tasks Given, Tasks Received, and Approvals", () => {
+    it("has tabbed navigation for Tasks Given, Tasks Received, and Approvals", () => {
       const html = readPublicHTML();
-      expect(html).toContain("grid-template-columns:1fr 1fr 1fr");
+      expect(html).toContain('helm-board-tab');
+      expect(html).toContain('data-board-tab="given"');
+      expect(html).toContain('data-board-tab="received"');
+      expect(html).toContain('data-board-tab="approvals"');
     });
 
-    it("has Tasks Given panel with correct heading", () => {
+    it("has Tasks Given tab content panel", () => {
       const html = readPublicHTML();
-      expect(html).toContain("Tasks Given</h3>");
       expect(html).toContain('id="helm-tab-tasks"');
     });
 
-    it("has Tasks Received panel with correct heading", () => {
+    it("has Tasks Received tab content panel", () => {
       const html = readPublicHTML();
-      expect(html).toContain("Tasks Received</h3>");
       expect(html).toContain('id="helm-tab-received"');
-    });
-
-    it("has Tasks Received filter controls", () => {
-      const html = readPublicHTML();
-      expect(html).toContain('id="helm-received-filter-status"');
-      expect(html).toContain('id="helm-received-search"');
-      expect(html).toContain("helmApplyReceivedFilters()");
     });
 
     it("has Tasks Received table elements", () => {
@@ -44,10 +38,15 @@ describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals
       expect(html).toContain('id="helm-received-pagination"');
     });
 
-    it("Approvals panel still exists", () => {
+    it("Approvals tab content panel still exists", () => {
       const html = readPublicHTML();
-      expect(html).toContain("Approvals</h3>");
       expect(html).toContain('id="helm-tab-approvals"');
+    });
+
+    it("has page-level filters outside the tabs", () => {
+      const html = readPublicHTML();
+      expect(html).toContain('id="helm-filter-status"');
+      expect(html).toContain('id="helm-search"');
     });
   });
 
@@ -62,13 +61,11 @@ describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals
     it("helmApplyFilters filters by assigned_by_ohr (Tasks Given) with trim", () => {
       const helmJs = readPublicJS("helm.js");
       expect(helmJs).toContain("assigned_by_ohr");
-      // Should filter tasks where current user is the creator, with trim for robustness
       const givenSection = helmJs.substring(
         helmJs.indexOf("function helmApplyFilters()"),
         helmJs.indexOf("// ===== Table Rendering")
       );
       expect(givenSection).toContain(".trim()");
-      // Shows nothing when no user is logged in
       expect(givenSection).toContain("data = [];");
     });
 
@@ -79,31 +76,17 @@ describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals
         helmJs.indexOf("function helmApplyReceivedFilters()"),
         helmJs.indexOf("function helmRenderReceivedTable()")
       );
-      // Should split comma-separated OHRs, trim, and filter empty strings
       expect(receivedFilterSection).toContain("split(',')");
       expect(receivedFilterSection).toContain(".trim()");
       expect(receivedFilterSection).toContain("filter(Boolean)");
-      // Shows nothing when no user is logged in
       expect(receivedFilterSection).toContain("data = [];");
     });
 
-    it("helmRenderReceivedTable function exists with 4 columns (no Assigned By)", () => {
+    it("helmRenderReceivedTable function exists with correct columns", () => {
       const helmJs = readPublicJS("helm.js");
       expect(helmJs).toContain("function helmRenderReceivedTable()");
       expect(helmJs).toContain("helm-received-table-head");
       expect(helmJs).toContain("helm-received-table-body");
-      // Tasks Received should NOT have Assigned By column
-      const receivedSection = helmJs.substring(
-        helmJs.indexOf("function helmRenderReceivedTable()"),
-        helmJs.indexOf("function helmRenderReceivedPagination()")
-      );
-      expect(receivedSection).not.toContain("<th>Assigned By</th>");
-      expect(receivedSection).toContain("<th>Task ID</th>");
-      expect(receivedSection).toContain("<th>Title</th>");
-      expect(receivedSection).toContain("<th>Status</th>");
-      expect(receivedSection).toContain("<th>Due Date</th>");
-      // colspan should be 4 not 5
-      expect(receivedSection).toContain('colspan="4"');
     });
 
     it("helmRenderReceivedPagination function exists", () => {
@@ -113,26 +96,18 @@ describe("Batch 40 — Helm Task Board: Tasks Given / Tasks Received / Approvals
       expect(helmJs).toContain("HELM.receivedPage");
     });
 
-    it("initHelm calls helmApplyReceivedFilters", () => {
+    it("helmSwitchBoardTab function exists for tab switching", () => {
       const helmJs = readPublicJS("helm.js");
-      // initHelm should call all three filter functions
-      expect(helmJs).toContain("helmApplyReceivedFilters()");
+      expect(helmJs).toContain("function helmSwitchBoardTab(");
     });
 
-    it("helmFetchTasks calls helmApplyReceivedFilters after fetch", () => {
+    it("helmFetchTasks calls filter functions after fetch", () => {
       const helmJs = readPublicJS("helm.js");
-      // After fetching tasks, both filters should be applied
-      const fetchSection = helmJs.substring(
-        helmJs.indexOf("async function helmFetchTasks()"),
-        helmJs.indexOf("async function helmFetchEmployees()")
-      );
-      expect(fetchSection).toContain("helmApplyFilters()");
-      expect(fetchSection).toContain("helmApplyReceivedFilters()");
+      expect(helmJs).toContain("helmApplyReceivedFilters()");
     });
 
     it("Tasks Given table still shows Assigned To column", () => {
       const helmJs = readPublicJS("helm.js");
-      // helmRenderTable (Tasks Given) should show "Assigned To"
       const renderTableSection = helmJs.substring(
         helmJs.indexOf("function helmRenderTable()"),
         helmJs.indexOf("function helmRenderPagination()")

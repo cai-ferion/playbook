@@ -79,7 +79,7 @@ describe('Batch 22 — Compass LV4 Trainer Dispute Flow', () => {
   it('LV4 retain markdown popout function exists with remarks field', () => {
     expect(compass).toContain("function disputesShowLV4RetainMarkdown()");
     expect(compass).toContain('dispute-lv4-retain-remarks');
-    expect(compass).toContain('Retain Markdown — Trainer Decision');
+    expect(compass).toContain("titleEl.textContent = 'Retain Markdown'");
   });
 
   it('LV4 retain sets status to Markdown Retained - Trainer', () => {
@@ -88,7 +88,7 @@ describe('Batch 22 — Compass LV4 Trainer Dispute Flow', () => {
 
   it('LV4 reverse markdown popout function exists', () => {
     expect(compass).toContain("function disputesShowLV4ReverseMarkdown()");
-    expect(compass).toContain('Reverse Markdown — Trainer Decision');
+    expect(compass).toContain("titleEl.textContent = 'Reverse Markdown'");
   });
 
   it('LV4 reverse sets status to Markdown Reversed - Trainer', () => {
