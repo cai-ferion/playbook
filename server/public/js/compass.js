@@ -722,16 +722,22 @@ async function compassOpenDetail(coachingId) {
   // Coaching Details
   html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '—'}</span></div>`;
 
-  // RCA section for QA Feedback
+  // Close Session Details section, open Root Cause Analysis section for QA Feedback
   if (log.coaching_type === 'QA Feedback') {
-    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
-      <div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value">${escapeHtml(log.guidelines || '—')}</span></div>
-    </div>`;
+    html += '</div>'; // close Session Details
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Root Cause Analysis</h4>';
+    html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value">${escapeHtml(log.guidelines || '—')}</span></div>`;
+    // Markdown Status
+    const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
+    html += `<div class="detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span class="detail-label">Markdown Status</span><span class="detail-value" style="font-weight:600;color:${mdStatusColor};">${escapeHtml(log.status || '—')}</span></div>`;
+    html += '</div>'; // close Root Cause Analysis
+    // Re-open a wrapper div so the rest of the code can close it
+    html += '<div class="detail-section" style="margin-top:0;">';
   }
 
   // ZTP section
@@ -748,15 +754,17 @@ async function compassOpenDetail(coachingId) {
   if (log.coaching_type === 'QA Feedback') {
     const hasDispute = log.dispute_comments || log.qa_comments || log.sme_qa_dispute_comments || log.trainer_comments || log.sme_trainer_comments || log.qtp_manager_comments;
     if (hasDispute) {
-      html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">';
-      html += '<div style="font-size:12px;font-weight:600;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Dispute Trail</div>';
+      html += '</div>'; // close current wrapper
+      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Dispute Trail</h4>';
       if (log.dispute_comments) html += `<div class="detail-row"><span class="detail-label">Dispute Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.dispute_comments)}</span></div>`;
       if (log.qa_comments) html += `<div class="detail-row"><span class="detail-label">QA Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.qa_comments)}</span></div>`;
       if (log.sme_qa_dispute_comments) html += `<div class="detail-row"><span class="detail-label">SME QA Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_qa_dispute_comments)}</span></div>`;
       if (log.trainer_comments) html += `<div class="detail-row"><span class="detail-label">Trainer Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.trainer_comments)}</span></div>`;
       if (log.sme_trainer_comments) html += `<div class="detail-row"><span class="detail-label">SME Trainer Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_trainer_comments)}</span></div>`;
       if (log.qtp_manager_comments) html += `<div class="detail-row"><span class="detail-label">QTP Manager</span><span class="detail-value detail-multiline">${escapeHtml(log.qtp_manager_comments)}</span></div>`;
-      html += '</div>';
+      html += '</div>'; // close Dispute Trail section
+      // Re-open wrapper for attachments/related
+      html += '<div class="detail-section" style="margin-top:0;">';
     }
   }
 
@@ -766,7 +774,7 @@ async function compassOpenDetail(coachingId) {
   // Related Coaching Logs — logs with the same session_goal as this log
   html += compassRenderRelatedLogs(log);
 
-  html += '</div>'; // close Section 1
+  html += '</div>'; // close current section
 
   // ===== SECTION 2: ACKNOWLEDGEMENT =====
   html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Acknowledgement</h4>';

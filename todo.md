@@ -873,3 +873,10 @@
 - [x] Compass: Import new coaching logs from DS.COACHING.xlsx (1,894 records imported, total now 2,005)
 - [x] Compass: Filter out QA Feedback with dispute statuses from Coaching Profile page (5 statuses hidden)
 - [x] Compass: Convert existing Group Coaching records into individual General Coaching records (147 converted → 246 General Coaching)
+
+## Batch 76 — Account Reset for OHR 740030270
+- [x] Delete existing user record for OHR 740030270 (Jenifer Rosales) so she can sign up fresh (password cleared from io_employees)
+
+## Batch 77 — QA Feedback Detail View Restructure
+- [x] Move L1-L5 + RCA Description from Session Details into a separate "Root Cause Analysis" section
+- [x] Add "Markdown Status" field under Root Cause Analysis section showing current dispute status
