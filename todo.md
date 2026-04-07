@@ -955,3 +955,10 @@
 
 ## Batch 90 — Supervisor Wise Alphabetical Sort
 - [x] Sort supervisors alphabetically in the Supervisor Wise breakdown on Anchor - Dashboard
+
+## Batch 91 — G Sheet Attendance Sync (04/04–04/07)
+- [x] Read G Sheet attendance data for 04/04/26–04/07/26 (1,544 rows from ATTEND_26 sheet)
+- [x] Upsert data into io_attendance database (176 changed records: 156 via PATCH + 20 locked via bulk-update)
+- [x] First verification — all 1,544 records match field-by-field
+- [x] Second verification — 90/90 spot-checks passed (20 locked + 40 random + 30 tag changes)
+- [x] Third verification — all counts, tag/billing/supervisor/planning group distributions match (1 null vs empty string cosmetic diff)
