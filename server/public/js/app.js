@@ -1708,26 +1708,28 @@ function buildShiftBreakdownHTML(records) {
     return '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No shift data available</div>';
   }
 
+  // Column header row reused inside each shift section
+  const colHeaders = `<tr class="shift-col-headers">
+    <th>Planning Group</th>
+    <th style="text-align:center">Schedule</th>
+    <th style="text-align:center">Present</th>
+    <th style="text-align:center">PL</th>
+    <th style="text-align:center">UPL</th>
+    <th style="text-align:center">Shrinkage</th>
+    <th style="text-align:center">Late</th>
+  </tr>`;
+
   let html = `<table class="data-table shift-table shift-bordered">
-    <thead>
-      <tr>
-        <th>Shift / Workflow</th>
-        <th style="text-align:center">Schedule</th>
-        <th style="text-align:center">Present</th>
-        <th style="text-align:center">PL</th>
-        <th style="text-align:center">UPL</th>
-        <th style="text-align:center">Shrinkage</th>
-        <th style="text-align:center">Late</th>
-      </tr>
-    </thead>
     <tbody>`;
 
-  const shiftNames = Object.keys(shifts).sort();
+  // Render shifts in defined order: GY Shift first, then Mid-Shift
+  const shiftOrder = ['GY Shift', 'Mid-Shift'];
   const grandOverall = { schedule: 0, present: 0, upl: 0, late: 0, pl: 0 };
 
-  for (const shiftName of shiftNames) {
+  for (const shiftName of shiftOrder) {
     const shiftData = shifts[shiftName];
-    const workflows = shiftData.workflows;
+    if (!shiftData) continue;
+    const planningGroups = shiftData.planningGroups;
     const overall = shiftData.overall;
 
     grandOverall.schedule += overall.schedule;
@@ -1736,22 +1738,26 @@ function buildShiftBreakdownHTML(records) {
     grandOverall.late += overall.late;
     grandOverall.pl += overall.pl;
 
+    // Shift section header
     html += `<tr class="shift-section-header">
       <td colspan="7"><strong>${escapeHtml(shiftName)}</strong></td>
     </tr>`;
+    // Column headers inside each shift
+    html += colHeaders;
 
-    const wfNames = Object.keys(workflows).sort();
-    for (const wfName of wfNames) {
-      const wf = workflows[wfName];
-      const shrinkage = (wf.present + wf.pl + wf.upl) > 0 ? ((wf.pl + wf.upl) / (wf.present + wf.pl + wf.upl) * 100) : 0;
+    // Fixed planning groups in defined order
+    const pgNames = Object.keys(planningGroups).sort();
+    for (const pgName of pgNames) {
+      const pg = planningGroups[pgName];
+      const shrinkage = (pg.present + pg.pl + pg.upl) > 0 ? ((pg.pl + pg.upl) / (pg.present + pg.pl + pg.upl) * 100) : 0;
       html += `<tr>
-        <td style="padding-left:24px;">${escapeHtml(wfName)}</td>
-        <td class="cell-center">${wf.schedule}</td>
-        <td class="cell-center">${wf.present}</td>
-        <td class="cell-center">${wf.pl || ''}</td>
-        <td class="cell-center">${wf.upl || ''}</td>
+        <td style="padding-left:24px;">${escapeHtml(pgName)}</td>
+        <td class="cell-center">${pg.schedule}</td>
+        <td class="cell-center">${pg.present}</td>
+        <td class="cell-center">${pg.pl || ''}</td>
+        <td class="cell-center">${pg.upl || ''}</td>
         <td class="cell-center">${shrinkage.toFixed(2)}%</td>
-        <td class="cell-center">${wf.late || ''}</td>
+        <td class="cell-center">${pg.late || ''}</td>
       </tr>`;
     }
 

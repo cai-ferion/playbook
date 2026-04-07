@@ -156,28 +156,44 @@ function calculateKPIs(records) {
   };
 }
 
+// Fixed planning groups per shift
+const SHIFT_PLANNING_GROUPS = {
+  'GY Shift': ['S-ABF', 'CS-ABF', 'CSO_CTR', 'FAD_CTR', 'RECALL_MEASUREMENT_CTR', 'SME_CTR', 'QPE_CTR'],
+  'Mid-Shift': ['S-ABF', 'CS-ABF', 'RECALL_MEASUREMENT_CTR', 'SME_CTR', 'QPE_CTR'],
+};
+
 function getShiftBreakdown(records) {
+  const emptyRow = () => ({ schedule: 0, present: 0, upl: 0, late: 0, pl: 0 });
+
+  // Initialize structure with fixed planning groups
   const shifts = {};
+  for (const [shiftName, pgs] of Object.entries(SHIFT_PLANNING_GROUPS)) {
+    shifts[shiftName] = { planningGroups: {}, overall: emptyRow() };
+    for (const pg of pgs) {
+      shifts[shiftName].planningGroups[pg] = emptyRow();
+    }
+  }
 
   for (const r of records) {
-    const shift = r.shiftTime || 'Unknown';
-    const pg = r.actualPlanningGroup || 'Unknown';
+    const shift = r.shiftTime || '';
+    const pg = r.actualPlanningGroup || '';
     const tag = getEffectiveTag(r.tag);
 
-    if (!shifts[shift]) shifts[shift] = { workflows: {}, overall: { schedule: 0, present: 0, upl: 0, late: 0, pl: 0 } };
-    if (!shifts[shift].workflows[pg]) shifts[shift].workflows[pg] = { schedule: 0, present: 0, upl: 0, late: 0, pl: 0 };
+    // Only count records that belong to a known shift + planning group
+    if (!shifts[shift]) continue;
+    if (!shifts[shift].planningGroups[pg]) continue;
 
-    const wf = shifts[shift].workflows[pg];
+    const row = shifts[shift].planningGroups[pg];
     const ov = shifts[shift].overall;
 
-    if (tag === 'P') { wf.present++; ov.present++; }
-    else if (tag === 'LATE') { wf.late++; ov.late++; }
-    else if (tag === 'UPL') { wf.upl++; ov.upl++; }
-    else if (tag === 'PL') { wf.pl++; ov.pl++; }
+    if (tag === 'P') { row.present++; ov.present++; }
+    else if (tag === 'LATE') { row.late++; ov.late++; }
+    else if (tag === 'UPL') { row.upl++; ov.upl++; }
+    else if (tag === 'PL') { row.pl++; ov.pl++; }
 
     // Scheduled = P + PL + UPL
     if (tag === 'P' || tag === 'PL' || tag === 'UPL') {
-      wf.schedule++;
+      row.schedule++;
       ov.schedule++;
     }
   }

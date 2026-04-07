@@ -932,3 +932,9 @@
 - [x] Update Shrinkage formula to (PL + UPL) / (P + PL + UPL) everywhere
 - [x] Update Scheduled formula to P + PL + UPL everywhere
 - [x] Update KPI display labels/tooltips to reflect new formulas
+
+## Batch 87 — Shift Breakdown Table Revision
+- [x] Remove "Shift / Workflow" column header, replace with "Planning Group"
+- [x] Column headers (Schedule, Present, PL, UPL, Shrinkage, Late) in GY Shift and Mid-Shift header rows
+- [x] Fixed planning groups: GY (S-ABF, CS-ABF, CSO_CTR, FAD_CTR, RECALL_MEASUREMENT_CTR, SME_CTR, QPE_CTR), Mid (S-ABF, CS-ABF, RECALL_MEASUREMENT_CTR, SME_CTR, QPE_CTR)
+- [x] Ensure data is sourced from Input Portal data only
