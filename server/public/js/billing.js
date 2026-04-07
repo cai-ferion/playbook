@@ -39,13 +39,48 @@ const BILLING_CODE_LABELS = {
 // Ordered billing codes for display
 const BILLING_CODE_ORDER = ['MA', 'MS', 'MQ', 'CA', 'CS', 'CQ', 'RM', 'FA', 'SO', 'SM', 'QP'];
 
-// ===== Target Hours Mapping =====
-const BILLING_TARGET_HOURS = {
-  'MA': 3293, 'MS': 222, 'MQ': 148,
-  'CA': 2405, 'CS': 111, 'CQ': 74,
-  'SO': 185, 'FA': 185, 'RM': 4736,
-  'SM': 407, 'QP': 222,
-};
+// ===== Target Hours Mapping (date-based) =====
+// Each entry: { effectiveFrom: 'YYYY-MM-DD' (week ending), targets: {...} }
+// Entries MUST be sorted newest-first. The first entry whose effectiveFrom <= weekEnding is used.
+const BILLING_TARGET_HISTORY = [
+  {
+    effectiveFrom: '2026-04-03',
+    targets: {
+      'MA': 3293, 'MS': 222, 'MQ': 148,
+      'CA': 2405, 'CS': 111, 'CQ': 74,
+      'SO': 185, 'FA': 185, 'RM': 4736,
+      'SM': 407, 'QP': 222,
+    }
+  },
+  {
+    effectiveFrom: '2000-01-01', // fallback for all earlier weeks
+    targets: {
+      'MA': 3293, 'MS': 222, 'MQ': 148,
+      'CA': 1665, 'CS': 111, 'CQ': 74,
+      'SO': 185, 'FA': 185, 'RM': 5476,
+      'SM': 407, 'QP': 222,
+    }
+  },
+];
+
+/**
+ * Get the target hours for a given billing code and week ending date.
+ * Falls back through BILLING_TARGET_HISTORY from newest to oldest.
+ * @param {string} code - billing code (e.g. 'MA')
+ * @param {string} weekEnding - 'YYYY-MM-DD' week ending date
+ * @returns {number} target hours
+ */
+function getTargetHours(code, weekEnding) {
+  for (const entry of BILLING_TARGET_HISTORY) {
+    if (weekEnding >= entry.effectiveFrom) {
+      return entry.targets[code] || 0;
+    }
+  }
+  return 0;
+}
+
+// Current (latest) target hours for the selected-week compliance table
+const BILLING_TARGET_HOURS = BILLING_TARGET_HISTORY[0].targets;
 
 // Excluded statuses for billing compliance
 const EXCLUDED_STATUSES = ['Nesting', 'Attrition Backfill Training', 'Exit'];
@@ -217,7 +252,7 @@ async function loadBillingCompliance() {
       const data = codeGroups[code] || { forecastedP: 0, otRendered: 0, uplCount: 0, plCount: 0 };
       const deliveredHours = data.forecastedP * 7.5;
       const totalPayload = deliveredHours + data.otRendered;
-      const targetHours = BILLING_TARGET_HOURS[code] !== undefined ? BILLING_TARGET_HOURS[code] : null;
+      const targetHours = getTargetHours(code, selectedDate) || null;
       tableData.push({
         code, label: BILLING_CODE_LABELS[code] || code,
         forecastedP: data.forecastedP, otRendered: data.otRendered,
@@ -231,7 +266,7 @@ async function loadBillingCompliance() {
       if (!BILLING_CODE_ORDER.includes(code) && !EXCLUDED_CODES.includes(code)) {
         const deliveredHours = data.forecastedP * 7.5;
         const totalPayload = deliveredHours + data.otRendered;
-        const targetHours = BILLING_TARGET_HOURS[code] !== undefined ? BILLING_TARGET_HOURS[code] : null;
+        const targetHours = getTargetHours(code, selectedDate) || null;
         tableData.push({
           code, label: BILLING_CODE_LABELS[code] || code,
           forecastedP: data.forecastedP, otRendered: data.otRendered,
@@ -447,7 +482,7 @@ function renderYTDComplianceDoughnut(weeklyData, threshold, weekDayCounts) {
     const dayCount = parseInt(weekDayCounts[we]) || 7;
     const proRateFactor = dayCount / 7;
     for (const code of BILLING_CODE_ORDER) {
-      const target = BILLING_TARGET_HOURS[code];
+      const target = getTargetHours(code, we);
       if (!target) continue;
       const adjustedTarget = target * proRateFactor;
       const data = byWeek[we][code] || { forecastedP: 0, otRendered: 0 };
@@ -536,7 +571,7 @@ function renderYTDComplianceDoughnut(weeklyData, threshold, weekDayCounts) {
     html += '<table class="billing-ytd-breakdown-table">';
     html += '<thead><tr><th class="ytd-sticky-col ytd-sticky-header" style="text-align:left;min-width:60px;z-index:3;">Week</th>';
     for (const code of BILLING_CODE_ORDER) {
-      if (!BILLING_TARGET_HOURS[code]) continue;
+      if (!BILLING_TARGET_HOURS[code] && !BILLING_TARGET_HISTORY[BILLING_TARGET_HISTORY.length - 1].targets[code]) continue;
       html += `<th class="ytd-sticky-header" title="${BILLING_CODE_LABELS[code] || code}">${code}</th>`;
     }
     html += '<th class="ytd-sticky-header">Score</th></tr></thead><tbody>';
@@ -546,7 +581,7 @@ function renderYTDComplianceDoughnut(weeklyData, threshold, weekDayCounts) {
       let weekPass = 0;
       let weekTotal = 0;
       for (const code of BILLING_CODE_ORDER) {
-        if (!BILLING_TARGET_HOURS[code]) continue;
+        if (!BILLING_TARGET_HOURS[code] && !BILLING_TARGET_HISTORY[BILLING_TARGET_HISTORY.length - 1].targets[code]) continue;
         const res = weekResults[we][code];
         weekTotal++;
         if (res && res.pass) {
@@ -749,7 +784,11 @@ async function loadBillingTargetHours() {
     // data is an array of [rows, fields] from mysql2 — rows is the first element
     const rows = Array.isArray(data) && Array.isArray(data[0]) ? data[0] : data;
     for (const row of rows) {
-      if (row.code) BILLING_TARGET_HOURS[row.code] = row.target_hours;
+      if (row.code) {
+        BILLING_TARGET_HOURS[row.code] = row.target_hours;
+        // Also update the latest entry in BILLING_TARGET_HISTORY
+        BILLING_TARGET_HISTORY[0].targets[row.code] = row.target_hours;
+      }
     }
   } catch (e) {
     console.warn('Failed to load billing target hours:', e);
@@ -803,6 +842,8 @@ async function billingUpdateTargetHours(code, value) {
 
   // Update the local mapping
   BILLING_TARGET_HOURS[code] = numVal;
+  // Also update the latest entry in BILLING_TARGET_HISTORY
+  BILLING_TARGET_HISTORY[0].targets[code] = numVal;
 
   // Persist to server
   try {

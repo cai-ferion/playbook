@@ -892,3 +892,8 @@
 - [x] Diagnose why Actual Weekly Compliance % differs between G Sheet and Playbook (CA and RM target hours were outdated)
 - [x] Fix the compliance calculation formula in billing.js to match G Sheet (CA: 1665→2405, RM: 5476→4736)
 - [x] Fix Goal columns (98%, 100%, 102%) — automatically fixed by correcting target hours
+
+## Batch 80 — Fix YTD Compliance 100% Threshold Chart
+- [x] Investigate why some weeks are not showing correctly in the YTD compliance chart (root cause: single static target hours used for all weeks)
+- [x] Fix the chart data computation and rendering (date-based getTargetHours applied to YTD doughnut, breakdown table, and selected-week table)
+- [x] Implement date-based target hours: old targets before WE 04/03, new targets from WE 04/03 onwards
