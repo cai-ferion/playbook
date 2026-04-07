@@ -921,3 +921,6 @@
 ## Batch 84 — Filtered Records Counter Fix
 - [x] Fix "Filtered Records" counter on Input Portal filter bar — stays visible and updates on filter change
 - [x] Fix "Filtered Records" counter on Dashboard filter bar — stays visible and updates on filter change
+
+## Batch 85 — Remove Duplicate Filtered Records Box
+- [x] Remove the standalone "Filtered Records: X" element below the Input Portal filter bar (duplicate of inline count)
