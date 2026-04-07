@@ -473,7 +473,20 @@ function renderYTDComplianceDoughnut(weeklyData, threshold, weekDayCounts) {
   // Detailed breakdown: weekFailures[we] = [{code, pct}]
   const weekFailures = {};
   const weekResults = {}; // weekResults[we][code] = { pct, pass }
-  const sortedWeeks = Object.keys(byWeek).sort();
+  const allSortedWeeks = Object.keys(byWeek).sort();
+  // Exclude the current incomplete week: keep only weeks with 7 days,
+  // or the first week of the year (which is always partial but complete)
+  const today = new Date();
+  const todayISO = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  const sortedWeeks = allSortedWeeks.filter(we => {
+    const dayCount = parseInt(weekDayCounts[we]) || 7;
+    // If it's a full 7-day week, always include
+    if (dayCount === 7) return true;
+    // If it's a partial week but the week ending is in the past, include it (e.g., first week of year)
+    if (we < todayISO) return true;
+    // Otherwise it's the current incomplete week — exclude it
+    return false;
+  });
 
   for (const we of sortedWeeks) {
     weekFailures[we] = [];

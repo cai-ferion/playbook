@@ -897,3 +897,4 @@
 - [x] Investigate why some weeks are not showing correctly in the YTD compliance chart (root cause: single static target hours used for all weeks)
 - [x] Fix the chart data computation and rendering (date-based getTargetHours applied to YTD doughnut, breakdown table, and selected-week table)
 - [x] Implement date-based target hours: old targets before WE 04/03, new targets from WE 04/03 onwards
+- [x] Exclude current incomplete week from YTD compliance chart (blanks already counted as P)
