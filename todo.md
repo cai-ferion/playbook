@@ -924,3 +924,11 @@
 
 ## Batch 85 — Remove Duplicate Filtered Records Box
 - [x] Remove the standalone "Filtered Records: X" element below the Input Portal filter bar (duplicate of inline count)
+
+## Batch 86 — Attendance Locking Mechanism Fix
+- [x] Fix attendance locking so past dates (before today) are not editable in Input Portal (confirmed working — Manager/admin exempt by design)
+
+## Batch 86 — Shrinkage & Scheduled Formula Update
+- [x] Update Shrinkage formula to (PL + UPL) / (P + PL + UPL) everywhere
+- [x] Update Scheduled formula to P + PL + UPL everywhere
+- [x] Update KPI display labels/tooltips to reflect new formulas

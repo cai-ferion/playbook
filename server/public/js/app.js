@@ -1674,7 +1674,7 @@ function renderDashboard() {
     <div class="kpi-card kpi-shrinkage ${shrinkageOk ? 'kpi-ok' : ''}">
       <div class="kpi-label">Shrinkage Rate</div>
       <div class="kpi-value">${kpis.shrinkageRate.toFixed(2)}%</div>
-      <div class="kpi-detail">UPL / (P + LATE + UPL)</div>
+      <div class="kpi-detail">(PL + UPL) / (P + PL + UPL)</div>
     </div>
     <div class="kpi-card kpi-upl">
       <div class="kpi-label">UPL Count</div>
@@ -1714,6 +1714,7 @@ function buildShiftBreakdownHTML(records) {
         <th>Shift / Workflow</th>
         <th style="text-align:center">Schedule</th>
         <th style="text-align:center">Present</th>
+        <th style="text-align:center">PL</th>
         <th style="text-align:center">UPL</th>
         <th style="text-align:center">Shrinkage</th>
         <th style="text-align:center">Late</th>
@@ -1722,7 +1723,7 @@ function buildShiftBreakdownHTML(records) {
     <tbody>`;
 
   const shiftNames = Object.keys(shifts).sort();
-  const grandOverall = { schedule: 0, present: 0, upl: 0, late: 0 };
+  const grandOverall = { schedule: 0, present: 0, upl: 0, late: 0, pl: 0 };
 
   for (const shiftName of shiftNames) {
     const shiftData = shifts[shiftName];
@@ -1733,41 +1734,45 @@ function buildShiftBreakdownHTML(records) {
     grandOverall.present += overall.present;
     grandOverall.upl += overall.upl;
     grandOverall.late += overall.late;
+    grandOverall.pl += overall.pl;
 
     html += `<tr class="shift-section-header">
-      <td colspan="6"><strong>${escapeHtml(shiftName)}</strong></td>
+      <td colspan="7"><strong>${escapeHtml(shiftName)}</strong></td>
     </tr>`;
 
     const wfNames = Object.keys(workflows).sort();
     for (const wfName of wfNames) {
       const wf = workflows[wfName];
-      const shrinkage = (wf.present + wf.late + wf.upl) > 0 ? (wf.upl / (wf.present + wf.late + wf.upl) * 100) : 0;
+      const shrinkage = (wf.present + wf.pl + wf.upl) > 0 ? ((wf.pl + wf.upl) / (wf.present + wf.pl + wf.upl) * 100) : 0;
       html += `<tr>
         <td style="padding-left:24px;">${escapeHtml(wfName)}</td>
         <td class="cell-center">${wf.schedule}</td>
         <td class="cell-center">${wf.present}</td>
+        <td class="cell-center">${wf.pl || ''}</td>
         <td class="cell-center">${wf.upl || ''}</td>
         <td class="cell-center">${shrinkage.toFixed(2)}%</td>
         <td class="cell-center">${wf.late || ''}</td>
       </tr>`;
     }
 
-    const overallShrinkage = (overall.present + overall.late + overall.upl) > 0 ? (overall.upl / (overall.present + overall.late + overall.upl) * 100) : 0;
+    const overallShrinkage = (overall.present + overall.pl + overall.upl) > 0 ? ((overall.pl + overall.upl) / (overall.present + overall.pl + overall.upl) * 100) : 0;
     html += `<tr class="shift-overall-row">
       <td><strong>${escapeHtml(shiftName)} Overall</strong></td>
       <td class="cell-center"><strong>${overall.schedule}</strong></td>
       <td class="cell-center"><strong>${overall.present}</strong></td>
+      <td class="cell-center"><strong>${overall.pl}</strong></td>
       <td class="cell-center"><strong>${overall.upl}</strong></td>
       <td class="cell-center"><strong>${overallShrinkage.toFixed(2)}%</strong></td>
       <td class="cell-center"><strong>${overall.late}</strong></td>
     </tr>`;
   }
 
-  const grandShrinkage = (grandOverall.present + grandOverall.late + grandOverall.upl) > 0 ? (grandOverall.upl / (grandOverall.present + grandOverall.late + grandOverall.upl) * 100) : 0;
+  const grandShrinkage = (grandOverall.present + grandOverall.pl + grandOverall.upl) > 0 ? ((grandOverall.pl + grandOverall.upl) / (grandOverall.present + grandOverall.pl + grandOverall.upl) * 100) : 0;
   html += `<tr class="shift-grand-overall-row">
     <td><strong>Overall</strong></td>
     <td class="cell-center"><strong>${grandOverall.schedule}</strong></td>
     <td class="cell-center"><strong>${grandOverall.present}</strong></td>
+    <td class="cell-center"><strong>${grandOverall.pl}</strong></td>
     <td class="cell-center"><strong>${grandOverall.upl}</strong></td>
     <td class="cell-center"><strong>${grandShrinkage.toFixed(2)}%</strong></td>
     <td class="cell-center"><strong>${grandOverall.late}</strong></td>

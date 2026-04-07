@@ -145,11 +145,12 @@ function calculateKPIs(records) {
     if (r.ot && !isNaN(parseFloat(r.ot))) totalOT += parseFloat(r.ot);
   }
 
-  const denominator = pCount + lateCount + uplCount;
-  const shrinkageRate = denominator > 0 ? (uplCount / denominator) * 100 : 0;
+  // Shrinkage = (PL + UPL) / (P + PL + UPL)
+  const denominator = pCount + plCount + uplCount;
+  const shrinkageRate = denominator > 0 ? ((plCount + uplCount) / denominator) * 100 : 0;
 
   return {
-    scheduled: records.length,
+    scheduled: pCount + plCount + uplCount, // Scheduled = P + PL + UPL
     pCount, lateCount, uplCount, plCount, mlCount,
     shrinkageRate, totalOT,
   };
@@ -163,18 +164,22 @@ function getShiftBreakdown(records) {
     const pg = r.actualPlanningGroup || 'Unknown';
     const tag = getEffectiveTag(r.tag);
 
-    if (!shifts[shift]) shifts[shift] = { workflows: {}, overall: { schedule: 0, present: 0, upl: 0, late: 0 } };
-    if (!shifts[shift].workflows[pg]) shifts[shift].workflows[pg] = { schedule: 0, present: 0, upl: 0, late: 0 };
+    if (!shifts[shift]) shifts[shift] = { workflows: {}, overall: { schedule: 0, present: 0, upl: 0, late: 0, pl: 0 } };
+    if (!shifts[shift].workflows[pg]) shifts[shift].workflows[pg] = { schedule: 0, present: 0, upl: 0, late: 0, pl: 0 };
 
     const wf = shifts[shift].workflows[pg];
     const ov = shifts[shift].overall;
 
-    wf.schedule++;
-    ov.schedule++;
-
     if (tag === 'P') { wf.present++; ov.present++; }
     else if (tag === 'LATE') { wf.late++; ov.late++; }
     else if (tag === 'UPL') { wf.upl++; ov.upl++; }
+    else if (tag === 'PL') { wf.pl++; ov.pl++; }
+
+    // Scheduled = P + PL + UPL
+    if (tag === 'P' || tag === 'PL' || tag === 'UPL') {
+      wf.schedule++;
+      ov.schedule++;
+    }
   }
 
   return shifts;
@@ -189,7 +194,9 @@ function getFLMBreakdown(records) {
 
     if (!flms[flm]) flms[flm] = { name: flm, schedule: 0, present: 0, upl: 0, late: 0, pl: 0, ml: 0, ot: 0 };
     const f = flms[flm];
-    f.schedule++;
+
+    // Scheduled = P + PL + UPL
+    if (tag === 'P' || tag === 'PL' || tag === 'UPL') f.schedule++;
 
     if (tag === 'P') f.present++;
     else if (tag === 'LATE') f.late++;
@@ -201,8 +208,9 @@ function getFLMBreakdown(records) {
   }
 
   return Object.values(flms).map(f => {
-    const denom = f.present + f.late + f.upl;
-    f.shrinkageRate = denom > 0 ? (f.upl / denom) * 100 : 0;
+    // Shrinkage = (PL + UPL) / (P + PL + UPL)
+    const denom = f.present + f.pl + f.upl;
+    f.shrinkageRate = denom > 0 ? ((f.pl + f.upl) / denom) * 100 : 0;
     return f;
   }).sort((a, b) => b.shrinkageRate - a.shrinkageRate);
 }
