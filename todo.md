@@ -944,3 +944,6 @@
 
 ## Batch 87c — Shift Breakdown Section Separators
 - [x] Add thin separator lines between GY Shift, Mid-Shift, and Overall sections for better UX visibility
+
+## Batch 88 — OHR 740044909 Input Portal Blank Page Fix
+- [x] Fix blank page and "Refresh Failed" error for OHR 740044909 on Input Portal — root cause: input-record-count element removed in Batch 85 but app.js still referenced it without null guard

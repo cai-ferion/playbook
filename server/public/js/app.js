@@ -1165,30 +1165,35 @@ function renderInputTable() {
   const start = page * pageSize;
   const pageItems = allFiltered.slice(start, start + pageSize);
 
-  document.getElementById('input-record-count').textContent = `Filtered Records: ${formatNumber(totalRecords)}`;
+  const rcEl = document.getElementById('input-record-count');
+  if (rcEl) rcEl.textContent = `Filtered Records: ${formatNumber(totalRecords)}`;
 
   const editCount = Object.keys(appState.pendingEdits).length;
   const editCountEl = document.getElementById('input-edit-count');
+  const saveBtn = document.getElementById('save-btn');
+  const undoBtn = document.getElementById('undo-btn');
   if (editCount > 0) {
-    editCountEl.textContent = `${editCount} record(s) edited`;
-    editCountEl.style.display = 'inline';
-    document.getElementById('save-btn').disabled = false;
-    document.getElementById('undo-btn').disabled = false;
+    if (editCountEl) { editCountEl.textContent = `${editCount} record(s) edited`; editCountEl.style.display = 'inline'; }
+    if (saveBtn) saveBtn.disabled = false;
+    if (undoBtn) undoBtn.disabled = false;
   } else {
-    editCountEl.style.display = 'none';
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('undo-btn').disabled = true;
+    if (editCountEl) editCountEl.style.display = 'none';
+    if (saveBtn) saveBtn.disabled = true;
+    if (undoBtn) undoBtn.disabled = true;
   }
 
   if (totalRecords > 0) {
-    document.getElementById('input-record-info').textContent =
+    const infoEl = document.getElementById('input-record-info');
+    if (infoEl) infoEl.textContent =
       `Showing ${start + 1}\u2013${Math.min(start + pageSize, totalRecords)} of ${formatNumber(totalRecords)}`;
   } else {
-    document.getElementById('input-record-info').textContent = 'No records';
+    const infoEl2 = document.getElementById('input-record-info');
+    if (infoEl2) infoEl2.textContent = 'No records';
   }
 
   // Table header with column width classes
   const thead = document.getElementById('input-table-head');
+  if (!thead) return; // Guard: Input Portal DOM not ready
   thead.innerHTML = '<tr>' + TABLE_COLUMNS.map(col => {
     const isEditable = col.editable;
     const widthClass = getColumnWidthClass(col.key);
