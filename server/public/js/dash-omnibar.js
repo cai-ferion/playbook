@@ -100,8 +100,10 @@
       + ' Clear Filters'
       + '</button>';
 
-    // Record count
-    html += '<span class="filter-bar-meta" id="dash-record-count">Filtered Records: 0</span>';
+    // Record count — preserve current value across re-renders
+    var curEl = document.getElementById('dash-record-count');
+    var curText = curEl ? curEl.textContent : 'Filtered Records: 0';
+    html += '<span class="filter-bar-meta" id="dash-record-count">' + curText + '</span>';
 
     container.innerHTML = html;
   }

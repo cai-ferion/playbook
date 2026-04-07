@@ -149,8 +149,9 @@ function inputRenderFilterBar() {
     + ' Clear Filters'
     + '</button>';
 
-  // Record count
-  html += '<span class="filter-bar-meta" id="input-filter-count"></span>';
+  // Record count — preserve current value across re-renders
+  var curCount = serverPagState.total || 0;
+  html += '<span class="filter-bar-meta" id="input-filter-count">Filtered Records: ' + formatNumber(curCount) + '</span>';
 
   container.innerHTML = html;
 }
@@ -579,7 +580,7 @@ function renderInputTableServerSide() {
   var rcEl = document.getElementById('input-record-count');
   if (rcEl) rcEl.textContent = 'Filtered Records: ' + formatNumber(totalRecords);
   var fcEl = document.getElementById('input-filter-count');
-  if (fcEl) fcEl.textContent = formatNumber(totalRecords) + ' records';
+  if (fcEl) fcEl.textContent = 'Filtered Records: ' + formatNumber(totalRecords);
 
   // Update edit count
   var editCount = Object.keys(appState.pendingEdits).length;
@@ -748,7 +749,7 @@ function renderInputTable() {
   var rcEl = document.getElementById('input-record-count');
   if (rcEl) rcEl.textContent = 'Filtered Records: ' + formatNumber(totalRecords);
   var fcEl = document.getElementById('input-filter-count');
-  if (fcEl) fcEl.textContent = formatNumber(totalRecords) + ' records';
+  if (fcEl) fcEl.textContent = 'Filtered Records: ' + formatNumber(totalRecords);
 
   // Update edit count
   var editCount = Object.keys(appState.pendingEdits).length;

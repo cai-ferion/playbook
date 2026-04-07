@@ -917,3 +917,7 @@
 - [x] Clear Filters button resets to all-selected defaults
 - [x] Date filter remains as date range picker
 - [x] Sort integrated into each filter dropdown (A→Z / Z→A)
+
+## Batch 84 — Filtered Records Counter Fix
+- [x] Fix "Filtered Records" counter on Input Portal filter bar — stays visible and updates on filter change
+- [x] Fix "Filtered Records" counter on Dashboard filter bar — stays visible and updates on filter change
