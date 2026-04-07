@@ -938,3 +938,6 @@
 - [x] Column headers (Schedule, Present, PL, UPL, Shrinkage, Late) in GY Shift and Mid-Shift header rows
 - [x] Fixed planning groups: GY (S-ABF, CS-ABF, CSO_CTR, FAD_CTR, RECALL_MEASUREMENT_CTR, SME_CTR, QPE_CTR), Mid (S-ABF, CS-ABF, RECALL_MEASUREMENT_CTR, SME_CTR, QPE_CTR)
 - [x] Ensure data is sourced from Input Portal data only
+
+## Batch 87b — Shift Breakdown Header Merge
+- [x] Merge column headers (Schedule, Present, PL, UPL, Shrinkage, Late) into the GY Shift and Mid-Shift rows on the same line

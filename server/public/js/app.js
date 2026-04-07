@@ -1708,17 +1708,6 @@ function buildShiftBreakdownHTML(records) {
     return '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No shift data available</div>';
   }
 
-  // Column header row reused inside each shift section
-  const colHeaders = `<tr class="shift-col-headers">
-    <th>Planning Group</th>
-    <th style="text-align:center">Schedule</th>
-    <th style="text-align:center">Present</th>
-    <th style="text-align:center">PL</th>
-    <th style="text-align:center">UPL</th>
-    <th style="text-align:center">Shrinkage</th>
-    <th style="text-align:center">Late</th>
-  </tr>`;
-
   let html = `<table class="data-table shift-table shift-bordered">
     <tbody>`;
 
@@ -1738,12 +1727,16 @@ function buildShiftBreakdownHTML(records) {
     grandOverall.late += overall.late;
     grandOverall.pl += overall.pl;
 
-    // Shift section header
+    // Shift section header with column headers on the same row
     html += `<tr class="shift-section-header">
-      <td colspan="7"><strong>${escapeHtml(shiftName)}</strong></td>
+      <th><strong>${escapeHtml(shiftName)}</strong></th>
+      <th style="text-align:center">Schedule</th>
+      <th style="text-align:center">Present</th>
+      <th style="text-align:center">PL</th>
+      <th style="text-align:center">UPL</th>
+      <th style="text-align:center">Shrinkage</th>
+      <th style="text-align:center">Late</th>
     </tr>`;
-    // Column headers inside each shift
-    html += colHeaders;
 
     // Fixed planning groups in defined order
     const pgNames = Object.keys(planningGroups).sort();
