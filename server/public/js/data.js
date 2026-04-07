@@ -23,6 +23,7 @@ const TABLE_COLUMNS = [
   { key: 'role', label: 'Role' },
   { key: 'actualPlanningGroup', label: 'Planning Group' },
   { key: 'status', label: 'Status' },
+  { key: 'shiftTime', label: 'Shift Time' },
   { key: 'billingCode', label: 'Code' },
 ];
 

@@ -172,6 +172,7 @@ function renderOmnibarFilterValuePicker() {
   if (searchable) {
     html += `<div class="omnibar-search-wrap"><input type="text" class="form-input form-input-sm omnibar-search" id="omni-value-search" placeholder="Search..." oninput="omnibarFilterValueList()"></div>`;
   }
+  html += '<div class="omnibar-select-all-wrap" style="padding:4px 12px;"><label class="omnibar-value-item" style="font-weight:600;"><input type="checkbox" id="omni-select-all" onchange="omnibarToggleSelectAll(this)"><span>Select All</span></label></div>';
   html += '<div class="omnibar-value-list" id="omni-value-list">';
   for (const v of values) {
     html += `<label class="omnibar-value-item"><input type="checkbox" value="${escapeAttr(v)}"><span>${escapeHtml(v)}</span></label>`;
@@ -183,6 +184,25 @@ function renderOmnibarFilterValuePicker() {
   if (searchable) {
     setTimeout(() => { const si = document.getElementById('omni-value-search'); if (si) si.focus(); }, 50);
   }
+  // Update Select All checkbox state based on checked items
+  setTimeout(() => {
+    const allCbs = document.querySelectorAll('#omni-value-list input[type="checkbox"]');
+    const selectAllCb = document.getElementById('omni-select-all');
+    if (selectAllCb && allCbs.length > 0) {
+      const allChecked = [...allCbs].every(cb => cb.checked);
+      selectAllCb.checked = allChecked;
+    }
+  }, 70);
+}
+
+function omnibarToggleSelectAll(selectAllCb) {
+  const checkboxes = document.querySelectorAll('#omni-value-list input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    // Only toggle visible items (respect search filter)
+    if (cb.closest('.omnibar-value-item').style.display !== 'none') {
+      cb.checked = selectAllCb.checked;
+    }
+  });
 }
 
 function omnibarFilterValueList() {

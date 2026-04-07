@@ -15,6 +15,7 @@
     { key: 'tag', label: 'Tag', type: 'multi', recordKey: 'tag', searchable: true },
     { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode', searchable: true },
     { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false },
+    { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false },
   ];
 
   const DASH_SORT_FIELDS = [
@@ -140,6 +141,7 @@
     if (searchable) {
       html += `<div class="omnibar-search-wrap"><input type="text" class="form-input form-input-sm omnibar-search" id="dash-omni-value-search" placeholder="Search..." oninput="dashOmnibarFilterValueList()"></div>`;
     }
+    html += '<div class="omnibar-select-all-wrap" style="padding:4px 12px;"><label class="omnibar-value-item" style="font-weight:600;"><input type="checkbox" id="dash-omni-select-all" onchange="dashOmnibarToggleSelectAll(this)"><span>Select All</span></label></div>';
     html += '<div class="omnibar-value-list" id="dash-omni-value-list">';
     for (const v of values) {
       html += `<label class="omnibar-value-item"><input type="checkbox" value="${escapeAttr(v)}"><span>${escapeHtml(v)}</span></label>`;
@@ -151,6 +153,15 @@
     if (searchable) {
       setTimeout(() => { const si = document.getElementById('dash-omni-value-search'); if (si) si.focus(); }, 50);
     }
+    // Update Select All checkbox state based on checked items
+    setTimeout(() => {
+      const allCbs = document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]');
+      const selectAllCb = document.getElementById('dash-omni-select-all');
+      if (selectAllCb && allCbs.length > 0) {
+        const allChecked = [...allCbs].every(cb => cb.checked);
+        selectAllCb.checked = allChecked;
+      }
+    }, 70);
   }
 
   // ===== Filter/Sort handlers =====
@@ -360,13 +371,29 @@
     dashOmnibarClearAll();
   };
 
-  // Set default dashboard omnibar filters
+  // Set default dashboard omnibar filters — all multi-select filters pre-applied with all values
   function setDefaultDashOmnibarFilters() {
     const today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
     dashOmniState.filters = [
       { key: 'date_range', label: 'Date Range', type: 'date_range', startDate: today, endDate: today }
     ];
     dashOmniState.sorts = [];
+
+    // Pre-apply all multi-select filters with all available values
+    if (appState.records && appState.records.length > 0) {
+      for (const field of DASH_FILTER_FIELDS) {
+        if (field.type !== 'multi') continue;
+        let values;
+        if (field.key === 'day') {
+          values = typeof DAY_NAMES !== 'undefined' ? DAY_NAMES.slice() : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        } else {
+          values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
+        }
+        if (values.length > 0) {
+          dashOmniState.filters.push({ key: field.key, label: field.label, type: 'multi', values: values, recordKey: field.recordKey });
+        }
+      }
+    }
     renderDashChips();
   }
 
@@ -375,6 +402,17 @@
   window.setDefaultFilters = function () {
     if (_origSetDefaultFiltersDash) _origSetDefaultFiltersDash();
     setDefaultDashOmnibarFilters();
+  };
+
+  // Toggle Select All for dashboard filter value list
+  window.dashOmnibarToggleSelectAll = function (selectAllCb) {
+    const checkboxes = document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      // Only toggle visible items (respect search filter)
+      if (cb.closest('.omnibar-value-item').style.display !== 'none') {
+        cb.checked = selectAllCb.checked;
+      }
+    });
   };
 
   // Expose globals

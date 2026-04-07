@@ -898,3 +898,10 @@
 - [x] Fix the chart data computation and rendering (date-based getTargetHours applied to YTD doughnut, breakdown table, and selected-week table)
 - [x] Implement date-based target hours: old targets before WE 04/03, new targets from WE 04/03 onwards
 - [x] Exclude current incomplete week from YTD compliance chart (blanks already counted as P)
+
+## Batch 81 — Anchor Dashboard & Input Portal Improvements
+- [x] Add "Select All" button inside each Dashboard and Input Portal filter dropdown
+- [x] Set default for all Anchor Dashboard filters to all-selected (except date)
+- [x] Add "Shift Time" column to Anchor Input Portal table (data.js TABLE_COLUMNS)
+- [x] Add "Shift Time" filter to Anchor Input Portal (already existed, added Select All button)
+- [x] Add "Shift Time" filter to Anchor Dashboard omnibar
