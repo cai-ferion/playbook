@@ -781,7 +781,8 @@ function startRefreshTimer() {
 
 function updateRefreshDisplay() {
   if (!appState.lastRefreshedTime) {
-    document.getElementById('header-meta').textContent = 'Last refreshed: \u2014';
+    var metaEl = document.getElementById('header-meta');
+    if (metaEl) metaEl.textContent = 'Last refreshed: \u2014';
     return;
   }
   const now = new Date();
@@ -796,7 +797,8 @@ function updateRefreshDisplay() {
     const diffHr = Math.floor(diffMin / 60);
     text = `Last refreshed: ${diffHr} hour${diffHr > 1 ? 's' : ''} ago`;
   }
-  document.getElementById('header-meta').textContent = text;
+  var metaEl2 = document.getElementById('header-meta');
+  if (metaEl2) metaEl2.textContent = text;
 }
 
 // ===== View Switching =====
@@ -857,7 +859,8 @@ async function switchView(view) {
     regimen: 'Regimen',
     performance: 'Main Metrics', 'productivity-hrs': 'Productivity Hrs.',
   };
-  document.getElementById('view-title').textContent = titles[view] || view;
+  var viewTitleEl = document.getElementById('view-title');
+  if (viewTitleEl) viewTitleEl.textContent = titles[view] || view;
 
   // Show Export CSV button only on Input Portal
   const exportBtn = document.getElementById('export-csv-btn');
@@ -999,7 +1002,8 @@ function updateAllViews() {
 
   const alerts = getAllAlerts(appState.records);
   const totalAlerts = getTotalAlertCount(alerts);
-  document.getElementById('alert-nav-count').textContent = totalAlerts;
+  const alertNavEl = document.getElementById('alert-nav-count');
+  if (alertNavEl) alertNavEl.textContent = totalAlerts;
 
   if (appState.activeView === 'input') renderInputTable();
   if (appState.activeView === 'dashboard') renderDashboard();
@@ -1411,7 +1415,8 @@ function initBillingCodeEdit() {
     codeSelect.appendChild(opt);
   }
 
-  document.getElementById('bc-edit-current').textContent = '\u2014';
+  var bcEditEl = document.getElementById('bc-edit-current');
+  if (bcEditEl) bcEditEl.textContent = '\u2014';
   bcEditPendingChanges = {};
 }
 
@@ -2011,7 +2016,8 @@ function renderShrinkPage() {
   const body = document.getElementById('shrink-fullscreen-body');
   if (agents.length === 0) {
     body.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No UPL or LATE records found</div>';
-    document.getElementById('shrink-pagination').innerHTML = '';
+    var shrinkPagEl = document.getElementById('shrink-pagination');
+    if (shrinkPagEl) shrinkPagEl.innerHTML = '';
     return;
   }
 
@@ -2239,7 +2245,8 @@ function renderAlerts() {
   }).join('');
 
   const currentCat = ALERT_CATEGORIES.find(c => c.id === appState.alertCategory);
-  document.getElementById('alert-description').innerHTML =
+  var alertDescEl = document.getElementById('alert-description');
+  if (alertDescEl) alertDescEl.innerHTML =
     `<div class="alert-desc-text">${currentCat.description}</div>`;
 
   let alerts = filterAlertsByRole(allAlerts[appState.alertCategory]);

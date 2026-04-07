@@ -585,15 +585,16 @@ function renderInputTableServerSide() {
   // Update edit count
   var editCount = Object.keys(appState.pendingEdits).length;
   var editCountEl = document.getElementById('input-edit-count');
+  var saveBtn = document.getElementById('save-btn');
+  var undoBtn = document.getElementById('undo-btn');
   if (editCount > 0) {
-    editCountEl.textContent = editCount + ' record(s) edited';
-    editCountEl.style.display = 'inline';
-    document.getElementById('save-btn').disabled = false;
-    document.getElementById('undo-btn').disabled = false;
+    if (editCountEl) { editCountEl.textContent = editCount + ' record(s) edited'; editCountEl.style.display = 'inline'; }
+    if (saveBtn) saveBtn.disabled = false;
+    if (undoBtn) undoBtn.disabled = false;
   } else {
-    editCountEl.style.display = 'none';
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('undo-btn').disabled = true;
+    if (editCountEl) editCountEl.style.display = 'none';
+    if (saveBtn) saveBtn.disabled = true;
+    if (undoBtn) undoBtn.disabled = true;
   }
 
   // Pagination
@@ -603,15 +604,17 @@ function renderInputTableServerSide() {
   appState.inputPage = page;
   var start = page * pageSize;
 
+  var infoEl = document.getElementById('input-record-info');
   if (totalRecords > 0) {
-    document.getElementById('input-record-info').textContent =
+    if (infoEl) infoEl.textContent =
       'Showing ' + (start + 1) + '\u2013' + Math.min(start + pageSize, totalRecords) + ' of ' + formatNumber(totalRecords);
   } else {
-    document.getElementById('input-record-info').textContent = 'No records';
+    if (infoEl) infoEl.textContent = 'No records';
   }
 
   // Render table header
   var thead = document.getElementById('input-table-head');
+  if (!thead) return; // Guard: Input Portal DOM not ready
   var checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
   var auditHeader = '<th class="col-audit"></th>';
   thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(function(col) {
@@ -622,6 +625,7 @@ function renderInputTableServerSide() {
 
   // Render table body — use server-side rows
   var tbody = document.getElementById('input-table-body');
+  if (!tbody) return;
   if (pageItems.length === 0) {
     tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Adjust the filters above to load data.</td></tr>';
   } else {
@@ -754,15 +758,16 @@ function renderInputTable() {
   // Update edit count
   var editCount = Object.keys(appState.pendingEdits).length;
   var editCountEl = document.getElementById('input-edit-count');
+  var saveBtn = document.getElementById('save-btn');
+  var undoBtn = document.getElementById('undo-btn');
   if (editCount > 0) {
-    editCountEl.textContent = editCount + ' record(s) edited';
-    editCountEl.style.display = 'inline';
-    document.getElementById('save-btn').disabled = false;
-    document.getElementById('undo-btn').disabled = false;
+    if (editCountEl) { editCountEl.textContent = editCount + ' record(s) edited'; editCountEl.style.display = 'inline'; }
+    if (saveBtn) saveBtn.disabled = false;
+    if (undoBtn) undoBtn.disabled = false;
   } else {
-    editCountEl.style.display = 'none';
-    document.getElementById('save-btn').disabled = true;
-    document.getElementById('undo-btn').disabled = true;
+    if (editCountEl) editCountEl.style.display = 'none';
+    if (saveBtn) saveBtn.disabled = true;
+    if (undoBtn) undoBtn.disabled = true;
   }
 
   // Pagination
@@ -773,15 +778,17 @@ function renderInputTable() {
   var start = page * pageSize;
   var pageItems = allFiltered.slice(start, start + pageSize);
 
+  var infoEl2 = document.getElementById('input-record-info');
   if (totalRecords > 0) {
-    document.getElementById('input-record-info').textContent =
+    if (infoEl2) infoEl2.textContent =
       'Showing ' + (start + 1) + '\u2013' + Math.min(start + pageSize, totalRecords) + ' of ' + formatNumber(totalRecords);
   } else {
-    document.getElementById('input-record-info').textContent = 'No records';
+    if (infoEl2) infoEl2.textContent = 'No records';
   }
 
   // Render table header
   var thead = document.getElementById('input-table-head');
+  if (!thead) return; // Guard: Input Portal DOM not ready
   var checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
   var auditHeader = '<th class="col-audit"></th>';
   thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(function(col) {
@@ -792,6 +799,7 @@ function renderInputTable() {
 
   // Render table body
   var tbody = document.getElementById('input-table-body');
+  if (!tbody) return;
   if (pageItems.length === 0) {
     tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Adjust the filters above to load data.</td></tr>';
   } else {
@@ -1038,7 +1046,8 @@ async function openAuditModal(recordId) {
 }
 
 function closeAuditModal() {
-  document.getElementById('audit-modal').style.display = 'none';
+  var auditModalEl = document.getElementById('audit-modal');
+  if (auditModalEl) auditModalEl.style.display = 'none';
 }
 
 // ============================================================
