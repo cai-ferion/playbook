@@ -908,3 +908,12 @@
 
 ## Batch 82 — Input Portal Default Filters
 - [x] Set default for all Input Portal multi-select filters to all-selected on load (except date)
+
+## Batch 83 — Filter Bar Overhaul (Input Portal + Dashboard)
+- [x] Replace Input Portal omnibar with persistent filter bar (all filters always visible as pills)
+- [x] Replace Dashboard omnibar with persistent filter bar
+- [x] Each filter pill: compact dropdown with checkboxes, Select All/Deselect All, inline sort toggle
+- [x] Instant-apply on every checkbox toggle (no Apply button)
+- [x] Clear Filters button resets to all-selected defaults
+- [x] Date filter remains as date range picker
+- [x] Sort integrated into each filter dropdown (A→Z / Z→A)

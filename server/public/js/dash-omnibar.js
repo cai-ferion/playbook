@@ -1,425 +1,481 @@
 /**
- * Dashboard Omnibar — chip-based filter/sort builder for Command Dashboard
- * Mirrors the Input Portal omnibar pattern but operates on appState.records for dashboard KPIs.
+ * Dashboard Filter Bar — persistent pill-based filter/sort for Command Dashboard
+ * Replaces the old omnibar pattern with always-visible pills and instant-apply.
  */
 
 (function () {
   'use strict';
 
+  // ===== Field definitions =====
+
   const DASH_FILTER_FIELDS = [
-    { key: 'date_range', label: 'Date Range', type: 'date_range' },
-    { key: 'flm', label: 'FLM', type: 'multi', recordKey: 'flm', searchable: true },
-    { key: 'actualPlanningGroup', label: 'Planning Group', type: 'multi', recordKey: 'actualPlanningGroup', searchable: true },
-    { key: 'day', label: 'Day', type: 'multi', recordKey: '_day', searchable: false },
-    { key: 'agent', label: 'Agent', type: 'multi', recordKey: 'agent', searchable: true },
-    { key: 'tag', label: 'Tag', type: 'multi', recordKey: 'tag', searchable: true },
-    { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode', searchable: true },
-    { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false },
-    { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false },
+    { key: 'date_range', label: 'Date', type: 'date_range' },
+    { key: 'tag', label: 'Tag', type: 'multi', recordKey: 'tag', searchable: true, sortable: true },
+    { key: 'agent', label: 'Agent', type: 'multi', recordKey: 'agent', searchable: true, sortable: true },
+    { key: 'flm', label: 'FLM', type: 'multi', recordKey: 'flm', searchable: true, sortable: true },
+    { key: 'actualPlanningGroup', label: 'Planning Group', type: 'multi', recordKey: 'actualPlanningGroup', searchable: true, sortable: true },
+    { key: 'day', label: 'Day', type: 'multi', recordKey: '_day', searchable: false, sortable: false },
+    { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode', searchable: true, sortable: true },
+    { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
+    { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false, sortable: false },
   ];
 
-  const DASH_SORT_FIELDS = [
-    { key: 'date', label: 'Date', recordKey: 'date' },
-    { key: 'agent', label: 'Agent', recordKey: 'agent' },
-    { key: 'flm', label: 'FLM', recordKey: 'flm' },
-    { key: 'actualPlanningGroup', label: 'Planning Group', recordKey: 'actualPlanningGroup' },
-  ];
+  // ===== State =====
 
-  const dashOmniState = {
-    filters: [],
-    sorts: [],
-    menuMode: null,
-    menuStep: null,
-    menuField: null,
+  const dashFilterState = {
+    // Each filter stored by key. Missing key = "All" (no restriction)
+    filters: {},
+    // Sort: { key, direction } or null
+    sort: null,
+    // Which pill dropdown is open
+    openPill: null,
   };
 
   let _dashOutsideListener = null;
+  let _dashApplyDebounce = null;
 
-  // ===== Menu open/close =====
+  // ===== Helpers =====
 
-  function dashOmnibarOpenMenu(mode) {
-    dashOmniState.menuMode = mode;
-    dashOmniState.menuStep = 'pick_field';
-    dashOmniState.menuField = null;
-    renderDashMenu();
-    if (!_dashOutsideListener) {
-      setTimeout(() => {
-        _dashOutsideListener = (e) => {
-          const omnibar = document.getElementById('dash-omnibar');
-          const menu = document.getElementById('dash-omnibar-menu');
-          if (!omnibar || !menu) return;
-          if (omnibar.contains(e.target)) return;
-          dashOmnibarCloseMenu();
-        };
-        document.addEventListener('mousedown', _dashOutsideListener);
-      }, 10);
+  function dashGetAllValues(field) {
+    if (field.key === 'day') {
+      return typeof DAY_NAMES !== 'undefined' ? DAY_NAMES.slice() : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    }
+    return [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
+  }
+
+  function dashGetFilterSummary(field) {
+    const f = dashFilterState.filters[field.key];
+    if (!f) return 'All';
+    if (field.type === 'date_range') {
+      const fmt = typeof formatDateDisplay === 'function' ? formatDateDisplay : (d) => d;
+      return fmt(f.startDate) + ' \u2013 ' + fmt(f.endDate);
+    }
+    const allValues = dashGetAllValues(field);
+    if (!f.values || f.values.length === 0) return 'None';
+    if (f.values.length === allValues.length) return 'All';
+    if (f.values.length === 1) return f.values[0];
+    return f.values.length + ' selected';
+  }
+
+  function dashIsFiltered(field) {
+    const f = dashFilterState.filters[field.key];
+    if (!f) return false;
+    if (field.type === 'date_range') return true;
+    const allValues = dashGetAllValues(field);
+    return f.values && f.values.length > 0 && f.values.length < allValues.length;
+  }
+
+  // ===== Render pills =====
+
+  function dashRenderFilterBar() {
+    const container = document.getElementById('dash-filter-pills');
+    if (!container) return;
+
+    let html = '';
+
+    for (const field of DASH_FILTER_FIELDS) {
+      const summary = dashGetFilterSummary(field);
+      const isActive = dashIsFiltered(field);
+      const hasSort = dashFilterState.sort && dashFilterState.sort.key === field.key;
+      const isOpen = dashFilterState.openPill === field.key;
+
+      let pillClass = 'filter-pill';
+      if (isActive) pillClass += ' active';
+      if (hasSort) pillClass += ' has-sort';
+      if (isOpen) pillClass += ' open';
+
+      const sortIcon = hasSort ? (dashFilterState.sort.direction === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+
+      html += '<div class="' + pillClass + '" id="dash-pill-' + field.key + '" onclick="event.stopPropagation(); dashTogglePill(\'' + field.key + '\')">'
+        + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span>'
+        + '<span class="filter-pill-value">' + escapeHtml(summary) + sortIcon + '</span>'
+        + '<span class="filter-pill-icon">\u25BE</span>'
+        + '<div class="filter-dropdown' + (isOpen ? ' open' : '') + '" id="dash-dd-' + field.key + '" onclick="event.stopPropagation();"></div>'
+        + '</div>';
+    }
+
+    // Clear Filters button
+    html += '<button class="filter-bar-clear" onclick="dashClearAllFilters()" title="Reset all filters to defaults">'
+      + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+      + ' Clear Filters'
+      + '</button>';
+
+    // Record count
+    html += '<span class="filter-bar-meta" id="dash-record-count">Filtered Records: 0</span>';
+
+    container.innerHTML = html;
+  }
+
+  // ===== Toggle pill dropdown =====
+
+  window.dashTogglePill = function (key) {
+    if (dashFilterState.openPill === key) {
+      dashClosePill();
+      return;
+    }
+    dashFilterState.openPill = key;
+    dashRenderFilterBar();
+    dashRenderDropdown(key);
+    _attachDashOutsideClick();
+  };
+
+  function dashClosePill() {
+    dashFilterState.openPill = null;
+    dashRenderFilterBar();
+    _detachDashOutsideClick();
+  }
+
+  // ===== Render dropdown content =====
+
+  function dashRenderDropdown(key) {
+    const field = DASH_FILTER_FIELDS.find(function(f) { return f.key === key; });
+    if (!field) return;
+    const dd = document.getElementById('dash-dd-' + key);
+    if (!dd) return;
+    dd.classList.add('open');
+
+    if (field.type === 'date_range') {
+      dashRenderDateDropdown(dd, field);
+      return;
+    }
+
+    dashRenderMultiDropdown(dd, field);
+  }
+
+  function dashRenderDateDropdown(dd, field) {
+    var f = dashFilterState.filters[field.key];
+    var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    var startVal = f ? f.startDate : today;
+    var endVal = f ? f.endDate : today;
+
+    dd.innerHTML = '<div class="filter-dropdown-header">'
+      + '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>'
+      + '</div>'
+      + '<div class="filter-date-row">'
+      + '<div class="filter-group"><label>Start</label>'
+      + '<input type="date" class="form-input form-input-sm" id="dash-date-start" value="' + startVal + '">'
+      + '</div>'
+      + '<div class="filter-group"><label>End</label>'
+      + '<input type="date" class="form-input form-input-sm" id="dash-date-end" value="' + endVal + '">'
+      + '</div>'
+      + '</div>';
+
+    setTimeout(function() {
+      var startEl = document.getElementById('dash-date-start');
+      var endEl = document.getElementById('dash-date-end');
+      if (startEl) startEl.addEventListener('change', dashOnDateChange);
+      if (endEl) endEl.addEventListener('change', dashOnDateChange);
+    }, 30);
+  }
+
+  function dashOnDateChange() {
+    var start = (document.getElementById('dash-date-start') || {}).value || '';
+    var end = (document.getElementById('dash-date-end') || {}).value || '';
+    if (!start || !end) return;
+    if (start > end) { showToast('Start date cannot be after end date', 'info'); return; }
+    dashFilterState.filters['date_range'] = {
+      key: 'date_range', label: 'Date', type: 'date_range', startDate: start, endDate: end
+    };
+    // Update pill text
+    var field = DASH_FILTER_FIELDS[0];
+    var pill = document.getElementById('dash-pill-' + field.key);
+    if (pill) {
+      var valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) valSpan.textContent = dashGetFilterSummary(field);
+    }
+    dashDebouncedApply();
+  }
+
+  function dashRenderMultiDropdown(dd, field) {
+    var values = dashGetAllValues(field);
+    var f = dashFilterState.filters[field.key];
+    var selectedSet = new Set(f ? f.values : values); // default: all selected
+    var searchable = field.searchable || values.length > 15;
+
+    var html = '<div class="filter-dropdown-header">';
+    html += '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>';
+
+    // Sort buttons (if sortable)
+    if (field.sortable) {
+      var curSort = dashFilterState.sort;
+      var isAsc = curSort && curSort.key === field.key && curSort.direction === 'asc';
+      var isDesc = curSort && curSort.key === field.key && curSort.direction === 'desc';
+      html += '<div class="filter-dropdown-sort">'
+        + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); dashSetSort(\'' + field.key + '\', \'asc\')" title="Sort A\u2192Z">A\u2191</button>'
+        + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); dashSetSort(\'' + field.key + '\', \'desc\')" title="Sort Z\u2192A">Z\u2193</button>'
+        + '</div>';
+    }
+    html += '</div>';
+
+    if (searchable) {
+      html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" id="dash-dd-search-' + field.key + '" placeholder="Search..." oninput="dashFilterDropdownSearch(\'' + field.key + '\')"></div>';
+    }
+
+    // Select All / Deselect All
+    html += '<div class="filter-dropdown-actions">'
+      + '<button class="filter-action-link" onclick="event.stopPropagation(); dashSelectAll(\'' + field.key + '\')">Select All</button>'
+      + '<button class="filter-action-link" onclick="event.stopPropagation(); dashDeselectAll(\'' + field.key + '\')" style="color:#DC2626;">Deselect All</button>'
+      + '</div>';
+
+    html += '<div class="filter-dropdown-list" id="dash-dd-list-' + field.key + '">';
+    for (var i = 0; i < values.length; i++) {
+      var v = values[i];
+      var checked = selectedSet.has(v) ? 'checked' : '';
+      html += '<label class="filter-dropdown-item"><input type="checkbox" value="' + escapeAttr(v) + '" ' + checked + ' onchange="dashOnCheckboxChange(\'' + field.key + '\')"><span>' + escapeHtml(v) + '</span></label>';
+    }
+    html += '</div>';
+
+    dd.innerHTML = html;
+
+    if (searchable) {
+      setTimeout(function() {
+        var si = document.getElementById('dash-dd-search-' + field.key);
+        if (si) si.focus();
+      }, 50);
     }
   }
 
-  function dashOmnibarCloseMenu() {
-    dashOmniState.menuMode = null;
-    dashOmniState.menuStep = null;
-    dashOmniState.menuField = null;
-    const menu = document.getElementById('dash-omnibar-menu');
-    if (menu) menu.style.display = 'none';
+  // ===== Checkbox / sort handlers =====
+
+  window.dashOnCheckboxChange = function (key) {
+    var field = DASH_FILTER_FIELDS.find(function(f) { return f.key === key; });
+    if (!field) return;
+    var listEl = document.getElementById('dash-dd-list-' + key);
+    if (!listEl) return;
+    var checked = [];
+    listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { checked.push(cb.value); });
+    var allValues = dashGetAllValues(field);
+
+    if (checked.length === allValues.length) {
+      delete dashFilterState.filters[key];
+    } else {
+      dashFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey };
+    }
+
+    // Update pill summary without closing dropdown
+    var pill = document.getElementById('dash-pill-' + key);
+    if (pill) {
+      var valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) {
+        var sortIcon = (dashFilterState.sort && dashFilterState.sort.key === key)
+          ? (dashFilterState.sort.direction === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+        valSpan.textContent = dashGetFilterSummary(field) + sortIcon;
+      }
+      if (dashIsFiltered(field)) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    }
+
+    dashDebouncedApply();
+  };
+
+  window.dashSetSort = function (key, direction) {
+    var curSort = dashFilterState.sort;
+    if (curSort && curSort.key === key && curSort.direction === direction) {
+      dashFilterState.sort = null;
+    } else {
+      dashFilterState.sort = { key: key, direction: direction };
+    }
+    // Re-render bar and re-open dropdown
+    var wasOpen = dashFilterState.openPill;
+    dashRenderFilterBar();
+    if (wasOpen) {
+      dashFilterState.openPill = wasOpen;
+      dashRenderFilterBar();
+      dashRenderDropdown(wasOpen);
+    }
+    dashDebouncedApply();
+  };
+
+  window.dashSelectAll = function (key) {
+    var listEl = document.getElementById('dash-dd-list-' + key);
+    if (!listEl) return;
+    listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+      if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true;
+    });
+    delete dashFilterState.filters[key];
+    var field = DASH_FILTER_FIELDS.find(function(f) { return f.key === key; });
+    if (field) {
+      var pill = document.getElementById('dash-pill-' + key);
+      if (pill) {
+        var valSpan = pill.querySelector('.filter-pill-value');
+        if (valSpan) valSpan.textContent = 'All';
+        pill.classList.remove('active');
+      }
+    }
+    dashDebouncedApply();
+  };
+
+  window.dashDeselectAll = function (key) {
+    var listEl = document.getElementById('dash-dd-list-' + key);
+    if (!listEl) return;
+    listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+      if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false;
+    });
+    var stillChecked = [];
+    listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { stillChecked.push(cb.value); });
+    var field = DASH_FILTER_FIELDS.find(function(f) { return f.key === key; });
+    dashFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: stillChecked, recordKey: field.recordKey };
+    var pill = document.getElementById('dash-pill-' + key);
+    if (pill) {
+      var valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) valSpan.textContent = stillChecked.length === 0 ? 'None' : stillChecked.length + ' selected';
+      pill.classList.add('active');
+    }
+    dashDebouncedApply();
+  };
+
+  window.dashFilterDropdownSearch = function (key) {
+    var searchEl = document.getElementById('dash-dd-search-' + key);
+    var listEl = document.getElementById('dash-dd-list-' + key);
+    if (!searchEl || !listEl) return;
+    var q = searchEl.value.toLowerCase();
+    listEl.querySelectorAll('.filter-dropdown-item').forEach(function(item) {
+      var text = item.textContent.toLowerCase();
+      item.style.display = text.includes(q) ? '' : 'none';
+    });
+  };
+
+  // ===== Clear all =====
+
+  window.dashClearAllFilters = function () {
+    dashClosePill();
+    var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    dashFilterState.filters = {
+      date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today }
+    };
+    dashFilterState.sort = null;
+    dashRenderFilterBar();
+    dashApplyNow();
+  };
+
+  // ===== Apply (instant, debounced) =====
+
+  function dashDebouncedApply() {
+    clearTimeout(_dashApplyDebounce);
+    _dashApplyDebounce = setTimeout(dashApplyNow, 200);
+  }
+
+  async function dashApplyNow() {
+    var dateFilter = dashFilterState.filters['date_range'];
+    if (dateFilter && typeof ensureDataForRange === 'function') {
+      await ensureDataForRange(dateFilter.startDate, dateFilter.endDate);
+    }
+    if (typeof renderDashboard === 'function') renderDashboard();
+  }
+
+  // ===== Outside click =====
+
+  function _attachDashOutsideClick() {
+    if (_dashOutsideListener) return;
+    setTimeout(function() {
+      _dashOutsideListener = function(e) {
+        var bar = document.getElementById('dash-filter-bar');
+        if (bar && bar.contains(e.target)) return;
+        dashClosePill();
+      };
+      document.addEventListener('mousedown', _dashOutsideListener);
+    }, 10);
+  }
+
+  function _detachDashOutsideClick() {
     if (_dashOutsideListener) {
       document.removeEventListener('mousedown', _dashOutsideListener);
       _dashOutsideListener = null;
     }
   }
 
-  // ===== Menu rendering =====
-
-  function renderDashMenu() {
-    const menu = document.getElementById('dash-omnibar-menu');
-    if (!menu) return;
-    menu.style.display = 'block';
-
-    if (dashOmniState.menuMode === 'filter' && dashOmniState.menuStep === 'pick_field') {
-      const activeKeys = new Set(dashOmniState.filters.map(f => f.key));
-      const available = DASH_FILTER_FIELDS.filter(f => !activeKeys.has(f.key));
-      if (available.length === 0) {
-        menu.innerHTML = '<div class="omnibar-menu-empty">All filters are active</div>';
-        return;
-      }
-      menu.innerHTML = '<div class="omnibar-menu-title">Select a filter</div>' +
-        available.map(f =>
-          `<button class="omnibar-menu-item" onclick="event.stopPropagation(); dashOmnibarSelectField('${f.key}')">${escapeHtml(f.label)}</button>`
-        ).join('');
-
-    } else if (dashOmniState.menuMode === 'filter' && dashOmniState.menuStep === 'pick_values') {
-      renderDashValuePicker();
-
-    } else if (dashOmniState.menuMode === 'sort' && dashOmniState.menuStep === 'pick_field') {
-      const activeKeys = new Set(dashOmniState.sorts.map(s => s.key));
-      const available = DASH_SORT_FIELDS.filter(f => !activeKeys.has(f.key));
-      if (available.length === 0) {
-        menu.innerHTML = '<div class="omnibar-menu-empty">All sort fields are active</div>';
-        return;
-      }
-      menu.innerHTML = '<div class="omnibar-menu-title">Sort by</div>' +
-        available.map(f =>
-          `<button class="omnibar-menu-item" onclick="event.stopPropagation(); dashOmnibarAddSort('${f.key}', 'asc')">${escapeHtml(f.label)} &#9650; Ascending</button>` +
-          `<button class="omnibar-menu-item" onclick="event.stopPropagation(); dashOmnibarAddSort('${f.key}', 'desc')">${escapeHtml(f.label)} &#9660; Descending</button>`
-        ).join('');
-    }
-  }
-
-  function renderDashValuePicker() {
-    const menu = document.getElementById('dash-omnibar-menu');
-    const field = dashOmniState.menuField;
-    if (!field || !menu) return;
-
-    if (field.type === 'date_range') {
-      const today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
-      menu.innerHTML = `
-        <div class="omnibar-menu-title">Date Range</div>
-        <div class="omnibar-date-picker">
-          <div class="filter-group">
-            <label class="filter-label">Start:</label>
-            <input type="date" class="form-input form-input-sm" id="dash-omni-date-start" value="${today}">
-          </div>
-          <div class="filter-group">
-            <label class="filter-label">End:</label>
-            <input type="date" class="form-input form-input-sm" id="dash-omni-date-end" value="${today}">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); dashOmnibarAddDateFilter()">Add</button>
-        </div>`;
-      return;
-    }
-
-    // Multi-select: gather unique values from records
-    let values;
-    if (field.key === 'day') {
-      values = typeof DAY_NAMES !== 'undefined' ? DAY_NAMES.slice() : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    } else {
-      values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
-    }
-    const searchable = field.searchable || values.length > 15;
-
-    let html = `<div class="omnibar-menu-title">${escapeHtml(field.label)}</div>`;
-    if (searchable) {
-      html += `<div class="omnibar-search-wrap"><input type="text" class="form-input form-input-sm omnibar-search" id="dash-omni-value-search" placeholder="Search..." oninput="dashOmnibarFilterValueList()"></div>`;
-    }
-    html += '<div class="omnibar-select-all-wrap" style="padding:4px 12px;"><label class="omnibar-value-item" style="font-weight:600;"><input type="checkbox" id="dash-omni-select-all" onchange="dashOmnibarToggleSelectAll(this)"><span>Select All</span></label></div>';
-    html += '<div class="omnibar-value-list" id="dash-omni-value-list">';
-    for (const v of values) {
-      html += `<label class="omnibar-value-item"><input type="checkbox" value="${escapeAttr(v)}"><span>${escapeHtml(v)}</span></label>`;
-    }
-    html += '</div>';
-    html += `<div class="omnibar-menu-footer"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); dashOmnibarAddMultiFilter()">Add Filter</button></div>`;
-    menu.innerHTML = html;
-
-    if (searchable) {
-      setTimeout(() => { const si = document.getElementById('dash-omni-value-search'); if (si) si.focus(); }, 50);
-    }
-    // Update Select All checkbox state based on checked items
-    setTimeout(() => {
-      const allCbs = document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]');
-      const selectAllCb = document.getElementById('dash-omni-select-all');
-      if (selectAllCb && allCbs.length > 0) {
-        const allChecked = [...allCbs].every(cb => cb.checked);
-        selectAllCb.checked = allChecked;
-      }
-    }, 70);
-  }
-
-  // ===== Filter/Sort handlers =====
-
-  window.dashOmnibarSelectField = function (key) {
-    const field = DASH_FILTER_FIELDS.find(f => f.key === key);
-    if (!field) return;
-    if (field.type === 'date_range') {
-      dashOmniState.menuField = field;
-      dashOmniState.menuStep = 'pick_values';
-      renderDashMenu();
-      return;
-    }
-    dashOmniState.menuField = field;
-    dashOmniState.menuStep = 'pick_values';
-    renderDashMenu();
-  };
-
-  window.dashOmnibarAddDateFilter = function () {
-    const start = document.getElementById('dash-omni-date-start')?.value || '';
-    const end = document.getElementById('dash-omni-date-end')?.value || '';
-    if (!start || !end) { showToast('Please select both dates', 'info'); return; }
-    if (start > end) { showToast('Start date cannot be after end date', 'info'); return; }
-    dashOmniState.filters = dashOmniState.filters.filter(f => f.key !== 'date_range');
-    dashOmniState.filters.unshift({ key: 'date_range', label: 'Date Range', type: 'date_range', startDate: start, endDate: end });
-    dashOmnibarCloseMenu();
-    renderDashChips();
-  };
-
-  window.dashOmnibarAddMultiFilter = function () {
-    const field = dashOmniState.menuField;
-    if (!field) return;
-    const checked = [...document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]:checked')].map(cb => cb.value);
-    if (checked.length === 0) { showToast('Select at least one value', 'info'); return; }
-    dashOmniState.filters = dashOmniState.filters.filter(f => f.key !== field.key);
-    dashOmniState.filters.push({ key: field.key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey });
-    dashOmnibarCloseMenu();
-    renderDashChips();
-  };
-
-  window.dashOmnibarAddSort = function (key, direction) {
-    const field = DASH_SORT_FIELDS.find(f => f.key === key);
-    if (!field) return;
-    dashOmniState.sorts = dashOmniState.sorts.filter(s => s.key !== key);
-    dashOmniState.sorts.push({ key, label: field.label, direction, recordKey: field.recordKey });
-    dashOmnibarCloseMenu();
-    renderDashChips();
-  };
-
-  window.dashOmnibarFilterValueList = function () {
-    const search = (document.getElementById('dash-omni-value-search')?.value || '').toLowerCase();
-    const items = document.querySelectorAll('#dash-omni-value-list .omnibar-value-item');
-    items.forEach(item => {
-      const text = item.textContent.toLowerCase();
-      item.style.display = text.includes(search) ? '' : 'none';
-    });
-  };
-
-  window.dashOmnibarRemoveFilter = function (key) {
-    dashOmniState.filters = dashOmniState.filters.filter(f => f.key !== key);
-    renderDashChips();
-  };
-
-  window.dashOmnibarEditSort = function (key) {
-    const sort = dashOmniState.sorts.find(s => s.key === key);
-    if (!sort) return;
-    sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
-    sort.label = sort.label.replace(/ [\u25B2\u25BC]$/, '');
-    renderDashChips();
-  };
-
-  window.dashOmnibarRemoveSort = function (key) {
-    dashOmniState.sorts = dashOmniState.sorts.filter(s => s.key !== key);
-    renderDashChips();
-  };
-
-  // ===== Chips =====
-
-  window.dashOmnibarEditFilter = function (key) {
-    const field = DASH_FILTER_FIELDS.find(f => f.key === key);
-    if (!field) return;
-    dashOmniState.menuMode = 'filter';
-    dashOmniState.menuStep = 'pick_values';
-    dashOmniState.menuField = field;
-    renderDashMenu();
-    if (!_dashOutsideListener) {
-      setTimeout(() => {
-        _dashOutsideListener = (e) => {
-          const omnibar = document.getElementById('dash-omnibar');
-          const menu = document.getElementById('dash-omnibar-menu');
-          if (!omnibar || !menu) return;
-          if (omnibar.contains(e.target)) return;
-          dashOmnibarCloseMenu();
-        };
-        document.addEventListener('mousedown', _dashOutsideListener);
-      }, 10);
-    }
-    setTimeout(() => {
-      const existing = dashOmniState.filters.find(f => f.key === key);
-      if (!existing) return;
-      if (field.type === 'date_range') {
-        const startEl = document.getElementById('dash-omni-date-start');
-        const endEl = document.getElementById('dash-omni-date-end');
-        if (startEl) startEl.value = existing.startDate || '';
-        if (endEl) endEl.value = existing.endDate || '';
-      } else if (field.type === 'multi') {
-        const checkboxes = document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]');
-        checkboxes.forEach(cb => {
-          if (existing.values && existing.values.includes(cb.value)) cb.checked = true;
-        });
-      }
-    }, 60);
-  };
-
-  function renderDashChips() {
-    const container = document.getElementById('dash-omnibar-chips');
-    if (!container) return;
-    let html = '';
-    for (const f of dashOmniState.filters) {
-      let chipLabel = '';
-      if (f.type === 'date_range') {
-        chipLabel = `${f.label}: ${typeof formatDateDisplay === 'function' ? formatDateDisplay(f.startDate) : f.startDate} – ${typeof formatDateDisplay === 'function' ? formatDateDisplay(f.endDate) : f.endDate}`;
-      } else {
-        chipLabel = f.values.length <= 2 ? `${f.label}: ${f.values.join(', ')}` : `${f.label}: ${f.values.length} selected`;
-      }
-      html += `<span class="omnibar-chip omnibar-chip-filter">
-        <span class="chip-icon">&#9881;</span>
-        <span class="chip-text chip-text-editable" onclick="dashOmnibarEditFilter('${f.key}')" title="Click to edit">${escapeHtml(chipLabel)}</span>
-        <button class="chip-remove" onclick="dashOmnibarRemoveFilter('${f.key}')" title="Remove">&times;</button>
-      </span>`;
-    }
-    for (const s of dashOmniState.sorts) {
-      const arrow = s.direction === 'asc' ? '\u25B2' : '\u25BC';
-      html += `<span class="omnibar-chip omnibar-chip-sort">
-        <span class="chip-icon">${arrow}</span>
-        <span class="chip-text chip-text-editable" onclick="dashOmnibarEditSort('${s.key}')" title="Click to toggle direction">${escapeHtml(s.label)}</span>
-        <button class="chip-remove" onclick="dashOmnibarRemoveSort('${s.key}')" title="Remove">&times;</button>
-      </span>`;
-    }
-    container.innerHTML = html;
-  }
-
-  // ===== Apply / Clear =====
-
-  async function dashOmnibarApply() {
-    // Ensure data is loaded for the date range
-    const dateFilter = dashOmniState.filters.find(f => f.key === 'date_range');
-    if (dateFilter && typeof ensureDataForRange === 'function') {
-      await ensureDataForRange(dateFilter.startDate, dateFilter.endDate);
-    }
-    renderDashboard();
-  }
-
-  function dashOmnibarClearAll() {
-    dashOmniState.filters = [];
-    dashOmniState.sorts = [];
-    dashOmnibarCloseMenu();
-    renderDashChips();
-    // Set default date to today
-    const today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
-    dashOmniState.filters.push({ key: 'date_range', label: 'Date Range', type: 'date_range', startDate: today, endDate: today });
-    renderDashChips();
-    renderDashboard();
-  }
-
   // ===== Override dashboard filter functions =====
 
-  // Override getFilteredDashboardRecords to use omnibar state
   window.getFilteredDashboardRecords = function () {
-    let records = appState.records;
+    var records = appState.records;
 
-    const dateFilter = dashOmniState.filters.find(f => f.key === 'date_range');
+    var dateFilter = dashFilterState.filters['date_range'];
     if (dateFilter) {
-      if (dateFilter.startDate) records = records.filter(r => r.date && r.date >= dateFilter.startDate);
-      if (dateFilter.endDate) records = records.filter(r => r.date && r.date <= dateFilter.endDate);
+      if (dateFilter.startDate) records = records.filter(function(r) { return r.date && r.date >= dateFilter.startDate; });
+      if (dateFilter.endDate) records = records.filter(function(r) { return r.date && r.date <= dateFilter.endDate; });
     }
 
     // Multi-select filters
-    for (const f of dashOmniState.filters) {
+    var keys = Object.keys(dashFilterState.filters);
+    for (var ki = 0; ki < keys.length; ki++) {
+      var f = dashFilterState.filters[keys[ki]];
       if (f.type !== 'multi') continue;
+      if (!f.values || f.values.length === 0) {
+        records = [];
+        break;
+      }
       if (f.key === 'day') {
-        records = records.filter(r => {
+        records = records.filter(function(r) {
           if (!r.date) return false;
-          const dayName = typeof getDayOfWeek === 'function' ? getDayOfWeek(r.date) : '';
+          var dayName = typeof getDayOfWeek === 'function' ? getDayOfWeek(r.date) : '';
           return f.values.includes(dayName);
         });
       } else {
-        records = records.filter(r => f.values.includes(r[f.recordKey]));
+        var rk = f.recordKey;
+        var vs = f.values;
+        records = records.filter(function(r) { return vs.includes(r[rk]); });
+      }
+    }
+
+    // Apply sort
+    if (dashFilterState.sort) {
+      var s = dashFilterState.sort;
+      var sortField = DASH_FILTER_FIELDS.find(function(ff) { return ff.key === s.key; });
+      if (sortField) {
+        var sortRk = sortField.recordKey;
+        var dir = s.direction;
+        records = records.slice().sort(function(a, b) {
+          var aVal = a[sortRk] || '';
+          var bVal = b[sortRk] || '';
+          var cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
+          return dir === 'asc' ? cmp : -cmp;
+        });
       }
     }
 
     return records;
   };
 
-  // Override populateDashboardFilterDropdowns — no longer needed
-  window.populateDashboardFilterDropdowns = function () {
-    // No-op: replaced by dashboard omnibar
-  };
+  window.populateDashboardFilterDropdowns = function () {};
 
-  // Override applyDashboardFilters
   window.applyDashboardFilters = async function () {
-    await dashOmnibarApply();
+    await dashApplyNow();
   };
 
-  // Override clearDashboardFilters
   window.clearDashboardFilters = function () {
-    dashOmnibarClearAll();
+    dashClearAllFilters();
   };
 
-  // Set default dashboard omnibar filters — all multi-select filters pre-applied with all values
-  function setDefaultDashOmnibarFilters() {
-    const today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
-    dashOmniState.filters = [
-      { key: 'date_range', label: 'Date Range', type: 'date_range', startDate: today, endDate: today }
-    ];
-    dashOmniState.sorts = [];
+  // ===== Set default filters on load =====
 
-    // Pre-apply all multi-select filters with all available values
-    if (appState.records && appState.records.length > 0) {
-      for (const field of DASH_FILTER_FIELDS) {
-        if (field.type !== 'multi') continue;
-        let values;
-        if (field.key === 'day') {
-          values = typeof DAY_NAMES !== 'undefined' ? DAY_NAMES.slice() : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-        } else {
-          values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
-        }
-        if (values.length > 0) {
-          dashOmniState.filters.push({ key: field.key, label: field.label, type: 'multi', values: values, recordKey: field.recordKey });
-        }
-      }
-    }
-    renderDashChips();
+  function setDefaultDashFilterBar() {
+    var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    dashFilterState.filters = {
+      date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today }
+    };
+    dashFilterState.sort = null;
+    dashFilterState.openPill = null;
+    // All multi-select filters default to "All" (no entry in filters = all selected)
+    dashRenderFilterBar();
   }
 
-  // Hook into the load flow — override the old setDefaultFilters to also set dashboard omnibar
-  const _origSetDefaultFiltersDash = window.setDefaultFilters;
+  // Hook into the load flow
+  var _origSetDefaultFiltersDash = window.setDefaultFilters;
   window.setDefaultFilters = function () {
     if (_origSetDefaultFiltersDash) _origSetDefaultFiltersDash();
-    setDefaultDashOmnibarFilters();
+    setDefaultDashFilterBar();
   };
 
-  // Toggle Select All for dashboard filter value list
-  window.dashOmnibarToggleSelectAll = function (selectAllCb) {
-    const checkboxes = document.querySelectorAll('#dash-omni-value-list input[type="checkbox"]');
-    checkboxes.forEach(cb => {
-      // Only toggle visible items (respect search filter)
-      if (cb.closest('.omnibar-value-item').style.display !== 'none') {
-        cb.checked = selectAllCb.checked;
-      }
-    });
-  };
-
-  // Expose globals
-  window.dashOmnibarOpenMenu = dashOmnibarOpenMenu;
-  window.dashOmnibarCloseMenu = dashOmnibarCloseMenu;
-  window.dashOmnibarApply = dashOmnibarApply;
-  window.dashOmnibarClearAll = dashOmnibarClearAll;
-  window.dashOmniState = dashOmniState;
+  // ===== Backward compat =====
+  window.dashOmnibarApply = dashApplyNow;
+  window.dashOmnibarClearAll = dashClearAllFilters;
+  window.dashOmniState = dashFilterState;
+  window.dashOmnibarOpenMenu = function () {};
+  window.dashOmnibarCloseMenu = function () {};
+  window.dashFilterState = dashFilterState;
+  window.dashRenderFilterBar = dashRenderFilterBar;
 
 })();

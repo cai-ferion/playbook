@@ -1,24 +1,24 @@
 /**
- * Input Portal — Omnibar View Builder, Virtualized Table, Bulk Editing, Audit Timeline
+ * Input Portal — Persistent Filter Bar, Virtualized Table, Bulk Editing, Audit Timeline
  *
  * Dependencies: data.js (appState, TABLE_COLUMNS, TAG_OPTIONS, etc.), app.js (escapeHtml, showToast, etc.)
  */
 
 // ============================================================
-// 1. OMNIBAR — Unified View Builder
+// 1. PERSISTENT FILTER BAR
 // ============================================================
 
 const OMNIBAR_FILTER_FIELDS = [
-  { key: 'date_range', label: 'Date Range', type: 'date_range' },
-  { key: 'tag', label: 'Tag', type: 'multi', recordKey: 'tag' },
-  { key: 'agent', label: 'Agent', type: 'multi', recordKey: 'agent', searchable: true },
-  { key: 'flm', label: 'FLM', type: 'multi', recordKey: 'flm', searchable: true },
-  { key: 'actualPlanningGroup', label: 'Planning Group', type: 'multi', recordKey: 'actualPlanningGroup' },
-  { key: 'role', label: 'Role', type: 'multi', recordKey: 'role' },
-  { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime' },
-  { key: 'status', label: 'Status', type: 'multi', recordKey: 'status' },
-  { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode' },
-  { key: 'blanks', label: 'Blank Tags Only', type: 'toggle' },
+  { key: 'date_range', label: 'Date', type: 'date_range' },
+  { key: 'tag', label: 'Tag', type: 'multi', recordKey: 'tag', searchable: false, sortable: true },
+  { key: 'agent', label: 'Agent', type: 'multi', recordKey: 'agent', searchable: true, sortable: true },
+  { key: 'flm', label: 'FLM', type: 'multi', recordKey: 'flm', searchable: true, sortable: true },
+  { key: 'actualPlanningGroup', label: 'Planning Group', type: 'multi', recordKey: 'actualPlanningGroup', searchable: true, sortable: true },
+  { key: 'role', label: 'Role', type: 'multi', recordKey: 'role', searchable: false, sortable: false },
+  { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false, sortable: false },
+  { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
+  { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode', searchable: true, sortable: true },
+  { key: 'blanks', label: 'Blank Tags', type: 'toggle' },
 ];
 
 const OMNIBAR_SORT_FIELDS = [
@@ -33,333 +33,423 @@ const OMNIBAR_SORT_FIELDS = [
 
 // Active view state
 const omnibarState = {
-  filters: [],   // { key, label, type, values, startDate, endDate }
-  sorts: [],     // { key, label, direction: 'asc'|'desc' }
-  menuMode: null, // 'filter' | 'sort' | null
-  menuStep: null, // null | 'pick_field' | 'pick_values'
-  menuField: null,
+  // Each filter stored by key. Missing key = "All" (no restriction)
+  filters: {},
+  // Sort: { key, direction, recordKey } or null
+  sort: { key: 'date', direction: 'desc', recordKey: 'date' },
+  // Which pill dropdown is open
+  openPill: null,
 };
 
-function omnibarOpenMenu(mode) {
-  omnibarState.menuMode = mode;
-  omnibarState.menuStep = 'pick_field';
-  omnibarState.menuField = null;
-  renderOmnibarMenu();
-  _attachOmnibarOutsideClick();
-}
+let _omnibarOutsideListener = null;
+let _inputApplyDebounce = null;
 
-function omnibarCloseMenu() {
-  omnibarState.menuMode = null;
-  omnibarState.menuStep = null;
-  omnibarState.menuField = null;
-  const menu = document.getElementById('omnibar-menu');
-  if (menu) menu.style.display = 'none';
-  _detachOmnibarOutsideClick();
-}
+// ===== Helpers =====
 
-function renderOmnibarMenu() {
-  const menu = document.getElementById('omnibar-menu');
-  if (!menu) return;
-  menu.style.display = 'block';
-
-  if (omnibarState.menuMode === 'filter' && omnibarState.menuStep === 'pick_field') {
-    // Show available filter fields (exclude already-active ones)
-    const activeKeys = new Set(omnibarState.filters.map(f => f.key));
-    const available = OMNIBAR_FILTER_FIELDS.filter(f => !activeKeys.has(f.key));
-
-    if (available.length === 0) {
-      menu.innerHTML = '<div class="omnibar-menu-empty">All filters are active</div>';
-      return;
-    }
-
-    menu.innerHTML = '<div class="omnibar-menu-title">Select a filter</div>' +
-      available.map(f =>
-        `<button class="omnibar-menu-item" onclick="event.stopPropagation(); omnibarSelectFilterField('${f.key}')">${escapeHtml(f.label)}</button>`
-      ).join('');
-
-  } else if (omnibarState.menuMode === 'filter' && omnibarState.menuStep === 'pick_values') {
-    renderOmnibarFilterValuePicker();
-
-  } else if (omnibarState.menuMode === 'sort' && omnibarState.menuStep === 'pick_field') {
-    const activeKeys = new Set(omnibarState.sorts.map(s => s.key));
-    const available = OMNIBAR_SORT_FIELDS.filter(f => !activeKeys.has(f.key));
-
-    if (available.length === 0) {
-      menu.innerHTML = '<div class="omnibar-menu-empty">All sort fields are active</div>';
-      return;
-    }
-
-    menu.innerHTML = '<div class="omnibar-menu-title">Sort by</div>' +
-      available.map(f =>
-        `<button class="omnibar-menu-item" onclick="event.stopPropagation(); omnibarAddSort('${f.key}', 'asc')">${escapeHtml(f.label)} &#9650; Ascending</button>` +
-        `<button class="omnibar-menu-item" onclick="event.stopPropagation(); omnibarAddSort('${f.key}', 'desc')">${escapeHtml(f.label)} &#9660; Descending</button>`
-      ).join('');
-  }
-}
-
-function omnibarSelectFilterField(key) {
-  const field = OMNIBAR_FILTER_FIELDS.find(f => f.key === key);
-  if (!field) return;
-
-  // Toggle-type filter: add immediately
-  if (field.type === 'toggle') {
-    omnibarState.filters.push({ key: field.key, label: field.label, type: 'toggle', values: [true] });
-    omnibarCloseMenu();
-    renderOmnibarChips();
-    return;
-  }
-
-  // Date range: show date pickers
-  if (field.type === 'date_range') {
-    omnibarState.menuField = field;
-    omnibarState.menuStep = 'pick_values';
-    renderOmnibarMenu();
-    return;
-  }
-
-  // Multi-select: show value picker
-  omnibarState.menuField = field;
-  omnibarState.menuStep = 'pick_values';
-  renderOmnibarMenu();
-}
-
-function renderOmnibarFilterValuePicker() {
-  const menu = document.getElementById('omnibar-menu');
-  const field = omnibarState.menuField;
-  if (!field || !menu) return;
-
-  if (field.type === 'date_range') {
-    const today = getTodayStr();
-    menu.innerHTML = `
-      <div class="omnibar-menu-title">Date Range</div>
-      <div class="omnibar-date-picker" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding:8px 12px;">
-        <label class="filter-label" style="margin:0;white-space:nowrap;font-size:12px;">Start:</label>
-        <input type="date" class="form-input form-input-sm" id="omni-date-start" value="${today}" style="min-width:140px;flex:1;">
-        <label class="filter-label" style="margin:0;white-space:nowrap;font-size:12px;">End:</label>
-        <input type="date" class="form-input form-input-sm" id="omni-date-end" value="${today}" style="min-width:140px;flex:1;">
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); omnibarAddDateFilter()" style="white-space:nowrap;">Add</button>
-      </div>`;
-    return;
-  }
-
-  // Multi-select: gather unique values
-  // For name-based fields, use employeeLookup when records are empty (server-side pagination)
-  let values;
-  const empFieldMap = {
+function inputGetAllValues(field) {
+  var empFieldMap = {
     agent: 'full_name', flm: 'supervisor_name',
     actualPlanningGroup: 'planning_group', role: 'actual_role',
     shiftTime: 'shift_time', status: 'srt_status',
   };
-  if (appState.records.length === 0 && empFieldMap[field.recordKey] && typeof employeeLookup === 'object') {
-    const empField = empFieldMap[field.recordKey];
-    values = [...new Set(Object.values(employeeLookup).map(e => (e[empField] || '').trim()).filter(Boolean))].sort();
+
+  var values;
+  if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
+    var recordTags = appState.records.length > 0
+      ? appState.records.map(function(r) { return r[field.recordKey]; }).filter(Boolean)
+      : [];
+    values = [...new Set([...TAG_OPTIONS, ...recordTags])].sort();
   } else if (appState.records.length > 0) {
-    values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
+    values = [...new Set(appState.records.map(function(r) { return r[field.recordKey]; }).filter(Boolean))].sort();
+  } else if (typeof employeeLookup === 'object' && empFieldMap[field.recordKey]) {
+    var empField = empFieldMap[field.recordKey];
+    values = [...new Set(Object.values(employeeLookup).map(function(e) { return (e[empField] || '').trim(); }).filter(Boolean))].sort();
+  } else if (typeof serverPagState !== 'undefined' && serverPagState.rows && serverPagState.rows.length > 0) {
+    values = [...new Set(serverPagState.rows.map(function(r) { return r[field.recordKey]; }).filter(Boolean))].sort();
   } else {
     values = [];
   }
-  // For tag and billingCode, also try to get from current server page
-  if (values.length === 0 && typeof serverPagState !== 'undefined' && serverPagState.rows && serverPagState.rows.length > 0) {
-    values = [...new Set(serverPagState.rows.map(r => r[field.recordKey]).filter(Boolean))].sort();
-  }
-  // For tag field, always include TAG_OPTIONS as base
-  if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
-    values = [...new Set([...TAG_OPTIONS, ...values])].sort();
-  }
-  const searchable = field.searchable || values.length > 15;
-
-  let html = `<div class="omnibar-menu-title">${escapeHtml(field.label)}</div>`;
-  if (searchable) {
-    html += `<div class="omnibar-search-wrap"><input type="text" class="form-input form-input-sm omnibar-search" id="omni-value-search" placeholder="Search..." oninput="omnibarFilterValueList()"></div>`;
-  }
-  html += '<div class="omnibar-select-all-wrap" style="padding:4px 12px;"><label class="omnibar-value-item" style="font-weight:600;"><input type="checkbox" id="omni-select-all" onchange="omnibarToggleSelectAll(this)"><span>Select All</span></label></div>';
-  html += '<div class="omnibar-value-list" id="omni-value-list">';
-  for (const v of values) {
-    html += `<label class="omnibar-value-item"><input type="checkbox" value="${escapeAttr(v)}"><span>${escapeHtml(v)}</span></label>`;
-  }
-  html += '</div>';
-  html += `<div class="omnibar-menu-footer"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); omnibarAddMultiFilter()">Add Filter</button></div>`;
-  menu.innerHTML = html;
-
-  if (searchable) {
-    setTimeout(() => { const si = document.getElementById('omni-value-search'); if (si) si.focus(); }, 50);
-  }
-  // Update Select All checkbox state based on checked items
-  setTimeout(() => {
-    const allCbs = document.querySelectorAll('#omni-value-list input[type="checkbox"]');
-    const selectAllCb = document.getElementById('omni-select-all');
-    if (selectAllCb && allCbs.length > 0) {
-      const allChecked = [...allCbs].every(cb => cb.checked);
-      selectAllCb.checked = allChecked;
-    }
-  }, 70);
+  return values;
 }
 
-function omnibarToggleSelectAll(selectAllCb) {
-  const checkboxes = document.querySelectorAll('#omni-value-list input[type="checkbox"]');
-  checkboxes.forEach(cb => {
-    // Only toggle visible items (respect search filter)
-    if (cb.closest('.omnibar-value-item').style.display !== 'none') {
-      cb.checked = selectAllCb.checked;
-    }
-  });
-}
-
-function omnibarFilterValueList() {
-  const search = (document.getElementById('omni-value-search')?.value || '').toLowerCase();
-  const items = document.querySelectorAll('#omni-value-list .omnibar-value-item');
-  items.forEach(item => {
-    const text = item.textContent.toLowerCase();
-    item.style.display = text.includes(search) ? '' : 'none';
-  });
-}
-
-function omnibarAddDateFilter() {
-  const start = document.getElementById('omni-date-start')?.value || '';
-  const end = document.getElementById('omni-date-end')?.value || '';
-  if (!start || !end) { showToast('Please select both start and end dates', 'info'); return; }
-  if (start > end) { showToast('Start date cannot be after end date', 'info'); return; }
-
-  // Remove existing date_range filter
-  omnibarState.filters = omnibarState.filters.filter(f => f.key !== 'date_range');
-  omnibarState.filters.unshift({ key: 'date_range', label: 'Date Range', type: 'date_range', startDate: start, endDate: end });
-  omnibarCloseMenu();
-  renderOmnibarChips();
-}
-
-function omnibarAddMultiFilter() {
-  const field = omnibarState.menuField;
-  if (!field) return;
-  const checked = [...document.querySelectorAll('#omni-value-list input[type="checkbox"]:checked')].map(cb => cb.value);
-  if (checked.length === 0) { showToast('Select at least one value', 'info'); return; }
-
-  // Remove existing filter for same key
-  omnibarState.filters = omnibarState.filters.filter(f => f.key !== field.key);
-  omnibarState.filters.push({ key: field.key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey });
-  omnibarCloseMenu();
-  renderOmnibarChips();
-}
-
-function omnibarAddSort(key, direction) {
-  const field = OMNIBAR_SORT_FIELDS.find(f => f.key === key);
-  if (!field) return;
-  omnibarState.sorts = omnibarState.sorts.filter(s => s.key !== key);
-  omnibarState.sorts.push({ key, label: field.label, direction, recordKey: field.recordKey });
-  omnibarCloseMenu();
-  renderOmnibarChips();
-}
-
-function omnibarRemoveFilter(key) {
-  omnibarState.filters = omnibarState.filters.filter(f => f.key !== key);
-  renderOmnibarChips();
-}
-
-function omnibarEditSort(key) {
-  const sort = omnibarState.sorts.find(s => s.key === key);
-  if (!sort) return;
-  sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
-  sort.label = sort.label.replace(/ [\u25B2\u25BC]$/, '') + (sort.direction === 'asc' ? ' \u25B2' : ' \u25BC');
-  renderOmnibarChips();
-}
-
-function omnibarRemoveSort(key) {
-  omnibarState.sorts = omnibarState.sorts.filter(s => s.key !== key);
-  renderOmnibarChips();
-}
-
-function omnibarClearAll() {
-  omnibarState.filters = [];
-  omnibarState.sorts = [];
-  omnibarCloseMenu();
-  renderOmnibarChips();
-  // Auto-apply on clear
-  omnibarApplyView();
-}
-
-function omnibarEditFilter(key) {
-  const field = OMNIBAR_FILTER_FIELDS.find(f => f.key === key);
-  if (!field || field.type === 'toggle') return;
-  omnibarState.menuMode = 'filter';
-  omnibarState.menuStep = 'pick_values';
-  omnibarState.menuField = field;
-  omnibarState._editingFilterKey = key;
-  renderOmnibarMenu();
-  _attachOmnibarOutsideClick();
-
-  // Pre-populate existing values after menu renders
-  setTimeout(() => {
-    const existing = omnibarState.filters.find(f => f.key === key);
-    if (!existing) return;
+function inputGetFilterSummary(field) {
+  var f = omnibarState.filters[field.key];
+  if (!f) {
     if (field.type === 'date_range') {
-      const startEl = document.getElementById('omni-date-start');
-      const endEl = document.getElementById('omni-date-end');
-      if (startEl) startEl.value = existing.startDate || '';
-      if (endEl) endEl.value = existing.endDate || '';
-    } else if (field.type === 'multi') {
-      const checkboxes = document.querySelectorAll('#omni-value-list input[type="checkbox"]');
-      checkboxes.forEach(cb => {
-        if (existing.values && existing.values.includes(cb.value)) cb.checked = true;
-      });
+      var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+      return today;
     }
-  }, 60);
+    return field.type === 'toggle' ? 'Off' : 'All';
+  }
+  if (field.type === 'date_range') {
+    var fmt = typeof formatDateDisplay === 'function' ? formatDateDisplay : function(d) { return d; };
+    return fmt(f.startDate) + ' \u2013 ' + fmt(f.endDate);
+  }
+  if (field.type === 'toggle') return 'On';
+  var allValues = inputGetAllValues(field);
+  if (!f.values || f.values.length === 0) return 'None';
+  if (f.values.length === allValues.length) return 'All';
+  if (f.values.length === 1) return f.values[0];
+  return f.values.length + ' selected';
 }
 
-function renderOmnibarChips() {
-  const container = document.getElementById('omnibar-chips');
+function inputIsFiltered(field) {
+  var f = omnibarState.filters[field.key];
+  if (!f) return false;
+  if (field.type === 'date_range') return true;
+  if (field.type === 'toggle') return true;
+  var allValues = inputGetAllValues(field);
+  return f.values && f.values.length > 0 && f.values.length < allValues.length;
+}
+
+// ===== Render pills =====
+
+function inputRenderFilterBar() {
+  var container = document.getElementById('input-filter-pills');
   if (!container) return;
 
-  let html = '';
+  var html = '';
 
-  for (const f of omnibarState.filters) {
-    let chipLabel = '';
-    if (f.type === 'date_range') {
-      chipLabel = `${f.label}: ${formatDateDisplay(f.startDate)} \u2013 ${formatDateDisplay(f.endDate)}`;
-    } else if (f.type === 'toggle') {
-      chipLabel = f.label;
-    } else {
-      chipLabel = f.values.length <= 2 ? `${f.label}: ${f.values.join(', ')}` : `${f.label}: ${f.values.length} selected`;
+  for (var fi = 0; fi < OMNIBAR_FILTER_FIELDS.length; fi++) {
+    var field = OMNIBAR_FILTER_FIELDS[fi];
+    var summary = inputGetFilterSummary(field);
+    var isActive = inputIsFiltered(field);
+    var hasSort = omnibarState.sort && omnibarState.sort.key === field.key;
+    var isOpen = omnibarState.openPill === field.key;
+
+    if (field.type === 'toggle') {
+      // Toggle pill — special rendering
+      var toggleActive = !!omnibarState.filters[field.key];
+      var toggleClass = 'filter-pill filter-pill-toggle' + (toggleActive ? ' active' : '');
+      html += '<div class="' + toggleClass + '" id="input-pill-' + field.key + '" onclick="event.stopPropagation(); inputToggleBlanks()">'
+        + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span>'
+        + '<span class="filter-pill-value">' + (toggleActive ? 'On' : 'Off') + '</span>'
+        + '</div>';
+      continue;
     }
-    const editClick = f.type !== 'toggle' ? `onclick="omnibarEditFilter('${f.key}')"` : '';
-    const editClass = f.type !== 'toggle' ? 'chip-text-editable' : '';
-    html += `<span class="omnibar-chip omnibar-chip-filter">
-      <span class="chip-icon">&#9881;</span>
-      <span class="chip-text ${editClass}" ${editClick} title="Click to edit">${escapeHtml(chipLabel)}</span>
-      <button class="chip-remove" onclick="omnibarRemoveFilter('${f.key}')" title="Remove">&times;</button>
-    </span>`;
+
+    var pillClass = 'filter-pill';
+    if (isActive) pillClass += ' active';
+    if (hasSort) pillClass += ' has-sort';
+    if (isOpen) pillClass += ' open';
+
+    var sortIcon = hasSort ? (omnibarState.sort.direction === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+
+    html += '<div class="' + pillClass + '" id="input-pill-' + field.key + '" onclick="event.stopPropagation(); inputTogglePill(\'' + field.key + '\')">'
+      + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span>'
+      + '<span class="filter-pill-value">' + escapeHtml(summary) + sortIcon + '</span>'
+      + '<span class="filter-pill-icon">\u25BE</span>'
+      + '<div class="filter-dropdown' + (isOpen ? ' open' : '') + '" id="input-dd-' + field.key + '" onclick="event.stopPropagation();"></div>'
+      + '</div>';
   }
 
-  for (const s of omnibarState.sorts) {
-    const arrow = s.direction === 'asc' ? '\u25B2' : '\u25BC';
-    html += `<span class="omnibar-chip omnibar-chip-sort">
-      <span class="chip-icon">${arrow}</span>
-      <span class="chip-text chip-text-editable" onclick="omnibarEditSort('${s.key}')" title="Click to toggle direction">${escapeHtml(s.label)}</span>
-      <button class="chip-remove" onclick="omnibarRemoveSort('${s.key}')" title="Remove">&times;</button>
-    </span>`;
-  }
+  // Clear Filters button
+  html += '<button class="filter-bar-clear" onclick="inputClearAllFilters()" title="Reset all filters to defaults">'
+    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+    + ' Clear Filters'
+    + '</button>';
+
+  // Record count
+  html += '<span class="filter-bar-meta" id="input-filter-count"></span>';
 
   container.innerHTML = html;
 }
 
-// Close omnibar menu on outside click — use mousedown to fire before onclick
-let _omnibarOutsideListener = null;
+// ===== Toggle pill dropdown =====
 
-function _attachOmnibarOutsideClick() {
-  if (_omnibarOutsideListener) return;
-  _omnibarOutsideListener = (e) => {
-    const omnibar = document.getElementById('omnibar');
-    const menu = document.getElementById('omnibar-menu');
-    if (!omnibar || !menu) return;
-    // If click is inside the omnibar (including the menu), do nothing
-    if (omnibar.contains(e.target)) return;
-    omnibarCloseMenu();
+window.inputTogglePill = function (key) {
+  if (omnibarState.openPill === key) {
+    inputClosePill();
+    return;
+  }
+  omnibarState.openPill = key;
+  inputRenderFilterBar();
+  inputRenderDropdown(key);
+  _attachInputOutsideClick();
+};
+
+function inputClosePill() {
+  omnibarState.openPill = null;
+  inputRenderFilterBar();
+  _detachInputOutsideClick();
+}
+
+// ===== Toggle blanks =====
+
+window.inputToggleBlanks = function () {
+  if (omnibarState.filters['blanks']) {
+    delete omnibarState.filters['blanks'];
+  } else {
+    omnibarState.filters['blanks'] = { key: 'blanks', label: 'Blank Tags', type: 'toggle', values: [true] };
+  }
+  inputRenderFilterBar();
+  inputDebouncedApply();
+};
+
+// ===== Render dropdown content =====
+
+function inputRenderDropdown(key) {
+  var field = OMNIBAR_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  if (!field) return;
+  var dd = document.getElementById('input-dd-' + key);
+  if (!dd) return;
+  dd.classList.add('open');
+
+  if (field.type === 'date_range') {
+    inputRenderDateDropdown(dd, field);
+    return;
+  }
+
+  inputRenderMultiDropdown(dd, field);
+}
+
+function inputRenderDateDropdown(dd, field) {
+  var f = omnibarState.filters[field.key];
+  var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  var startVal = f ? f.startDate : today;
+  var endVal = f ? f.endDate : today;
+
+  // Sort buttons for date
+  var curSort = omnibarState.sort;
+  var isAsc = curSort && curSort.key === 'date' && curSort.direction === 'asc';
+  var isDesc = curSort && curSort.key === 'date' && curSort.direction === 'desc';
+
+  dd.innerHTML = '<div class="filter-dropdown-header">'
+    + '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>'
+    + '<div class="filter-dropdown-sort">'
+    + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); inputSetSort(\'date\', \'asc\')" title="Oldest first">Old\u2191</button>'
+    + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); inputSetSort(\'date\', \'desc\')" title="Newest first">New\u2193</button>'
+    + '</div>'
+    + '</div>'
+    + '<div class="filter-date-row">'
+    + '<div class="filter-group"><label>Start</label>'
+    + '<input type="date" class="form-input form-input-sm" id="input-date-start" value="' + startVal + '">'
+    + '</div>'
+    + '<div class="filter-group"><label>End</label>'
+    + '<input type="date" class="form-input form-input-sm" id="input-date-end" value="' + endVal + '">'
+    + '</div>'
+    + '</div>';
+
+  setTimeout(function() {
+    var startEl = document.getElementById('input-date-start');
+    var endEl = document.getElementById('input-date-end');
+    if (startEl) startEl.addEventListener('change', inputOnDateChange);
+    if (endEl) endEl.addEventListener('change', inputOnDateChange);
+  }, 30);
+}
+
+function inputOnDateChange() {
+  var start = (document.getElementById('input-date-start') || {}).value || '';
+  var end = (document.getElementById('input-date-end') || {}).value || '';
+  if (!start || !end) return;
+  if (start > end) { showToast('Start date cannot be after end date', 'info'); return; }
+  omnibarState.filters['date_range'] = {
+    key: 'date_range', label: 'Date', type: 'date_range', startDate: start, endDate: end
   };
-  // Defer attachment so the current click event doesn't immediately close
-  setTimeout(() => {
+  // Update pill text
+  var field = OMNIBAR_FILTER_FIELDS[0];
+  var pill = document.getElementById('input-pill-' + field.key);
+  if (pill) {
+    var valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = inputGetFilterSummary(field);
+  }
+  inputDebouncedApply();
+}
+
+function inputRenderMultiDropdown(dd, field) {
+  var values = inputGetAllValues(field);
+  var f = omnibarState.filters[field.key];
+  var selectedSet = new Set(f ? f.values : values); // default: all selected
+  var searchable = field.searchable || values.length > 15;
+
+  var html = '<div class="filter-dropdown-header">';
+  html += '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>';
+
+  // Sort buttons (if sortable)
+  if (field.sortable) {
+    var sortField = OMNIBAR_SORT_FIELDS.find(function(sf) { return sf.key === field.key; });
+    if (sortField) {
+      var curSort = omnibarState.sort;
+      var isAsc = curSort && curSort.key === field.key && curSort.direction === 'asc';
+      var isDesc = curSort && curSort.key === field.key && curSort.direction === 'desc';
+      html += '<div class="filter-dropdown-sort">'
+        + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); inputSetSort(\'' + field.key + '\', \'asc\')" title="Sort A\u2192Z">A\u2191</button>'
+        + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); inputSetSort(\'' + field.key + '\', \'desc\')" title="Sort Z\u2192A">Z\u2193</button>'
+        + '</div>';
+    }
+  }
+  html += '</div>';
+
+  if (searchable) {
+    html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" id="input-dd-search-' + field.key + '" placeholder="Search..." oninput="inputFilterDropdownSearch(\'' + field.key + '\')"></div>';
+  }
+
+  // Select All / Deselect All
+  html += '<div class="filter-dropdown-actions">'
+    + '<button class="filter-action-link" onclick="event.stopPropagation(); inputSelectAll(\'' + field.key + '\')">Select All</button>'
+    + '<button class="filter-action-link" onclick="event.stopPropagation(); inputDeselectAll(\'' + field.key + '\')" style="color:#DC2626;">Deselect All</button>'
+    + '</div>';
+
+  html += '<div class="filter-dropdown-list" id="input-dd-list-' + field.key + '">';
+  for (var i = 0; i < values.length; i++) {
+    var v = values[i];
+    var checked = selectedSet.has(v) ? 'checked' : '';
+    html += '<label class="filter-dropdown-item"><input type="checkbox" value="' + escapeAttr(v) + '" ' + checked + ' onchange="inputOnCheckboxChange(\'' + field.key + '\')"><span>' + escapeHtml(v) + '</span></label>';
+  }
+  html += '</div>';
+
+  dd.innerHTML = html;
+
+  if (searchable) {
+    setTimeout(function() {
+      var si = document.getElementById('input-dd-search-' + field.key);
+      if (si) si.focus();
+    }, 50);
+  }
+}
+
+// ===== Checkbox / sort handlers =====
+
+window.inputOnCheckboxChange = function (key) {
+  var field = OMNIBAR_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  if (!field) return;
+  var listEl = document.getElementById('input-dd-list-' + key);
+  if (!listEl) return;
+  var checked = [];
+  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { checked.push(cb.value); });
+  var allValues = inputGetAllValues(field);
+
+  if (checked.length === allValues.length) {
+    delete omnibarState.filters[key];
+  } else {
+    omnibarState.filters[key] = { key: key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey };
+  }
+
+  // Update pill summary without closing dropdown
+  var pill = document.getElementById('input-pill-' + key);
+  if (pill) {
+    var valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) {
+      var sortIcon = (omnibarState.sort && omnibarState.sort.key === key)
+        ? (omnibarState.sort.direction === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+      valSpan.textContent = inputGetFilterSummary(field) + sortIcon;
+    }
+    if (inputIsFiltered(field)) {
+      pill.classList.add('active');
+    } else {
+      pill.classList.remove('active');
+    }
+  }
+
+  inputDebouncedApply();
+};
+
+window.inputSetSort = function (key, direction) {
+  var curSort = omnibarState.sort;
+  if (curSort && curSort.key === key && curSort.direction === direction) {
+    omnibarState.sort = null;
+  } else {
+    var sortField = OMNIBAR_SORT_FIELDS.find(function(sf) { return sf.key === key; });
+    omnibarState.sort = { key: key, direction: direction, recordKey: sortField ? sortField.recordKey : key };
+  }
+  var wasOpen = omnibarState.openPill;
+  inputRenderFilterBar();
+  if (wasOpen) {
+    omnibarState.openPill = wasOpen;
+    inputRenderFilterBar();
+    inputRenderDropdown(wasOpen);
+  }
+  inputDebouncedApply();
+};
+
+window.inputSelectAll = function (key) {
+  var listEl = document.getElementById('input-dd-list-' + key);
+  if (!listEl) return;
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true;
+  });
+  delete omnibarState.filters[key];
+  var field = OMNIBAR_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  if (field) {
+    var pill = document.getElementById('input-pill-' + key);
+    if (pill) {
+      var valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) valSpan.textContent = 'All';
+      pill.classList.remove('active');
+    }
+  }
+  inputDebouncedApply();
+};
+
+window.inputDeselectAll = function (key) {
+  var listEl = document.getElementById('input-dd-list-' + key);
+  if (!listEl) return;
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false;
+  });
+  var stillChecked = [];
+  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { stillChecked.push(cb.value); });
+  var field = OMNIBAR_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  omnibarState.filters[key] = { key: key, label: field.label, type: 'multi', values: stillChecked, recordKey: field.recordKey };
+  var pill = document.getElementById('input-pill-' + key);
+  if (pill) {
+    var valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = stillChecked.length === 0 ? 'None' : stillChecked.length + ' selected';
+    pill.classList.add('active');
+  }
+  inputDebouncedApply();
+};
+
+window.inputFilterDropdownSearch = function (key) {
+  var searchEl = document.getElementById('input-dd-search-' + key);
+  var listEl = document.getElementById('input-dd-list-' + key);
+  if (!searchEl || !listEl) return;
+  var q = searchEl.value.toLowerCase();
+  listEl.querySelectorAll('.filter-dropdown-item').forEach(function(item) {
+    var text = item.textContent.toLowerCase();
+    item.style.display = text.includes(q) ? '' : 'none';
+  });
+};
+
+// ===== Clear all =====
+
+window.inputClearAllFilters = function () {
+  inputClosePill();
+  var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  omnibarState.filters = {
+    date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today }
+  };
+  omnibarState.sort = { key: 'date', direction: 'desc', recordKey: 'date' };
+  inputRenderFilterBar();
+  inputApplyNow();
+};
+
+// ===== Apply (instant, debounced) =====
+
+function inputDebouncedApply() {
+  clearTimeout(_inputApplyDebounce);
+  _inputApplyDebounce = setTimeout(inputApplyNow, 250);
+}
+
+async function inputApplyNow() {
+  await omnibarApplyView();
+}
+
+// ===== Outside click =====
+
+function _attachInputOutsideClick() {
+  if (_omnibarOutsideListener) return;
+  setTimeout(function() {
+    _omnibarOutsideListener = function(e) {
+      var bar = document.getElementById('input-filter-bar');
+      if (bar && bar.contains(e.target)) return;
+      inputClosePill();
+    };
     document.addEventListener('mousedown', _omnibarOutsideListener);
   }, 10);
 }
 
-function _detachOmnibarOutsideClick() {
+function _detachInputOutsideClick() {
   if (_omnibarOutsideListener) {
     document.removeEventListener('mousedown', _omnibarOutsideListener);
     _omnibarOutsideListener = null;
@@ -367,7 +457,7 @@ function _detachOmnibarOutsideClick() {
 }
 
 // ============================================================
-// 2. VIEW APPLICATION — Filter + Sort + Data Loading
+// 2. SERVER-SIDE PAGINATION
 // ============================================================
 
 // Server-side pagination state
@@ -379,20 +469,23 @@ const serverPagState = {
 };
 
 async function omnibarApplyView() {
-  const dateFilter = omnibarState.filters.find(f => f.key === 'date_range');
-  const startDate = dateFilter ? dateFilter.startDate : getTodayStr();
-  const endDate = dateFilter ? dateFilter.endDate : getTodayStr();
+  var dateFilter = omnibarState.filters['date_range'];
+  var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  var startDate = dateFilter ? dateFilter.startDate : today;
+  var endDate = dateFilter ? dateFilter.endDate : today;
 
-  // Build server-side filter params from omnibar state
-  const filters = {};
-  for (const f of omnibarState.filters) {
+  // Build server-side filter params
+  var filters = {};
+  var keys = Object.keys(omnibarState.filters);
+  for (var ki = 0; ki < keys.length; ki++) {
+    var f = omnibarState.filters[keys[ki]];
     if (f.type === 'multi' && f.values && f.values.length > 0) {
-      const keyMap = {
+      var keyMap = {
         tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
         actualPlanningGroup: 'planning_group_in', billingCode: 'billing_code_in',
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
-      const paramKey = keyMap[f.key];
+      var paramKey = keyMap[f.key];
       if (paramKey) filters[paramKey] = f.values.join('|');
     }
     if (f.type === 'toggle' && f.key === 'blanks') {
@@ -401,10 +494,10 @@ async function omnibarApplyView() {
   }
 
   // Build sort params
-  let sortBy = null, sortDir = null;
-  if (omnibarState.sorts.length > 0) {
-    sortBy = omnibarState.sorts[0].recordKey;
-    sortDir = omnibarState.sorts[0].direction;
+  var sortBy = null, sortDir = null;
+  if (omnibarState.sort) {
+    sortBy = omnibarState.sort.recordKey;
+    sortDir = omnibarState.sort.direction;
   }
 
   // Use server-side pagination
@@ -414,12 +507,12 @@ async function omnibarApplyView() {
 
   try {
     showProgressBar('Loading Data...');
-    const result = await fetchPaginatedAttendance({
-      startDate, endDate,
+    var result = await fetchPaginatedAttendance({
+      startDate: startDate, endDate: endDate,
       limit: serverPagState.pageSize,
       offset: 0,
-      sortBy, sortDir,
-      filters,
+      sortBy: sortBy, sortDir: sortDir,
+      filters: filters,
     });
     serverPagState.total = result.total;
     serverPagState.rows = result.rows;
@@ -432,19 +525,22 @@ async function omnibarApplyView() {
 }
 
 async function serverPageChange(newPage) {
-  const dateFilter = omnibarState.filters.find(f => f.key === 'date_range');
-  const startDate = dateFilter ? dateFilter.startDate : getTodayStr();
-  const endDate = dateFilter ? dateFilter.endDate : getTodayStr();
+  var dateFilter = omnibarState.filters['date_range'];
+  var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  var startDate = dateFilter ? dateFilter.startDate : today;
+  var endDate = dateFilter ? dateFilter.endDate : today;
 
-  const filters = {};
-  for (const f of omnibarState.filters) {
+  var filters = {};
+  var keys = Object.keys(omnibarState.filters);
+  for (var ki = 0; ki < keys.length; ki++) {
+    var f = omnibarState.filters[keys[ki]];
     if (f.type === 'multi' && f.values && f.values.length > 0) {
-      const keyMap = {
+      var keyMap = {
         tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
         actualPlanningGroup: 'planning_group_in', billingCode: 'billing_code_in',
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
-      const paramKey = keyMap[f.key];
+      var paramKey = keyMap[f.key];
       if (paramKey) filters[paramKey] = f.values.join('|');
     }
     if (f.type === 'toggle' && f.key === 'blanks') {
@@ -452,20 +548,20 @@ async function serverPageChange(newPage) {
     }
   }
 
-  let sortBy = null, sortDir = null;
-  if (omnibarState.sorts.length > 0) {
-    sortBy = omnibarState.sorts[0].recordKey;
-    sortDir = omnibarState.sorts[0].direction;
+  var sortBy = null, sortDir = null;
+  if (omnibarState.sort) {
+    sortBy = omnibarState.sort.recordKey;
+    sortDir = omnibarState.sort.direction;
   }
 
   appState.inputPage = newPage;
   try {
-    const result = await fetchPaginatedAttendance({
-      startDate, endDate,
+    var result = await fetchPaginatedAttendance({
+      startDate: startDate, endDate: endDate,
       limit: serverPagState.pageSize,
       offset: newPage * serverPagState.pageSize,
-      sortBy, sortDir,
-      filters,
+      sortBy: sortBy, sortDir: sortDir,
+      filters: filters,
     });
     serverPagState.rows = result.rows;
     serverPagState.total = result.total;
@@ -476,17 +572,20 @@ async function serverPageChange(newPage) {
 }
 
 function renderInputTableServerSide() {
-  const totalRecords = serverPagState.total;
-  const pageItems = serverPagState.rows;
+  var totalRecords = serverPagState.total;
+  var pageItems = serverPagState.rows;
 
-  // Update record count
-  document.getElementById('input-record-count').textContent = `Filtered Records: ${formatNumber(totalRecords)}`;
+  // Update record count in both places
+  var rcEl = document.getElementById('input-record-count');
+  if (rcEl) rcEl.textContent = 'Filtered Records: ' + formatNumber(totalRecords);
+  var fcEl = document.getElementById('input-filter-count');
+  if (fcEl) fcEl.textContent = formatNumber(totalRecords) + ' records';
 
   // Update edit count
-  const editCount = Object.keys(appState.pendingEdits).length;
-  const editCountEl = document.getElementById('input-edit-count');
+  var editCount = Object.keys(appState.pendingEdits).length;
+  var editCountEl = document.getElementById('input-edit-count');
   if (editCount > 0) {
-    editCountEl.textContent = `${editCount} record(s) edited`;
+    editCountEl.textContent = editCount + ' record(s) edited';
     editCountEl.style.display = 'inline';
     document.getElementById('save-btn').disabled = false;
     document.getElementById('undo-btn').disabled = false;
@@ -497,48 +596,44 @@ function renderInputTableServerSide() {
   }
 
   // Pagination
-  const pageSize = serverPagState.pageSize;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const page = Math.min(appState.inputPage, totalPages - 1);
+  var pageSize = serverPagState.pageSize;
+  var totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  var page = Math.min(appState.inputPage, totalPages - 1);
   appState.inputPage = page;
-  const start = page * pageSize;
+  var start = page * pageSize;
 
   if (totalRecords > 0) {
     document.getElementById('input-record-info').textContent =
-      `Showing ${start + 1}\u2013${Math.min(start + pageSize, totalRecords)} of ${formatNumber(totalRecords)}`;
+      'Showing ' + (start + 1) + '\u2013' + Math.min(start + pageSize, totalRecords) + ' of ' + formatNumber(totalRecords);
   } else {
     document.getElementById('input-record-info').textContent = 'No records';
   }
 
   // Render table header
-  const thead = document.getElementById('input-table-head');
-  const checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
-  const auditHeader = '<th class="col-audit"></th>';
-  thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(col => {
-    const isEditable = col.editable;
-    const widthClass = getColumnWidthClass(col.key);
-    return `<th class="${isEditable ? 'th-editable' : ''} ${widthClass}">${col.label}${isEditable ? ' <span class="edit-indicator">&#9998;</span>' : ''}</th>`;
+  var thead = document.getElementById('input-table-head');
+  var checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
+  var auditHeader = '<th class="col-audit"></th>';
+  thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(function(col) {
+    var isEditable = col.editable;
+    var widthClass = getColumnWidthClass(col.key);
+    return '<th class="' + (isEditable ? 'th-editable' : '') + ' ' + widthClass + '">' + col.label + (isEditable ? ' <span class="edit-indicator">&#9998;</span>' : '') + '</th>';
   }).join('') + auditHeader + '</tr>';
 
   // Render table body — use server-side rows
-  const tbody = document.getElementById('input-table-body');
+  var tbody = document.getElementById('input-table-body');
   if (pageItems.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${TABLE_COLUMNS.length + 2}" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Use the Omnibar to add filters and apply a view.</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Adjust the filters above to load data.</td></tr>';
   } else {
-    // For server-side rows, we need to find the originalIndex in appState.records
-    // If the record is in appState.records, use that index; otherwise use -1
-    tbody.innerHTML = pageItems.map((record, pageIdx) => {
-      // Try to find this record in appState.records by _id
-      let originalIndex = -1;
-      for (let i = 0; i < appState.records.length; i++) {
+    tbody.innerHTML = pageItems.map(function(record, pageIdx) {
+      var originalIndex = -1;
+      for (var i = 0; i < appState.records.length; i++) {
         if (appState.records[i]._id === record._id) { originalIndex = i; break; }
       }
-      // If not found in local state, add it temporarily
       if (originalIndex === -1) {
         originalIndex = appState.records.length;
         appState.records.push(record);
       }
-      return renderTableRow({ record, originalIndex });
+      return renderTableRow({ record: record, originalIndex: originalIndex });
     }).join('');
   }
 
@@ -549,50 +644,56 @@ function renderInputTableServerSide() {
 }
 
 function renderServerPagination(currentPage, totalPages) {
-  const container = document.getElementById('input-pagination');
+  var container = document.getElementById('input-pagination');
   if (!container) return;
   if (totalPages <= 1) { container.innerHTML = ''; return; }
 
-  let html = '<div class="pagination">';
-  html += `<button class="pagination-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="serverPageChange(${currentPage - 1})">&laquo; Prev</button>`;
+  var html = '<div class="pagination">';
+  html += '<button class="pagination-btn" ' + (currentPage === 0 ? 'disabled' : '') + ' onclick="serverPageChange(' + (currentPage - 1) + ')">&laquo; Prev</button>';
 
-  const maxButtons = 7;
-  let startPage = Math.max(0, currentPage - Math.floor(maxButtons / 2));
-  let endPage = Math.min(totalPages - 1, startPage + maxButtons - 1);
+  var maxButtons = 7;
+  var startPage = Math.max(0, currentPage - Math.floor(maxButtons / 2));
+  var endPage = Math.min(totalPages - 1, startPage + maxButtons - 1);
   if (endPage - startPage < maxButtons - 1) startPage = Math.max(0, endPage - maxButtons + 1);
 
   if (startPage > 0) {
-    html += `<button class="pagination-btn" onclick="serverPageChange(0)">1</button>`;
+    html += '<button class="pagination-btn" onclick="serverPageChange(0)">1</button>';
     if (startPage > 1) html += '<span class="pagination-ellipsis">&hellip;</span>';
   }
-  for (let i = startPage; i <= endPage; i++) {
-    html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="serverPageChange(${i})">${i + 1}</button>`;
+  for (var i = startPage; i <= endPage; i++) {
+    html += '<button class="pagination-btn ' + (i === currentPage ? 'active' : '') + '" onclick="serverPageChange(' + i + ')">' + (i + 1) + '</button>';
   }
   if (endPage < totalPages - 1) {
     if (endPage < totalPages - 2) html += '<span class="pagination-ellipsis">&hellip;</span>';
-    html += `<button class="pagination-btn" onclick="serverPageChange(${totalPages - 1})">${totalPages}</button>`;
+    html += '<button class="pagination-btn" onclick="serverPageChange(' + (totalPages - 1) + ')">' + totalPages + '</button>';
   }
 
-  html += `<button class="pagination-btn" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="serverPageChange(${currentPage + 1})">Next &raquo;</button>`;
+  html += '<button class="pagination-btn" ' + (currentPage >= totalPages - 1 ? 'disabled' : '') + ' onclick="serverPageChange(' + (currentPage + 1) + ')">Next &raquo;</button>';
   html += '</div>';
   container.innerHTML = html;
 }
 
 /**
- * Apply omnibar filters and sorts to appState.records.
+ * Apply filters and sorts to appState.records.
  * Returns array of { record, originalIndex }.
  */
 function getFilteredInputRecords() {
-  let result = [];
-  const records = appState.records;
+  var result = [];
+  var records = appState.records;
 
-  // Build filter predicates from omnibar state
-  const dateFilter = omnibarState.filters.find(f => f.key === 'date_range');
-  const blanksFilter = omnibarState.filters.find(f => f.key === 'blanks');
-  const multiFilters = omnibarState.filters.filter(f => f.type === 'multi');
+  var dateFilter = omnibarState.filters['date_range'];
+  var blanksFilter = omnibarState.filters['blanks'];
 
-  for (let i = 0; i < records.length; i++) {
-    const r = records[i];
+  // Collect multi filters
+  var multiFilters = [];
+  var keys = Object.keys(omnibarState.filters);
+  for (var ki = 0; ki < keys.length; ki++) {
+    var f = omnibarState.filters[keys[ki]];
+    if (f.type === 'multi') multiFilters.push(f);
+  }
+
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
 
     // Date range filter
     if (dateFilter) {
@@ -604,9 +705,10 @@ function getFilteredInputRecords() {
     if (blanksFilter && (r.tag || '').trim() !== '') continue;
 
     // Multi-select filters
-    let skip = false;
-    for (const mf of multiFilters) {
-      const val = r[mf.recordKey] || '';
+    var skip = false;
+    for (var mfi = 0; mfi < multiFilters.length; mfi++) {
+      var mf = multiFilters[mfi];
+      var val = r[mf.recordKey] || '';
       if (mf.values.length > 0 && !mf.values.includes(val)) { skip = true; break; }
     }
     if (skip) continue;
@@ -614,16 +716,14 @@ function getFilteredInputRecords() {
     result.push({ record: r, originalIndex: i });
   }
 
-  // Apply sorts
-  if (omnibarState.sorts.length > 0) {
-    result.sort((a, b) => {
-      for (const s of omnibarState.sorts) {
-        const aVal = a.record[s.recordKey] || '';
-        const bVal = b.record[s.recordKey] || '';
-        const cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
-        if (cmp !== 0) return s.direction === 'asc' ? cmp : -cmp;
-      }
-      return 0;
+  // Apply sort
+  if (omnibarState.sort) {
+    var s = omnibarState.sort;
+    result.sort(function(a, b) {
+      var aVal = a.record[s.recordKey] || '';
+      var bVal = b.record[s.recordKey] || '';
+      var cmp = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
+      return s.direction === 'asc' ? cmp : -cmp;
     });
   }
 
@@ -638,20 +738,23 @@ const VTABLE_ROW_HEIGHT = 38; // px per row
 const VTABLE_BUFFER = 10;     // extra rows above/below viewport
 
 function renderInputTable() {
-  const allFiltered = getFilteredInputRecords();
-  const totalRecords = allFiltered.length;
+  var allFiltered = getFilteredInputRecords();
+  var totalRecords = allFiltered.length;
 
   // Store filtered data for virtualization
   appState._filteredData = allFiltered;
 
   // Update record count
-  document.getElementById('input-record-count').textContent = `Filtered Records: ${formatNumber(totalRecords)}`;
+  var rcEl = document.getElementById('input-record-count');
+  if (rcEl) rcEl.textContent = 'Filtered Records: ' + formatNumber(totalRecords);
+  var fcEl = document.getElementById('input-filter-count');
+  if (fcEl) fcEl.textContent = formatNumber(totalRecords) + ' records';
 
   // Update edit count
-  const editCount = Object.keys(appState.pendingEdits).length;
-  const editCountEl = document.getElementById('input-edit-count');
+  var editCount = Object.keys(appState.pendingEdits).length;
+  var editCountEl = document.getElementById('input-edit-count');
   if (editCount > 0) {
-    editCountEl.textContent = `${editCount} record(s) edited`;
+    editCountEl.textContent = editCount + ' record(s) edited';
     editCountEl.style.display = 'inline';
     document.getElementById('save-btn').disabled = false;
     document.getElementById('undo-btn').disabled = false;
@@ -662,36 +765,36 @@ function renderInputTable() {
   }
 
   // Pagination
-  const pageSize = appState.inputPageSize;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const page = Math.min(appState.inputPage, totalPages - 1);
+  var pageSize = appState.inputPageSize;
+  var totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  var page = Math.min(appState.inputPage, totalPages - 1);
   appState.inputPage = page;
-  const start = page * pageSize;
-  const pageItems = allFiltered.slice(start, start + pageSize);
+  var start = page * pageSize;
+  var pageItems = allFiltered.slice(start, start + pageSize);
 
   if (totalRecords > 0) {
     document.getElementById('input-record-info').textContent =
-      `Showing ${start + 1}\u2013${Math.min(start + pageSize, totalRecords)} of ${formatNumber(totalRecords)}`;
+      'Showing ' + (start + 1) + '\u2013' + Math.min(start + pageSize, totalRecords) + ' of ' + formatNumber(totalRecords);
   } else {
     document.getElementById('input-record-info').textContent = 'No records';
   }
 
   // Render table header
-  const thead = document.getElementById('input-table-head');
-  const checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
-  const auditHeader = '<th class="col-audit"></th>';
-  thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(col => {
-    const isEditable = col.editable;
-    const widthClass = getColumnWidthClass(col.key);
-    return `<th class="${isEditable ? 'th-editable' : ''} ${widthClass}">${col.label}${isEditable ? ' <span class="edit-indicator">&#9998;</span>' : ''}</th>`;
+  var thead = document.getElementById('input-table-head');
+  var checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
+  var auditHeader = '<th class="col-audit"></th>';
+  thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(function(col) {
+    var isEditable = col.editable;
+    var widthClass = getColumnWidthClass(col.key);
+    return '<th class="' + (isEditable ? 'th-editable' : '') + ' ' + widthClass + '">' + col.label + (isEditable ? ' <span class="edit-indicator">&#9998;</span>' : '') + '</th>';
   }).join('') + auditHeader + '</tr>';
 
   // Render table body
-  const tbody = document.getElementById('input-table-body');
+  var tbody = document.getElementById('input-table-body');
   if (pageItems.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${TABLE_COLUMNS.length + 2}" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Use the Omnibar to add filters and apply a view.</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Adjust the filters above to load data.</td></tr>';
   } else {
-    tbody.innerHTML = pageItems.map(item => renderTableRow(item)).join('');
+    tbody.innerHTML = pageItems.map(function(item) { return renderTableRow(item); }).join('');
   }
 
   renderInputPagination(page, totalPages);
@@ -700,71 +803,70 @@ function renderInputTable() {
 }
 
 function renderTableRow(item) {
-  const record = item.record;
-  const globalIdx = item.originalIndex;
-  const isEdited = appState.pendingEdits[globalIdx] !== undefined;
-  const locked = isRowLocked(record);
-  const isSelected = bulkState.selected.has(globalIdx);
-  const rowClass = (isEdited ? 'row-edited ' : '') + (locked ? 'row-locked ' : '') + (isSelected ? 'row-selected ' : '');
+  var record = item.record;
+  var globalIdx = item.originalIndex;
+  var isEdited = appState.pendingEdits[globalIdx] !== undefined;
+  var locked = isRowLocked(record);
+  var isSelected = bulkState.selected.has(globalIdx);
+  var rowClass = (isEdited ? 'row-edited ' : '') + (locked ? 'row-locked ' : '') + (isSelected ? 'row-selected ' : '');
 
   // Checkbox cell
-  const checkboxCell = locked
-    ? `<td class="col-checkbox cell-readonly"><span class="lock-icon" title="Locked (previous day, after 11 AM PHT)">&#128274;</span></td>`
-    : `<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="${globalIdx}" ${isSelected ? 'checked' : ''} onchange="bulkToggleRow(${globalIdx}, this.checked)"></td>`;
+  var checkboxCell = locked
+    ? '<td class="col-checkbox cell-readonly"><span class="lock-icon" title="Locked (previous day, after 11 AM PHT)">&#128274;</span></td>'
+    : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + globalIdx + ', this.checked)"></td>';
 
   // Audit icon cell
-  const auditCell = `<td class="col-audit"><button class="audit-icon-btn" onclick="openAuditModal('${record._id}')" title="View audit trail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></td>`;
+  var auditCell = '<td class="col-audit"><button class="audit-icon-btn" onclick="openAuditModal(\'' + record._id + '\')" title="View audit trail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></td>';
 
-  const cells = TABLE_COLUMNS.map(col => {
-    const val = record[col.key] || '';
-    const widthClass = getColumnWidthClass(col.key);
+  var cells = TABLE_COLUMNS.map(function(col) {
+    var val = record[col.key] || '';
+    var widthClass = getColumnWidthClass(col.key);
 
     if (!col.editable || locked) {
       if (col.key === 'date') {
-        return `<td class="cell-readonly col-date ${widthClass}">${formatDateDisplay(val)}</td>`;
+        return '<td class="cell-readonly col-date ' + widthClass + '">' + formatDateDisplay(val) + '</td>';
       }
       if (locked && col.editable) {
-        return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;
+        return '<td class="cell-readonly cell-locked ' + widthClass + '">' + escapeHtml(val) + '</td>';
       }
-      return `<td class="cell-readonly ${widthClass}">${escapeHtml(val)}</td>`;
+      return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val) + '</td>';
     }
 
     if (col.key === 'tag') {
-      return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="tag" onchange="handleCellEdit(this)">
-        ${TAG_OPTIONS.map(t => `<option value="${t}" ${val === t ? 'selected' : ''}>${t}</option>`).join('')}
-        ${!val ? '<option value="" selected>&mdash;</option>' : ''}
-      </select></td>`;
+      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" onchange="handleCellEdit(this)">'
+        + TAG_OPTIONS.map(function(t) { return '<option value="' + t + '" ' + (val === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
+        + (!val ? '<option value="" selected>&mdash;</option>' : '')
+        + '</select></td>';
     }
     if (col.key === 'uplReason') {
-      const canEdit = record.tag === 'UPL' || record.tag === 'LATE';
-      if (!canEdit) return `<td class="cell-readonly cell-na ${widthClass}">&mdash;</td>`;
-      return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="uplReason" onchange="handleCellEdit(this)">
-        <option value="">&mdash;</option>
-        ${UPL_REASONS.map(r => `<option value="${r}" ${val === r ? 'selected' : ''}>${r}</option>`).join('')}
-      </select></td>`;
+      var canEdit = record.tag === 'UPL' || record.tag === 'LATE';
+      if (!canEdit) return '<td class="cell-readonly cell-na ' + widthClass + '">&mdash;</td>';
+      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="uplReason" onchange="handleCellEdit(this)">'
+        + '<option value="">&mdash;</option>'
+        + UPL_REASONS.map(function(r) { return '<option value="' + r + '" ' + (val === r ? 'selected' : '') + '>' + r + '</option>'; }).join('')
+        + '</select></td>';
     }
     if (col.key === 'ot') {
-      // OT column is locked for all employees EXCEPT RECALL_MEASUREMENT_CTR
-      const isRecall = (record.completePlanningGroup || '').includes('RECALL_MEASUREMENT_CTR');
+      var isRecall = (record.completePlanningGroup || '').includes('RECALL_MEASUREMENT_CTR');
       if (!isRecall) {
-        return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;
+        return '<td class="cell-readonly cell-locked ' + widthClass + '">' + escapeHtml(val) + '</td>';
       }
-      return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
+      return '<td class="cell-editable ' + widthClass + '"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="' + escapeAttr(val) + '" data-idx="' + globalIdx + '" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>';
     }
     if (col.key === 'remarks') {
-      return `<td class="cell-editable ${widthClass}"><textarea class="cell-input cell-textarea-remarks" data-idx="${globalIdx}" data-key="remarks" onchange="handleCellEdit(this)" placeholder="\u2014">${escapeHtml(val)}</textarea></td>`;
+      return '<td class="cell-editable ' + widthClass + '"><textarea class="cell-input cell-textarea-remarks" data-idx="' + globalIdx + '" data-key="remarks" onchange="handleCellEdit(this)" placeholder="\u2014">' + escapeHtml(val) + '</textarea></td>';
     }
 
-    return `<td class="cell-readonly ${widthClass}">${escapeHtml(val)}</td>`;
+    return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val) + '</td>';
   }).join('');
 
-  return `<tr class="${rowClass}">${checkboxCell}${cells}${auditCell}</tr>`;
+  return '<tr class="' + rowClass + '">' + checkboxCell + cells + auditCell + '</tr>';
 }
 
 function pageToggleAll(checked) {
-  const checkboxes = document.querySelectorAll('.row-checkbox');
-  checkboxes.forEach(cb => {
-    const idx = parseInt(cb.dataset.idx);
+  var checkboxes = document.querySelectorAll('.row-checkbox');
+  checkboxes.forEach(function(cb) {
+    var idx = parseInt(cb.dataset.idx);
     cb.checked = checked;
     if (checked) bulkState.selected.add(idx);
     else bulkState.selected.delete(idx);
@@ -788,11 +890,10 @@ function bulkToggleRow(idx, checked) {
 
 function bulkToggleAll(checked) {
   if (checked) {
-    // Select all non-locked rows on current page
-    const pageItems = getCurrentPageItems();
-    for (const item of pageItems) {
-      if (!isRowLocked(item.record)) {
-        bulkState.selected.add(item.originalIndex);
+    var pageItems = getCurrentPageItems();
+    for (var pi = 0; pi < pageItems.length; pi++) {
+      if (!isRowLocked(pageItems[pi].record)) {
+        bulkState.selected.add(pageItems[pi].originalIndex);
       }
     }
   } else {
@@ -803,44 +904,43 @@ function bulkToggleAll(checked) {
 
 function bulkDeselectAll() {
   bulkState.selected.clear();
-  const selectAll = document.getElementById('bulk-select-all');
+  var selectAll = document.getElementById('bulk-select-all');
   if (selectAll) selectAll.checked = false;
   updateBulkToolbar();
 }
 
 function updateBulkToolbar() {
-  const toolbar = document.getElementById('bulk-toolbar');
-  const countEl = document.getElementById('bulk-count');
-  const count = bulkState.selected.size;
+  var toolbar = document.getElementById('bulk-toolbar');
+  var countEl = document.getElementById('bulk-count');
+  var count = bulkState.selected.size;
 
   if (count > 0) {
     toolbar.style.display = 'flex';
-    countEl.textContent = `${count} selected`;
+    countEl.textContent = count + ' selected';
   } else {
     toolbar.style.display = 'none';
   }
 }
 
 function getCurrentPageItems() {
-  const allFiltered = appState._filteredData || [];
-  const pageSize = appState.inputPageSize;
-  const page = appState.inputPage;
-  const start = page * pageSize;
+  var allFiltered = appState._filteredData || [];
+  var pageSize = appState.inputPageSize;
+  var page = appState.inputPage;
+  var start = page * pageSize;
   return allFiltered.slice(start, start + pageSize);
 }
 
 async function bulkApplyTag() {
-  const tag = document.getElementById('bulk-tag-select').value;
+  var tag = document.getElementById('bulk-tag-select').value;
   if (!tag) { showToast('Please select a tag first', 'info'); return; }
 
-  const selectedIds = [...bulkState.selected];
+  var selectedIds = [...bulkState.selected];
   if (selectedIds.length === 0) { showToast('No rows selected', 'info'); return; }
   if (selectedIds.length > 50) { showToast('Bulk editing is limited to 50 rows at a time', 'error'); return; }
 
-  // Collect record IDs
-  const recordIds = [];
-  for (const idx of selectedIds) {
-    const record = appState.records[idx];
+  var recordIds = [];
+  for (var si = 0; si < selectedIds.length; si++) {
+    var record = appState.records[selectedIds[si]];
     if (record && record._id && !isRowLocked(record)) {
       recordIds.push(record._id);
     }
@@ -849,34 +949,32 @@ async function bulkApplyTag() {
   if (recordIds.length === 0) { showToast('No editable rows in selection', 'info'); return; }
 
   try {
-    const user = typeof currentUser !== 'undefined' ? currentUser : null;
-    const resp = await fetch(`${IO_API_BASE}/attendance/bulk-tag`, {
+    var user = typeof currentUser !== 'undefined' ? currentUser : null;
+    var resp = await fetch(IO_API_BASE + '/attendance/bulk-tag', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ids: recordIds,
         tag: tag,
-        actor_ohr: user?.ohr_id || '',
-        actor_name: user?.full_name || '',
+        actor_ohr: user ? user.ohr_id || '' : '',
+        actor_name: user ? user.full_name || '' : '',
       }),
     });
 
-    const result = await resp.json();
+    var result = await resp.json();
     if (result.ok) {
-      // Update local state
-      for (const idx of selectedIds) {
-        if (appState.records[idx] && !isRowLocked(appState.records[idx])) {
-          appState.records[idx].tag = tag;
-          // Clear UPL reason if tag is not UPL/LATE
+      for (var si2 = 0; si2 < selectedIds.length; si2++) {
+        if (appState.records[selectedIds[si2]] && !isRowLocked(appState.records[selectedIds[si2]])) {
+          appState.records[selectedIds[si2]].tag = tag;
           if (tag !== 'UPL' && tag !== 'LATE') {
-            appState.records[idx].uplReason = '';
+            appState.records[selectedIds[si2]].uplReason = '';
           }
         }
       }
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
 
-      const msg = `Bulk tagged ${result.updated} record(s) as "${tag}"` +
-        (result.locked > 0 ? ` (${result.locked} locked rows skipped)` : '');
+      var msg = 'Bulk tagged ' + result.updated + ' record(s) as "' + tag + '"'
+        + (result.locked > 0 ? ' (' + result.locked + ' locked rows skipped)' : '');
       showToast(msg, 'success');
       bulkDeselectAll();
       renderInputTable();
@@ -893,47 +991,48 @@ async function bulkApplyTag() {
 // ============================================================
 
 async function openAuditModal(recordId) {
-  const modal = document.getElementById('audit-modal');
-  const body = document.getElementById('audit-modal-body');
+  var modal = document.getElementById('audit-modal');
+  var body = document.getElementById('audit-modal-body');
   modal.style.display = 'flex';
   body.innerHTML = '<div class="audit-loading"><div class="spinner"></div><p>Loading audit trail...</p></div>';
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/audit-log?record_id=${encodeURIComponent(recordId)}&record_type=attendance&limit=50`);
-    const logs = await resp.json();
+    var resp = await fetch(IO_API_BASE + '/audit-log?record_id=' + encodeURIComponent(recordId) + '&record_type=attendance&limit=50');
+    var logs = await resp.json();
 
     if (!Array.isArray(logs) || logs.length === 0) {
       body.innerHTML = '<div class="audit-empty"><p>No changes recorded for this row.</p></div>';
       return;
     }
 
-    let html = '<div class="audit-timeline">';
-    for (const entry of logs) {
-      const ts = entry.timestamp ? new Date(entry.timestamp) : null;
-      const timeStr = ts ? ts.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown';
-      const actionLabel = entry.action === 'bulk_tag' ? 'Bulk Tag' : entry.action === 'edit' ? 'Edit' : entry.action || 'Change';
-      const fieldLabel = (entry.field_name || '').replace(/_/g, ' ');
+    var html = '<div class="audit-timeline">';
+    for (var li = 0; li < logs.length; li++) {
+      var entry = logs[li];
+      var ts = entry.timestamp ? new Date(entry.timestamp) : null;
+      var timeStr = ts ? ts.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown';
+      var actionLabel = entry.action === 'bulk_tag' ? 'Bulk Tag' : entry.action === 'edit' ? 'Edit' : entry.action || 'Change';
+      var fieldLabel = (entry.field_name || '').replace(/_/g, ' ');
 
-      html += `<div class="audit-entry">
-        <div class="audit-entry-header">
-          <span class="audit-action audit-action-${entry.action || 'edit'}">${escapeHtml(actionLabel)}</span>
-          <span class="audit-time">${escapeHtml(timeStr)}</span>
-        </div>
-        <div class="audit-entry-body">
-          <span class="audit-field">${escapeHtml(fieldLabel)}</span>
-          <span class="audit-old">${escapeHtml(entry.old_value || '(empty)')}</span>
-          <span class="audit-arrow">&rarr;</span>
-          <span class="audit-new">${escapeHtml(entry.new_value || '(empty)')}</span>
-        </div>
-        <div class="audit-entry-footer">
-          by ${escapeHtml(entry.actor_name || entry.actor_ohr || 'System')}
-        </div>
-      </div>`;
+      html += '<div class="audit-entry">'
+        + '<div class="audit-entry-header">'
+        + '<span class="audit-action audit-action-' + (entry.action || 'edit') + '">' + escapeHtml(actionLabel) + '</span>'
+        + '<span class="audit-time">' + escapeHtml(timeStr) + '</span>'
+        + '</div>'
+        + '<div class="audit-entry-body">'
+        + '<span class="audit-field">' + escapeHtml(fieldLabel) + '</span>'
+        + '<span class="audit-old">' + escapeHtml(entry.old_value || '(empty)') + '</span>'
+        + '<span class="audit-arrow">&rarr;</span>'
+        + '<span class="audit-new">' + escapeHtml(entry.new_value || '(empty)') + '</span>'
+        + '</div>'
+        + '<div class="audit-entry-footer">'
+        + 'by ' + escapeHtml(entry.actor_name || entry.actor_ohr || 'System')
+        + '</div>'
+        + '</div>';
     }
     html += '</div>';
     body.innerHTML = html;
   } catch (err) {
-    body.innerHTML = `<div class="audit-empty"><p>Failed to load audit trail: ${escapeHtml(err.message)}</p></div>`;
+    body.innerHTML = '<div class="audit-empty"><p>Failed to load audit trail: ' + escapeHtml(err.message) + '</p></div>';
   }
 }
 
@@ -945,93 +1044,51 @@ function closeAuditModal() {
 // 6. BACKWARD COMPATIBILITY — Bridge old functions
 // ============================================================
 
-// Override the old applyInputFilters to use omnibar
+// Override the old applyInputFilters to use filter bar
 async function applyInputFilters() {
-  // If omnibar has no date filter, add default (today)
-  if (omnibarState.filters.length === 0) {
-    const today = getTodayStr();
-    omnibarState.filters.push({ key: 'date_range', label: 'Date Range', type: 'date_range', startDate: today, endDate: today });
-    renderOmnibarChips();
+  if (!omnibarState.filters['date_range']) {
+    var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    omnibarState.filters['date_range'] = { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today };
+    inputRenderFilterBar();
   }
   await omnibarApplyView();
 }
 
 function clearInputFilters() {
-  omnibarClearAll();
+  inputClearAllFilters();
 }
 
-// Override populateInputFilterDropdowns — no longer needed since omnibar builds from records dynamically
-function populateInputFilterDropdowns() {
-  // No-op: Omnibar reads from appState.records directly
-}
+// Override populateInputFilterDropdowns — no longer needed since filter bar builds from records dynamically
+function populateInputFilterDropdowns() {}
 
 // Override initMultiSelects — no longer needed
 function initMultiSelects() {
-  // No-op: replaced by Omnibar
   appState.multiSelects = {};
 }
 
-// Set default omnibar filter on load
+// Set default filter bar on load
 function setDefaultOmnibarFilters() {
-  const today = getTodayStr();
-  omnibarState.filters = [
-    { key: 'date_range', label: 'Date Range', type: 'date_range', startDate: today, endDate: today }
-  ];
-  omnibarState.sorts = [
-    { key: 'date', label: 'Date', direction: 'desc', recordKey: 'date' }
-  ];
-
-  // Pre-apply all multi-select filters with all available values (except date_range and toggle)
-  if (appState.records && appState.records.length > 0) {
-    for (const field of OMNIBAR_FILTER_FIELDS) {
-      if (field.type !== 'multi') continue;
-      let values;
-      if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
-        values = [...new Set([...TAG_OPTIONS, ...appState.records.map(r => r[field.recordKey]).filter(Boolean)])].sort();
-      } else {
-        values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
-      }
-      if (values.length > 0) {
-        omnibarState.filters.push({ key: field.key, label: field.label, type: 'multi', values: values, recordKey: field.recordKey });
-      }
-    }
-  } else if (typeof employeeLookup === 'object' && Object.keys(employeeLookup).length > 0) {
-    // Fallback: use employeeLookup when records haven't loaded yet
-    const empFieldMap = {
-      agent: 'full_name', flm: 'supervisor_name',
-      actualPlanningGroup: 'planning_group', role: 'actual_role',
-      shiftTime: 'shift_time', status: 'srt_status',
-    };
-    for (const field of OMNIBAR_FILTER_FIELDS) {
-      if (field.type !== 'multi') continue;
-      let values;
-      if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
-        values = TAG_OPTIONS.slice();
-      } else if (empFieldMap[field.recordKey]) {
-        values = [...new Set(Object.values(employeeLookup).map(e => (e[empFieldMap[field.recordKey]] || '').trim()).filter(Boolean))].sort();
-      } else {
-        continue;
-      }
-      if (values.length > 0) {
-        omnibarState.filters.push({ key: field.key, label: field.label, type: 'multi', values: values, recordKey: field.recordKey });
-      }
-    }
-  }
-
-  renderOmnibarChips();
+  var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  omnibarState.filters = {
+    date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today }
+  };
+  omnibarState.sort = { key: 'date', direction: 'desc', recordKey: 'date' };
+  omnibarState.openPill = null;
+  // All multi-select filters default to "All" (no entry in filters = all selected)
+  inputRenderFilterBar();
 }
 
 // Hook into the load flow
-const _origSetDefaultFilters = typeof setDefaultFilters === 'function' ? setDefaultFilters : null;
+var _origSetDefaultFilters = typeof setDefaultFilters === 'function' ? setDefaultFilters : null;
 function setDefaultFilters() {
   // Set date inputs for dashboard (keep backward compat)
-  const today = getTodayStr();
-  const dashStart = document.getElementById('dash-start-date');
-  const dashEnd = document.getElementById('dash-end-date');
+  var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+  var dashStart = document.getElementById('dash-start-date');
+  var dashEnd = document.getElementById('dash-end-date');
   if (dashStart) dashStart.value = today;
   if (dashEnd) dashEnd.value = today;
 
-  // Set omnibar defaults
+  // Set filter bar defaults
   setDefaultOmnibarFilters();
 }
 
@@ -1039,17 +1096,19 @@ function setDefaultFilters() {
 // 7. INITIALIZATION
 // ============================================================
 
-// Auto-initialize omnibar when Input Portal loads
+// Auto-initialize filter bar when Input Portal loads
 (function() {
   // Override the old toggleBlanksFilter
   window.toggleBlanksFilter = function() {
-    const hasBlanks = omnibarState.filters.some(f => f.key === 'blanks');
-    if (hasBlanks) {
-      omnibarState.filters = omnibarState.filters.filter(f => f.key !== 'blanks');
-    } else {
-      omnibarState.filters.push({ key: 'blanks', label: 'Blank Tags Only', type: 'toggle', values: [true] });
-    }
-    renderOmnibarChips();
-    omnibarApplyView();
+    inputToggleBlanks();
   };
+
+  // Backward compat: expose old function names
+  window.omnibarApplyView = omnibarApplyView;
+  window.omnibarClearAll = inputClearAllFilters;
+  window.omnibarState = omnibarState;
+  window.renderOmnibarChips = inputRenderFilterBar;
+  window.omnibarOpenMenu = function() {};
+  window.omnibarCloseMenu = function() {};
+  window.inputRenderFilterBar = inputRenderFilterBar;
 })();
