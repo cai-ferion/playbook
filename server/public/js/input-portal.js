@@ -980,6 +980,44 @@ function setDefaultOmnibarFilters() {
   omnibarState.sorts = [
     { key: 'date', label: 'Date', direction: 'desc', recordKey: 'date' }
   ];
+
+  // Pre-apply all multi-select filters with all available values (except date_range and toggle)
+  if (appState.records && appState.records.length > 0) {
+    for (const field of OMNIBAR_FILTER_FIELDS) {
+      if (field.type !== 'multi') continue;
+      let values;
+      if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
+        values = [...new Set([...TAG_OPTIONS, ...appState.records.map(r => r[field.recordKey]).filter(Boolean)])].sort();
+      } else {
+        values = [...new Set(appState.records.map(r => r[field.recordKey]).filter(Boolean))].sort();
+      }
+      if (values.length > 0) {
+        omnibarState.filters.push({ key: field.key, label: field.label, type: 'multi', values: values, recordKey: field.recordKey });
+      }
+    }
+  } else if (typeof employeeLookup === 'object' && Object.keys(employeeLookup).length > 0) {
+    // Fallback: use employeeLookup when records haven't loaded yet
+    const empFieldMap = {
+      agent: 'full_name', flm: 'supervisor_name',
+      actualPlanningGroup: 'planning_group', role: 'actual_role',
+      shiftTime: 'shift_time', status: 'srt_status',
+    };
+    for (const field of OMNIBAR_FILTER_FIELDS) {
+      if (field.type !== 'multi') continue;
+      let values;
+      if (field.recordKey === 'tag' && typeof TAG_OPTIONS !== 'undefined') {
+        values = TAG_OPTIONS.slice();
+      } else if (empFieldMap[field.recordKey]) {
+        values = [...new Set(Object.values(employeeLookup).map(e => (e[empFieldMap[field.recordKey]] || '').trim()).filter(Boolean))].sort();
+      } else {
+        continue;
+      }
+      if (values.length > 0) {
+        omnibarState.filters.push({ key: field.key, label: field.label, type: 'multi', values: values, recordKey: field.recordKey });
+      }
+    }
+  }
+
   renderOmnibarChips();
 }
 

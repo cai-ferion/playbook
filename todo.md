@@ -905,3 +905,6 @@
 - [x] Add "Shift Time" column to Anchor Input Portal table (data.js TABLE_COLUMNS)
 - [x] Add "Shift Time" filter to Anchor Input Portal (already existed, added Select All button)
 - [x] Add "Shift Time" filter to Anchor Dashboard omnibar
+
+## Batch 82 — Input Portal Default Filters
+- [x] Set default for all Input Portal multi-select filters to all-selected on load (except date)
