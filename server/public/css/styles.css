@@ -2125,9 +2125,32 @@ body {
   border: 1px solid var(--border-muted);
 }
 
-/* Shift section header row */
+/* Shift section header row — shift name + column headers on same line */
 .shift-section-header {
   background: var(--primary-bg) !important;
+  border-top: 2px solid var(--border) !important;
+}
+
+/* First shift header has no top separator */
+.shift-table tbody tr.shift-section-header:first-child {
+  border-top: none !important;
+}
+
+.shift-section-header th {
+  padding: 10px 16px !important;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.shift-section-header th:first-child {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .shift-section-header td {
@@ -2139,15 +2162,15 @@ body {
 /* Shift overall row */
 .shift-overall-row {
   background: var(--primary-bg) !important;
-  border-top: 2px solid var(--primary);
+  border-top: 1.5px solid var(--primary) !important;
 }
 
 .shift-overall-row td { font-weight: 600; }
 
-/* Grand overall row */
+/* Grand overall row — separated from shift sections */
 .shift-grand-overall-row {
   background: rgba(0, 181, 226, 0.12) !important;
-  border-top: 3px solid var(--primary);
+  border-top: 2px solid var(--border) !important;
 }
 
 .shift-grand-overall-row td { font-weight: 700; }

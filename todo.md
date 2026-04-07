@@ -941,3 +941,6 @@
 
 ## Batch 87b — Shift Breakdown Header Merge
 - [x] Merge column headers (Schedule, Present, PL, UPL, Shrinkage, Late) into the GY Shift and Mid-Shift rows on the same line
+
+## Batch 87c — Shift Breakdown Section Separators
+- [x] Add thin separator lines between GY Shift, Mid-Shift, and Overall sections for better UX visibility
