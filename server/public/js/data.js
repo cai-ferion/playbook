@@ -228,7 +228,7 @@ function getFLMBreakdown(records) {
     const denom = f.present + f.pl + f.upl;
     f.shrinkageRate = denom > 0 ? ((f.pl + f.upl) / denom) * 100 : 0;
     return f;
-  }).sort((a, b) => b.shrinkageRate - a.shrinkageRate);
+  }).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function getUPLLateAgentList(records) {

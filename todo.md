@@ -947,3 +947,11 @@
 
 ## Batch 88 — OHR 740044909 Input Portal Blank Page Fix
 - [x] Fix blank page and "Refresh Failed" error for OHR 740044909 on Input Portal — comprehensive null guards added to all getElementById chains in app.js (updateAllViews, updateRefreshDisplay, switchView, renderInputTable) and input-portal.js (renderInputTableServerSide, renderInputTable, closeAuditModal)
+
+## Batch 89 — Dashboard & Billing Compliance Data Source Alignment
+- [x] Audit Dashboard data flow — confirmed all KPIs, charts, and tables use appState.records (Input Portal data)
+- [x] Audit Billing Compliance data flow — weekly table uses appState.records; YTD analytics use server-side aggregation of same io_attendance table (kept server-side per user request)
+- [x] No divergent data paths found — all data traces back to io_attendance table
+
+## Batch 90 — Supervisor Wise Alphabetical Sort
+- [x] Sort supervisors alphabetically in the Supervisor Wise breakdown on Anchor - Dashboard
