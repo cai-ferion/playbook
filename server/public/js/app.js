@@ -1220,6 +1220,37 @@ function renderInputTable() {
         const val = record[col.key] || '';
         const widthClass = getColumnWidthClass(col.key);
 
+        // OT field gets special treatment: editable on locked rows within current week (only 11 AM lock applies)
+        if (col.key === 'ot' && locked) {
+          // Compute current WE (Friday) and week start (Saturday)
+          const nowOt = new Date();
+          const phtOt = new Date(nowOt.getTime() + 8 * 60 * 60000);
+          const phtDayOt = phtOt.getUTCDay(); // 0=Sun
+          const daysToFri = (5 - phtDayOt + 7) % 7;
+          const weFri = new Date(phtOt);
+          weFri.setUTCDate(weFri.getUTCDate() + daysToFri);
+          const weStart = new Date(weFri);
+          weStart.setUTCDate(weStart.getUTCDate() - 6); // Saturday
+          const weStartStr = weStart.toISOString().slice(0, 10);
+          const weEndStr = weFri.toISOString().slice(0, 10);
+          const inCurrentWeek = record.date >= weStartStr && record.date <= weEndStr;
+          if (inCurrentWeek) {
+            // Check OT mechanism lock (non-RECALL agents from 04/11 onward)
+            const otLockDate = '2026-04-11';
+            const isOtMechanismAgent = currentUser && currentUser.actual_role === 'Agent'
+              && !(currentUser.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')
+              && currentUser.ohr_id !== '740045023';
+            const isOtFieldLocked = isOtMechanismAgent && record.date >= otLockDate;
+            if (isOtFieldLocked) {
+              return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
+            }
+            // OT editable even on locked row (within current week)
+            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
+          }
+          // Outside current week and row is locked: show as readonly
+          return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;
+        }
+
         if (!col.editable || locked) {
           // Format date column
           if (col.key === 'date') {

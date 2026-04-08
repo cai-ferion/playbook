@@ -289,12 +289,10 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const [current] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, recordId)).limit(1);
     if (!current) return res.status(404).json({ error: "Record not found" });
 
-    // Server-side lock enforcement (skip for admin/manager)
-    if (current.is_locked && actorOhr !== "740045023") {
-      return res.status(403).json({ error: "Record is locked and cannot be edited" });
-    }
+    // NOTE: is_locked record-level lock removed in Batch 98. Only date-based + OT locks remain.
 
     // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin)
+    // Exception: OT-only edits are allowed on past dates within the current operational week (Sat-Fri)
     if (actorOhr !== "740045023") {
       const now = new Date();
       const phtTime = new Date(now.getTime() + 8 * 60 * 60000);
@@ -304,13 +302,31 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       yesterdayD.setUTCDate(yesterdayD.getUTCDate() - 1);
       const yesterdayPHT = yesterdayD.toISOString().slice(0, 10);
       const recordDate = current.log_date || '';
-      // Dates before yesterday are always locked
-      if (recordDate < yesterdayPHT) {
-        return res.status(403).json({ error: "Date-based lock: past dates locked for editing" });
-      }
-      // Yesterday is locked after 11 AM PHT
-      if (recordDate === yesterdayPHT && phtHour >= 11) {
-        return res.status(403).json({ error: "Date-based lock: previous day locked after 11 AM PHT" });
+
+      // Check if this is an OT-only edit within the current operational week
+      const isOtOnlyEdit = Object.keys(updates).length === 1 && updates.ot_hours !== undefined;
+      const phtDay = phtTime.getUTCDay(); // 0=Sun
+      const daysToFri = (5 - phtDay + 7) % 7;
+      const weFri = new Date(phtTime);
+      weFri.setUTCDate(weFri.getUTCDate() + daysToFri);
+      const weStart = new Date(weFri);
+      weStart.setUTCDate(weStart.getUTCDate() - 6); // Saturday
+      const weStartStr = weStart.toISOString().slice(0, 10);
+      const weEndStr = weFri.toISOString().slice(0, 10);
+      const inCurrentWeek = recordDate >= weStartStr && recordDate <= weEndStr;
+
+      // Allow OT-only edits on past dates within current week (bypass date lock)
+      const bypassDateLock = isOtOnlyEdit && inCurrentWeek;
+
+      if (!bypassDateLock) {
+        // Dates before yesterday are always locked
+        if (recordDate < yesterdayPHT) {
+          return res.status(403).json({ error: "Date-based lock: past dates locked for editing" });
+        }
+        // Yesterday is locked after 11 AM PHT
+        if (recordDate === yesterdayPHT && phtHour >= 11) {
+          return res.status(403).json({ error: "Date-based lock: previous day locked after 11 AM PHT" });
+        }
       }
     }
 
@@ -826,11 +842,7 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
       const [record] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, id)).limit(1);
       if (!record) continue;
 
-      // Skip locked records (unless admin)
-      if (record.is_locked && actor_ohr !== "740045023") {
-        locked++;
-        continue;
-      }
+      // NOTE: is_locked record-level lock removed in Batch 98.
 
       // Date-based lock: yesterday and earlier locked after 11 AM PHT (except admin)
       if (actor_ohr !== "740045023") {

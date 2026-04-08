@@ -1005,3 +1005,11 @@
 - [x] Add "Forfeited" status badge in OT Dashboard table
 - [x] Add forfeiture notifications to agent and supervisor
 - [ ] (Hold) Forfeiture check timing — only checks yesterday, may miss retroactive tag changes
+
+## Batch 98 — Bug Fixes
+- [x] Fix: Tag update failing for user 740044792 updating 740035562 with WO
+- [x] Fix: OT fields not editable for current week ending 04/10 (should be editable until 04/10 for all, locked from 04/11 onward for non-RECALL agents only)
+- [x] Remove is_locked enforcement from backend PATCH endpoint
+- [x] Remove is_locked auto-set during attendance sync (work-off and future week auto-lock)
+- [x] Remove is_locked visual indicators from frontend (row-locked class, lock icons)
+- [x] Unlock all currently locked attendance records in database
