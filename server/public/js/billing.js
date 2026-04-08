@@ -958,7 +958,7 @@ function otDashRender() {
   if (!tbody) return;
 
   if (OT_DASH.filteredRequests.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
     return;
   }
 
@@ -977,7 +977,6 @@ function otDashRender() {
       <td style="padding:8px 12px;">${submittedDate}</td>
       <td style="padding:8px 12px;">${escapeHtml(r.agent_name || '—')}</td>
       <td style="padding:8px 12px;">${escapeHtml(r.planning_group || '—')}</td>
-      <td style="padding:8px 12px;text-align:center;font-weight:600;">${r.requested_hours}</td>
       <td style="padding:8px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:${statusBadgeBg};color:${statusBadgeColor};">${statusLabel}</span></td>
       <td style="padding:8px 12px;color:${statusColor};">${approvedDate}</td>
     </tr>`;
@@ -1016,13 +1015,13 @@ async function otDashApply() {
 
   // Check if there are enough waitlisted hours to cover the request
   const waitlistedRequests = OT_DASH.filteredRequests.filter(r => r.status === 'pending');
-  const totalWaitlistedHours = waitlistedRequests.reduce((sum, r) => sum + parseFloat(r.requested_hours || 0), 0);
-  if (totalWaitlistedHours === 0) {
-    showToast('No waitlisted OT requests available. Please reopen the OT form to collect new requests from agents.', 'error');
+  const totalWaitlistedHours = waitlistedRequests.length * 2.5;
+  if (waitlistedRequests.length === 0) {
+    showToast('No waitlisted OT commitments available. Please reopen the OT form to collect new commitments from agents.', 'error');
     return;
   }
   if (hours > totalWaitlistedHours) {
-    showToast(`Insufficient waitlisted hours. Only ${totalWaitlistedHours} hour(s) available from ${waitlistedRequests.length} request(s). Please reopen the OT form to collect more requests.`, 'error');
+    showToast(`Insufficient waitlisted hours. Only ${totalWaitlistedHours} hour(s) available from ${waitlistedRequests.length} commitment(s). Please reopen the OT form to collect more commitments.`, 'error');
     return;
   }
 

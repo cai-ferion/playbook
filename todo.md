@@ -976,3 +976,6 @@
 - [x] Backend approval: divide requested hours by 2.5, always round up for agent count
 - [x] Forfeiture cascade: daily check after 11AM PHT lock, if tag ≠ P or LATE → forfeit and cascade to next waitlisted agent (same week, skip past days). Friday OT = no cascade, truly forfeited.
 - [x] Update all notifications for revised OT flows
+
+## Batch 94 — OT Dashboard Cleanup
+- [x] Remove "Requested Hours" column from OT Dashboard table (since OT is now fixed at 2.5hrs)
