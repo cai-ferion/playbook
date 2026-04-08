@@ -984,18 +984,18 @@ async function helmShowNewRequestForm() {
             const submittedDate = new Date(lastReq.submitted_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
             const statusLabel = (lastReq.status || 'pending').charAt(0).toUpperCase() + (lastReq.status || 'pending').slice(1);
             const statusColor = statusLabel === 'Approved' ? '#16a34a' : statusLabel === 'Rejected' ? '#dc2626' : 'var(--fg-muted)';
-            formTitle.textContent = 'OT Request';
+            formTitle.textContent = 'OT Commitment';
             formBody.innerHTML = `
               <div style="text-align:center;padding:24px 16px;">
                 <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 </div>
-                <h3 style="font-size:16px;font-weight:700;color:var(--fg);margin-bottom:8px;">Already Submitted This Week</h3>
-                <p style="font-size:13px;color:var(--fg-muted);margin-bottom:20px;line-height:1.5;">You have already submitted an OT request for this week.<br>Only one OT request per week is allowed.</p>
+                <h3 style="font-size:16px;font-weight:700;color:var(--fg);margin-bottom:8px;">Already Committed This Week</h3>
+                <p style="font-size:13px;color:var(--fg-muted);margin-bottom:20px;line-height:1.5;">You have already submitted your OT commitment (2.5 hours) for this week.<br>Only one commitment per week is allowed.</p>
                 <div style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:left;max-width:320px;margin:0 auto;">
-                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);margin-bottom:10px;font-weight:600;">Your Request Details</div>
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);margin-bottom:10px;font-weight:600;">Your Commitment Details</div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Request ID</span><span style="font-size:13px;font-weight:600;font-family:monospace;color:var(--primary);">${escapeHtml(lastReq.request_id)}</span></div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Requested Hours</span><span style="font-size:13px;font-weight:600;">${escapeHtml(String(lastReq.requested_hours))} hr(s)</span></div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">OT Hours</span><span style="font-size:13px;font-weight:600;">2.5 hr(s)</span></div>
                   <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Submitted</span><span style="font-size:13px;">${submittedDate}</span></div>
                   <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--fg-muted);">Status</span><span style="font-size:13px;font-weight:600;color:${statusColor};">${escapeHtml(statusLabel)}</span></div>
                 </div>
@@ -1031,31 +1031,28 @@ async function helmShowNewRequestForm() {
   // For agents: auto-select OT Request, hide dropdown, show OT fields immediately
   const agentAutoOT = isAgent;
 
-  // Calculate next week's ending (Sunday) for the OT reservation info
+  // Calculate next week ending (Friday) for the OT commitment info
+  // Week = Sat–Fri; next WE = the Friday of next week
   const _now = new Date();
-  const _dayOfWeek = _now.getUTCDay(); // 0=Sun
-  // Next Monday
-  const _daysToNextMon = _dayOfWeek === 0 ? 1 : (8 - _dayOfWeek);
-  const _nextMonday = new Date(_now);
-  _nextMonday.setUTCDate(_nextMonday.getUTCDate() + _daysToNextMon);
-  // Next Sunday = next Monday + 6
-  const _nextSunday = new Date(_nextMonday);
-  _nextSunday.setUTCDate(_nextSunday.getUTCDate() + 6);
-  const _weMonth = String(_nextSunday.getUTCMonth() + 1).padStart(2, '0');
-  const _weDay = String(_nextSunday.getUTCDate()).padStart(2, '0');
+  // Get current day in PHT (UTC+8)
+  const _phtNow = new Date(_now.getTime() + 8 * 60 * 60 * 1000);
+  const _phtDay = _phtNow.getUTCDay(); // 0=Sun, 6=Sat
+  // Next Saturday (start of next operational week)
+  const _daysToNextSat = (6 - _phtDay + 7) % 7 || 7;
+  const _nextSat = new Date(_phtNow);
+  _nextSat.setUTCDate(_nextSat.getUTCDate() + _daysToNextSat);
+  // Next Friday = next Saturday + 6
+  const _nextFri = new Date(_nextSat);
+  _nextFri.setUTCDate(_nextFri.getUTCDate() + 6);
+  const _weMonth = String(_nextFri.getUTCMonth() + 1).padStart(2, '0');
+  const _weDay = String(_nextFri.getUTCDate()).padStart(2, '0');
+  const _weYear = _nextFri.getUTCFullYear();
   const _nextWeekEnding = `${_weMonth}/${_weDay}`;
-  // Also format next Monday for display
-  const _nwmMonth = String(_nextMonday.getUTCMonth() + 1).padStart(2, '0');
-  const _nwmDay = String(_nextMonday.getUTCDate()).padStart(2, '0');
-  const _nextWeekStart = `${_nwmMonth}/${_nwmDay}`;
+  const _nextWeekEndingFull = `${_weMonth}/${_weDay}/${String(_weYear).slice(2)}`;
 
   formBody.innerHTML = `
     <div class="form-section">
-      ${agentAutoOT ? '<div style="margin-bottom:12px;"><span style="font-size:15px;font-weight:600;color:var(--fg);letter-spacing:0.3px;">OT Request</span></div>' : ''}
-      ${agentAutoOT ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <div style="font-size:13px;color:#1e40af;line-height:1.5;">This OT request will be <strong>waitlisted for next week</strong> (${_nextWeekStart} \u2013 ${_nextWeekEnding}).</div>
-      </div>` : ''}
+      ${agentAutoOT ? '<div style="margin-bottom:12px;"><span style="font-size:15px;font-weight:600;color:var(--fg);letter-spacing:0.3px;">OT Commitment</span></div>' : ''}
       <div class="form-field" ${agentAutoOT ? 'style="display:none;"' : ''}>
         <label class="form-label">Request Type <span class="required">*</span></label>
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
@@ -1063,18 +1060,20 @@ async function helmShowNewRequestForm() {
         </select>
       </div>
 
-      <!-- OT Request fields -->
+      <!-- OT Request fields (commitment form) -->
       <div id="helm-req-ot-fields" style="${agentAutoOT ? '' : 'display:none;'}">
-        <div class="form-field">
-          <label class="form-label">How many OT hours are you willing to render? <span class="required">*</span></label>
-          <select class="form-input" id="helm-req-ot-hours" style="max-width:220px;">
-            <option value="">— Select Hours —</option>
-            <option value="1">1 hour</option>
-            <option value="1.5">1.5 hours</option>
-            <option value="2">2 hours</option>
-            <option value="2.5">2.5 hours</option>
-          </select>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px 18px;margin-bottom:16px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div style="font-size:14px;color:#1e3a5f;line-height:1.6;">
+              By clicking <strong>"Yes, I agree"</strong> you are committing to render <strong style="color:#1d4ed8;">2.5 hours</strong> of overtime for <strong>week ending ${_nextWeekEndingFull}</strong>.
+            </div>
+          </div>
+          <div style="background:#dbeafe;border-radius:6px;padding:10px 14px;font-size:12px;color:#1e40af;line-height:1.5;">
+            Your request will be <strong>waitlisted</strong> until your manager applies OT hours for your planning group. You will be notified once your OT has been applied.
+          </div>
         </div>
+        <input type="hidden" id="helm-req-ot-hours" value="2.5">
       </div>
 
       <!-- Attendance Backdated Change Tag fields -->
@@ -1111,10 +1110,18 @@ async function helmShowNewRequestForm() {
     </div>
   `;
 
-  formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit</button>
-  `;
+  // For agent OT: show Yes/No commitment buttons; for others: show Cancel/Submit
+  if (agentAutoOT) {
+    formFooter.innerHTML = `
+      <button class="btn btn-outline btn-sm" onclick="helmCloseForm()" style="min-width:130px;">No, I don't agree</button>
+      <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()" style="min-width:130px;">Yes, I agree</button>
+    `;
+  } else {
+    formFooter.innerHTML = `
+      <button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit</button>
+    `;
+  }
 
   overlay.style.display = 'flex';
 }
@@ -1336,8 +1343,7 @@ async function helmSubmitNewRequest() {
       showToast('Failed to submit request: ' + e.message, 'error');
     }
   } else if (reqType === 'ot_request') {
-    const otHours = document.getElementById('helm-req-ot-hours')?.value || '';
-    if (!otHours) { showToast('Please select the number of OT hours', 'error'); return; }
+    const otHours = '2.5'; // Fixed 2.5 hours commitment
     if (!cu) { showToast('You must be logged in to submit an OT request', 'error'); return; }
 
     // Check if this agent is RECALL_MEASUREMENT_CTR (excluded from OT system)
@@ -1363,7 +1369,7 @@ async function helmSubmitNewRequest() {
         throw new Error(errData.error || 'Failed to submit OT request');
       }
       const result = await resp.json();
-      showToast(`OT Request submitted successfully (${otHours} hours)`, 'success');
+      showToast('OT commitment submitted successfully (2.5 hours)', 'success');
       helmCloseForm();
       await helmFetchTasks();
       helmSwitchBoardTab('approvals');

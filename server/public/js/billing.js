@@ -168,11 +168,12 @@ async function initBillingCompliance() {
   // Load YTD analytics: doughnut (per-week compliance) + trend charts
   loadBillingYTDAnalytics();
 
-  // Hide tab bar for RECALL_MEASUREMENT_CTR employees (exempt Managers and admin)
+  // Hide OT Dashboard tab for RECALL_MEASUREMENT_CTR employees (all roles)
+  // Exempt ONLY: Ravikiran Polimetla (703212987), Joshua Masacote (740044909), Admin (740045023)
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   if (cu) {
-    const isManagerOrAdmin = cu.actual_role === 'Manager' || cu.ohr_id === '740045023';
-    if (!isManagerOrAdmin) {
+    const OT_TAB_EXEMPT_OHRS = ['703212987', '740044909', '740045023'];
+    if (!OT_TAB_EXEMPT_OHRS.includes(cu.ohr_id)) {
       try {
         const empResp = await fetch(`${IO_API_BASE}/employees`);
         if (empResp.ok) {

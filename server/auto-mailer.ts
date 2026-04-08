@@ -8,8 +8,8 @@
 import { Express } from "express";
 import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
-import { eq, and, inArray, sql } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioGchatQueue } from "../drizzle/schema";
+import { eq, and, inArray, sql, gte, lte, asc } from "drizzle-orm";
+import { ioAttendance, ioEmployees, ioNotifications, ioGchatQueue, ioOtRequests, ioLeaves, ioAuditLog } from "../drizzle/schema";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -250,6 +250,306 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
   return { sent, errors, gchatQueued };
 }
 
+// ============================================================
+// OT Forfeiture Cascade
+// Runs daily after 11 AM PHT. Checks approved OT records where the agent's
+// attendance tag on the applied_date is NOT 'P' or 'LATE'. Forfeits the OT
+// and cascades to the next waitlisted agent (same week, skip past days).
+// Exception: if applied_date is a Friday, no cascade — truly forfeited.
+// ============================================================
+
+function parseWorkOffDays(workOff: string | null | undefined): number[] {
+  if (!workOff) return [];
+  const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return workOff.split(/\s*-\s*/).map(d => dayMap[d.trim()]).filter(d => d !== undefined);
+}
+
+function isOnLeave(dateStr: string, leaves: any[]): boolean {
+  for (const lv of leaves) {
+    if (lv.status !== 'approved' && lv.status !== 'Approved') continue;
+    const start = lv.start_date || '';
+    const end = lv.end_date || '';
+    if (start && end && dateStr >= start && dateStr <= end) return true;
+    if (start && !end && dateStr === start) return true;
+  }
+  return false;
+}
+
+function findOtDayForCascade(weekSaturday: Date, workOffDays: number[], agentLeaves: any[], attendanceRecords: any[]): string | null {
+  // Get today's date in PHT
+  const nowUtc = new Date();
+  const phtNow = new Date(nowUtc.getTime() + PHT_OFFSET_HOURS * 60 * 60 * 1000);
+  const todayStr = phtNow.toISOString().split('T')[0];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekSaturday);
+    d.setUTCDate(d.getUTCDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const dow = d.getUTCDay();
+    if (dateStr < todayStr) continue; // Skip past days
+    if (workOffDays.includes(dow)) continue;
+    if (isOnLeave(dateStr, agentLeaves)) continue;
+    // Check if PL tag
+    const rec = attendanceRecords.find((r: any) => r.log_date === dateStr);
+    if (rec) {
+      const tag = (rec.tag || '').toUpperCase().trim();
+      if (tag === 'PL' || tag === 'ML') continue;
+    }
+    return dateStr;
+  }
+  return null;
+}
+
+import crypto from "crypto";
+
+async function runOtForfeitureCheck(db: ReturnType<typeof drizzle>): Promise<{ forfeited: number; cascaded: number; trulyForfeited: number; errors: number }> {
+  let forfeited = 0, cascaded = 0, trulyForfeited = 0, errors = 0;
+  const now = new Date().toISOString();
+
+  // Get yesterday's date in PHT (the day that just got locked at 11 AM)
+  const phtNow = new Date(Date.now() + PHT_OFFSET_HOURS * 60 * 60 * 1000);
+  const yesterday = new Date(phtNow);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+  console.log(`[OT-Forfeiture] Checking approved OTs applied on ${yesterdayStr}`);
+
+  // Find all approved OT requests where applied_date = yesterday
+  const approvedOTs = await db.select().from(ioOtRequests)
+    .where(and(
+      eq(ioOtRequests.status, 'approved'),
+      eq(ioOtRequests.applied_date, yesterdayStr)
+    ));
+
+  if (approvedOTs.length === 0) {
+    console.log(`[OT-Forfeiture] No approved OTs found for ${yesterdayStr}`);
+    return { forfeited, cascaded, trulyForfeited, errors };
+  }
+
+  console.log(`[OT-Forfeiture] Found ${approvedOTs.length} approved OTs for ${yesterdayStr}`);
+
+  // Fetch attendance records for yesterday for these agents
+  const agentOhrs = approvedOTs.map(r => r.ohr_id);
+  const attendanceRecords = await db.select().from(ioAttendance)
+    .where(and(
+      eq(ioAttendance.log_date, yesterdayStr),
+      inArray(ioAttendance.ohr_id, agentOhrs)
+    ));
+
+  for (const otReq of approvedOTs) {
+    try {
+      const attRec = attendanceRecords.find(a => a.ohr_id === otReq.ohr_id);
+      const tag = (attRec?.tag || '').toUpperCase().trim();
+
+      // If tag is P or LATE, the OT is valid — skip
+      if (tag === 'P' || tag === 'LATE') continue;
+
+      // OT is forfeited — agent was not P or LATE on the applied date
+      forfeited++;
+      console.log(`[OT-Forfeiture] Forfeiting OT ${otReq.request_id} for ${otReq.agent_name} (${otReq.ohr_id}) — tag was '${tag}' on ${yesterdayStr}`);
+
+      // Mark as forfeited
+      await db.update(ioOtRequests)
+        .set({ status: 'forfeited' })
+        .where(eq(ioOtRequests.id, otReq.id));
+
+      // Clear OT hours from attendance
+      if (attRec) {
+        await db.update(ioAttendance)
+          .set({ ot_hours: '0' })
+          .where(eq(ioAttendance.id, attRec.id));
+      }
+
+      // Audit log
+      await db.insert(ioAuditLog).values({
+        record_type: 'ot_request',
+        record_id: otReq.request_id,
+        action: 'forfeited',
+        field_name: 'status',
+        old_value: 'approved',
+        new_value: 'forfeited',
+        actor_ohr: 'SYSTEM',
+        actor_name: 'OT Forfeiture Check',
+        timestamp: now,
+        metadata: JSON.stringify({ reason: `Tag was '${tag}' (not P or LATE) on ${yesterdayStr}`, applied_date: yesterdayStr }),
+      });
+
+      // Notify the agent about forfeiture
+      const forfeitDateFormatted = new Date(yesterdayStr + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+      await db.insert(ioNotifications).values({
+        type: 'ot_forfeited',
+        title: 'OT Forfeited',
+        message: `Your OT commitment (${otReq.request_id}) for ${yesterdayStr} has been forfeited because your attendance tag was '${tag}' (not Present or Late).`,
+        actor_ohr: 'SYSTEM',
+        actor_name: 'OT Forfeiture Check',
+        target_ohr: otReq.ohr_id,
+        metadata: JSON.stringify({ request_id: otReq.request_id, applied_date: yesterdayStr, tag }),
+        is_read: false,
+        created_at: now,
+      });
+
+      // Check if applied_date is a Friday — if so, no cascade
+      const appliedDow = new Date(yesterdayStr + 'T00:00:00Z').getUTCDay();
+      if (appliedDow === 5) { // Friday
+        trulyForfeited++;
+        console.log(`[OT-Forfeiture] ${otReq.request_id} was on Friday — truly forfeited, no cascade`);
+        continue;
+      }
+
+      // CASCADE: Find next waitlisted agent for the same planning group
+      const pg = otReq.planning_group || '';
+      if (!pg) {
+        trulyForfeited++;
+        continue;
+      }
+
+      // Get current week boundaries (Sat–Fri) for the applied_date's week
+      const appliedDate = new Date(yesterdayStr + 'T00:00:00Z');
+      const adDow = appliedDate.getUTCDay();
+      const daysSinceSat = adDow === 6 ? 0 : (adDow + 1);
+      const weekSaturday = new Date(appliedDate);
+      weekSaturday.setUTCDate(weekSaturday.getUTCDate() - daysSinceSat);
+      weekSaturday.setUTCHours(0, 0, 0, 0);
+      const weekFriday = new Date(weekSaturday);
+      weekFriday.setUTCDate(weekFriday.getUTCDate() + 6);
+      const weekSatStr = weekSaturday.toISOString().split('T')[0];
+      const weekFriStr = weekFriday.toISOString().split('T')[0];
+
+      // Get all pending (waitlisted) requests for this PG, FIFO order
+      const waitlisted = await db.select().from(ioOtRequests)
+        .where(and(eq(ioOtRequests.planning_group, pg), eq(ioOtRequests.status, 'pending')))
+        .orderBy(asc(ioOtRequests.submitted_at));
+
+      if (waitlisted.length === 0) {
+        trulyForfeited++;
+        console.log(`[OT-Forfeiture] No waitlisted agents for PG '${pg}' — truly forfeited`);
+        continue;
+      }
+
+      // Pre-fetch employees and leaves for cascade
+      const allEmployees = await db.select().from(ioEmployees)
+        .where(eq(ioEmployees.planning_group, pg));
+      const empMap = new Map(allEmployees.map((e: any) => [e.ohr_id, e]));
+
+      const allLeaves = await db.select().from(ioLeaves)
+        .where(eq(ioLeaves.planning_group, pg));
+      const weekLeaves = allLeaves.filter((lv: any) => {
+        if (lv.status !== 'approved' && lv.status !== 'Approved') return false;
+        const start = lv.start_date || '';
+        const end = lv.end_date || start;
+        return start <= weekFriStr && end >= weekSatStr;
+      });
+
+      let cascadeSuccess = false;
+      for (const nextReq of waitlisted) {
+        const emp = empMap.get(nextReq.ohr_id);
+        const workOffDays = parseWorkOffDays(emp?.work_off || '');
+        const agentLeaves = weekLeaves.filter((lv: any) => lv.ohr_id === nextReq.ohr_id);
+
+        // Fetch attendance for this agent for the current week
+        const agentAtt = await db.select().from(ioAttendance)
+          .where(and(
+            gte(ioAttendance.log_date, weekSatStr),
+            lte(ioAttendance.log_date, weekFriStr),
+            eq(ioAttendance.ohr_id, nextReq.ohr_id)
+          ));
+
+        const cascadeDate = findOtDayForCascade(weekSaturday, workOffDays, agentLeaves, agentAtt);
+        if (!cascadeDate) continue; // No valid day for this agent, try next
+
+        // Apply OT to this agent
+        const OT_HOURS = 2.5;
+        await db.update(ioOtRequests)
+          .set({ status: 'approved', approved_at: now, applied_date: cascadeDate, approved_by: 'SYSTEM (Cascade)', approved_by_ohr: 'SYSTEM' })
+          .where(eq(ioOtRequests.id, nextReq.id));
+
+        // Write OT to attendance
+        const attRows = await db.select().from(ioAttendance)
+          .where(and(eq(ioAttendance.ohr_id, nextReq.ohr_id), eq(ioAttendance.log_date, cascadeDate)));
+        if (attRows.length > 0) {
+          await db.update(ioAttendance)
+            .set({ ot_hours: String(OT_HOURS) })
+            .where(eq(ioAttendance.id, attRows[0].id));
+        } else {
+          const attId = crypto.randomBytes(8).toString('hex');
+          await db.insert(ioAttendance).values({
+            id: attId,
+            ohr_id: nextReq.ohr_id,
+            log_date: cascadeDate,
+            ot_hours: String(OT_HOURS),
+            created_at: now,
+            snap_full_name: emp?.full_name || nextReq.agent_name,
+            snap_supervisor: emp?.supervisor_name || '',
+            snap_planning_group: emp?.planning_group || '',
+            snap_shift_time: emp?.shift_time || '',
+            snap_actual_role: emp?.actual_role || '',
+            snap_billing_name: emp?.billing_name || '',
+            snap_status: emp?.srt_status || '',
+          });
+        }
+
+        // Audit log for cascade
+        await db.insert(ioAuditLog).values({
+          record_type: 'ot_request',
+          record_id: nextReq.request_id,
+          action: 'cascade_approved',
+          field_name: 'status',
+          old_value: 'pending',
+          new_value: 'approved',
+          actor_ohr: 'SYSTEM',
+          actor_name: 'OT Forfeiture Cascade',
+          timestamp: now,
+          metadata: JSON.stringify({ cascaded_from: otReq.request_id, original_agent: otReq.ohr_id, applied_date: cascadeDate }),
+        });
+
+        // Notify the cascade agent + supervisor
+        const cascadeDateFormatted = new Date(cascadeDate + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        const cascadeNotifs: any[] = [{
+          type: 'ot_applied',
+          title: 'OT Applied (Cascade)',
+          message: `Your OT commitment (${nextReq.request_id}) for 2.5 hour(s) has been applied on ${cascadeDateFormatted} via cascade.`,
+          actor_ohr: 'SYSTEM',
+          actor_name: 'OT Forfeiture Cascade',
+          target_ohr: nextReq.ohr_id,
+          metadata: JSON.stringify({ request_id: nextReq.request_id, hours: OT_HOURS, applied_date: cascadeDate, cascaded_from: otReq.request_id }),
+          is_read: false,
+          created_at: now,
+        }];
+        if (emp?.supervisor_ohr) {
+          cascadeNotifs.push({
+            type: 'ot_applied',
+            title: 'OT Applied (Cascade) — Agent Update',
+            message: `OT for ${nextReq.agent_name} (2.5 hr) has been applied on ${cascadeDateFormatted} via cascade.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'OT Forfeiture Cascade',
+            target_ohr: emp.supervisor_ohr,
+            metadata: JSON.stringify({ request_id: nextReq.request_id, agent_ohr: nextReq.ohr_id, agent_name: nextReq.agent_name, hours: OT_HOURS, applied_date: cascadeDate }),
+            is_read: false,
+            created_at: now,
+          });
+        }
+        await db.insert(ioNotifications).values(cascadeNotifs);
+
+        cascadeSuccess = true;
+        cascaded++;
+        console.log(`[OT-Forfeiture] Cascaded ${otReq.request_id} → ${nextReq.request_id} (${nextReq.agent_name}) on ${cascadeDate}`);
+        break; // Only cascade to one agent per forfeited OT
+      }
+
+      if (!cascadeSuccess) {
+        trulyForfeited++;
+        console.log(`[OT-Forfeiture] No valid cascade target for ${otReq.request_id} — truly forfeited`);
+      }
+    } catch (err: any) {
+      errors++;
+      console.error(`[OT-Forfeiture] Error processing ${otReq.request_id}:`, err.message);
+    }
+  }
+
+  console.log(`[OT-Forfeiture] Complete: ${forfeited} forfeited, ${cascaded} cascaded, ${trulyForfeited} truly forfeited, ${errors} errors`);
+  return { forfeited, cascaded, trulyForfeited, errors };
+}
+
 export function registerAutoMailer(app: Express): void {
   const dbUrl = process.env.DATABASE_URL;
 
@@ -282,6 +582,19 @@ export function registerAutoMailer(app: Express): void {
 
   console.log("[AutoNotifier] Scheduled: 2:30 AM PHT, 11:30 AM PHT (UPL/LATE + GChat)");
 
+  // Schedule: OT Forfeiture check at 11:15 AM PHT = 03:15 UTC daily
+  // Runs after the 11 AM PHT attendance lock so yesterday's tags are finalized
+  cron.schedule("15 3 * * *", async () => {
+    console.log("[OT-Forfeiture] Triggered: 11:15 AM PHT daily forfeiture check");
+    try {
+      await runOtForfeitureCheck(db);
+    } catch (err) {
+      console.error("[OT-Forfeiture] Cron error:", err);
+    }
+  });
+
+  console.log("[AutoNotifier] Scheduled: 11:15 AM PHT (OT Forfeiture Cascade)");
+
   // Manual trigger for UPL/LATE notifications
   app.post("/api/io/send-notifications", async (req, res) => {
     try {
@@ -297,5 +610,20 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
-  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications");
+  // Manual trigger for OT forfeiture check
+  app.post("/api/io/ot-forfeiture-check", async (req, res) => {
+    try {
+      const result = await runOtForfeitureCheck(db);
+      res.json({
+        success: true,
+        message: `Forfeited: ${result.forfeited}, Cascaded: ${result.cascaded}, Truly forfeited: ${result.trulyForfeited}, Errors: ${result.errors}`,
+        ...result,
+      });
+    } catch (err: any) {
+      console.error("[OT-Forfeiture] Manual trigger error:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/ot-forfeiture-check");
 }

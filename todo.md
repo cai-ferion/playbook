@@ -968,3 +968,11 @@
 
 ## Batch 92 — OT Dashboard Visibility Fix
 - [x] Fix: Senior Manager (Ravikiran Polimetla, OHR 703212987) cannot see OT Dashboard tab — RECALL_MEASUREMENT_CTR check in billing.js hides tab bar for anyone with that planning group, including Managers who manage multiple groups. Exempt Manager role from the hide logic.
+
+## Batch 93 — OT Mechanism Comprehensive Revision
+- [x] OT Dashboard tab visibility: hide for anyone with RECALL_MEASUREMENT_CTR in complete_planning_group (including TL/Manager), exempt only Ravikiran (703212987), Joshua (740044909), and Admin (740045023)
+- [x] Agent OT form: remove hours dropdown, fixed 2.5hrs, Yes/No commitment buttons with next WE date
+- [x] Backend approval: apply OT to current week (not next week), skip past days, search from today→Friday
+- [x] Backend approval: divide requested hours by 2.5, always round up for agent count
+- [x] Forfeiture cascade: daily check after 11AM PHT lock, if tag ≠ P or LATE → forfeit and cascade to next waitlisted agent (same week, skip past days). Friday OT = no cascade, truly forfeited.
+- [x] Update all notifications for revised OT flows

@@ -1425,10 +1425,8 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
     if (!ohr_id || !requested_hours) {
       return res.status(400).json({ error: "ohr_id and requested_hours are required" });
     }
-    const validHours = ["1", "1.5", "2", "2.5"];
-    if (!validHours.includes(String(requested_hours))) {
-      return res.status(400).json({ error: "requested_hours must be 1, 1.5, 2, or 2.5" });
-    }
+    // OT hours are fixed at 2.5 — override any client-sent value
+    const fixedHours = "2.5";
     // Check for existing requests by this agent in the current week (Mon-Sun)
     const now = new Date().toISOString();
     const nowDate = new Date(now);
@@ -1471,7 +1469,7 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
       ohr_id,
       agent_name: agent_name || "",
       planning_group: planning_group || "",
-      requested_hours: String(requested_hours),
+      requested_hours: fixedHours,
       status: "pending",
       submitted_at: now,
     });
@@ -1479,12 +1477,12 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
     try {
       await db.insert(ioNotifications).values({
         type: "ot_request_submitted",
-        title: "OT Request Submitted",
-        message: `Your OT request (${requestId}) for ${requested_hours} hour(s) has been submitted and is waitlisted for next week.`,
+        title: "OT Commitment Submitted",
+        message: `Your OT commitment (${requestId}) for 2.5 hour(s) has been submitted and is waitlisted.`,
         actor_ohr: ohr_id,
         actor_name: agent_name || "",
         target_ohr: ohr_id,
-        metadata: JSON.stringify({ request_id: requestId, hours: requested_hours, planning_group }),
+        metadata: JSON.stringify({ request_id: requestId, hours: fixedHours, planning_group }),
         is_read: false,
         created_at: now,
       });
@@ -1517,27 +1515,44 @@ function isOnLeave(dateStr: string, leaves: any[]): boolean {
   return false;
 }
 
-// Helper: find a valid OT day in next week (Sat–Fri) for an agent
+// Helper: check if a date has a PL tag in attendance records
+function isOnPL(dateStr: string, attendanceRecords: any[]): boolean {
+  const rec = attendanceRecords.find((r: any) => r.log_date === dateStr);
+  if (!rec) return false;
+  const tag = (rec.tag || '').toUpperCase().trim();
+  return tag === 'PL' || tag === 'ML'; // PL and ML count as planned leave
+}
+
+// Helper: find a valid OT day in the CURRENT week (Sat–Fri) for an agent
+// Skips past days (before today in PHT), work-off days, and PL days
 // Returns YYYY-MM-DD or null if no valid day found
-function findOtDay(nextSaturday: Date, workOffDays: number[], agentLeaves: any[]): string | null {
+function findOtDay(weekSaturday: Date, workOffDays: number[], agentLeaves: any[], attendanceRecords?: any[]): string | null {
+  // Get today's date in PHT (UTC+8)
+  const nowUtc = new Date();
+  const phtNow = new Date(nowUtc.getTime() + 8 * 60 * 60 * 1000);
+  const todayStr = phtNow.toISOString().split('T')[0];
+
   const weekDates: { date: Date; dateStr: string; dow: number }[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(nextSaturday);
+    const d = new Date(weekSaturday);
     d.setUTCDate(d.getUTCDate() + i);
     const dateStr = d.toISOString().split('T')[0];
     weekDates.push({ date: d, dateStr, dow: d.getUTCDay() });
   }
-  // Forward pass: Sat to Fri — if no day found, return null (request will be waitlisted)
+  // Forward pass: Sat to Fri — skip past days, work-off, leaves, and PL
   for (const wd of weekDates) {
+    if (wd.dateStr < todayStr) continue; // Skip past days
     if (workOffDays.includes(wd.dow)) continue;
     if (isOnLeave(wd.dateStr, agentLeaves)) continue;
+    if (attendanceRecords && isOnPL(wd.dateStr, attendanceRecords)) continue;
     return wd.dateStr;
   }
   return null; // No valid day found — request stays on waitlist
 }
 
 // POST /ot-requests/approve — OM approves OT requests for a planning group (FIFO)
-// OT is applied to NEXT WEEK, on a day the agent is not on work off or leave
+// OT is applied to the CURRENT WEEK (Sat–Fri), skipping past days
+// Hours ÷ 2.5 = agent count (always round up)
 router.post("/ot-requests/approve", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
@@ -1550,6 +1565,10 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
     if (isNaN(hoursNeeded) || hoursNeeded <= 0) {
       return res.status(400).json({ error: "ot_hours_needed must be a positive number" });
     }
+    // Calculate how many agents to approve: hours ÷ 2.5, always round up
+    const OT_HOURS_PER_AGENT = 2.5;
+    const agentsToApprove = Math.ceil(hoursNeeded / OT_HOURS_PER_AGENT);
+
     // Get pending requests for this PG, sorted by submitted_at ASC (FIFO)
     const pending = await db.select().from(ioOtRequests)
       .where(and(eq(ioOtRequests.planning_group, planning_group), eq(ioOtRequests.status, "pending")))
@@ -1558,54 +1577,61 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "No pending OT requests for this planning group" });
     }
     const now = new Date().toISOString();
-    const nowDate = new Date();
 
-    // Calculate next week's Saturday (start of Sat–Fri operational week)
-    const dayOfWeek = nowDate.getUTCDay(); // 0=Sun, 6=Sat
-    const daysToNextSat = (6 - dayOfWeek + 7) % 7 || 7; // always jump to NEXT Saturday
-    const nextSaturday = new Date(nowDate);
-    nextSaturday.setUTCDate(nextSaturday.getUTCDate() + daysToNextSat);
-    nextSaturday.setUTCHours(0, 0, 0, 0);
-    // Next Friday (end of the Sat–Fri week)
-    const nextFriday = new Date(nextSaturday);
-    nextFriday.setUTCDate(nextFriday.getUTCDate() + 6);
-    const nextSaturdayStr = nextSaturday.toISOString().split('T')[0];
-    const nextFridayStr = nextFriday.toISOString().split('T')[0];
+    // Calculate CURRENT week's Saturday (start of Sat–Fri operational week) in PHT
+    const phtNow = new Date(Date.now() + 8 * 60 * 60 * 1000);
+    const phtDay = phtNow.getUTCDay(); // 0=Sun, 6=Sat
+    // Go back to this week's Saturday
+    const daysSinceSat = phtDay === 6 ? 0 : (phtDay + 1); // Sat=0 back, Sun=1 back, Mon=2 back, ...
+    const currentSaturday = new Date(phtNow);
+    currentSaturday.setUTCDate(currentSaturday.getUTCDate() - daysSinceSat);
+    currentSaturday.setUTCHours(0, 0, 0, 0);
+    // Current Friday (end of the Sat–Fri week)
+    const currentFriday = new Date(currentSaturday);
+    currentFriday.setUTCDate(currentFriday.getUTCDate() + 6);
+    const currentSaturdayStr = currentSaturday.toISOString().split('T')[0];
+    const currentFridayStr = currentFriday.toISOString().split('T')[0];
 
     // Pre-fetch all employees in this PG for work_off data
     const allEmployees = await db.select().from(ioEmployees)
       .where(eq(ioEmployees.planning_group, planning_group));
     const empMap = new Map(allEmployees.map((e: any) => [e.ohr_id, e]));
 
-    // Pre-fetch all approved leaves for next week for agents in this PG
+    // Pre-fetch all approved leaves for current week for agents in this PG
     const allLeaves = await db.select().from(ioLeaves)
       .where(eq(ioLeaves.planning_group, planning_group));
-    // Filter to leaves that overlap with next week (Sat–Fri)
-    const nextWeekLeaves = allLeaves.filter((lv: any) => {
+    const currentWeekLeaves = allLeaves.filter((lv: any) => {
       if (lv.status !== 'approved' && lv.status !== 'Approved') return false;
       const start = lv.start_date || '';
       const end = lv.end_date || start;
-      return start <= nextFridayStr && end >= nextSaturdayStr;
+      return start <= currentFridayStr && end >= currentSaturdayStr;
     });
 
-    let hoursRemaining = hoursNeeded;
+    // Pre-fetch attendance records for current week for all agents in this PG
+    const currentWeekAttendance = await db.select().from(ioAttendance)
+      .where(and(
+        gte(ioAttendance.log_date, currentSaturdayStr),
+        lte(ioAttendance.log_date, currentFridayStr),
+        inArray(ioAttendance.ohr_id, pending.map(r => r.ohr_id))
+      ));
+
+    let agentsApproved = 0;
     const approved: any[] = [];
     const waitlisted: any[] = [];
 
     for (const otReq of pending) {
-      if (hoursRemaining <= 0) break;
-      const reqHours = parseFloat(otReq.requested_hours);
-      if (reqHours > hoursRemaining) continue;
+      if (agentsApproved >= agentsToApprove) break;
 
       const emp = empMap.get(otReq.ohr_id);
       const workOffDays = parseWorkOffDays(emp?.work_off || '');
-      const agentLeaves = nextWeekLeaves.filter((lv: any) => lv.ohr_id === otReq.ohr_id);
+      const agentLeaves = currentWeekLeaves.filter((lv: any) => lv.ohr_id === otReq.ohr_id);
+      const agentAttendance = currentWeekAttendance.filter((a: any) => a.ohr_id === otReq.ohr_id);
 
-      const appliedDate = findOtDay(nextSaturday, workOffDays, agentLeaves);
+      const appliedDate = findOtDay(currentSaturday, workOffDays, agentLeaves, agentAttendance);
 
       if (!appliedDate) {
         // No valid day — keep waitlisted
-        waitlisted.push({ request_id: otReq.request_id, ohr_id: otReq.ohr_id, agent_name: otReq.agent_name, hours: reqHours, reason: 'No available day (all days are work off or on leave)' });
+        waitlisted.push({ request_id: otReq.request_id, ohr_id: otReq.ohr_id, agent_name: otReq.agent_name, hours: OT_HOURS_PER_AGENT, reason: 'No available day (all remaining days are work off, PL, or past)' });
         continue;
       }
 
@@ -1619,7 +1645,7 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
         .where(and(eq(ioAttendance.ohr_id, otReq.ohr_id), eq(ioAttendance.log_date, appliedDate)));
       if (attRows.length > 0) {
         await db.update(ioAttendance)
-          .set({ ot_hours: String(reqHours) })
+          .set({ ot_hours: String(OT_HOURS_PER_AGENT) })
           .where(eq(ioAttendance.id, attRows[0].id));
       } else {
         const e = emp;
@@ -1628,7 +1654,7 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
           id: attId,
           ohr_id: otReq.ohr_id,
           log_date: appliedDate,
-          ot_hours: String(reqHours),
+          ot_hours: String(OT_HOURS_PER_AGENT),
           created_at: now,
           snap_full_name: e?.full_name || otReq.agent_name,
           snap_supervisor: e?.supervisor_name || "",
@@ -1651,10 +1677,10 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
         actor_ohr: approved_by_ohr || "",
         actor_name: approved_by || "",
         timestamp: now,
-        metadata: JSON.stringify({ ot_hours: reqHours, applied_date: appliedDate, planning_group }),
+        metadata: JSON.stringify({ ot_hours: OT_HOURS_PER_AGENT, applied_date: appliedDate, planning_group }),
       });
-      hoursRemaining -= reqHours;
-      approved.push({ request_id: otReq.request_id, ohr_id: otReq.ohr_id, agent_name: otReq.agent_name, hours: reqHours, applied_date: appliedDate });
+      agentsApproved++;
+      approved.push({ request_id: otReq.request_id, ohr_id: otReq.ohr_id, agent_name: otReq.agent_name, hours: OT_HOURS_PER_AGENT, applied_date: appliedDate });
     }
     // Close OT form for this planning group after approval
     await db.update(ioOtConfig)
@@ -1669,8 +1695,8 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
         // Notify the agent
         appliedNotifs.push({
           type: "ot_applied",
-          title: "OT Request Applied",
-          message: `Your OT request (${a.request_id}) for ${a.hours} hour(s) has been applied on ${appliedDateFormatted}.`,
+          title: "OT Applied",
+          message: `Your OT commitment (${a.request_id}) for ${a.hours} hour(s) has been applied on ${appliedDateFormatted}.`,
           actor_ohr: approved_by_ohr || "",
           actor_name: approved_by || "",
           target_ohr: a.ohr_id,
@@ -1705,8 +1731,8 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
     try {
       const waitlistNotifs = waitlisted.map((w: any) => ({
         type: "ot_waitlisted",
-        title: "OT Request Waitlisted",
-        message: `Your OT request (${w.request_id}) for ${w.hours} hour(s) remains waitlisted. Reason: ${w.reason}`,
+        title: "OT Commitment Waitlisted",
+        message: `Your OT commitment (${w.request_id}) for ${w.hours} hour(s) remains waitlisted. Reason: ${w.reason}`,
         actor_ohr: approved_by_ohr || "",
         actor_name: approved_by || "",
         target_ohr: w.ohr_id,
@@ -1724,8 +1750,8 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
     res.json({
       ok: true,
       approved_count: approved.length,
-      total_hours_approved: approved.reduce((sum: number, a: any) => sum + a.hours, 0),
-      hours_remaining: Math.max(0, hoursRemaining),
+      agents_target: agentsToApprove,
+      total_hours_approved: approved.length * OT_HOURS_PER_AGENT,
       waitlisted_count: waitlisted.length,
       approved,
       waitlisted,
@@ -1790,8 +1816,8 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
     // Batch create in-app notifications for all eligible agents
     const notifTitle = isReopen ? "OT Form Reopened" : "OT Request Form Open";
     const notifMsg = isReopen
-      ? `The OT form has been reopened for ${planning_group}. You may submit an additional OT request.`
-      : `OT requests are now open for ${planning_group}. You may submit a new OT request.`;
+      ? `The OT form has been reopened for ${planning_group}. You may submit an additional OT commitment (2.5 hours).`
+      : `OT commitments are now open for ${planning_group}. You may submit your 2.5-hour OT commitment.`;
     const notifValues = eligibleAgents.map((agent: any) => ({
       type: isReopen ? "ot_form_reopen" : "ot_form_open",
       title: notifTitle,
@@ -1835,8 +1861,8 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
               sections: [{
                 widgets: [
                   { textParagraph: { text: isReopen
-                    ? `The OT form has been <b>reopened</b> for <b>${planning_group}</b>. You may submit an additional OT request in the Task Board.`
-                    : `OT requests are now open for <b>${planning_group}</b>. You may submit a new OT request in the Task Board.` } },
+                    ? `The OT form has been <b>reopened</b> for <b>${planning_group}</b>. You may submit an additional OT commitment (2.5 hours) in the Task Board.`
+                    : `OT commitments are now open for <b>${planning_group}</b>. Submit your 2.5-hour OT commitment in the Task Board.` } },
                 ]
               }]
             }
@@ -1848,8 +1874,8 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
           target_name: agent.full_name || "",
           card_json: cardJson,
           fallback_text: isReopen
-            ? `The OT form has been reopened for ${planning_group}. You may submit an additional OT request in the Task Board.`
-            : `OT requests are now open for ${planning_group}. Submit your OT request in the Task Board.`,
+            ? `The OT form has been reopened for ${planning_group}. You may submit an additional OT commitment (2.5 hours) in the Task Board.`
+            : `OT commitments are now open for ${planning_group}. Submit your 2.5-hour OT commitment in the Task Board.`,
           status: "pending",
           metadata: JSON.stringify({ planning_group, ohr_id: agent.ohr_id }),
           created_at: now,
