@@ -1451,6 +1451,16 @@ router.post("/ot-requests", async (req: Request, res: Response) => {
     }
     // OT hours are fixed at 2.5 — override any client-sent value
     const fixedHours = "2.5";
+
+    // Server-side validation: reject submission if OT form is not open for this planning group
+    if (planning_group) {
+      const configRows = await db.select().from(ioOtConfig)
+        .where(eq(ioOtConfig.planning_group, planning_group));
+      if (configRows.length === 0 || !configRows[0].ot_form_open) {
+        return res.status(403).json({ error: "The OT form is currently closed for your planning group. Please wait for it to be opened." });
+      }
+    }
+
     // Check for existing requests by this agent in the current week (Mon-Sun)
     const now = new Date().toISOString();
     const nowDate = new Date(now);

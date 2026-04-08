@@ -9,7 +9,7 @@ import { Express } from "express";
 import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq, and, inArray, sql, gte, lte, asc } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioGchatQueue, ioOtRequests, ioLeaves, ioAuditLog } from "../drizzle/schema";
+import { ioAttendance, ioEmployees, ioNotifications, ioGchatQueue, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig } from "../drizzle/schema";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -379,7 +379,7 @@ async function runOtForfeitureCheck(db: ReturnType<typeof drizzle>): Promise<{ f
       await db.insert(ioNotifications).values({
         type: 'ot_forfeited',
         title: 'OT Forfeited',
-        message: `Your OT commitment (${otReq.request_id}) for ${yesterdayStr} has been forfeited because your attendance tag was '${tag}' (not Present or Late).`,
+        message: `Your OT commitment (${otReq.request_id}) for ${forfeitDateFormatted} has been forfeited because your attendance tag was '${tag}' (not Present or Late).`,
         actor_ohr: 'SYSTEM',
         actor_name: 'OT Forfeiture Check',
         target_ohr: otReq.ohr_id,
@@ -387,6 +387,31 @@ async function runOtForfeitureCheck(db: ReturnType<typeof drizzle>): Promise<{ f
         is_read: false,
         created_at: now,
       });
+
+      // Notify the agent's supervisor about the forfeiture
+      try {
+        const [agentEmp] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, otReq.ohr_id)).limit(1);
+        if (agentEmp && agentEmp.supervisor_name) {
+          // Look up supervisor by name to get their OHR
+          const [supervisor] = await db.select().from(ioEmployees)
+            .where(eq(ioEmployees.full_name, agentEmp.supervisor_name)).limit(1);
+          if (supervisor) {
+            await db.insert(ioNotifications).values({
+              type: 'ot_forfeited',
+              title: 'Agent OT Forfeited',
+              message: `OT commitment for ${agentEmp.full_name || otReq.ohr_id} (${otReq.request_id}) on ${forfeitDateFormatted} has been forfeited. Attendance tag was '${tag}' (not Present or Late).`,
+              actor_ohr: 'SYSTEM',
+              actor_name: 'OT Forfeiture Check',
+              target_ohr: supervisor.ohr_id,
+              metadata: JSON.stringify({ request_id: otReq.request_id, applied_date: yesterdayStr, tag, agent_ohr: otReq.ohr_id, agent_name: agentEmp.full_name }),
+              is_read: false,
+              created_at: now,
+            });
+          }
+        }
+      } catch (supErr: any) {
+        console.warn(`[OT-Forfeiture] Failed to notify supervisor for ${otReq.ohr_id}:`, supErr.message);
+      }
 
       // Check if applied_date is a Friday — if so, no cascade
       const appliedDow = new Date(yesterdayStr + 'T00:00:00Z').getUTCDay();
@@ -550,6 +575,130 @@ async function runOtForfeitureCheck(db: ReturnType<typeof drizzle>): Promise<{ f
   return { forfeited, cascaded, trulyForfeited, errors };
 }
 
+/**
+ * Auto-open OT forms every Saturday 1:00 AM PHT for all non-RECALL planning groups.
+ * Resets open_count to 1 for the new week and notifies all eligible agents.
+ */
+async function autoOpenOtForms(db: ReturnType<typeof drizzle>): Promise<{ opened: number; notified: number; errors: number }> {
+  let opened = 0, notified = 0, errors = 0;
+  const now = new Date();
+  const pht = new Date(now.getTime() + PHT_OFFSET_HOURS * 60 * 60 * 1000);
+  const nowISO = pht.toISOString();
+
+  // Calculate current week start (Mon-Sun) in PHT
+  const dayOfWeek = pht.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = new Date(pht);
+  weekStart.setUTCDate(weekStart.getUTCDate() - diffToMonday);
+  weekStart.setUTCHours(0, 0, 0, 0);
+  const weekStartISO = weekStart.toISOString();
+
+  try {
+    // Get all distinct planning groups from active employees (exclude RECALL_MEASUREMENT_CTR)
+    const allEmployees = await db.select().from(ioEmployees);
+    const pgSet = new Set<string>();
+    for (const emp of allEmployees) {
+      if (!emp.planning_group) continue;
+      if ((emp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) continue;
+      if (emp.actual_role !== 'Agent') continue;
+      pgSet.add(emp.planning_group);
+    }
+    const planningGroups = Array.from(pgSet);
+    console.log(`[OT-AutoOpen] Found ${planningGroups.length} non-RECALL planning groups: ${planningGroups.join(', ')}`);
+
+    for (const pg of planningGroups) {
+      try {
+        // Upsert config: reset open_count to 1 for new week
+        const existing = await db.select().from(ioOtConfig).where(eq(ioOtConfig.planning_group, pg));
+        if (existing.length > 0) {
+          await db.update(ioOtConfig)
+            .set({ ot_form_open: true, open_count: 1, week_start: weekStartISO, updated_at: nowISO, updated_by: 'SYSTEM_AUTO_OPEN' })
+            .where(eq(ioOtConfig.planning_group, pg));
+        } else {
+          await db.insert(ioOtConfig).values({
+            planning_group: pg,
+            ot_form_open: true,
+            open_count: 1,
+            week_start: weekStartISO,
+            updated_at: nowISO,
+            updated_by: 'SYSTEM_AUTO_OPEN',
+          });
+        }
+        opened++;
+
+        // Get eligible agents for this PG
+        const eligibleAgents = allEmployees.filter((a: any) =>
+          a.planning_group === pg &&
+          a.actual_role === 'Agent' &&
+          !(a.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')
+        );
+
+        // Create in-app notifications
+        const notifTitle = 'OT Request Form Open';
+        const notifMsg = `OT commitments are now open for ${pg}. You may submit your 2.5-hour OT commitment.`;
+        const notifValues = eligibleAgents.map((agent: any) => ({
+          type: 'ot_form_open',
+          title: notifTitle,
+          message: notifMsg,
+          actor_ohr: 'SYSTEM',
+          actor_name: 'System Auto-Open',
+          target_ohr: agent.ohr_id,
+          metadata: JSON.stringify({ planning_group: pg, auto_open: true }),
+          is_read: false,
+          created_at: nowISO,
+        }));
+        if (notifValues.length > 0) {
+          await db.insert(ioNotifications).values(notifValues);
+          notified += notifValues.length;
+        }
+
+        // Queue GChat notifications for agents with gchat_space_id
+        const gchatValues = eligibleAgents
+          .filter((a: any) => a.gchat_space_id)
+          .map((agent: any) => {
+            const cardJson = JSON.stringify({
+              cardsV2: [{
+                cardId: `ot-auto-open-${agent.ohr_id}`,
+                card: {
+                  header: { title: notifTitle, subtitle: pg, imageUrl: '', imageType: 'CIRCLE' },
+                  sections: [{
+                    widgets: [
+                      { textParagraph: { text: `OT commitments are now open for <b>${pg}</b>. Submit your 2.5-hour OT commitment in the Task Board.` } },
+                    ]
+                  }]
+                }
+              }]
+            });
+            return {
+              type: 'ot_form_open',
+              target_space_id: agent.gchat_space_id,
+              target_name: agent.full_name || '',
+              card_json: cardJson,
+              fallback_text: `OT commitments are now open for ${pg}. Submit your 2.5-hour OT commitment in the Task Board.`,
+              status: 'pending',
+              metadata: JSON.stringify({ planning_group: pg, ohr_id: agent.ohr_id }),
+              created_at: nowISO,
+            };
+          });
+        if (gchatValues.length > 0) {
+          await db.insert(ioGchatQueue).values(gchatValues);
+        }
+
+        console.log(`[OT-AutoOpen] Opened ${pg}: ${eligibleAgents.length} agents notified`);
+      } catch (pgErr: any) {
+        errors++;
+        console.error(`[OT-AutoOpen] Error opening ${pg}:`, pgErr.message);
+      }
+    }
+  } catch (err: any) {
+    errors++;
+    console.error('[OT-AutoOpen] Fatal error:', err.message);
+  }
+
+  console.log(`[OT-AutoOpen] Complete: ${opened} PGs opened, ${notified} agents notified, ${errors} errors`);
+  return { opened, notified, errors };
+}
+
 export function registerAutoMailer(app: Express): void {
   const dbUrl = process.env.DATABASE_URL;
 
@@ -595,6 +744,19 @@ export function registerAutoMailer(app: Express): void {
 
   console.log("[AutoNotifier] Scheduled: 11:15 AM PHT (OT Forfeiture Cascade)");
 
+  // Schedule: OT Form Auto-Open at 1:00 AM PHT every Saturday = 17:00 UTC Friday
+  // Opens OT form for all non-RECALL planning groups and notifies eligible agents
+  cron.schedule("0 17 * * 5", async () => {
+    console.log("[OT-AutoOpen] Triggered: 1:00 AM PHT Saturday auto-open");
+    try {
+      await autoOpenOtForms(db);
+    } catch (err) {
+      console.error("[OT-AutoOpen] Cron error:", err);
+    }
+  });
+
+  console.log("[AutoNotifier] Scheduled: 1:00 AM PHT Saturday (OT Form Auto-Open)");
+
   // Manual trigger for UPL/LATE notifications
   app.post("/api/io/send-notifications", async (req, res) => {
     try {
@@ -625,5 +787,20 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
-  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/ot-forfeiture-check");
+  // Manual trigger for OT auto-open
+  app.post("/api/io/ot-auto-open", async (req, res) => {
+    try {
+      const result = await autoOpenOtForms(db);
+      res.json({
+        success: true,
+        message: `Opened: ${result.opened} PGs, Notified: ${result.notified} agents, Errors: ${result.errors}`,
+        ...result,
+      });
+    } catch (err: any) {
+      console.error("[OT-AutoOpen] Manual trigger error:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/ot-forfeiture-check, POST /api/io/ot-auto-open");
 }

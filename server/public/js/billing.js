@@ -1038,12 +1038,18 @@ function otDashRender() {
   OT_DASH.filteredRequests.forEach(r => {
     const submittedDate = r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
     const approvedDate = r.applied_date ? new Date(r.applied_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-    const statusColor = r.status === 'approved' ? 'var(--accent)' : 'var(--fg)';
-    const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);' : '';
+    const statusColor = r.status === 'approved' ? 'var(--accent)' : r.status === 'forfeited' ? '#dc2626' : 'var(--fg)';
+    const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);'
+      : r.status === 'forfeited' ? 'background:rgba(220,38,38,0.04);' : '';
 
-    const statusLabel = r.status === 'approved' ? 'Approved' : 'Waitlisted';
-    const statusBadgeBg = r.status === 'approved' ? 'rgba(22,163,74,0.1)' : 'rgba(234,179,8,0.1)';
-    const statusBadgeColor = r.status === 'approved' ? '#16a34a' : '#b45309';
+    let statusLabel, statusBadgeBg, statusBadgeColor;
+    if (r.status === 'approved') {
+      statusLabel = 'Approved'; statusBadgeBg = 'rgba(22,163,74,0.1)'; statusBadgeColor = '#16a34a';
+    } else if (r.status === 'forfeited') {
+      statusLabel = 'Forfeited'; statusBadgeBg = 'rgba(220,38,38,0.1)'; statusBadgeColor = '#dc2626';
+    } else {
+      statusLabel = 'Waitlisted'; statusBadgeBg = 'rgba(234,179,8,0.1)'; statusBadgeColor = '#b45309';
+    }
 
     html += `<tr style="${rowBg}">
       <td style="padding:8px 12px;">${submittedDate}</td>

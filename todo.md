@@ -992,3 +992,16 @@
 - [x] RECALL agents and non-agent roles (SME, TL, Manager, etc.) always edit OT normally, only 11 AM lock applies
 - [x] Apply lock on both frontend (Input Portal) and backend (PATCH endpoint)
 - [x] Hide "OT Request" option from Task Board for non-agent roles (SME, TL, Manager, etc.)
+
+## Batch 97 — Approvals Tab Visibility
+- [ ] TL: show own items + items from their agents
+- [ ] Manager: show all items
+- [ ] Admin (740045023): show all items
+- [ ] All other roles (agents, SME, etc.): show only their own items
+
+## Batch 97 — OT Workflow Gap Fixes
+- [x] Add Saturday auto-open cron job at 1 AM PHT for all non-RECALL planning groups
+- [x] Add server-side validation on POST /ot-requests to reject submissions when OT form is closed
+- [x] Add "Forfeited" status badge in OT Dashboard table
+- [x] Add forfeiture notifications to agent and supervisor
+- [ ] (Hold) Forfeiture check timing — only checks yesterday, may miss retroactive tag changes
