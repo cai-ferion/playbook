@@ -1933,6 +1933,18 @@ body {
   color: var(--fg-muted);
   line-height: 1.5;
 }
+.alert-card-meta {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle, #e2e8f0);
+  line-height: 1.5;
+}
+.alert-meta-label {
+  font-weight: 600;
+  color: var(--fg-secondary, #64748b);
+}
 
 .alert-empty {
   text-align: center;

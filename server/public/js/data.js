@@ -262,18 +262,26 @@ function detectUPLViolations(records) {
   for (const r of filtered) {
     if (getEffectiveTag(r.tag) === 'UPL') {
       const key = `${r.agent}__${r.month}`;
-      if (!grouped[key]) grouped[key] = { agent: r.agent, month: r.month, count: 0 };
+      if (!grouped[key]) grouped[key] = { agent: r.agent, month: r.month, count: 0, dates: [], flm: r.flm || '' };
       grouped[key].count++;
+      if (r.date) grouped[key].dates.push(r.date);
+      if (!grouped[key].flm && r.flm) grouped[key].flm = r.flm;
     }
   }
   const alerts = [];
   for (const entry of Object.values(grouped)) {
     if (entry.count > 3) {
+      // Sort dates chronologically and format as MM/DD
+      const sortedDates = entry.dates.sort().map(d => {
+        const parts = d.split('-');
+        return parts.length === 3 ? `${parts[1]}/${parts[2]}` : d;
+      });
       alerts.push({
         id: `upl_${entry.agent}_${entry.month}`, category: 'upl_violation', agent: entry.agent,
         severity: 'critical', title: `${entry.count} UPL days in ${entry.month}`,
         detail: `${entry.agent} has ${entry.count} UPL days in ${entry.month} (threshold: >3)`,
-        count: entry.count, month: entry.month
+        count: entry.count, month: entry.month,
+        uplDates: sortedDates, supervisor: entry.flm
       });
     }
   }

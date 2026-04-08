@@ -1117,3 +1117,9 @@
 - [x] Root cause 2: ADMIN_OHR already declared (maintenance.js + admin.js both use const ADMIN_OHR)
 - [x] Fix: Moved maintenance.js before admin.js in script load order, removed duplicate const from admin.js
 - [x] Bumped all cache-busting to ?v=102g
+
+## Batch 103 — UPL Violations: Show Dates + Supervisor
+- [x] Update detectUPLViolations to collect UPL dates (sorted, formatted MM/DD) and supervisor (from r.flm)
+- [x] Update alert card rendering to display Supervisor and UPL Dates below each UPL Violations card
+- [x] Added .alert-card-meta and .alert-meta-label CSS styles
+- [x] Bumped data.js, app.js, styles.css cache-busting to ?v=103
