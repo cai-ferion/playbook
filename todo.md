@@ -1068,3 +1068,10 @@
 - [x] Absent alert: send to agent first, then supervisor (frontend notifyAbsentTag updated)
 - [x] Added getNotifTagLabel() for type-based tag badges on sidebar cards
 - [x] Bumped cache-busting to ?v=102
+
+## Batch 102b — Fix Risk Intelligence Month Filter Refresh
+- [x] Bug: Month dropdown change doesn't immediately refresh data (requires page switch)
+- [x] Bug: Nav badge shows "0" instead of actual alert count after month change
+- [x] Fix: applyAlertFilters() now calls updateAlertNavBadge() after renderAlerts()
+- [x] Fix: New updateAlertNavBadge() computes filtered count respecting month/week filters
+- [x] Fix: populateAlertFilterDropdowns() now preserves user-selected filters instead of resetting to current month

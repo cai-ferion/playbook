@@ -994,16 +994,32 @@ function showToast(message, type = 'info') {
 
 // ===== Update All Views =====
 
+function updateAlertNavBadge() {
+  const allAlerts = getAllAlerts(appState.records);
+  const monthFilter = appState.alertFilters.month;
+  const weekFilter = appState.alertFilters.weekEnding;
+  let total = 0;
+  for (const cat of (typeof ALERT_CATEGORIES !== 'undefined' ? ALERT_CATEGORIES : [])) {
+    let catAlerts = allAlerts[cat.id] || [];
+    if (cat.hasMonth && monthFilter && monthFilter !== 'All') {
+      catAlerts = catAlerts.filter(a => a.month === monthFilter);
+    }
+    if (cat.hasWeek && weekFilter && weekFilter !== 'All') {
+      catAlerts = catAlerts.filter(a => a.weekEnding === weekFilter);
+    }
+    total += catAlerts.length;
+  }
+  const alertNavEl = document.getElementById('alert-nav-count');
+  if (alertNavEl) alertNavEl.textContent = total;
+}
+
 function updateAllViews() {
   updateRefreshDisplay();
   populateInputFilterDropdowns();
   populateDashboardFilterDropdowns();
   populateAlertFilterDropdowns();
 
-  const alerts = getAllAlerts(appState.records);
-  const totalAlerts = getTotalAlertCount(alerts);
-  const alertNavEl = document.getElementById('alert-nav-count');
-  if (alertNavEl) alertNavEl.textContent = totalAlerts;
+  updateAlertNavBadge();
 
   if (appState.activeView === 'input') renderInputTable();
   if (appState.activeView === 'dashboard') renderDashboard();
@@ -2148,6 +2164,10 @@ const ALERT_CATEGORIES = [
 ];
 
 function populateAlertFilterDropdowns() {
+  // Preserve current user selection before rebuilding options
+  const prevMonth = appState.alertFilters.month;
+  const prevWeek = appState.alertFilters.weekEnding;
+
   // Show ALL months (Jan-Dec) regardless of loaded data
   fillSelect('alert-filter-month', MONTHS.slice(), 'All Months');
 
@@ -2164,19 +2184,32 @@ function populateAlertFilterDropdowns() {
   }
   fillSelect('alert-filter-week', allWeeks, 'All Weeks');
 
-  const currentMonth = getCurrentMonthName();
-  const currentWE = getCurrentWeekEnding();
-
+  // Restore previous selection if it exists, otherwise default to current month/week
   const monthEl = document.getElementById('alert-filter-month');
-  if ([...monthEl.options].some(o => o.value === currentMonth)) {
-    monthEl.value = currentMonth;
-    appState.alertFilters.month = currentMonth;
+  const weekEl = document.getElementById('alert-filter-week');
+
+  const targetMonth = prevMonth || getCurrentMonthName();
+  if ([...monthEl.options].some(o => o.value === targetMonth)) {
+    monthEl.value = targetMonth;
+    appState.alertFilters.month = targetMonth;
+  } else {
+    const currentMonth = getCurrentMonthName();
+    if ([...monthEl.options].some(o => o.value === currentMonth)) {
+      monthEl.value = currentMonth;
+      appState.alertFilters.month = currentMonth;
+    }
   }
 
-  const weekEl = document.getElementById('alert-filter-week');
-  if ([...weekEl.options].some(o => o.value === currentWE)) {
-    weekEl.value = currentWE;
-    appState.alertFilters.weekEnding = currentWE;
+  const targetWeek = prevWeek || getCurrentWeekEnding();
+  if ([...weekEl.options].some(o => o.value === targetWeek)) {
+    weekEl.value = targetWeek;
+    appState.alertFilters.weekEnding = targetWeek;
+  } else {
+    const currentWE = getCurrentWeekEnding();
+    if ([...weekEl.options].some(o => o.value === currentWE)) {
+      weekEl.value = currentWE;
+      appState.alertFilters.weekEnding = currentWE;
+    }
   }
 }
 
@@ -2231,6 +2264,8 @@ async function applyAlertFilters() {
   }
 
   renderAlerts();
+  // Update nav badge to reflect filtered alert count
+  updateAlertNavBadge();
 }
 
 function switchAlertCategory(cat) {
