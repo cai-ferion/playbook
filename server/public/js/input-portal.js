@@ -469,6 +469,27 @@ const serverPagState = {
   pageSize: 50,
 };
 
+// Track whether initial data load has happened
+var _initialLoadDone = false;
+
+function _showTableOverlay() {
+  var tableWrap = document.getElementById('input-table-wrapper') || document.querySelector('.input-table-container');
+  if (!tableWrap) return;
+  var existing = document.getElementById('table-loading-overlay');
+  if (existing) { existing.style.display = 'flex'; return; }
+  var overlay = document.createElement('div');
+  overlay.id = 'table-loading-overlay';
+  overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;z-index:10;pointer-events:none;border-radius:8px;';
+  overlay.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.12);font-size:13px;color:#555;"><div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>Updating...</div>';
+  tableWrap.style.position = 'relative';
+  tableWrap.appendChild(overlay);
+}
+
+function _hideTableOverlay() {
+  var overlay = document.getElementById('table-loading-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
 async function omnibarApplyView() {
   var dateFilter = omnibarState.filters['date_range'];
   var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
@@ -506,8 +527,15 @@ async function omnibarApplyView() {
   bulkDeselectAll();
   appState.inputPage = 0;
 
+  // Use full progress bar only for initial load; subtle overlay for filter changes
+  var useFullLoader = !_initialLoadDone;
+
   try {
-    showProgressBar('Loading Data...');
+    if (useFullLoader) {
+      showProgressBar('Loading Data...');
+    } else {
+      _showTableOverlay();
+    }
     var result = await fetchPaginatedAttendance({
       startDate: startDate, endDate: endDate,
       limit: serverPagState.pageSize,
@@ -517,10 +545,19 @@ async function omnibarApplyView() {
     });
     serverPagState.total = result.total;
     serverPagState.rows = result.rows;
-    hideProgressBar();
+    if (useFullLoader) {
+      hideProgressBar();
+      _initialLoadDone = true;
+    } else {
+      _hideTableOverlay();
+    }
     renderInputTableServerSide();
   } catch (err) {
-    hideProgressBar();
+    if (useFullLoader) {
+      hideProgressBar();
+    } else {
+      _hideTableOverlay();
+    }
     showToast('Failed to load data: ' + err.message, 'error');
   }
 }
@@ -557,6 +594,7 @@ async function serverPageChange(newPage) {
 
   appState.inputPage = newPage;
   try {
+    _showTableOverlay();
     var result = await fetchPaginatedAttendance({
       startDate: startDate, endDate: endDate,
       limit: serverPagState.pageSize,
@@ -566,8 +604,10 @@ async function serverPageChange(newPage) {
     });
     serverPagState.rows = result.rows;
     serverPagState.total = result.total;
+    _hideTableOverlay();
     renderInputTableServerSide();
   } catch (err) {
+    _hideTableOverlay();
     showToast('Failed to load page: ' + err.message, 'error');
   }
 }

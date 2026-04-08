@@ -1013,3 +1013,6 @@
 - [x] Remove is_locked auto-set during attendance sync (work-off and future week auto-lock)
 - [x] Remove is_locked visual indicators from frontend (row-locked class, lock icons)
 - [x] Unlock all currently locked attendance records in database
+
+## Batch 99 — Input Portal Performance
+- [x] Reduce loading screens: replaced full-screen progress bar with subtle table overlay for filter/sort/pagination changes (initial load still uses full progress bar)
