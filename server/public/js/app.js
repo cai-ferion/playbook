@@ -1246,6 +1246,16 @@ function renderInputTable() {
           </select></td>`;
         }
         if (col.key === 'ot') {
+          // OT lock for non-RECALL agents: locked from WE 04/17 onward (dates >= 2026-04-11)
+          // Exempt: RECALL_MEASUREMENT_CTR agents, non-agent roles (SME, TL, Manager, etc.), admin
+          const otLockDate = '2026-04-11'; // Saturday of next operational week
+          const isOtMechanismAgent = currentUser && currentUser.actual_role === 'Agent'
+            && !(currentUser.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')
+            && currentUser.ohr_id !== '740045023';
+          const isOtFieldLocked = isOtMechanismAgent && record.date >= otLockDate;
+          if (isOtFieldLocked) {
+            return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
+          }
           return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
         }
         if (col.key === 'remarks') {

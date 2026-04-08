@@ -985,3 +985,10 @@
 - [x] Add Forecasted OT column (average of all previous weeks' OT for that billing code), left of PL Count
 - [x] Add Forecasted UPL column (average of all previous weeks' UPL for that billing code), between Forecasted OT and PL Count
 - [x] Forecasted OT and Forecasted UPL only visible when viewing next week (WE after current WE)
+
+## Batch 96 — OT Edit Lock Mechanism
+- [x] Allow OT editing for all users until end of this week (Friday 04/10) with 11 AM lock
+- [x] From next week (04/11 onward), lock OT field for non-RECALL agents (role=Agent, planning group does NOT contain RECALL_MEASUREMENT_CTR)
+- [x] RECALL agents and non-agent roles (SME, TL, Manager, etc.) always edit OT normally, only 11 AM lock applies
+- [x] Apply lock on both frontend (Input Portal) and backend (PATCH endpoint)
+- [x] Hide "OT Request" option from Task Board for non-agent roles (SME, TL, Manager, etc.)

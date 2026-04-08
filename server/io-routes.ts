@@ -314,6 +314,29 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       }
     }
 
+    // OT field lock enforcement for non-RECALL agents from 2026-04-11 onward
+    // The lock applies based on the RECORD OWNER's role/PG, not the actor.
+    // Managers/TLs editing on behalf of agents are exempt (they can still edit OT).
+    // Only self-service OT edits by non-RECALL agents are blocked.
+    if (actorOhr !== "740045023" && (updates.ot_hours !== undefined)) {
+      const otLockDate = '2026-04-11';
+      const recordDate = current.log_date || '';
+      if (recordDate >= otLockDate) {
+        // Check if the actor is editing their own record (self-service)
+        const recordOwnerOhr = (current as any).ohr_id || '';
+        if (actorOhr === recordOwnerOhr) {
+          // Self-service: look up actor's role and planning group
+          const [actorEmp] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, actorOhr)).limit(1);
+          // Block if actor is an Agent and NOT in RECALL_MEASUREMENT_CTR
+          if (actorEmp && actorEmp.actual_role === 'Agent'
+            && !(actorEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+            return res.status(403).json({ error: "OT editing is locked for this date. OT is managed via the OT Dashboard." });
+          }
+        }
+        // If actor != record owner (e.g., Manager editing for an agent), allow it
+      }
+    }
+
     // Build audit entries for each changed field
     const now = new Date().toISOString();
     const fieldMap: Record<string, string> = {

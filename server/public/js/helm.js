@@ -1013,13 +1013,10 @@ async function helmShowNewRequestForm() {
   }
   // Filter request types based on role:
   // - Agents: only see OT Request (hide Attendance Backdated Change Tag)
-  // - Team Leaders & Managers: only see Attendance Backdated Change Tag (hide OT Request)
-  const isTLOrManager = cu && (cu.actual_role === 'Team Leader' || cu.actual_role === 'Manager');
+  // - Non-agents (TL, Manager, SME, etc.): only see Attendance Backdated Change Tag (hide OT Request)
   const filteredRequestTypes = isAgent
     ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
-    : isTLOrManager
-      ? HELM_REQUEST_TYPES.filter(t => t.value !== 'ot_request')
-      : HELM_REQUEST_TYPES;
+    : HELM_REQUEST_TYPES.filter(t => t.value !== 'ot_request');
   const typeOptions = filteredRequestTypes.map(t =>
     `<option value="${escapeAttr(t.value)}">${escapeHtml(t.label)}</option>`
   ).join('');
