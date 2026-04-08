@@ -1104,3 +1104,9 @@
 - [x] Fix: updateAlertNavBadge now applies same role-based filtering as renderAlerts
 - [x] Removed debug console.log statements
 - [x] Bumped cache-busting to ?v=102e3
+
+## Batch 102f — Fix Risk Intelligence Completely Broken After 102e
+- [x] Bug: Tabs not rendering, data not loading, page is blank after 102e changes
+- [x] Root cause: Lines 2362-2363 in applyAlertFilters accessed dash-start-date/dash-end-date .value without null checks — crashed the entire async function before renderAlerts() could run
+- [x] Fix: Added null-safe checks (dashStartEl/dashEndEl) before setting .value
+- [x] Bumped cache-busting to ?v=102f

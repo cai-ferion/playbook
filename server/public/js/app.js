@@ -2358,9 +2358,11 @@ async function applyAlertFilters() {
       console.error('Failed to load alert data:', err);
     }
 
-    // Sync date range to Dashboard and Input Portal
-    document.getElementById('dash-start-date').value = rangeStart;
-    document.getElementById('dash-end-date').value = rangeEnd;
+    // Sync date range to Dashboard and Input Portal (null-safe)
+    const dashStartEl = document.getElementById('dash-start-date');
+    const dashEndEl = document.getElementById('dash-end-date');
+    if (dashStartEl) dashStartEl.value = rangeStart;
+    if (dashEndEl) dashEndEl.value = rangeEnd;
     const inputStartEl = document.getElementById('input-filter-start-date');
     const inputEndEl = document.getElementById('input-filter-end-date');
     if (inputStartEl) inputStartEl.value = rangeStart;
