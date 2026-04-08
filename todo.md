@@ -1090,3 +1090,17 @@
 - [x] Fix: loadAllDataForAlerts() now calls await applyAlertFilters() to load data + render
 - [x] Fix: onchange handlers use void applyAlertFilters() for proper async invocation
 - [x] Bumped cache-busting to ?v=102d
+
+## Batch 102e — Fix Risk Intelligence Render Chain
+- [x] Bug: Data only renders after clicking a tab button, not on month switch or page load
+- [x] Root cause 1: switchView didn't await loadAllDataForAlerts() — fire-and-forget
+- [x] Root cause 2: filterAlertsByRole used r.supervisor instead of r.flm — Team Lead saw 0 alerts
+- [x] Root cause 3: currentUser missing planning_group/complete_planning_group fields
+- [x] Root cause 4: updateAlertNavBadge didn't apply role-based filtering
+- [x] Fix: Added await to loadAllDataForAlerts in switchView
+- [x] Fix: loadAllDataForAlerts calls populateAlertFilterDropdowns first, defaults to current month
+- [x] Fix: currentUser now includes planning_group, complete_planning_group, actualPlanningGroup
+- [x] Fix: filterAlertsByRole uses r.flm instead of r.supervisor
+- [x] Fix: updateAlertNavBadge now applies same role-based filtering as renderAlerts
+- [x] Removed debug console.log statements
+- [x] Bumped cache-busting to ?v=102e3

@@ -378,7 +378,10 @@ async function handleLogin() {
       ohr_id: emp.ohr_id,
       full_name: emp.full_name,
       actual_role: emp.actual_role,
-      employement_status: emp.employement_status
+      employement_status: emp.employement_status,
+      planning_group: emp.planning_group || '',
+      complete_planning_group: emp.complete_planning_group || '',
+      actualPlanningGroup: emp.planning_group || ''
     };
 
     sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
@@ -872,7 +875,7 @@ async function switchView(view) {
 
   if (view === 'input') renderInputTable();
   if (view === 'dashboard') renderDashboard();
-  if (view === 'alerts') loadAllDataForAlerts();
+  if (view === 'alerts') await loadAllDataForAlerts();
   if (view === 'billing') await initBillingCompliance();
   if (view === 'performance') { if (typeof initPerformance === 'function') await initPerformance(); }
   if (view === 'admin') { if (typeof onAdminViewLoad === 'function') onAdminViewLoad(); }
@@ -890,7 +893,20 @@ async function switchView(view) {
  * Called when switching to the alerts view.
  */
 async function loadAllDataForAlerts() {
-  // Trigger a full filter apply which loads data for the selected month and renders
+  // First, ensure the filter dropdowns are populated and synced with appState
+  populateAlertFilterDropdowns();
+
+  // If no month is selected (still 'All'), default to the current month
+  const monthEl = document.getElementById('alert-filter-month');
+  if (monthEl && (!monthEl.value || monthEl.value === 'All')) {
+    const currentMonth = getCurrentMonthName();
+    if ([...monthEl.options].some(o => o.value === currentMonth)) {
+      monthEl.value = currentMonth;
+      appState.alertFilters.month = currentMonth;
+    }
+  }
+
+  // Now trigger the full filter apply which loads data for the selected month and renders
   await applyAlertFilters();
 }
 
@@ -998,9 +1014,41 @@ function updateAlertNavBadge() {
   const allAlerts = getAllAlerts(appState.records);
   const monthFilter = appState.alertFilters.month;
   const weekFilter = appState.alertFilters.weekEnding;
+
+  // Apply same role-based filtering as renderAlerts
+  const role = currentUser ? currentUser.actual_role : '';
+  const userOhr = currentUser ? currentUser.ohr_id : '';
+  const isAdmin = userOhr === '740045023';
+
+  function filterByRole(alerts) {
+    if (!currentUser) return alerts;
+    if (isAdmin || role === 'Trainer') return alerts;
+    if (role === 'Team Lead') {
+      const myAgents = appState.records
+        .filter(r => r.flm === currentUser.full_name)
+        .map(r => r.agent);
+      const myAgentSet = new Set(myAgents);
+      return alerts.filter(a => myAgentSet.has(a.agent));
+    }
+    if (role === 'Manager') {
+      const myPG = currentUser.complete_planning_group || '';
+      if (!myPG) return alerts;
+      const pgList = myPG.split(',').map(s => s.trim().toLowerCase());
+      const pgAgents = appState.records
+        .filter(r => {
+          const rPG = (r.planningGroup || '').toLowerCase();
+          return pgList.some(pg => rPG.includes(pg));
+        })
+        .map(r => r.agent);
+      const pgAgentSet = new Set(pgAgents);
+      return alerts.filter(a => pgAgentSet.has(a.agent));
+    }
+    return alerts;
+  }
+
   let total = 0;
   for (const cat of (typeof ALERT_CATEGORIES !== 'undefined' ? ALERT_CATEGORIES : [])) {
-    let catAlerts = allAlerts[cat.id] || [];
+    let catAlerts = filterByRole(allAlerts[cat.id] || []);
     if (cat.hasMonth && monthFilter && monthFilter !== 'All') {
       catAlerts = catAlerts.filter(a => a.month === monthFilter);
     }
@@ -2349,7 +2397,7 @@ function renderAlerts() {
     if (role === 'Team Lead') {
       // Team Lead sees only alerts for agents they supervise
       const myAgents = appState.records
-        .filter(r => r.supervisor === (typeof currentUser !== 'undefined' ? currentUser.full_name : ''))
+        .filter(r => r.flm === (typeof currentUser !== 'undefined' ? currentUser.full_name : ''))
         .map(r => r.agent);
       const myAgentSet = new Set(myAgents);
       return alerts.filter(a => myAgentSet.has(a.agent));
