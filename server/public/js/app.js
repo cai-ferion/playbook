@@ -2163,6 +2163,37 @@ const ALERT_CATEGORIES = [
   { id: 'active_ml', label: 'Active ML', icon: '\u2139', description: 'Agents on Maternity Leave within the trailing 10-day window, showing WO days for timeline continuity.', hasMonth: false, hasWeek: false },
 ];
 
+/**
+ * Generate all Saturday week-endings for the given year.
+ */
+function getAllWeekEndings(year) {
+  const allWeeks = [];
+  const d = new Date(year, 0, 1);
+  while (d.getDay() !== 6) d.setDate(d.getDate() + 1);
+  while (d.getFullYear() === year) {
+    const we = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    allWeeks.push(we);
+    d.setDate(d.getDate() + 7);
+  }
+  return allWeeks;
+}
+
+/**
+ * Return week endings whose Sun-Sat span overlaps the given month (0-indexed).
+ */
+function getWeeksForMonth(allWeeks, monthIdx, year) {
+  const monthStart = new Date(year, monthIdx, 1);
+  const monthEnd = new Date(year, monthIdx + 1, 0); // last day of month
+  return allWeeks.filter(we => {
+    const parts = we.split('-');
+    const sat = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const sun = new Date(sat);
+    sun.setDate(sat.getDate() - 6);
+    // Week overlaps month if week-start <= month-end AND week-end >= month-start
+    return sun <= monthEnd && sat >= monthStart;
+  });
+}
+
 function populateAlertFilterDropdowns() {
   // Preserve current user selection before rebuilding options
   const prevMonth = appState.alertFilters.month;
@@ -2171,23 +2202,14 @@ function populateAlertFilterDropdowns() {
   // Show ALL months (Jan-Dec) regardless of loaded data
   fillSelect('alert-filter-month', MONTHS.slice(), 'All Months');
 
-  // Generate all week endings (Saturdays) for the current year to match getWeekEnding()
   const year = new Date().getFullYear();
-  const allWeeks = [];
-  const d = new Date(year, 0, 1);
-  // Find first Saturday (day 6)
-  while (d.getDay() !== 6) d.setDate(d.getDate() + 1);
-  while (d.getFullYear() === year) {
-    const we = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    allWeeks.push(we);
-    d.setDate(d.getDate() + 7);
-  }
-  fillSelect('alert-filter-week', allWeeks, 'All Weeks');
+  const allWeeks = getAllWeekEndings(year);
 
-  // Restore previous selection if it exists, otherwise default to current month/week
+  // Filter weeks based on selected month
   const monthEl = document.getElementById('alert-filter-month');
   const weekEl = document.getElementById('alert-filter-week');
 
+  // Restore month selection first
   const targetMonth = prevMonth || getCurrentMonthName();
   if ([...monthEl.options].some(o => o.value === targetMonth)) {
     monthEl.value = targetMonth;
@@ -2200,29 +2222,67 @@ function populateAlertFilterDropdowns() {
     }
   }
 
+  // Now populate weeks based on selected month
+  const selectedMonth = monthEl.value;
+  let weeksToShow = allWeeks;
+  if (selectedMonth && selectedMonth !== 'All') {
+    const monthIdx = MONTHS.indexOf(selectedMonth);
+    if (monthIdx >= 0) {
+      weeksToShow = getWeeksForMonth(allWeeks, monthIdx, year);
+    }
+  }
+  fillSelect('alert-filter-week', weeksToShow, 'All Weeks');
+
+  // Restore week selection if it's still in the filtered list, otherwise reset to All
   const targetWeek = prevWeek || getCurrentWeekEnding();
-  if ([...weekEl.options].some(o => o.value === targetWeek)) {
+  if (targetWeek && targetWeek !== 'All' && [...weekEl.options].some(o => o.value === targetWeek)) {
     weekEl.value = targetWeek;
     appState.alertFilters.weekEnding = targetWeek;
   } else {
-    const currentWE = getCurrentWeekEnding();
-    if ([...weekEl.options].some(o => o.value === currentWE)) {
-      weekEl.value = currentWE;
-      appState.alertFilters.weekEnding = currentWE;
-    }
+    weekEl.value = 'All';
+    appState.alertFilters.weekEnding = 'All';
   }
 }
 
 async function applyAlertFilters() {
-  const selectedMonth = document.getElementById('alert-filter-month').value;
-  const selectedWeek = document.getElementById('alert-filter-week').value;
+  const monthEl = document.getElementById('alert-filter-month');
+  const weekEl = document.getElementById('alert-filter-week');
+  const selectedMonth = monthEl.value;
+
+  // When month changes, rebuild week dropdown to show only overlapping weeks
+  const year = new Date().getFullYear();
+  const allWeeks = getAllWeekEndings(year);
+  const prevWeek = weekEl.value;
+
+  if (selectedMonth && selectedMonth !== 'All') {
+    const monthIdx = MONTHS.indexOf(selectedMonth);
+    if (monthIdx >= 0) {
+      const filteredWeeks = getWeeksForMonth(allWeeks, monthIdx, year);
+      fillSelect('alert-filter-week', filteredWeeks, 'All Weeks');
+      // Keep previous week if still valid, otherwise reset to All
+      if (prevWeek && prevWeek !== 'All' && [...weekEl.options].some(o => o.value === prevWeek)) {
+        weekEl.value = prevWeek;
+      } else {
+        weekEl.value = 'All';
+      }
+    }
+  } else {
+    // Month is "All" — show all weeks
+    fillSelect('alert-filter-week', allWeeks, 'All Weeks');
+    if (prevWeek && prevWeek !== 'All' && [...weekEl.options].some(o => o.value === prevWeek)) {
+      weekEl.value = prevWeek;
+    } else {
+      weekEl.value = 'All';
+    }
+  }
+
+  const selectedWeek = weekEl.value;
   appState.alertFilters.month = selectedMonth;
   appState.alertFilters.weekEnding = selectedWeek;
 
   // Determine the date range for the selected month/week and load data if needed
   let rangeStart = null;
   let rangeEnd = null;
-  const year = new Date().getFullYear();
 
   if (selectedMonth !== 'All') {
     const monthIdx = MONTHS.indexOf(selectedMonth);
@@ -2234,7 +2294,6 @@ async function applyAlertFilters() {
   }
 
   if (selectedWeek !== 'All') {
-    // Week ending is Saturday; week starts on Sunday (6 days before)
     const weParts = selectedWeek.split('-');
     const weDate = new Date(parseInt(weParts[0]), parseInt(weParts[1]) - 1, parseInt(weParts[2]));
     const sunStart = new Date(weDate);
@@ -2245,7 +2304,6 @@ async function applyAlertFilters() {
   }
 
   if (rangeStart && rangeEnd) {
-    // Load data for this range if not already loaded
     await ensureDataForRange(rangeStart, rangeEnd);
 
     // Sync date range to Dashboard and Input Portal
@@ -2255,7 +2313,6 @@ async function applyAlertFilters() {
     const inputEndEl = document.getElementById('input-filter-end-date');
     if (inputStartEl) inputStartEl.value = rangeStart;
     if (inputEndEl) inputEndEl.value = rangeEnd;
-    // Sync to omnibar if available
     if (typeof omnibarState !== 'undefined') {
       omnibarState.filters = omnibarState.filters.filter(f => f.key !== 'date_range');
       omnibarState.filters.unshift({ key: 'date_range', label: 'Date Range', type: 'date_range', startDate: rangeStart, endDate: rangeEnd });
@@ -2264,7 +2321,6 @@ async function applyAlertFilters() {
   }
 
   renderAlerts();
-  // Update nav badge to reflect filtered alert count
   updateAlertNavBadge();
 }
 

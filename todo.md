@@ -1075,3 +1075,10 @@
 - [x] Fix: applyAlertFilters() now calls updateAlertNavBadge() after renderAlerts()
 - [x] Fix: New updateAlertNavBadge() computes filtered count respecting month/week filters
 - [x] Fix: populateAlertFilterDropdowns() now preserves user-selected filters instead of resetting to current month
+
+## Batch 102c — Fix Risk Intelligence Week Dropdown + Nav Badge
+- [x] Week Ending dropdown auto-filters to show only weeks whose Sun-Sat span overlaps the selected month
+- [x] Nav badge count updates via updateAlertNavBadge() after every applyAlertFilters() call
+- [x] When month changes, week resets to "All Weeks" if current selection doesn't overlap
+- [x] Added getAllWeekEndings() and getWeeksForMonth() helper functions
+- [x] populateAlertFilterDropdowns() now uses month-aware week filtering on init too
