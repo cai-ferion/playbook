@@ -184,6 +184,17 @@ function getNotifIcon(type) {
   return icons[type] || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
 }
 
+function getNotifTagLabel(type) {
+  const labels = {
+    upl_notice: 'UPL', late_notice: 'LATE', absent_alert: 'Absent',
+    ot_request_submitted: 'OT', ot_form_open: 'OT Form', ot_form_reopen: 'OT Reopen',
+    ot_applied: 'OT Applied', ot_waitlisted: 'Waitlisted',
+    task_assigned: 'Task', backdate_request: 'Backdate',
+    record_save: 'Saved', billing_code_edit: 'Billing',
+  };
+  return labels[type] || '';
+}
+
 function getNotifColor(type) {
   const colors = {
     record_save: '#22c55e', billing_change: '#f59e0b', billing_code_edit: '#f59e0b',
@@ -305,15 +316,17 @@ function renderSidebarNotifList() {
       const accentColor = getNotifColor(n.type);
       const brief = getNotifBrief(n);
       const timeStr = formatNotifTime(n.created_at);
+      const tagLabel = getNotifTagLabel(n.type);
       html += `
         <div class="notif-item ${readClass}" data-id="${n.id}" onclick="handleNotifClick(${n.id})" style="border-left-color:${n.is_read ? 'transparent' : accentColor}">
-          <div class="notif-icon" style="background:${accentColor}15">${getNotifIcon(n.type)}</div>
+          <div class="notif-icon" style="background:${accentColor}18">${getNotifIcon(n.type)}</div>
           <div class="notif-content">
             <div class="notif-row">
               <span class="notif-title">${escapeHtml(n.title)}</span>
               <span class="notif-time">${timeStr}</span>
             </div>
             <div class="notif-brief">${escapeHtml(brief)}</div>
+            ${tagLabel ? `<span class="notif-tag" style="background:${accentColor}18;color:${accentColor}">${tagLabel}</span>` : ''}
           </div>
         </div>
       `;
@@ -383,8 +396,11 @@ function showNotifDetailCard(n) {
       break;
     case 'upl_notice':
     case 'late_notice':
-      if (meta.date) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Date</span><span class="notif-detail-value">${escapeHtml(meta.date)}</span></div>`;
       if (meta.agentName) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Agent</span><span class="notif-detail-value">${escapeHtml(meta.agentName)}</span></div>`;
+      if (meta.date) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Date</span><span class="notif-detail-value">${escapeHtml(meta.date)}</span></div>`;
+      if (meta.tag) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Tag</span><span class="notif-detail-value" style="color:${n.type === 'upl_notice' ? '#ef4444' : '#d97706'};font-weight:700">${escapeHtml(meta.tag)}</span></div>`;
+      if (meta.reason) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Reason</span><span class="notif-detail-value">${escapeHtml(meta.reason)}</span></div>`;
+      if (meta.remarks) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Remarks</span><span class="notif-detail-value">${escapeHtml(meta.remarks)}</span></div>`;
       break;
     default:
       if (n.message) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Details</span><span class="notif-detail-value">${escapeHtml(n.message)}</span></div>`;
@@ -437,14 +453,32 @@ async function notifyBackdateRequest(agentName, requestDate, newTag, reason) {
 // Removed: notifyUserLogin, notifySystemAlert, notifyCoachingIssued (Batch 51)
 
 async function notifyAbsentTag(agentName, agentOhr, date) {
+  // 1) Notify the agent first
   await createNotification({
     type: 'absent_alert',
     title: 'Absence Recorded',
-    message: `Marked absent on ${date || 'a recent date'}.`,
+    message: `You have been marked absent on ${date || 'a recent date'}.`,
     target_ohr: agentOhr || null,
     target_role: 'agent',
     metadata: { agentName, agentOhr, date },
   });
+
+  // 2) Notify the supervisor
+  if (agentOhr && typeof appState !== 'undefined' && appState.employees) {
+    const emp = appState.employees.find(e => e.ohr_id === agentOhr);
+    if (emp && emp.supervisor_name) {
+      const supervisor = appState.employees.find(e => e.full_name === emp.supervisor_name);
+      if (supervisor && supervisor.ohr_id) {
+        await createNotification({
+          type: 'absent_alert',
+          title: `Absence Recorded — ${agentName}`,
+          message: `${agentName} has been marked absent on ${date || 'a recent date'}.`,
+          target_ohr: supervisor.ohr_id,
+          metadata: { agentName, agentOhr, date },
+        });
+      }
+    }
+  }
 }
 
 // Removed: notifyTaskAssigned (Batch 51 — server-side handles this)

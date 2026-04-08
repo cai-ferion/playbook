@@ -1058,3 +1058,13 @@
 - [x] Investigate: 132 unlocked WO/PL records found (out of 1,916 total from 04/09+)
 - [x] Fix: set is_locked=true on all 132 records (0 errors)
 - [x] Verify: confirmed 0 unlocked WO/PL remaining from 04/09+
+
+## Batch 102 — Alerts Restyle & UPL/LATE Notification Fixes
+- [x] Restyle Alerts sidebar notification cards (larger icons, tag badges, better spacing, polished detail overlay)
+- [x] UPL alert: send to the tagged agent first, then to their supervisor (via name→OHR lookup)
+- [x] LATE alert: send to the tagged agent first, then to their supervisor (via name→OHR lookup)
+- [x] UPL alert: include reason and remarks in metadata + detail card
+- [x] LATE alert: include reason and remarks in metadata + detail card
+- [x] Absent alert: send to agent first, then supervisor (frontend notifyAbsentTag updated)
+- [x] Added getNotifTagLabel() for type-based tag badges on sidebar cards
+- [x] Bumped cache-busting to ?v=102

@@ -188,6 +188,15 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
     if (emp.ohr_id) employeeMap.set(emp.ohr_id, emp);
   }
 
+  // Build supervisor name → OHR lookup for sending supervisor notifications
+  const allEmployees = await db
+    .select({ ohr_id: ioEmployees.ohr_id, full_name: ioEmployees.full_name })
+    .from(ioEmployees);
+  const nameToOhr = new Map<string, string>();
+  for (const e of allEmployees) {
+    if (e.full_name && e.ohr_id) nameToOhr.set(e.full_name, e.ohr_id);
+  }
+
   let sent = 0;
   let errors = 0;
   let gchatQueued = 0;
@@ -200,17 +209,43 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
       const tagLabel = record.tag === "UPL" ? "Unplanned Leave (UPL)" : "Late Attendance (LATE)";
       const supervisorName = employee?.supervisor_name || "your supervisor";
 
-      // In-app notification for the tagged employee
+      const notifType = record.tag === "UPL" ? "upl_notice" : "late_notice";
+      const reason = record.reason || "Not specified";
+      const remarks = record.remarks || "No additional remarks";
+      const metaObj = {
+        attendance_id: record.id,
+        tag: record.tag,
+        date: record.log_date,
+        agentName,
+        reason,
+        remarks,
+      };
+
+      // 1) In-app notification for the tagged employee (sent first)
       await createNotification(db, {
-        type: record.tag === "UPL" ? "upl_notice" : "late_notice",
+        type: notifType,
         title: `${record.tag} Notice — ${readableDate}`,
-        message: `You have been tagged as ${tagLabel} for ${readableDate}.\n\nReason: ${record.reason || "Not specified"}\nRemarks: ${record.remarks || "No additional remarks"}\n\nPlease coordinate with your supervisor, ${supervisorName}, regarding this attendance record. If you believe this tag was applied in error, you may request for your supervisor to change this.`,
+        message: `You have been tagged as ${tagLabel} for ${readableDate}.\n\nReason: ${reason}\nRemarks: ${remarks}\n\nPlease coordinate with your supervisor, ${supervisorName}, regarding this attendance record. If you believe this tag was applied in error, you may request for your supervisor to change this.`,
         actor_name: "Playbook System",
         target_ohr: record.ohr_id || undefined,
-        metadata: JSON.stringify({ attendance_id: record.id, tag: record.tag, date: record.log_date }),
+        metadata: JSON.stringify(metaObj),
       });
 
       sent++;
+
+      // 2) In-app notification for the supervisor (sent second)
+      const supervisorOhr = employee?.supervisor_name ? nameToOhr.get(employee.supervisor_name) : null;
+      if (supervisorOhr) {
+        await createNotification(db, {
+          type: notifType,
+          title: `${record.tag} Notice — ${agentName}`,
+          message: `${agentName} has been tagged as ${tagLabel} for ${readableDate}.\n\nReason: ${reason}\nRemarks: ${remarks}`,
+          actor_name: "Playbook System",
+          target_ohr: supervisorOhr,
+          metadata: JSON.stringify(metaObj),
+        });
+        sent++;
+      }
 
       // Queue GChat rich card notification if employee has a gchat_space_id
       if (employee?.gchat_space_id) {
