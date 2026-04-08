@@ -302,17 +302,63 @@ function getGoalCell(totalPayload, targetHours, threshold) {
 
   if (ratio > 1.05) {
     const surplus = Math.round(totalPayload - (1.05 * targetHours));
-    return { text: `${surplus} hrs. surplus`, className: 'goal-surplus' };
+    const surplusHC = Math.ceil(surplus / 7.5);
+    return { text: `${surplus} hrs. (${surplusHC} HC) surplus`, className: 'goal-surplus' };
   } else if (ratio < thresholdDecimal) {
     const remaining = Math.round(neededForThreshold - totalPayload);
-    return { text: `${remaining} hrs. until ${threshold}%`, className: 'goal-warning' };
+    const remainingHC = Math.ceil(remaining / 7.5);
+    return { text: `${remaining} hrs. (${remainingHC} HC) until ${threshold}%`, className: 'goal-warning' };
   } else {
     return { text: 'Met', className: 'goal-met' };
   }
 }
 
 /**
+ * Determine if the selected week ending is the "next week" (the week after the current one).
+ * Used to conditionally show Forecasted OT and Forecasted UPL columns.
+ */
+function isNextWeekEnding(selectedWE) {
+  const currentWE = getBillingCurrentWeekEnding();
+  const currentFri = new Date(currentWE + 'T00:00:00');
+  const nextFri = new Date(currentFri);
+  nextFri.setDate(currentFri.getDate() + 7);
+  const nextWE = nextFri.getFullYear() + '-' + String(nextFri.getMonth() + 1).padStart(2, '0') + '-' + String(nextFri.getDate()).padStart(2, '0');
+  return selectedWE === nextWE;
+}
+
+/**
+ * Compute average OT rendered and UPL count per billing code from all previous weeks' YTD data.
+ * @param {string} selectedWE - The currently selected week ending (YYYY-MM-DD)
+ * @returns {{ [code: string]: { avgOT: number, avgUPL: number } }}
+ */
+function computeForecastAverages(selectedWE) {
+  const result = {};
+  if (!_ytdWeeklyDataCache) return result;
+
+  // Group by billing code, only include weeks BEFORE the selected week
+  const byCode = {};
+  for (const r of _ytdWeeklyDataCache) {
+    if (r.week_ending >= selectedWE) continue; // Only previous weeks
+    const code = (r.billing_code || '').trim();
+    if (!code) continue;
+    if (!byCode[code]) byCode[code] = { otTotal: 0, uplTotal: 0, weekCount: 0 };
+    byCode[code].otTotal += parseFloat(r.ot_rendered) || 0;
+    byCode[code].uplTotal += parseInt(r.upl_count) || 0;
+    byCode[code].weekCount++;
+  }
+
+  for (const [code, data] of Object.entries(byCode)) {
+    result[code] = {
+      avgOT: data.weekCount > 0 ? data.otTotal / data.weekCount : 0,
+      avgUPL: data.weekCount > 0 ? data.uplTotal / data.weekCount : 0,
+    };
+  }
+  return result;
+}
+
+/**
  * Render the billing compliance data table (with 98%, 100%, 102% goals).
+ * Conditionally shows Forecasted OT and Forecasted UPL columns when viewing next week.
  */
 function renderBillingComplianceTable(tableData) {
   const tbody = document.getElementById('billing-compliance-body');
@@ -321,8 +367,21 @@ function renderBillingComplianceTable(tableData) {
 
   tableEl.style.display = 'block';
 
+  const select = document.getElementById('billing-week-select');
+  const selectedWE = select ? select.value : '';
+  const showForecast = isNextWeekEnding(selectedWE);
+  const forecastData = showForecast ? computeForecastAverages(selectedWE) : {};
+
+  // Update table header: show/hide Forecasted OT and Forecasted UPL columns
+  const forecastOTHeader = document.getElementById('billing-th-forecast-ot');
+  const forecastUPLHeader = document.getElementById('billing-th-forecast-upl');
+  if (forecastOTHeader) forecastOTHeader.style.display = showForecast ? '' : 'none';
+  if (forecastUPLHeader) forecastUPLHeader.style.display = showForecast ? '' : 'none';
+
+  const totalCols = showForecast ? 12 : 10;
+
   if (tableData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--fg-muted);">No billing data found for the selected week.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center;padding:40px;color:var(--fg-muted);">No billing data found for the selected week.</td></tr>`;
     return;
   }
 
@@ -348,13 +407,25 @@ function renderBillingComplianceTable(tableData) {
     const hasDeficit102 = goal102.className === 'goal-warning';
     const hasAnyDeficit = hasDeficit98 || hasDeficit100 || hasDeficit102;
 
+    // Adjust deficit end column index based on whether forecast columns are shown
+    const goalStartCol = showForecast ? 9 : 7;
     let deficitEndCol = -1;
-    if (hasDeficit102) deficitEndCol = 9;
-    else if (hasDeficit100) deficitEndCol = 8;
-    else if (hasDeficit98) deficitEndCol = 7;
+    if (hasDeficit102) deficitEndCol = goalStartCol + 2;
+    else if (hasDeficit100) deficitEndCol = goalStartCol + 1;
+    else if (hasDeficit98) deficitEndCol = goalStartCol;
 
     function deficitClass(colIdx) {
       return (hasAnyDeficit && colIdx >= 0 && colIdx <= deficitEndCol) ? ' billing-deficit-highlight' : '';
+    }
+
+    // Forecast cells (only rendered when showForecast is true)
+    let forecastCells = '';
+    if (showForecast) {
+      const fc = forecastData[row.code] || { avgOT: 0, avgUPL: 0 };
+      forecastCells = `
+        <td class="cell-center${deficitClass(5)}" style="color:var(--text-secondary);font-style:italic;">${fc.avgOT > 0 ? fc.avgOT.toFixed(1) : '—'}</td>
+        <td class="cell-center${deficitClass(6)}" style="color:var(--text-secondary);font-style:italic;">${fc.avgUPL > 0 ? fc.avgUPL.toFixed(1) : '—'}</td>
+      `;
     }
 
     const tr = document.createElement('tr');
@@ -364,12 +435,13 @@ function renderBillingComplianceTable(tableData) {
       <td class="cell-center${deficitClass(1)}">${row.forecastedP}</td>
       <td class="cell-center${deficitClass(2)}">${row.otRendered > 0 ? row.otRendered.toFixed(1) : '0'}</td>
       <td class="cell-center${deficitClass(3)}">${row.deliveredHours.toFixed(1)}</td>
-      <td class="cell-center${deficitClass(4)}">${row.uplCount || ''}</td>
-      <td class="cell-center${deficitClass(5)}">${row.plCount || ''}</td>
-      <td class="cell-center ${actualClass}${deficitClass(6)}"><strong>${actualPct}</strong></td>
-      <td class="cell-center${deficitClass(7)}"><span class="goal-badge ${goal98.className}">${goal98.text}</span></td>
-      <td class="cell-center${deficitClass(8)}"><span class="goal-badge ${goal100.className}">${goal100.text}</span></td>
-      <td class="cell-center${deficitClass(9)}"><span class="goal-badge ${goal102.className}">${goal102.text}</span></td>
+      ${forecastCells}
+      <td class="cell-center${deficitClass(showForecast ? 7 : 4)}">${row.uplCount || ''}</td>
+      <td class="cell-center${deficitClass(showForecast ? 8 : 5)}">${row.plCount || ''}</td>
+      <td class="cell-center ${actualClass}${deficitClass(showForecast ? 9 : 6)}"><strong>${actualPct}</strong></td>
+      <td class="cell-center${deficitClass(showForecast ? 10 : 7)}"><span class="goal-badge ${goal98.className}">${goal98.text}</span></td>
+      <td class="cell-center${deficitClass(showForecast ? 11 : 8)}"><span class="goal-badge ${goal100.className}">${goal100.text}</span></td>
+      <td class="cell-center${deficitClass(showForecast ? 12 : 9)}"><span class="goal-badge ${goal102.className}">${goal102.text}</span></td>
     `;
     tbody.appendChild(tr);
   }

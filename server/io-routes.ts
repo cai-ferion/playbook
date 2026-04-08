@@ -1096,7 +1096,8 @@ router.get("/attendance/billing-ytd-weekly", async (req: Request, res: Response)
         ) AS week_ending,
         a.billing_code,
         SUM(CASE WHEN a.tag IN ('P', 'LATE', '') OR a.tag IS NULL THEN 1 ELSE 0 END) AS forecasted_p,
-        SUM(COALESCE(a.ot_hours, 0)) AS ot_rendered
+        SUM(COALESCE(a.ot_hours, 0)) AS ot_rendered,
+        SUM(CASE WHEN a.tag = 'UPL' THEN 1 ELSE 0 END) AS upl_count
       FROM io_attendance a
       WHERE a.log_date >= ${startDate}
         AND a.log_date <= ${endDate}

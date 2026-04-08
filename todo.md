@@ -979,3 +979,9 @@
 
 ## Batch 94 — OT Dashboard Cleanup
 - [x] Remove "Requested Hours" column from OT Dashboard table (since OT is now fixed at 2.5hrs)
+
+## Batch 95 — Billing Compliance Table Enhancements
+- [x] Add headcount needed beside each goal column (hours ÷ 7.5, round up)
+- [x] Add Forecasted OT column (average of all previous weeks' OT for that billing code), left of PL Count
+- [x] Add Forecasted UPL column (average of all previous weeks' UPL for that billing code), between Forecasted OT and PL Count
+- [x] Forecasted OT and Forecasted UPL only visible when viewing next week (WE after current WE)
