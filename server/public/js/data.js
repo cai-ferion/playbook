@@ -293,17 +293,26 @@ function detectNCNSPipeline(records) {
   const grouped = {};
   for (const r of filtered) {
     if (r.uplReason === 'NCNS') {
-      grouped[r.agent] = (grouped[r.agent] || 0) + 1;
+      if (!grouped[r.agent]) grouped[r.agent] = { count: 0, dates: [], supervisor: '' };
+      grouped[r.agent].count++;
+      if (r.date) {
+        const d = new Date(r.date);
+        grouped[r.agent].dates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
+      }
+      if (r.flm && !grouped[r.agent].supervisor) grouped[r.agent].supervisor = r.flm;
     }
   }
   const alerts = [];
-  for (const [agent, count] of Object.entries(grouped)) {
-    if (count >= 4) {
+  for (const [agent, data] of Object.entries(grouped)) {
+    if (data.count >= 4) {
       alerts.push({
         id: `ncns_${agent}`, category: 'ncns_pipeline', agent,
         severity: 'critical', title: 'RTWO Required',
-        detail: `${agent} has ${count} cumulative NCNS incidents (threshold: 4)`,
-        count
+        detail: `${agent} has ${data.count} cumulative NCNS incidents (threshold: 4)`,
+        count: data.count,
+        supervisor: data.supervisor,
+        metaDates: data.dates.sort(),
+        metaDatesLabel: 'NCNS Dates'
       });
     }
   }
@@ -321,22 +330,31 @@ function detectOffboardingRisk(records) {
   for (const [agent, agentRecords] of Object.entries(byAgent)) {
     const sorted = agentRecords.filter(r => r.date).sort((a, b) => new Date(a.date) - new Date(b.date));
     let consecutiveUPL = 0;
+    let uplDates = [];
+    let supervisor = '';
     for (const r of sorted) {
       const tag = getEffectiveTag(r.tag);
       if (tag === 'WO') continue;
       if (tag === 'UPL') {
         consecutiveUPL++;
+        const d = new Date(r.date);
+        uplDates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
+        if (r.flm && !supervisor) supervisor = r.flm;
         if (consecutiveUPL >= 10) {
           alerts.push({
             id: `offboard_${agent}`, category: 'offboarding_risk', agent,
             severity: 'critical', title: 'Critical Offboarding Risk',
             detail: `${agent} has ${consecutiveUPL} consecutive UPL days (WO excluded)`,
-            count: consecutiveUPL
+            count: consecutiveUPL,
+            supervisor,
+            metaDates: uplDates,
+            metaDatesLabel: 'Consecutive UPL Dates'
           });
           break;
         }
       } else {
         consecutiveUPL = 0;
+        uplDates = [];
       }
     }
   }
@@ -349,24 +367,30 @@ function detectWeeklyLateTrend(records) {
   for (const r of filtered) {
     if (getEffectiveTag(r.tag) === 'LATE') {
       const key = r.agent;
-      if (!grouped[key]) grouped[key] = {};
       const we = r.weekEnding || 'Unknown';
-      if (!grouped[key][we]) grouped[key][we] = 0;
-      grouped[key][we]++;
+      const compKey = `${key}||${we}`;
+      if (!grouped[compKey]) grouped[compKey] = { agent: key, weekEnding: we, count: 0, dates: [], supervisor: '' };
+      grouped[compKey].count++;
+      if (r.date) {
+        const d = new Date(r.date);
+        grouped[compKey].dates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
+      }
+      if (r.flm && !grouped[compKey].supervisor) grouped[compKey].supervisor = r.flm;
     }
   }
   const alerts = [];
-  for (const [agent, weeks] of Object.entries(grouped)) {
-    for (const [weekEnding, count] of Object.entries(weeks)) {
-      if (count >= 3) {
-        alerts.push({
-          id: `wlate_${agent}_${weekEnding}`, category: 'weekly_late', agent,
-          severity: 'warning', title: `Weekly Late: ${count} times`,
-          detail: `${agent} was late ${count} times in week ending ${weekEnding} (threshold: 3)`,
-          count, weekEnding,
-          month: getMonthFromWeekEnding(weekEnding)
-        });
-      }
+  for (const data of Object.values(grouped)) {
+    if (data.count >= 3) {
+      alerts.push({
+        id: `wlate_${data.agent}_${data.weekEnding}`, category: 'weekly_late', agent: data.agent,
+        severity: 'warning', title: `Weekly Late: ${data.count} times`,
+        detail: `${data.agent} was late ${data.count} times in week ending ${data.weekEnding} (threshold: 3)`,
+        count: data.count, weekEnding: data.weekEnding,
+        month: getMonthFromWeekEnding(data.weekEnding),
+        supervisor: data.supervisor,
+        metaDates: data.dates.sort(),
+        metaDatesLabel: 'Late Dates'
+      });
     }
   }
   return alerts.sort((a, b) => (b.count || 0) - (a.count || 0));
@@ -385,19 +409,27 @@ function detectMonthlyLateEscalation(records) {
     if (getEffectiveTag(r.tag) === 'LATE') {
       const key = r.agent;
       if (!grouped[key]) grouped[key] = {};
-      if (!grouped[key][r.month]) grouped[key][r.month] = 0;
-      grouped[key][r.month]++;
+      if (!grouped[key][r.month]) grouped[key][r.month] = { count: 0, dates: [], supervisor: '' };
+      grouped[key][r.month].count++;
+      if (r.date) {
+        const d = new Date(r.date);
+        grouped[key][r.month].dates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
+      }
+      if (r.flm && !grouped[key][r.month].supervisor) grouped[key][r.month].supervisor = r.flm;
     }
   }
   const alerts = [];
   for (const [agent, months] of Object.entries(grouped)) {
-    for (const [month, count] of Object.entries(months)) {
-      if (count >= 10) {
+    for (const [month, data] of Object.entries(months)) {
+      if (data.count >= 10) {
         alerts.push({
           id: `mlate_${agent}_${month}`, category: 'monthly_late', agent,
-          severity: 'critical', title: `Monthly Late Escalation: ${count} times`,
-          detail: `${agent} was late ${count} times in ${month} (threshold: 10)`,
-          count, month
+          severity: 'critical', title: `Monthly Late Escalation: ${data.count} times`,
+          detail: `${agent} was late ${data.count} times in ${month} (threshold: 10)`,
+          count: data.count, month,
+          supervisor: data.supervisor,
+          metaDates: data.dates.sort(),
+          metaDatesLabel: 'Late Dates'
         });
       }
     }
@@ -427,13 +459,22 @@ function detectActiveML(records) {
   for (const [agent, agentRecords] of Object.entries(byAgent)) {
     const hasML = agentRecords.some(r => getEffectiveTag(r.tag) === 'ML');
     if (hasML) {
-      const mlDays = agentRecords.filter(r => getEffectiveTag(r.tag) === 'ML').map(r => r.date);
+      const mlRecs = agentRecords.filter(r => getEffectiveTag(r.tag) === 'ML');
       const woDays = agentRecords.filter(r => getEffectiveTag(r.tag) === 'WO').map(r => r.date);
+      const mlDates = mlRecs.map(r => {
+        const d = new Date(r.date);
+        return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+      }).sort();
+      let supervisor = '';
+      for (const r of mlRecs) { if (r.flm) { supervisor = r.flm; break; } }
       alerts.push({
         id: `ml_${agent}`, category: 'active_ml', agent,
         severity: 'info', title: 'Active Maternity Leave',
-        detail: `ML days: ${mlDays.join(', ')}${woDays.length > 0 ? ' | WO days: ' + woDays.join(', ') : ''}`,
-        count: mlDays.length
+        detail: `ML days: ${mlDates.join(', ')}${woDays.length > 0 ? ' | WO days: ' + woDays.join(', ') : ''}`,
+        count: mlDates.length,
+        supervisor,
+        metaDates: mlDates,
+        metaDatesLabel: 'ML Dates'
       });
     }
   }

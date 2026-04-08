@@ -2463,15 +2463,16 @@ function renderAlerts() {
 
   listContainer.innerHTML = alerts.map(alert => {
     const severityClass = `severity-${alert.severity}`;
-    // Extra info for UPL Violations: dates and supervisor
+    // Metadata: supervisor + dates for all alert categories
     let extraHtml = '';
-    if (alert.category === 'upl_violation') {
-      if (alert.supervisor) {
-        extraHtml += `<div class="alert-card-meta"><span class="alert-meta-label">Supervisor:</span> ${escapeHtml(alert.supervisor)}</div>`;
-      }
-      if (alert.uplDates && alert.uplDates.length > 0) {
-        extraHtml += `<div class="alert-card-meta"><span class="alert-meta-label">UPL Dates:</span> ${alert.uplDates.map(d => escapeHtml(d)).join(', ')}</div>`;
-      }
+    if (alert.supervisor) {
+      extraHtml += `<div class="alert-card-meta"><span class="alert-meta-label">Supervisor:</span> ${escapeHtml(alert.supervisor)}</div>`;
+    }
+    // UPL Violations use uplDates, all others use metaDates
+    const dates = alert.uplDates || alert.metaDates;
+    const datesLabel = alert.metaDatesLabel || 'Dates';
+    if (dates && dates.length > 0) {
+      extraHtml += `<div class="alert-card-meta"><span class="alert-meta-label">${escapeHtml(datesLabel)}:</span> ${dates.map(d => escapeHtml(d)).join(', ')}</div>`;
     }
     return `<div class="alert-card ${severityClass}">
       <div class="alert-card-header">

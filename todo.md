@@ -1123,3 +1123,12 @@
 - [x] Update alert card rendering to display Supervisor and UPL Dates below each UPL Violations card
 - [x] Added .alert-card-meta and .alert-meta-label CSS styles
 - [x] Bumped data.js, app.js, styles.css cache-busting to ?v=103
+
+## Batch 103b — Add Metadata to All Risk Intelligence Alert Cards
+- [x] NCNS Pipeline: add NCNS dates (MM/DD sorted) and supervisor
+- [x] Offboarding Risk: add consecutive UPL dates and supervisor
+- [x] Weekly Late: add late dates and supervisor
+- [x] Monthly Late: add late dates and supervisor
+- [x] Active ML: add ML dates and supervisor
+- [x] Update alert card rendering — generic metadata display for all categories (supervisor + labeled dates)
+- [x] Bumped data.js, app.js cache-busting to ?v=103b
