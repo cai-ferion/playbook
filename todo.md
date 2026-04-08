@@ -1053,3 +1053,8 @@
 - [x] Frontend helm.js: OT submission guard — S-ABF & CS-ABF Agents only
 - [x] Bumped all cache-busting to ?v=101
 - [x] Backend verified: S-ABF Agent blocked (403), RECALL Agent allowed (200), Team Lead allowed (200)
+
+## Batch 101b — Fix Unlocked WO/PL Records from 04/09 Onward
+- [x] Investigate: 132 unlocked WO/PL records found (out of 1,916 total from 04/09+)
+- [x] Fix: set is_locked=true on all 132 records (0 errors)
+- [x] Verify: confirmed 0 unlocked WO/PL remaining from 04/09+
