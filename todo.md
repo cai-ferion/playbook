@@ -962,3 +962,9 @@
 - [x] First verification — all 1,544 records match field-by-field
 - [x] Second verification — 90/90 spot-checks passed (20 locked + 40 random + 30 tag changes)
 - [x] Third verification — all counts, tag/billing/supervisor/planning group distributions match (1 null vs empty string cosmetic diff)
+
+## Batch 92 — Asset Inventory Uses Dashboard Filters
+- [ ] Make Asset Inventory & Endorsement table use Dashboard-filtered records instead of fixed/hardcoded counts
+
+## Batch 92 — OT Dashboard Visibility Fix
+- [x] Fix: Senior Manager (Ravikiran Polimetla, OHR 703212987) cannot see OT Dashboard tab — RECALL_MEASUREMENT_CTR check in billing.js hides tab bar for anyone with that planning group, including Managers who manage multiple groups. Exempt Manager role from the hide logic.

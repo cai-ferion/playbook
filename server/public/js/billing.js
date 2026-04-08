@@ -168,28 +168,31 @@ async function initBillingCompliance() {
   // Load YTD analytics: doughnut (per-week compliance) + trend charts
   loadBillingYTDAnalytics();
 
-  // Hide tab bar for RECALL_MEASUREMENT_CTR employees
+  // Hide tab bar for RECALL_MEASUREMENT_CTR employees (exempt Managers and admin)
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   if (cu) {
-    try {
-      const empResp = await fetch(`${IO_API_BASE}/employees`);
-      if (empResp.ok) {
-        const allEmps = await empResp.json();
-        const myEmp = allEmps.find(e => e.ohr_id === cu.ohr_id);
-        if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
-          // Hide tab bar — they only see the Billing Dashboard content without tabs
-          const tabBar = document.querySelector('.billing-tab-bar');
-          if (tabBar) tabBar.style.display = 'none';
-          // Ensure Billing Dashboard tab is visible
-          const billingTab = document.getElementById('billing-tab-billing-dashboard');
-          if (billingTab) billingTab.style.display = '';
-          const otTab = document.getElementById('billing-tab-ot-dashboard');
-          if (otTab) otTab.style.display = 'none';
-          return; // Skip OT Dashboard init
+    const isManagerOrAdmin = cu.actual_role === 'Manager' || cu.ohr_id === '740045023';
+    if (!isManagerOrAdmin) {
+      try {
+        const empResp = await fetch(`${IO_API_BASE}/employees`);
+        if (empResp.ok) {
+          const allEmps = await empResp.json();
+          const myEmp = allEmps.find(e => e.ohr_id === cu.ohr_id);
+          if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+            // Hide tab bar — they only see the Billing Dashboard content without tabs
+            const tabBar = document.querySelector('.billing-tab-bar');
+            if (tabBar) tabBar.style.display = 'none';
+            // Ensure Billing Dashboard tab is visible
+            const billingTab = document.getElementById('billing-tab-billing-dashboard');
+            if (billingTab) billingTab.style.display = '';
+            const otTab = document.getElementById('billing-tab-ot-dashboard');
+            if (otTab) otTab.style.display = 'none';
+            return; // Skip OT Dashboard init
+          }
         }
+      } catch (e) {
+        console.warn('Failed to check employee planning group:', e);
       }
-    } catch (e) {
-      console.warn('Failed to check employee planning group:', e);
     }
   }
 
