@@ -1026,3 +1026,16 @@
 - [x] Verify import accuracy (1,784/1,797 match, 1 mismatch=UPL override, 12 missing=employees not in DB)
 - [x] Bump cache-busting version to ?v=100
 - [x] Add bulk-import endpoint (POST /attendance/bulk-import) for admin-only batch operations
+
+## Batch 100b — Remove Non-Roster OHRs
+- [x] Delete all records for OHR 703188146 from all tables (attendance, employees, etc.) — 0 attendance, 0 employee records found (never in DB)
+- [x] Delete all records for OHR 740043139 from all tables — 0 attendance, 0 employee records found (never in DB)
+- [x] Delete all records for OHR 740044631 from all tables — 0 attendance, 0 employee records found (never in DB)
+- [x] Verify no remaining data for these 3 OHRs — confirmed clean
+
+## Batch 100c — Fix is_locked Enforcement Bug
+- [x] Bug: OHR 740043993 can edit locked WO record for Mansalay, Jandy Mahinay on 04/09
+- [x] Investigate: backend enforcement confirmed working (PATCH returns 403); issue was frontend-only
+- [x] Fix: Added is_locked to normalizeRecord() in data.js + isRowLocked() in app.js now checks record.is_locked
+- [x] Lock icon tooltip differentiates schedule lock vs date lock
+- [x] Bumped data.js cache-busting to ?v=100

@@ -502,6 +502,7 @@ function normalizeRecord(att) {
     weekEnding: dateStr ? getWeekEnding(dateStr) : '',
     month: dateStr ? getMonthName(dateStr) : '',
     concat: dateStr ? generateConcat(dateStr, (att.ohr_id || '').toString().trim()) : '',
+    is_locked: att.is_locked === true || att.is_locked === 1,
   };
 }
 

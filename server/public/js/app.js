@@ -1364,6 +1364,12 @@ function isRowLocked(record) {
     return false;
   }
 
+  // is_locked enforcement (Batch 100): WO/PL records from Final Cut Schedule
+  // are locked for everyone except Managers and admin (handled above)
+  if (record.is_locked) {
+    return true;
+  }
+
   const now = new Date();
   // Convert to Philippine Time (UTC+8)
   const phtOffset = 8 * 60; // minutes
