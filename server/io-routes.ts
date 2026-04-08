@@ -248,6 +248,61 @@ router.get("/attendance", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/io/attendance/bulk-import - bulk create/update attendance records (admin only)
+router.post("/attendance/bulk-import", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const actorOhr = req.headers["x-actor-ohr"] as string || "";
+    if (actorOhr !== "740045023") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+
+    const { updates, creates } = req.body;
+    // updates: [{id, tag?, is_locked?, locked_at?}, ...]
+    // creates: [{id, ohr_id, log_date, tag, billing_code, created_at, snap_*, is_locked, locked_at}, ...]
+
+    let updatedCount = 0;
+    let createdCount = 0;
+    const errors: string[] = [];
+    const now = new Date().toISOString();
+
+    // Process updates in batches
+    if (updates && Array.isArray(updates)) {
+      for (const u of updates) {
+        try {
+          const setObj: any = {};
+          if (u.tag !== undefined) setObj.tag = u.tag;
+          if (u.is_locked !== undefined) setObj.is_locked = u.is_locked;
+          if (u.locked_at !== undefined) setObj.locked_at = u.locked_at;
+          await db.update(ioAttendance).set(setObj).where(eq(ioAttendance.id, u.id));
+          updatedCount++;
+        } catch (e: any) {
+          errors.push(`update ${u.id}: ${e.message}`);
+        }
+      }
+    }
+
+    // Process creates
+    if (creates && Array.isArray(creates)) {
+      for (const c of creates) {
+        try {
+          await db.insert(ioAttendance).values(c);
+          createdCount++;
+        } catch (e: any) {
+          errors.push(`create ${c.ohr_id}_${c.log_date}: ${e.message}`);
+        }
+      }
+    }
+
+    res.json({ ok: true, updatedCount, createdCount, errors: errors.slice(0, 20), totalErrors: errors.length });
+  } catch (err: any) {
+    console.error("[IO API] attendance bulk-import error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/io/attendance/bulk-update - update multiple attendance records matching filters
 router.patch("/attendance/bulk-update", async (req: Request, res: Response) => {
   try {
@@ -289,7 +344,18 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const [current] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, recordId)).limit(1);
     if (!current) return res.status(404).json({ error: "Record not found" });
 
-    // NOTE: is_locked record-level lock removed in Batch 98. Only date-based + OT locks remain.
+    // is_locked enforcement (Batch 100): WO/PL records from Final Cut Schedule are locked.
+    // Only Managers (actual_role='Manager') and admin (740045023) can edit locked records.
+    if (current.is_locked) {
+      if (actorOhr !== "740045023") {
+        // Look up actor's role
+        const [actorEmpLock] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, actorOhr)).limit(1);
+        const actorRole = actorEmpLock?.actual_role || '';
+        if (actorRole !== 'Manager') {
+          return res.status(403).json({ error: "This record is locked. Only Managers or Admin can edit locked records." });
+        }
+      }
+    }
 
     // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin)
     // Exception: OT-only edits are allowed on past dates within the current operational week (Sat-Fri)
@@ -842,7 +908,14 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
       const [record] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, id)).limit(1);
       if (!record) continue;
 
-      // NOTE: is_locked record-level lock removed in Batch 98.
+      // is_locked enforcement (Batch 100): locked records only editable by Managers + admin
+      if (record.is_locked && actor_ohr !== "740045023") {
+        const [actorEmpBulk] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, actor_ohr)).limit(1);
+        if (!actorEmpBulk || actorEmpBulk.actual_role !== 'Manager') {
+          locked++;
+          continue;
+        }
+      }
 
       // Date-based lock: yesterday and earlier locked after 11 AM PHT (except admin)
       if (actor_ohr !== "740045023") {

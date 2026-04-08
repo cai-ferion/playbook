@@ -1016,3 +1016,13 @@
 
 ## Batch 99 — Input Portal Performance
 - [x] Reduce loading screens: replaced full-screen progress bar with subtle table overlay for filter/sort/pagination changes (initial load still uses full progress bar)
+
+## Batch 100 — Final Cut Schedule Import
+- [x] Read cleaned Final Cut Schedule (04/09-04/24), extract WO/PL per OHR+date (1,797 entries: 1,658 WO + 139 PL)
+- [x] Re-enable is_locked enforcement in backend PATCH + bulk-tag (Managers + admin 740045023 can override)
+- [x] For existing records with empty tag: set WO/PL from schedule (1,279 updated)
+- [x] For missing records (04/11+): create with WO/PL tag + employee snapshot (40 created; 12 skipped — 3 OHRs not in employee DB)
+- [x] Lock all WO/PL records from schedule (is_locked = true) (465 lock-only + all updates/creates)
+- [x] Verify import accuracy (1,784/1,797 match, 1 mismatch=UPL override, 12 missing=employees not in DB)
+- [x] Bump cache-busting version to ?v=100
+- [x] Add bulk-import endpoint (POST /attendance/bulk-import) for admin-only batch operations
