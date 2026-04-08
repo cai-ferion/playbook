@@ -2367,7 +2367,7 @@ async function applyAlertFilters() {
     const inputEndEl = document.getElementById('input-filter-end-date');
     if (inputStartEl) inputStartEl.value = rangeStart;
     if (inputEndEl) inputEndEl.value = rangeEnd;
-    if (typeof omnibarState !== 'undefined') {
+    if (typeof omnibarState !== 'undefined' && Array.isArray(omnibarState.filters)) {
       omnibarState.filters = omnibarState.filters.filter(f => f.key !== 'date_range');
       omnibarState.filters.unshift({ key: 'date_range', label: 'Date Range', type: 'date_range', startDate: rangeStart, endDate: rangeEnd });
       if (typeof renderOmnibarChips === 'function') renderOmnibarChips();

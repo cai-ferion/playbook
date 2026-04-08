@@ -1110,3 +1110,10 @@
 - [x] Root cause: Lines 2362-2363 in applyAlertFilters accessed dash-start-date/dash-end-date .value without null checks — crashed the entire async function before renderAlerts() could run
 - [x] Fix: Added null-safe checks (dashStartEl/dashEndEl) before setting .value
 - [x] Bumped cache-busting to ?v=102f
+
+## Batch 102g — Fix Risk Intelligence (Console Errors)
+- [x] Root cause 1: omnibarState.filters.filter is not a function (app.js:2371) — omnibarState.filters not yet an array when alerts load
+- [x] Fix: Added Array.isArray(omnibarState.filters) guard before calling .filter()
+- [x] Root cause 2: ADMIN_OHR already declared (maintenance.js + admin.js both use const ADMIN_OHR)
+- [x] Fix: Moved maintenance.js before admin.js in script load order, removed duplicate const from admin.js
+- [x] Bumped all cache-busting to ?v=102g

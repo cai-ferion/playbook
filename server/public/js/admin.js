@@ -7,7 +7,7 @@
 
 // ===== Constants =====
 
-const ADMIN_OHR = '740045023';
+// ADMIN_OHR is declared in maintenance.js (loaded before admin.js)
 
 // Planning group mapping: CSV value -> DB value
 const PG_MAPPING = {
