@@ -1082,3 +1082,11 @@
 - [x] When month changes, week resets to "All Weeks" if current selection doesn't overlap
 - [x] Added getAllWeekEndings() and getWeeksForMonth() helper functions
 - [x] populateAlertFilterDropdowns() now uses month-aware week filtering on init too
+
+## Batch 102d — Fix Risk Intelligence Async Data Load Race Condition
+- [x] Bug: Switching months doesn't populate data immediately
+- [x] Bug: Nav badge stays at 0 after month switch
+- [x] Root cause: loadAllDataForAlerts() only called renderAlerts() without loading data for selected month
+- [x] Fix: loadAllDataForAlerts() now calls await applyAlertFilters() to load data + render
+- [x] Fix: onchange handlers use void applyAlertFilters() for proper async invocation
+- [x] Bumped cache-busting to ?v=102d

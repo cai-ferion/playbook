@@ -886,12 +886,12 @@ async function switchView(view) {
 }
 
 /**
- * Load all data for Risk Alerts if not already loaded.
+ * Load data for Risk Alerts based on the currently selected month filter.
+ * Called when switching to the alerts view.
  */
 async function loadAllDataForAlerts() {
-  // Risk alerts use only the currently loaded date range
-  // Data will be loaded on-demand when user changes date filters
-  renderAlerts();
+  // Trigger a full filter apply which loads data for the selected month and renders
+  await applyAlertFilters();
 }
 
 // ===== Refresh Data =====
@@ -2259,7 +2259,6 @@ async function applyAlertFilters() {
     if (monthIdx >= 0) {
       const filteredWeeks = getWeeksForMonth(allWeeks, monthIdx, year);
       fillSelect('alert-filter-week', filteredWeeks, 'All Weeks');
-      // Keep previous week if still valid, otherwise reset to All
       if (prevWeek && prevWeek !== 'All' && [...weekEl.options].some(o => o.value === prevWeek)) {
         weekEl.value = prevWeek;
       } else {
@@ -2267,7 +2266,6 @@ async function applyAlertFilters() {
       }
     }
   } else {
-    // Month is "All" — show all weeks
     fillSelect('alert-filter-week', allWeeks, 'All Weeks');
     if (prevWeek && prevWeek !== 'All' && [...weekEl.options].some(o => o.value === prevWeek)) {
       weekEl.value = prevWeek;
@@ -2280,7 +2278,7 @@ async function applyAlertFilters() {
   appState.alertFilters.month = selectedMonth;
   appState.alertFilters.weekEnding = selectedWeek;
 
-  // Determine the date range for the selected month/week and load data if needed
+  // Always compute the full date range to load for the selected month
   let rangeStart = null;
   let rangeEnd = null;
 
@@ -2293,6 +2291,7 @@ async function applyAlertFilters() {
     }
   }
 
+  // Expand range if a specific week is selected that extends beyond the month
   if (selectedWeek !== 'All') {
     const weParts = selectedWeek.split('-');
     const weDate = new Date(parseInt(weParts[0]), parseInt(weParts[1]) - 1, parseInt(weParts[2]));
@@ -2303,8 +2302,13 @@ async function applyAlertFilters() {
     if (!rangeEnd || selectedWeek > rangeEnd) rangeEnd = selectedWeek;
   }
 
+  // Load data for the range, then render AFTER data is available
   if (rangeStart && rangeEnd) {
-    await ensureDataForRange(rangeStart, rangeEnd);
+    try {
+      await ensureDataForRange(rangeStart, rangeEnd);
+    } catch (err) {
+      console.error('Failed to load alert data:', err);
+    }
 
     // Sync date range to Dashboard and Input Portal
     document.getElementById('dash-start-date').value = rangeStart;
@@ -2320,6 +2324,7 @@ async function applyAlertFilters() {
     }
   }
 
+  // Render AFTER data has been loaded (await above ensures this)
   renderAlerts();
   updateAlertNavBadge();
 }
