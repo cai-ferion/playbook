@@ -897,8 +897,10 @@ function renderTableRow(item) {
         + '</select></td>';
     }
     if (col.key === 'ot') {
-      var isRecall = (record.completePlanningGroup || '').includes('RECALL_MEASUREMENT_CTR');
-      if (!isRecall) {
+      // OT mechanism lock: only S-ABF & CS-ABF Agents have OT locked (managed via OT Dashboard)
+      var OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
+      var isOtMechAgent = (record.role === 'Agent') && OT_MECH_PGS.indexOf(record.actualPlanningGroup) !== -1;
+      if (isOtMechAgent) {
         return '<td class="cell-readonly cell-locked ' + widthClass + '">' + escapeHtml(val) + '</td>';
       }
       return '<td class="cell-editable ' + widthClass + '"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="' + escapeAttr(val) + '" data-idx="' + globalIdx + '" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>';

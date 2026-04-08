@@ -940,9 +940,13 @@ async function helmShowNewRequestForm() {
   // Filter request types: hide Attendance Backdated Change Tag from agents
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  // OT mechanism only applies to S-ABF & CS-ABF Agents
+  const OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
+  const myEmpForOt = HELM.employees.find(e => e.ohr_id === (cu ? cu.ohr_id : ''));
+  const isOtMechAgent = isAgent && myEmpForOt && OT_MECH_PGS.includes(myEmpForOt.planning_group || '');
 
-  // Pre-check: if agent, check if they already submitted an OT request this week
-  if (isAgent && cu) {
+  // Pre-check: if S-ABF/CS-ABF agent, check if they already submitted an OT request this week
+  if (isOtMechAgent && cu) {
     try {
       const otResp = await fetch(`${IO_API_BASE}/ot-requests?ohr_id=${encodeURIComponent(cu.ohr_id)}`);
       if (otResp.ok) {
@@ -1011,10 +1015,10 @@ async function helmShowNewRequestForm() {
       console.warn('Failed to pre-check OT requests:', e);
     }
   }
-  // Filter request types based on role:
-  // - Agents: only see OT Request (hide Attendance Backdated Change Tag)
-  // - Non-agents (TL, Manager, SME, etc.): only see Attendance Backdated Change Tag (hide OT Request)
-  const filteredRequestTypes = isAgent
+  // Filter request types based on role & planning group:
+  // - S-ABF & CS-ABF Agents: only see OT Request (hide Attendance Backdated Change Tag)
+  // - All others (non S-ABF/CS-ABF agents, TL, Manager, SME, etc.): only see Attendance Backdated Change Tag (hide OT Request)
+  const filteredRequestTypes = isOtMechAgent
     ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
     : HELM_REQUEST_TYPES.filter(t => t.value !== 'ot_request');
   const typeOptions = filteredRequestTypes.map(t =>
@@ -1025,8 +1029,8 @@ async function helmShowNewRequestForm() {
     `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmSelectRequestAgent('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)} (${escapeHtml(e.ohr_id)})</div>`
   ).join('');
 
-  // For agents: auto-select OT Request, hide dropdown, show OT fields immediately
-  const agentAutoOT = isAgent;
+  // For S-ABF/CS-ABF agents: auto-select OT Request, hide dropdown, show OT fields immediately
+  const agentAutoOT = isOtMechAgent;
 
   // Calculate next week ending (Friday) for the OT commitment info
   // Week = Sat–Fri; next WE = the Friday of next week
@@ -1343,10 +1347,11 @@ async function helmSubmitNewRequest() {
     const otHours = '2.5'; // Fixed 2.5 hours commitment
     if (!cu) { showToast('You must be logged in to submit an OT request', 'error'); return; }
 
-    // Check if this agent is RECALL_MEASUREMENT_CTR (excluded from OT system)
+    // Check if this agent is in S-ABF or CS-ABF (only PGs eligible for OT requests)
+    const OT_SUB_PGS = ['S-ABF', 'CS-ABF'];
     const myEmp = HELM.employees.find(e => e.ohr_id === cu.ohr_id);
-    if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
-      showToast('OT requests are not available for your planning group', 'error');
+    if (!myEmp || !OT_SUB_PGS.includes(myEmp.planning_group || '')) {
+      showToast('OT requests are only available for S-ABF & CS-ABF agents', 'error');
       return;
     }
 

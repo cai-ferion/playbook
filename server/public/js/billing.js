@@ -168,9 +168,10 @@ async function initBillingCompliance() {
   // Load YTD analytics: doughnut (per-week compliance) + trend charts
   loadBillingYTDAnalytics();
 
-  // Hide OT Dashboard tab for RECALL_MEASUREMENT_CTR employees (all roles)
+  // Show OT Dashboard tab only for S-ABF & CS-ABF employees (and exempt OHRs)
   // Exempt ONLY: Ravikiran Polimetla (703212987), Joshua Masacote (740044909), Admin (740045023)
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
   if (cu) {
     const OT_TAB_EXEMPT_OHRS = ['703212987', '740044909', '740045023'];
     if (!OT_TAB_EXEMPT_OHRS.includes(cu.ohr_id)) {
@@ -179,11 +180,10 @@ async function initBillingCompliance() {
         if (empResp.ok) {
           const allEmps = await empResp.json();
           const myEmp = allEmps.find(e => e.ohr_id === cu.ohr_id);
-          if (myEmp && (myEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
-            // Hide tab bar — they only see the Billing Dashboard content without tabs
+          if (myEmp && !OT_MECH_PGS.includes(myEmp.planning_group || '')) {
+            // Not in S-ABF/CS-ABF — hide OT Dashboard tab
             const tabBar = document.querySelector('.billing-tab-bar');
             if (tabBar) tabBar.style.display = 'none';
-            // Ensure Billing Dashboard tab is visible
             const billingTab = document.getElementById('billing-tab-billing-dashboard');
             if (billingTab) billingTab.style.display = '';
             const otTab = document.getElementById('billing-tab-ot-dashboard');
@@ -973,14 +973,15 @@ async function otDashInit() {
     approvalControls.style.display = (cu && OT_APPROVER_OHRS.includes(cu.ohr_id)) ? 'flex' : 'none';
   }
 
-  // Populate planning group dropdown from employees (exclude RECALL_MEASUREMENT_CTR)
+  // Populate planning group dropdown from employees (S-ABF & CS-ABF only)
+  const OT_DASH_PGS = ['S-ABF', 'CS-ABF'];
   try {
     const resp = await fetch(`${IO_API_BASE}/employees`);
     if (resp.ok) {
       const employees = await resp.json();
       const pgSet = new Set();
       employees.forEach(e => {
-        if (e.planning_group && !(e.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+        if (e.planning_group && OT_DASH_PGS.includes(e.planning_group)) {
           pgSet.add(e.planning_group);
         }
       });

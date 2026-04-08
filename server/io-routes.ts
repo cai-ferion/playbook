@@ -396,26 +396,23 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       }
     }
 
-    // OT field lock enforcement for non-RECALL agents from 2026-04-11 onward
-    // The lock applies based on the RECORD OWNER's role/PG, not the actor.
-    // Managers/TLs editing on behalf of agents are exempt (they can still edit OT).
-    // Only self-service OT edits by non-RECALL agents are blocked.
+    // OT field lock enforcement for S-ABF & CS-ABF Agents from 2026-04-11 onward
+    // Only self-service OT edits by S-ABF/CS-ABF Agents are blocked.
+    // Managers/TLs editing on behalf of agents are exempt.
+    const OT_MECHANISM_PGS = ['S-ABF', 'CS-ABF'];
     if (actorOhr !== "740045023" && (updates.ot_hours !== undefined)) {
       const otLockDate = '2026-04-11';
       const recordDate = current.log_date || '';
       if (recordDate >= otLockDate) {
-        // Check if the actor is editing their own record (self-service)
         const recordOwnerOhr = (current as any).ohr_id || '';
         if (actorOhr === recordOwnerOhr) {
-          // Self-service: look up actor's role and planning group
           const [actorEmp] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, actorOhr)).limit(1);
-          // Block if actor is an Agent and NOT in RECALL_MEASUREMENT_CTR
+          // Block only if actor is an Agent in S-ABF or CS-ABF
           if (actorEmp && actorEmp.actual_role === 'Agent'
-            && !(actorEmp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) {
+            && OT_MECHANISM_PGS.includes(actorEmp.planning_group || '')) {
             return res.status(403).json({ error: "OT editing is locked for this date. OT is managed via the OT Dashboard." });
           }
         }
-        // If actor != record owner (e.g., Manager editing for an agent), allow it
       }
     }
 
@@ -1925,12 +1922,13 @@ router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
         updated_by: opened_by || "",
       });
     }
-    // Get all agents in this planning group (exclude RECALL_MEASUREMENT_CTR)
+    // Get all agents in this planning group (S-ABF & CS-ABF only)
+    const OT_MECHANISM_PGS = ['S-ABF', 'CS-ABF'];
     const agents = await db.select().from(ioEmployees)
       .where(eq(ioEmployees.planning_group, planning_group));
     const eligibleAgents = agents.filter((a: any) =>
       a.actual_role === "Agent" &&
-      !(a.complete_planning_group || "").includes("RECALL_MEASUREMENT_CTR")
+      OT_MECHANISM_PGS.includes(a.planning_group || '')
     );
     // Batch create in-app notifications for all eligible agents
     const notifTitle = isReopen ? "OT Form Reopened" : "OT Request Form Open";

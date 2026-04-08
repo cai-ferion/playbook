@@ -1039,3 +1039,17 @@
 - [x] Fix: Added is_locked to normalizeRecord() in data.js + isRowLocked() in app.js now checks record.is_locked
 - [x] Lock icon tooltip differentiates schedule lock vs date lock
 - [x] Bumped data.js cache-busting to ?v=100
+
+## Batch 101 — Scope OT Mechanism to S-ABF & CS-ABF Agents Only
+- [x] Audit all OT mechanism touchpoints (backend + frontend) — 10 touchpoints identified
+- [x] Backend: PATCH OT field lock — check planning_group S-ABF/CS-ABF instead of !RECALL
+- [x] Backend: open-form eligible agents — filter to S-ABF & CS-ABF Agents only
+- [x] Backend: autoOpenOtForms cron — only S-ABF & CS-ABF PGs
+- [x] Frontend app.js: OT column lock — S-ABF & CS-ABF Agents only (both locked-row and unlocked-row paths)
+- [x] Frontend input-portal.js: OT column lock — S-ABF & CS-ABF Agents only
+- [x] Frontend billing.js: OT Dashboard tab visibility — show only for S-ABF & CS-ABF employees
+- [x] Frontend billing.js: OT Dashboard PG dropdown — only S-ABF & CS-ABF
+- [x] Frontend helm.js: OT Request visibility in Task Board — S-ABF & CS-ABF Agents only
+- [x] Frontend helm.js: OT submission guard — S-ABF & CS-ABF Agents only
+- [x] Bumped all cache-busting to ?v=101
+- [x] Backend verified: S-ABF Agent blocked (403), RECALL Agent allowed (200), Team Lead allowed (200)

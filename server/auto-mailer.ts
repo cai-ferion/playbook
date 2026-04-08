@@ -576,9 +576,11 @@ async function runOtForfeitureCheck(db: ReturnType<typeof drizzle>): Promise<{ f
 }
 
 /**
- * Auto-open OT forms every Saturday 1:00 AM PHT for all non-RECALL planning groups.
+ * Auto-open OT forms every Saturday 1:00 AM PHT for S-ABF & CS-ABF planning groups only.
  * Resets open_count to 1 for the new week and notifies all eligible agents.
  */
+const OT_MECHANISM_PGS = ['S-ABF', 'CS-ABF'];
+
 async function autoOpenOtForms(db: ReturnType<typeof drizzle>): Promise<{ opened: number; notified: number; errors: number }> {
   let opened = 0, notified = 0, errors = 0;
   const now = new Date();
@@ -594,17 +596,17 @@ async function autoOpenOtForms(db: ReturnType<typeof drizzle>): Promise<{ opened
   const weekStartISO = weekStart.toISOString();
 
   try {
-    // Get all distinct planning groups from active employees (exclude RECALL_MEASUREMENT_CTR)
+    // Get all distinct planning groups from active employees (S-ABF & CS-ABF only)
     const allEmployees = await db.select().from(ioEmployees);
     const pgSet = new Set<string>();
     for (const emp of allEmployees) {
       if (!emp.planning_group) continue;
-      if ((emp.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')) continue;
+      if (!OT_MECHANISM_PGS.includes(emp.planning_group)) continue;
       if (emp.actual_role !== 'Agent') continue;
       pgSet.add(emp.planning_group);
     }
     const planningGroups = Array.from(pgSet);
-    console.log(`[OT-AutoOpen] Found ${planningGroups.length} non-RECALL planning groups: ${planningGroups.join(', ')}`);
+    console.log(`[OT-AutoOpen] Found ${planningGroups.length} OT-eligible planning groups (S-ABF/CS-ABF): ${planningGroups.join(', ')}`);
 
     for (const pg of planningGroups) {
       try {
@@ -626,11 +628,11 @@ async function autoOpenOtForms(db: ReturnType<typeof drizzle>): Promise<{ opened
         }
         opened++;
 
-        // Get eligible agents for this PG
+        // Get eligible agents for this PG (S-ABF & CS-ABF Agents only)
         const eligibleAgents = allEmployees.filter((a: any) =>
           a.planning_group === pg &&
           a.actual_role === 'Agent' &&
-          !(a.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')
+          OT_MECHANISM_PGS.includes(a.planning_group || '')
         );
 
         // Create in-app notifications

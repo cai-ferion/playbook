@@ -1235,10 +1235,11 @@ function renderInputTable() {
           const weEndStr = weFri.toISOString().slice(0, 10);
           const inCurrentWeek = record.date >= weStartStr && record.date <= weEndStr;
           if (inCurrentWeek) {
-            // Check OT mechanism lock (non-RECALL agents from 04/11 onward)
+            // Check OT mechanism lock (S-ABF & CS-ABF agents from 04/11 onward)
+            const OT_MECH_PGS_1 = ['S-ABF', 'CS-ABF'];
             const otLockDate = '2026-04-11';
             const isOtMechanismAgent = currentUser && currentUser.actual_role === 'Agent'
-              && !(currentUser.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')
+              && OT_MECH_PGS_1.includes(currentUser.actualPlanningGroup || currentUser.planning_group || '')
               && currentUser.ohr_id !== '740045023';
             const isOtFieldLocked = isOtMechanismAgent && record.date >= otLockDate;
             if (isOtFieldLocked) {
@@ -1277,11 +1278,12 @@ function renderInputTable() {
           </select></td>`;
         }
         if (col.key === 'ot') {
-          // OT lock for non-RECALL agents: locked from WE 04/17 onward (dates >= 2026-04-11)
-          // Exempt: RECALL_MEASUREMENT_CTR agents, non-agent roles (SME, TL, Manager, etc.), admin
-          const otLockDate = '2026-04-11'; // Saturday of next operational week
+          // OT lock for S-ABF & CS-ABF agents: locked from dates >= 2026-04-11
+          // Exempt: all other PGs, non-agent roles (SME, TL, Manager, etc.), admin
+          const OT_MECH_PGS_2 = ['S-ABF', 'CS-ABF'];
+          const otLockDate = '2026-04-11';
           const isOtMechanismAgent = currentUser && currentUser.actual_role === 'Agent'
-            && !(currentUser.complete_planning_group || '').includes('RECALL_MEASUREMENT_CTR')
+            && OT_MECH_PGS_2.includes(currentUser.actualPlanningGroup || currentUser.planning_group || '')
             && currentUser.ohr_id !== '740045023';
           const isOtFieldLocked = isOtMechanismAgent && record.date >= otLockDate;
           if (isOtFieldLocked) {
