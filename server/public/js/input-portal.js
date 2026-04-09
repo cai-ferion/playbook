@@ -1000,6 +1000,13 @@ async function bulkApplyTag() {
 
   if (recordIds.length === 0) { showToast('No editable rows in selection', 'info'); return; }
 
+  // Set loading state on button
+  var applyBtn = document.getElementById('bulk-apply-tag-btn');
+  if (applyBtn) {
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = '<span class="btn-spinner"></span> Applying...';
+  }
+
   try {
     var user = typeof currentUser !== 'undefined' ? currentUser : null;
     var resp = await fetch(IO_API_BASE + '/attendance/bulk-tag', {
@@ -1035,6 +1042,12 @@ async function bulkApplyTag() {
     }
   } catch (err) {
     showToast('Bulk tag failed: ' + err.message, 'error');
+  } finally {
+    // Reset button state
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.innerHTML = 'Apply Tag';
+    }
   }
 }
 

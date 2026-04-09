@@ -1137,3 +1137,7 @@
 - [x] Add a blank/clear option to the Tag column dropdown in Input Portal for clearing mistaken logs
 - [x] Ensure backend PATCH accepts empty string for tag field (already supported)
 - [x] Bump cache-busting to ?v=104
+
+## Batch 105 — Apply Tag Loading Indicator
+- [x] Add loading state to bulk "Apply Tag" button: change text to "Applying..." with spinner while processing
+- [x] Bump cache-busting to ?v=105
