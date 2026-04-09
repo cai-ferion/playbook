@@ -1189,3 +1189,10 @@
 - [x] Preserve all existing functionality: filters, save, undo, export, OT lock, PL restriction, audit timeline
 - [ ] Add CSS for new compact table layout and animations
 - [ ] Bump cache-busting
+
+## Batch 115 — Input Portal Visual Polish & Animations
+- [x] Refined color palette across entire Input Portal page
+- [x] Responsive layout for mobile/tablet/desktop breakpoints
+- [x] Fluid hover and click micro-animations on all interactive elements
+- [x] Premium visual feel — shadows, gradients, transitions
+- [x] Ensure filter bar, pagination, and toolbar are responsive
