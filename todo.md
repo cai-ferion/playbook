@@ -1206,3 +1206,6 @@
 - [x] Audit all filter bar functionalities (date range, multi-selects, sort, blanks toggle)
 - [ ] Fix broken filter logic and wiring to compact table renderer
 - [ ] Verify all filters apply correctly and re-render the table
+
+## Batch 118 — Filter Dropdown Z-Index Fix
+- [x] Fix filter dropdowns being hidden behind other elements in Input Portal

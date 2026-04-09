@@ -10,6 +10,7 @@
   margin-bottom: 12px;
   box-shadow: var(--shadow);
   position: relative;
+  z-index: 100;
 }
 
 .filter-bar-row {
