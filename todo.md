@@ -1155,3 +1155,7 @@
 ## Batch 108 — Asset Inventory Date from Filter End Date
 - [x] Update Asset Inventory & Endorsement modal DATE to use end date of current date range filter
 - [x] Bump cache-busting to ?v=108
+
+## Batch 109 — Asset Inventory Should Follow Dashboard Filters
+- [x] Ensure Asset Inventory modal uses getFilteredDashboardRecords() so it respects all dashboard filters (FLM, PG, Day, date range)
+- [x] Bump cache-busting to ?v=109

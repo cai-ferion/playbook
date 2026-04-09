@@ -2001,8 +2001,13 @@ function buildAgentListHTML(records) {
 function renderAssetInventory(records) {
   const container = document.getElementById('asset-inventory-widget');
   if (!container) return;
-  // Use end date from dashboard date range filter, fall back to today
-  const endDateVal = document.getElementById('dash-end-date')?.value || '';
+  // Use end date from dashFilterState (omnibar), fall back to today
+  const dateFilter = (typeof dashFilterState !== 'undefined' && dashFilterState.filters) ? dashFilterState.filters['date_range'] : null;
+  let endDateVal = dateFilter ? dateFilter.endDate : '';
+  if (!endDateVal) {
+    const el = document.getElementById('dash-end-date') || document.getElementById('dash-date-end');
+    endDateVal = el ? el.value : '';
+  }
   let dateStr;
   if (endDateVal) {
     const parts = endDateVal.split('-'); // YYYY-MM-DD
@@ -2057,8 +2062,13 @@ function renderAssetInventory(records) {
 }
 
 function buildAssetInventoryHTML(records) {
-  // Use end date from dashboard date range filter, fall back to today
-  const endDateVal = document.getElementById('dash-end-date')?.value || '';
+  // Use end date from dashFilterState (omnibar), fall back to today
+  const dateFilter = (typeof dashFilterState !== 'undefined' && dashFilterState.filters) ? dashFilterState.filters['date_range'] : null;
+  let endDateVal = dateFilter ? dateFilter.endDate : '';
+  if (!endDateVal) {
+    const el = document.getElementById('dash-end-date') || document.getElementById('dash-date-end');
+    endDateVal = el ? el.value : '';
+  }
   let dateStr;
   if (endDateVal) {
     const parts = endDateVal.split('-'); // YYYY-MM-DD
