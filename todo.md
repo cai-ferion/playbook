@@ -1141,3 +1141,9 @@
 ## Batch 105 — Apply Tag Loading Indicator
 - [x] Add loading state to bulk "Apply Tag" button: change text to "Applying..." with spinner while processing
 - [x] Bump cache-busting to ?v=105
+
+## Batch 106 — Bulk Select Checkbox & Blank Tag Improvements
+- [x] Header checkbox (topmost) should select/deselect all tickable (non-locked) rows in current filter
+- [x] Remove the separate "Select All" checkbox from the bulk select toolbar
+- [x] Add blank option to bulk tag dropdown to clear tags on selected rows
+- [x] Bump cache-busting to ?v=106

@@ -916,14 +916,18 @@ function renderTableRow(item) {
 }
 
 function pageToggleAll(checked) {
-  var checkboxes = document.querySelectorAll('.row-checkbox');
-  checkboxes.forEach(function(cb) {
-    var idx = parseInt(cb.dataset.idx);
-    cb.checked = checked;
-    if (checked) bulkState.selected.add(idx);
-    else bulkState.selected.delete(idx);
-  });
-  updateBulkToolbar();
+  // Select/deselect ALL tickable (non-locked) rows in the entire filtered dataset, not just current page
+  var allFiltered = appState._filteredData || [];
+  if (checked) {
+    for (var fi = 0; fi < allFiltered.length; fi++) {
+      if (!isRowLocked(allFiltered[fi].record)) {
+        bulkState.selected.add(allFiltered[fi].originalIndex);
+      }
+    }
+  } else {
+    bulkState.selected.clear();
+  }
+  renderInputTable();
 }
 
 // ============================================================
@@ -940,25 +944,15 @@ function bulkToggleRow(idx, checked) {
   updateBulkToolbar();
 }
 
-function bulkToggleAll(checked) {
-  if (checked) {
-    var pageItems = getCurrentPageItems();
-    for (var pi = 0; pi < pageItems.length; pi++) {
-      if (!isRowLocked(pageItems[pi].record)) {
-        bulkState.selected.add(pageItems[pi].originalIndex);
-      }
-    }
-  } else {
-    bulkState.selected.clear();
-  }
-  renderInputTable();
-}
+// bulkToggleAll removed — header checkbox (pageToggleAll) now handles all-select
 
 function bulkDeselectAll() {
   bulkState.selected.clear();
-  var selectAll = document.getElementById('bulk-select-all');
-  if (selectAll) selectAll.checked = false;
+  // Uncheck header checkbox
+  var pageSelectAll = document.getElementById('page-select-all');
+  if (pageSelectAll) pageSelectAll.checked = false;
   updateBulkToolbar();
+  renderInputTable();
 }
 
 function updateBulkToolbar() {
@@ -983,8 +977,10 @@ function getCurrentPageItems() {
 }
 
 async function bulkApplyTag() {
-  var tag = document.getElementById('bulk-tag-select').value;
-  if (!tag) { showToast('Please select a tag first', 'info'); return; }
+  var tagSelect = document.getElementById('bulk-tag-select');
+  var tag = tagSelect.value;
+  if (tag === '_select') { showToast('Please select a tag first', 'info'); return; }
+  // tag === '' means blank/clear
 
   var selectedIds = [...bulkState.selected];
   if (selectedIds.length === 0) { showToast('No rows selected', 'info'); return; }
@@ -1032,7 +1028,8 @@ async function bulkApplyTag() {
       }
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
 
-      var msg = 'Bulk tagged ' + result.updated + ' record(s) as "' + tag + '"'
+      var tagLabel = tag === '' ? 'blank' : '"' + tag + '"';
+      var msg = 'Bulk tagged ' + result.updated + ' record(s) as ' + tagLabel
         + (result.locked > 0 ? ' (' + result.locked + ' locked rows skipped)' : '');
       showToast(msg, 'success');
       bulkDeselectAll();

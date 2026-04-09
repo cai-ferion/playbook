@@ -895,7 +895,8 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: "ids array is required" });
     }
-    if (!tag) return res.status(400).json({ error: "tag is required" });
+    if (tag === undefined || tag === null) return res.status(400).json({ error: "tag is required" });
+    // tag === '' is valid (clearing the tag)
 
     const now = new Date().toISOString();
     let updated = 0;

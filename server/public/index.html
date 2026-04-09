@@ -342,16 +342,14 @@
         <!-- Bulk Selection Toolbar (appears when rows are selected) -->
         <div class="bulk-toolbar" id="bulk-toolbar" style="display:none;">
           <div class="bulk-toolbar-left">
-            <label class="bulk-select-all-label">
-              <input type="checkbox" id="bulk-select-all" onchange="bulkToggleAll(this.checked)">
-              <span id="bulk-count">0 selected</span>
-            </label>
+            <span id="bulk-count" style="font-weight:600;">0 selected</span>
           </div>
           <div class="bulk-toolbar-right">
             <div class="bulk-action-group">
               <label class="filter-label">Tag:</label>
               <select class="form-select form-select-sm" id="bulk-tag-select">
-                <option value="">— Select Tag —</option>
+                <option value="_select">— Select Tag —</option>
+                <option value="">&mdash;</option>
                 <option value="P">P</option>
                 <option value="LATE">LATE</option>
                 <option value="UPL">UPL</option>
@@ -1478,7 +1476,7 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="js/data.js?v=104"></script>
   <script src="js/app.js?v=104"></script>
-  <script src="js/input-portal.js?v=105"></script>
+  <script src="js/input-portal.js?v=106"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
   <script src="js/notifications.js?v=102g"></script>
   <script src="js/maintenance.js?v=102g"></script>
