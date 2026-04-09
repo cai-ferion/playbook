@@ -1151,3 +1151,7 @@
 ## Batch 107 — Remove PL Column from Shift Breakdown
 - [x] Remove PL column from Shift Breakdown modal table
 - [x] Bump cache-busting to ?v=107
+
+## Batch 108 — Asset Inventory Date from Filter End Date
+- [x] Update Asset Inventory & Endorsement modal DATE to use end date of current date range filter
+- [x] Bump cache-busting to ?v=108

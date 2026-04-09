@@ -2001,9 +2001,16 @@ function buildAgentListHTML(records) {
 function renderAssetInventory(records) {
   const container = document.getElementById('asset-inventory-widget');
   if (!container) return;
-  // Get today's date for the header
-  const today = new Date();
-  const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  // Use end date from dashboard date range filter, fall back to today
+  const endDateVal = document.getElementById('dash-end-date')?.value || '';
+  let dateStr;
+  if (endDateVal) {
+    const parts = endDateVal.split('-'); // YYYY-MM-DD
+    dateStr = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+  } else {
+    const today = new Date();
+    dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  }
   // Group records by shift time and role, count present (P or blank tag)
   // Exclude employees with RECALL_MEASUREMENT_CTR in complete_planning_group
   const shiftData = {};
@@ -2050,8 +2057,16 @@ function renderAssetInventory(records) {
 }
 
 function buildAssetInventoryHTML(records) {
-  const today = new Date();
-  const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  // Use end date from dashboard date range filter, fall back to today
+  const endDateVal = document.getElementById('dash-end-date')?.value || '';
+  let dateStr;
+  if (endDateVal) {
+    const parts = endDateVal.split('-'); // YYYY-MM-DD
+    dateStr = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+  } else {
+    const today = new Date();
+    dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  }
   // Exclude employees with RECALL_MEASUREMENT_CTR in complete_planning_group
   const shiftData = {};
   for (const r of records) {
