@@ -1180,3 +1180,12 @@
 ## Batch 113b — Restore dates-before-yesterday lock
 - [x] Restore "dates before yesterday are always locked" rule in isRowLocked
 - [x] Bump cache-busting
+
+## Batch 114 — Input Portal Redesign (Stylized Compact Table)
+- [ ] Redesign table to 3 compact columns: Employee (name+role badge), Tag (color chip), Date
+- [ ] Implement expandable detail row (accordion) with tag editing, agent info, OT, remarks, audit
+- [ ] Add micro-animations: row hover lift, expand/collapse smooth transition, tag chip colors
+- [ ] Reimagine bulk edit UX with selection mode toggle and floating action bar
+- [x] Preserve all existing functionality: filters, save, undo, export, OT lock, PL restriction, audit timeline
+- [ ] Add CSS for new compact table layout and animations
+- [ ] Bump cache-busting
