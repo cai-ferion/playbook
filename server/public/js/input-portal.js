@@ -782,7 +782,23 @@ function getFilteredInputRecords() {
 const VTABLE_ROW_HEIGHT = 38; // px per row
 const VTABLE_BUFFER = 10;     // extra rows above/below viewport
 
+function initBulkTagDropdown() {
+  var sel = document.getElementById('bulk-tag-select');
+  if (!sel) return;
+  var cu = typeof currentUser !== 'undefined' ? currentUser : null;
+  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+  var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
+  // Keep the first two static options (Select Tag, blank), remove old dynamic ones
+  while (sel.options.length > 2) sel.remove(2);
+  tagOpts.forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    sel.appendChild(opt);
+  });
+}
+
 function renderInputTable() {
+  initBulkTagDropdown();
   var allFiltered = getFilteredInputRecords();
   var totalRecords = allFiltered.length;
 
@@ -860,7 +876,7 @@ function renderTableRow(item) {
   var rowClass = (isEdited ? 'row-edited ' : '') + (locked ? 'row-locked ' : '') + (isSelected ? 'row-selected ' : '');
 
   // Checkbox cell
-  var lockTitle = record.is_locked ? 'Locked (WO/PL from schedule — Manager/Admin override only)' : 'Locked (previous day, after 11 AM PHT)';
+  var lockTitle = 'Locked (after 11 AM PHT cutoff)';
   var checkboxCell = locked
     ? '<td class="col-checkbox cell-readonly"><span class="lock-icon" title="' + lockTitle + '">&#128274;</span></td>'
     : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + globalIdx + ', this.checked)"></td>';
@@ -883,9 +899,13 @@ function renderTableRow(item) {
     }
 
     if (col.key === 'tag') {
-      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" onchange="handleCellEdit(this)">'
+      // PL restricted to Managers and OHR 740045023 only
+      var cu = typeof currentUser !== 'undefined' ? currentUser : null;
+      var canSeePL = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+      var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
+      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" onchange="handleCellEdit(this)">' 
         + '<option value="" ' + (!val ? 'selected' : '') + '>\u2014</option>'
-        + TAG_OPTIONS.map(function(t) { return '<option value="' + t + '" ' + (val === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
+        + tagOpts.map(function(t) { return '<option value="' + t + '" ' + (val === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
         + '</select></td>';
     }
     if (col.key === 'uplReason') {

@@ -1425,15 +1425,9 @@ function renderInputPagination(currentPage, totalPages) {
  * - Exempt: OHR 740045023 and actual_role = 'Manager'
  */
 function isRowLocked(record) {
-  // Exempt admin OHR 740045023 and Managers
+  // Exempt admin OHR 740045023 and Managers — never locked
   if (currentUser && (currentUser.ohr_id === '740045023' || currentUser.actual_role === 'Manager')) {
     return false;
-  }
-
-  // is_locked enforcement (Batch 100): WO/PL records from Final Cut Schedule
-  // are locked for everyone except Managers and admin (handled above)
-  if (record.is_locked) {
-    return true;
   }
 
   const now = new Date();
@@ -1441,26 +1435,20 @@ function isRowLocked(record) {
   const phtOffset = 8 * 60; // minutes
   const phtTime = new Date(now.getTime() + phtOffset * 60000);
   const phtHour = phtTime.getUTCHours();
-  const todayPHT = phtTime.getUTCFullYear() + '-' + String(phtTime.getUTCMonth() + 1).padStart(2, '0') + '-' + String(phtTime.getUTCDate()).padStart(2, '0');
 
   // Compute yesterday in PHT
   const yesterdayPHT_d = new Date(phtTime);
   yesterdayPHT_d.setUTCDate(yesterdayPHT_d.getUTCDate() - 1);
   const yesterdayPHT = yesterdayPHT_d.getUTCFullYear() + '-' + String(yesterdayPHT_d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(yesterdayPHT_d.getUTCDate()).padStart(2, '0');
 
-  if (!record.date) return true;
+  if (!record.date) return false;
 
-  // Dates before yesterday are always locked
-  if (record.date < yesterdayPHT) {
+  // Only lock: yesterday's records after 11 AM PHT
+  if (record.date <= yesterdayPHT && phtHour >= 11) {
     return true;
   }
 
-  // Yesterday: editable before 11:00 AM PHT, locked after
-  if (record.date === yesterdayPHT) {
-    return phtHour >= 11; // locked if 11 AM or later
-  }
-
-  // Current day and future dates are not locked
+  // Everything else is editable
   return false;
 }
 

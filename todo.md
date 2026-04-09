@@ -1171,3 +1171,8 @@
 ## Batch 112 — OT Column Editable for Dates <= 04/10
 - [x] Make OT column in Input Portal editable for all dates up to and including 2026-04-10; new OT mechanism applies only after that
 - [x] Bump cache-busting
+
+## Batch 113 — Remove Extra Locks & Restrict PL Tag
+- [x] Remove all Input Portal locks except the 11 AM PHT daily cutoff lock
+- [x] Restrict PL tag option to Managers and OHR 740045023 only — hide from all other users
+- [x] Bump cache-busting
