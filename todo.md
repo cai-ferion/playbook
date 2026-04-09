@@ -1147,3 +1147,7 @@
 - [x] Remove the separate "Select All" checkbox from the bulk select toolbar
 - [x] Add blank option to bulk tag dropdown to clear tags on selected rows
 - [x] Bump cache-busting to ?v=106
+
+## Batch 107 — Remove PL Column from Shift Breakdown
+- [x] Remove PL column from Shift Breakdown modal table
+- [x] Bump cache-busting to ?v=107

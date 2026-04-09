@@ -1855,7 +1855,6 @@ function buildShiftBreakdownHTML(records) {
       <th><strong>${escapeHtml(shiftName)}</strong></th>
       <th style="text-align:center">Schedule</th>
       <th style="text-align:center">Present</th>
-      <th style="text-align:center">PL</th>
       <th style="text-align:center">UPL</th>
       <th style="text-align:center">Shrinkage</th>
       <th style="text-align:center">Late</th>
@@ -1870,7 +1869,6 @@ function buildShiftBreakdownHTML(records) {
         <td style="padding-left:24px;">${escapeHtml(pgName)}</td>
         <td class="cell-center">${pg.schedule}</td>
         <td class="cell-center">${pg.present}</td>
-        <td class="cell-center">${pg.pl || ''}</td>
         <td class="cell-center">${pg.upl || ''}</td>
         <td class="cell-center">${shrinkage.toFixed(2)}%</td>
         <td class="cell-center">${pg.late || ''}</td>
@@ -1882,7 +1880,6 @@ function buildShiftBreakdownHTML(records) {
       <td><strong>${escapeHtml(shiftName)} Overall</strong></td>
       <td class="cell-center"><strong>${overall.schedule}</strong></td>
       <td class="cell-center"><strong>${overall.present}</strong></td>
-      <td class="cell-center"><strong>${overall.pl}</strong></td>
       <td class="cell-center"><strong>${overall.upl}</strong></td>
       <td class="cell-center"><strong>${overallShrinkage.toFixed(2)}%</strong></td>
       <td class="cell-center"><strong>${overall.late}</strong></td>
@@ -1894,7 +1891,6 @@ function buildShiftBreakdownHTML(records) {
     <td><strong>Overall</strong></td>
     <td class="cell-center"><strong>${grandOverall.schedule}</strong></td>
     <td class="cell-center"><strong>${grandOverall.present}</strong></td>
-    <td class="cell-center"><strong>${grandOverall.pl}</strong></td>
     <td class="cell-center"><strong>${grandOverall.upl}</strong></td>
     <td class="cell-center"><strong>${grandShrinkage.toFixed(2)}%</strong></td>
     <td class="cell-center"><strong>${grandOverall.late}</strong></td>
