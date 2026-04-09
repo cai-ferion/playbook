@@ -1054,6 +1054,13 @@ async function bulkApplyTag() {
       }
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
 
+      // Invalidate audit cache for all bulk-tagged records
+      if (typeof invalidateAuditCache === 'function') {
+        for (var ri = 0; ri < recordIds.length; ri++) {
+          invalidateAuditCache(recordIds[ri]);
+        }
+      }
+
       var tagLabel = tag === '' ? 'blank' : '"' + tag + '"';
       var msg = 'Bulk tagged ' + result.updated + ' record(s) as ' + tagLabel
         + (result.locked > 0 ? ' (' + result.locked + ' locked rows skipped)' : '');

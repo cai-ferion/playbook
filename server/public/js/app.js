@@ -1638,13 +1638,18 @@ function handleCellEdit(el) {
     if (saveBtn) saveBtn.disabled = false;
     if (undoBtn) undoBtn.disabled = false;
 
+    // Invalidate audit cache for this record (will re-fetch on next expand)
+    var editedRec = appState.records[idx];
+    if (editedRec && typeof invalidateAuditCache === 'function') {
+      invalidateAuditCache(editedRec._id);
+    }
+
     if (key === 'tag') {
       // In compact mode, just refresh the tag chip + detail panel without full re-render
-      var rec = appState.records[idx];
-      if (rec && typeof compactRefreshRow === 'function') {
-        compactRefreshRow(rec._id);
+      if (editedRec && typeof compactRefreshRow === 'function') {
+        compactRefreshRow(editedRec._id);
         // Also refresh the detail panel reason field (UPL reason becomes editable/readonly based on tag)
-        compactRefreshDetailPanel(rec._id, idx);
+        compactRefreshDetailPanel(editedRec._id, idx);
       } else {
         window.renderInputTable();
       }
@@ -1705,6 +1710,14 @@ async function confirmSave() {
       showToast(result.message || 'Changes saved successfully', 'success');
       appState.pendingEdits = {};
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
+
+      // Invalidate audit cache for all saved records so inline trail re-fetches
+      if (typeof invalidateAuditCache === 'function') {
+        for (const edit of edits) {
+          if (edit._id) invalidateAuditCache(edit._id);
+        }
+      }
+
       window.renderInputTable();
 
       // Trigger absent alerts for agents tagged as absent-related tags

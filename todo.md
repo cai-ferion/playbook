@@ -1183,11 +1183,11 @@
 
 ## Batch 114 — Input Portal Redesign (Stylized Compact Table)
 - [ ] Redesign table to 3 compact columns: Employee (name+role badge), Tag (color chip), Date
-- [ ] Implement expandable detail row (accordion) with tag editing, agent info, OT, remarks, audit
+- [x] Implement expandable detail row (accordion) with tag editing, agent info, OT, remarks, audit
 - [ ] Add micro-animations: row hover lift, expand/collapse smooth transition, tag chip colors
 - [ ] Reimagine bulk edit UX with selection mode toggle and floating action bar
 - [x] Preserve all existing functionality: filters, save, undo, export, OT lock, PL restriction, audit timeline
-- [ ] Add CSS for new compact table layout and animations
+- [x] Add CSS for new compact table layout and animations
 - [ ] Bump cache-busting
 
 ## Batch 115 — Input Portal Visual Polish & Animations
@@ -1209,3 +1209,15 @@
 
 ## Batch 118 — Filter Dropdown Z-Index Fix
 - [x] Fix filter dropdowns being hidden behind other elements in Input Portal
+
+## Batch 119 — Inline Audit Trail in Detail Panel
+- [x] Embed inline audit trail section within each compact detail panel (below Status/Billing/PG row)
+- [x] Async fetch audit trail data on row expand with caching (auditCache)
+- [x] Render timeline entries with action icons, field changes, old/new values, actor, and timestamps
+- [x] Add CSS for inline audit trail (timeline, entries, spinner, empty state, animations)
+- [x] Wire audit cache invalidation in handleCellEdit (confirmSave) for fresh data after edits
+- [x] Wire audit cache invalidation in bulk tag operations (input-portal.js and input-compact.js)
+- [x] compactRefreshDetailPanel re-fetches audit trail after panel re-render
+- [x] Increase detail-panel max-height from 420px to 800px to accommodate audit trail section
+- [x] Add missing CSS custom properties (ip-bg-hover, ip-bg-card, ip-fg-primary)
+- [x] Bump cache versions to v=119

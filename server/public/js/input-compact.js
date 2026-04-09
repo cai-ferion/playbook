@@ -329,12 +329,15 @@ function renderDetailPanel(r, idx, locked) {
     + '<div class="detail-section"><span class="detail-label">Status</span><span class="detail-value">' + escapeHtml(r.status || '\u2014') + '</span></div>'
     + '<div class="detail-section"><span class="detail-label">Billing Code</span><span class="detail-value">' + escapeHtml(r.billingCode || '\u2014') + '</span></div>'
     + '<div class="detail-section"><span class="detail-label">Planning Group</span><span class="detail-value">' + escapeHtml(r.actualPlanningGroup || '\u2014') + '</span></div>'
-    // Actions
-    + '<div class="detail-actions">'
-    + '<button class="detail-audit-btn" onclick="event.stopPropagation(); openAuditModal(\'' + r._id + '\')">'
-    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
-    + ' Audit Trail'
-    + '</button>'
+    // Inline Audit Trail
+    + '<div class="detail-divider"></div>'
+    + '<div class="detail-section detail-audit-inline" style="grid-column:1/-1;">'
+    + '<span class="detail-label">'
+    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+    + 'Audit Trail</span>'
+    + '<div class="inline-audit-container" id="inline-audit-' + r._id + '">'
+    + '<div class="inline-audit-loading"><div class="inline-audit-spinner"></div> Loading...</div>'
+    + '</div>'
     + '</div>'
     + '</div>';
 }
@@ -370,6 +373,8 @@ window.compactToggleExpand = function(recordId, idx) {
     if (newRow) { newRow.classList.add('row-expanded'); var ni = newRow.querySelector('.expand-indicator'); if (ni) ni.innerHTML = '&#9650;'; }
     if (newPanel) {
       setTimeout(function() { newPanel.classList.add('open'); }, 10);
+      // Auto-fetch inline audit trail
+      fetchInlineAudit(recordId);
     }
   }
 };
@@ -385,6 +390,8 @@ window.compactRefreshDetailPanel = function(recordId, idx) {
   if (!r) return;
   var locked = isRowLocked(r);
   panel.innerHTML = renderDetailPanel(r, idx, locked);
+  // Re-fetch the inline audit trail (cache was already invalidated by handleCellEdit)
+  fetchInlineAudit(recordId);
 };
 
 // Refresh a single row's tag chip after edit (without full re-render)
@@ -529,6 +536,12 @@ window.fcbApplyTag = async function() {
         }
       }
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
+
+      // Invalidate audit cache for all bulk-tagged records
+      for (var ri = 0; ri < recordIds.length; ri++) {
+        invalidateAuditCache(recordIds[ri]);
+      }
+
       var tagLabel = tag === '' ? 'blank' : '"' + tag + '"';
       showToast('Bulk tagged ' + result.updated + ' record(s) as ' + tagLabel, 'success');
       compactState.selectionMode = false;
@@ -599,6 +612,83 @@ window.pageToggleAll = function(checked) {
     bulkDeselectAll();
     renderCompactTable();
   }
+};
+
+// ============================================================
+// INLINE AUDIT TRAIL — fetch and render on expand
+// ============================================================
+
+var auditCache = {}; // Cache by recordId to avoid re-fetching
+
+async function fetchInlineAudit(recordId) {
+  var container = document.getElementById('inline-audit-' + recordId);
+  if (!container) return;
+
+  // If cached, render immediately
+  if (auditCache[recordId]) {
+    container.innerHTML = renderInlineAuditTimeline(auditCache[recordId]);
+    animateAuditEntries(container);
+    return;
+  }
+
+  // Show loading
+  container.innerHTML = '<div class="inline-audit-loading"><div class="inline-audit-spinner"></div> Loading...</div>';
+
+  try {
+    var resp = await fetch(IO_API_BASE + '/audit-log?record_id=' + encodeURIComponent(recordId) + '&record_type=attendance&limit=50');
+    var logs = await resp.json();
+    auditCache[recordId] = logs;
+    container.innerHTML = renderInlineAuditTimeline(logs);
+    animateAuditEntries(container);
+  } catch (err) {
+    container.innerHTML = '<div class="inline-audit-empty">Failed to load audit trail.</div>';
+  }
+}
+
+function renderInlineAuditTimeline(logs) {
+  if (!Array.isArray(logs) || logs.length === 0) {
+    return '<div class="inline-audit-empty">No changes recorded.</div>';
+  }
+
+  var html = '<div class="inline-audit-timeline">';
+  for (var i = 0; i < logs.length; i++) {
+    var entry = logs[i];
+    var ts = entry.timestamp ? new Date(entry.timestamp) : null;
+    var timeStr = ts ? ts.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown';
+    var actionLabel = entry.action === 'bulk_tag' ? 'Bulk Tag' : entry.action === 'edit' ? 'Edit' : entry.action || 'Change';
+    var fieldLabel = (entry.field_name || '').replace(/_/g, ' ');
+
+    html += '<div class="inline-audit-entry" style="animation-delay:' + (i * 60) + 'ms">'
+      + '<div class="inline-audit-dot"></div>'
+      + '<div class="inline-audit-content">'
+      + '<div class="inline-audit-header">'
+      + '<span class="inline-audit-action inline-audit-action-' + (entry.action || 'edit') + '">' + escapeHtml(actionLabel) + '</span>'
+      + '<span class="inline-audit-field">' + escapeHtml(fieldLabel) + '</span>'
+      + '<span class="inline-audit-time">' + escapeHtml(timeStr) + '</span>'
+      + '</div>'
+      + '<div class="inline-audit-change">'
+      + '<span class="inline-audit-old">' + escapeHtml(entry.old_value || '(empty)') + '</span>'
+      + '<span class="inline-audit-arrow">\u2192</span>'
+      + '<span class="inline-audit-new">' + escapeHtml(entry.new_value || '(empty)') + '</span>'
+      + '</div>'
+      + '<div class="inline-audit-actor">by ' + escapeHtml(entry.actor_name || entry.actor_ohr || 'System') + '</div>'
+      + '</div>'
+      + '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function animateAuditEntries(container) {
+  var entries = container.querySelectorAll('.inline-audit-entry');
+  for (var i = 0; i < entries.length; i++) {
+    entries[i].classList.add('animate-in');
+  }
+}
+
+// Invalidate audit cache for a record after edit
+window.invalidateAuditCache = function(recordId) {
+  delete auditCache[recordId];
 };
 
 // Init FCB dropdown on load
