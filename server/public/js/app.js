@@ -1441,14 +1441,19 @@ function isRowLocked(record) {
   yesterdayPHT_d.setUTCDate(yesterdayPHT_d.getUTCDate() - 1);
   const yesterdayPHT = yesterdayPHT_d.getUTCFullYear() + '-' + String(yesterdayPHT_d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(yesterdayPHT_d.getUTCDate()).padStart(2, '0');
 
-  if (!record.date) return false;
+  if (!record.date) return true;
 
-  // Only lock: yesterday's records after 11 AM PHT
-  if (record.date <= yesterdayPHT && phtHour >= 11) {
+  // Dates before yesterday are always locked
+  if (record.date < yesterdayPHT) {
     return true;
   }
 
-  // Everything else is editable
+  // Yesterday: editable before 11:00 AM PHT, locked after
+  if (record.date === yesterdayPHT) {
+    return phtHour >= 11; // locked if 11 AM or later
+  }
+
+  // Current day and future dates are not locked
   return false;
 }
 

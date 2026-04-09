@@ -1176,3 +1176,7 @@
 - [x] Remove all Input Portal locks except the 11 AM PHT daily cutoff lock
 - [x] Restrict PL tag option to Managers and OHR 740045023 only — hide from all other users
 - [x] Bump cache-busting
+
+## Batch 113b — Restore dates-before-yesterday lock
+- [x] Restore "dates before yesterday are always locked" rule in isRowLocked
+- [x] Bump cache-busting
