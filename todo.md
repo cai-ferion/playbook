@@ -1167,3 +1167,7 @@
 ## Batch 111 — Rename Task Board Request Type Label
 - [x] Replace "Attendance Backdated Change Tag" with "I want to change an already locked tag on a previous date." in Task Board New Request form
 - [x] Bump cache-busting
+
+## Batch 112 — OT Column Editable for Dates <= 04/10
+- [x] Make OT column in Input Portal editable for all dates up to and including 2026-04-10; new OT mechanism applies only after that
+- [x] Bump cache-busting

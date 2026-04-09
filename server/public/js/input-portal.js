@@ -898,9 +898,12 @@ function renderTableRow(item) {
     }
     if (col.key === 'ot') {
       // OT mechanism lock: only S-ABF & CS-ABF Agents have OT locked (managed via OT Dashboard)
+      // But only for dates AFTER 2026-04-10 — before that, OT is freely editable
+      var OT_MECH_CUTOFF = '2026-04-10';
       var OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
       var isOtMechAgent = (record.role === 'Agent') && OT_MECH_PGS.indexOf(record.actualPlanningGroup) !== -1;
-      if (isOtMechAgent) {
+      var isAfterCutoff = record.date && record.date > OT_MECH_CUTOFF;
+      if (isOtMechAgent && isAfterCutoff) {
         return '<td class="cell-readonly cell-locked ' + widthClass + '">' + escapeHtml(val) + '</td>';
       }
       return '<td class="cell-editable ' + widthClass + '"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="' + escapeAttr(val) + '" data-idx="' + globalIdx + '" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>';
