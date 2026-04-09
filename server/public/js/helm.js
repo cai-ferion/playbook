@@ -918,7 +918,7 @@ function helmCalcAvgCompletion() {
 // ===== New Request Form =====
 
 const HELM_REQUEST_TYPES = [
-  { value: 'attendance_backdated_change_tag', label: 'Attendance Backdated Change Tag' },
+  { value: 'attendance_backdated_change_tag', label: 'I want to change an already locked tag on a previous date.' },
   { value: 'ot_request', label: 'OT Request' }
 ];
 
