@@ -1159,3 +1159,7 @@
 ## Batch 109 — Asset Inventory Should Follow Dashboard Filters
 - [x] Ensure Asset Inventory modal uses getFilteredDashboardRecords() so it respects all dashboard filters (FLM, PG, Day, date range)
 - [x] Bump cache-busting to ?v=109
+
+## Batch 110 — Fix Asset Inventory Not Responding to Multi-Select Filters
+- [x] Debug why Asset Inventory counts don't change when planning group or FLM filters are modified
+- [x] Bump cache-busting to ?v=110

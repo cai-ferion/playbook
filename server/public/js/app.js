@@ -2017,10 +2017,9 @@ function renderAssetInventory(records) {
     dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
   }
   // Group records by shift time and role, count present (P or blank tag)
-  // Exclude employees with RECALL_MEASUREMENT_CTR in complete_planning_group
+  // Filtering is handled by dashboard omnibar — no hardcoded exclusions here
   const shiftData = {};
   for (const r of records) {
-    if ((r.completePlanningGroup || '').toUpperCase().includes('RECALL_MEASUREMENT_CTR')) continue;
     const shift = r.shiftTime || 'Unknown';
     const role = r.role || 'Unknown';
     const tag = getEffectiveTag(r.tag);
@@ -2077,10 +2076,9 @@ function buildAssetInventoryHTML(records) {
     const today = new Date();
     dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
   }
-  // Exclude employees with RECALL_MEASUREMENT_CTR in complete_planning_group
+  // Filtering is handled by dashboard omnibar — no hardcoded exclusions here
   const shiftData = {};
   for (const r of records) {
-    if ((r.completePlanningGroup || '').toUpperCase().includes('RECALL_MEASUREMENT_CTR')) continue;
     const shift = r.shiftTime || 'Unknown';
     const role = r.role || 'Unknown';
     const tag = getEffectiveTag(r.tag);
