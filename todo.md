@@ -1132,3 +1132,8 @@
 - [x] Active ML: add ML dates and supervisor
 - [x] Update alert card rendering — generic metadata display for all categories (supervisor + labeled dates)
 - [x] Bumped data.js, app.js cache-busting to ?v=103b
+
+## Batch 104 — Add Blank/Clear Option to Tag Dropdown
+- [x] Add a blank/clear option to the Tag column dropdown in Input Portal for clearing mistaken logs
+- [x] Ensure backend PATCH accepts empty string for tag field (already supported)
+- [x] Bump cache-busting to ?v=104

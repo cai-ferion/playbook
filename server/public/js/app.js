@@ -1329,8 +1329,8 @@ function renderInputTable() {
 
         if (col.key === 'tag') {
           return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="tag" onchange="handleCellEdit(this)">
+            <option value="" ${!val ? 'selected' : ''}>(clear)</option>
             ${TAG_OPTIONS.map(t => `<option value="${t}" ${val === t ? 'selected' : ''}>${t}</option>`).join('')}
-            ${!val ? '<option value="" selected>&mdash;</option>' : ''}
           </select></td>`;
         }
         if (col.key === 'uplReason') {
