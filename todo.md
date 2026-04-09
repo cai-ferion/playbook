@@ -1201,3 +1201,8 @@
 - [ ] Audit all function references between input-compact.js, input-portal.js, and app.js
 - [ ] Fix broken or incorrectly wired functions
 - [ ] Verify filters, editing, saving, bulk ops, pagination all work end-to-end
+
+## Batch 117 — Input Portal Filter Bar Audit & Fixes
+- [x] Audit all filter bar functionalities (date range, multi-selects, sort, blanks toggle)
+- [ ] Fix broken filter logic and wiring to compact table renderer
+- [ ] Verify all filters apply correctly and re-render the table

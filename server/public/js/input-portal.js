@@ -551,7 +551,7 @@ async function omnibarApplyView() {
     } else {
       _hideTableOverlay();
     }
-    renderInputTableServerSide();
+    window.renderInputTableServerSide();
   } catch (err) {
     if (useFullLoader) {
       hideProgressBar();
@@ -605,7 +605,7 @@ async function serverPageChange(newPage) {
     serverPagState.rows = result.rows;
     serverPagState.total = result.total;
     _hideTableOverlay();
-    renderInputTableServerSide();
+    window.renderInputTableServerSide();
   } catch (err) {
     _hideTableOverlay();
     showToast('Failed to load page: ' + err.message, 'error');
@@ -950,7 +950,7 @@ function pageToggleAll(checked) {
   } else {
     bulkState.selected.clear();
   }
-  renderInputTable();
+  window.renderInputTable();
 }
 
 // ============================================================
@@ -1059,7 +1059,7 @@ async function bulkApplyTag() {
         + (result.locked > 0 ? ' (' + result.locked + ' locked rows skipped)' : '');
       showToast(msg, 'success');
       bulkDeselectAll();
-      renderInputTable();
+      window.renderInputTable();
     } else {
       showToast('Bulk tag failed: ' + (result.error || 'Unknown error'), 'error');
     }

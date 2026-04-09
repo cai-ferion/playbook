@@ -873,7 +873,7 @@ async function switchView(view) {
   const headerMeta = document.getElementById('header-meta');
   if (headerMeta) headerMeta.style.display = view === 'input' ? '' : 'none';
 
-  if (view === 'input') renderInputTable();
+  if (view === 'input') window.renderInputTable();
   if (view === 'dashboard') renderDashboard();
   if (view === 'alerts') await loadAllDataForAlerts();
   if (view === 'billing') await initBillingCompliance();
@@ -1069,7 +1069,7 @@ function updateAllViews() {
 
   updateAlertNavBadge();
 
-  if (appState.activeView === 'input') renderInputTable();
+  if (appState.activeView === 'input') window.renderInputTable();
   if (appState.activeView === 'dashboard') renderDashboard();
   if (appState.activeView === 'alerts') renderAlerts();
 }
@@ -1135,7 +1135,7 @@ function toggleBlanksFilter() {
     }
   }
   appState.inputPage = 0;
-  renderInputTable();
+  window.renderInputTable();
 }
 
 // ===== Input Portal Filtering =====
@@ -1151,7 +1151,7 @@ async function applyInputFilters() {
     await ensureDataForRange(startDate, endDate);
   }
   appState.inputPage = 0;
-  renderInputTable();
+  window.renderInputTable();
 }
 
 function clearInputFilters() {
@@ -1167,7 +1167,7 @@ function clearInputFilters() {
   // Delegate to omnibar if available
   if (typeof omnibarClearAll === 'function') { omnibarClearAll(); return; }
   appState.inputPage = 0;
-  renderInputTable();
+  window.renderInputTable();
 }
 
 function getFilteredInputRecords() {
@@ -1223,7 +1223,7 @@ function goInputPage(page) {
     serverPageChange(page);
   } else {
     appState.inputPage = page;
-    renderInputTable();
+    window.renderInputTable();
   }
 }
 
@@ -1599,7 +1599,7 @@ function applyBillingCodeEditToPending() {
 
   if (count > 0) {
     showToast(`Billing code changed to "${newCode}" for ${count} record(s) of ${agentName} (${startDate} to ${endDate}). Click Save Changes to persist.`, 'success');
-    renderInputTable();
+    window.renderInputTable();
 
   } else {
     showToast('No records needed updating in the specified date range.', 'info');
@@ -1646,7 +1646,7 @@ function handleCellEdit(el) {
         // Also refresh the detail panel reason field (UPL reason becomes editable/readonly based on tag)
         compactRefreshDetailPanel(rec._id, idx);
       } else {
-        renderInputTable();
+        window.renderInputTable();
       }
     }
   }
@@ -1658,7 +1658,7 @@ function handleUndoAll() {
   if (Object.keys(appState.pendingEdits).length === 0) return;
   appState.records = JSON.parse(JSON.stringify(appState.originalRecords));
   appState.pendingEdits = {};
-  renderInputTable();
+  window.renderInputTable();
   showToast('All changes have been reverted', 'info');
 }
 
@@ -1705,7 +1705,7 @@ async function confirmSave() {
       showToast(result.message || 'Changes saved successfully', 'success');
       appState.pendingEdits = {};
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
-      renderInputTable();
+      window.renderInputTable();
 
       // Trigger absent alerts for agents tagged as absent-related tags
       try {
