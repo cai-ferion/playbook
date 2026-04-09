@@ -1630,6 +1630,22 @@ function handleCellEdit(el) {
       appState.pendingEdits[idx].uplReason = '';
     }
 
+    // Sync serverPagState.rows so compact view re-renders show edited values
+    if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
+      var editedRecId = appState.records[idx]._id;
+      var spRow = serverPagState.rows.find(function(r) { return r._id === editedRecId; });
+      if (spRow) {
+        // Map frontend keys to both frontend and DB column names
+        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], billingCode: ['billingCode', 'billing_code'] };
+        var targets = keyMap[key] || [key];
+        for (var ti = 0; ti < targets.length; ti++) { spRow[targets[ti]] = value; }
+        if (key === 'tag' && value !== 'UPL' && value !== 'LATE') {
+          spRow.uplReason = '';
+          spRow.upl_reason = '';
+        }
+      }
+    }
+
     const editCount = Object.keys(appState.pendingEdits).length;
     const editCountEl = document.getElementById('input-edit-count');
     if (editCountEl) { editCountEl.textContent = `${editCount} record(s) edited`; editCountEl.style.display = 'inline'; }
@@ -1663,6 +1679,25 @@ function handleUndoAll() {
   if (Object.keys(appState.pendingEdits).length === 0) return;
   appState.records = JSON.parse(JSON.stringify(appState.originalRecords));
   appState.pendingEdits = {};
+
+  // Sync serverPagState.rows from restored records so compact view shows reverted data
+  if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
+    for (var si = 0; si < serverPagState.rows.length; si++) {
+      var sRow = serverPagState.rows[si];
+      var origRec = appState.records.find(function(r) { return r._id === sRow._id; });
+      if (origRec) {
+        sRow.tag = origRec.tag;
+        sRow.uplReason = origRec.uplReason;
+        sRow.upl_reason = origRec.uplReason;
+        sRow.remarks = origRec.remarks;
+        sRow.ot = origRec.ot;
+        sRow.ot_hours = origRec.ot;
+        sRow.billingCode = origRec.billingCode;
+        sRow.billing_code = origRec.billingCode;
+      }
+    }
+  }
+
   window.renderInputTable();
   showToast('All changes have been reverted', 'info');
 }
@@ -1709,6 +1744,25 @@ async function confirmSave() {
     if (result.success) {
       showToast(result.message || 'Changes saved successfully', 'success');
       appState.pendingEdits = {};
+
+      // Sync serverPagState.rows with saved values so re-render shows fresh data
+      if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
+        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', billing_code: 'billingCode' };
+        for (const edit of edits) {
+          const row = serverPagState.rows.find(r => r._id === edit._id);
+          if (row) {
+            for (const [dbCol, val] of Object.entries(edit)) {
+              if (dbCol === '_id') continue;
+              // Update using the frontend key name
+              const frontendKey = reverseFieldMap[dbCol] || dbCol;
+              row[frontendKey] = val;
+              // Also update the DB column name variant if present
+              row[dbCol] = val;
+            }
+          }
+        }
+      }
+
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
 
       // Invalidate audit cache for all saved records so inline trail re-fetches
@@ -1718,7 +1772,17 @@ async function confirmSave() {
         }
       }
 
-      window.renderInputTable();
+      // Re-fetch current page from server to ensure data consistency (server-side pagination)
+      if (typeof serverPagState !== 'undefined' && serverPagState.enabled && typeof serverPageChange === 'function') {
+        try {
+          await serverPageChange(appState.inputPage);
+        } catch (refreshErr) {
+          console.warn('[Save] Server re-fetch failed, using local state:', refreshErr);
+          window.renderInputTable();
+        }
+      } else {
+        window.renderInputTable();
+      }
 
       // Trigger absent alerts for agents tagged as absent-related tags
       try {

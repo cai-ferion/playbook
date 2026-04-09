@@ -1221,3 +1221,12 @@
 - [x] Increase detail-panel max-height from 420px to 800px to accommodate audit trail section
 - [x] Add missing CSS custom properties (ip-bg-hover, ip-bg-card, ip-fg-primary)
 - [x] Bump cache versions to v=119
+
+## Batch 120 — SME Save Not Reflecting Fix
+- [x] Root cause: serverPagState.rows (server-side pagination cache) not synced after edits/saves
+- [x] Fix handleCellEdit: sync serverPagState.rows on every cell edit
+- [x] Fix confirmSave: sync serverPagState.rows + re-fetch current page via serverPageChange()
+- [x] Fix bulkApplyTag (input-portal.js): sync serverPagState.rows + re-fetch
+- [x] Fix fcbApplyTag (input-compact.js): sync serverPagState.rows + re-fetch
+- [x] Fix handleUndoAll: sync serverPagState.rows from restored originalRecords
+- [x] Bump cache versions to v=120

@@ -537,6 +537,20 @@ window.fcbApplyTag = async function() {
       }
       appState.originalRecords = JSON.parse(JSON.stringify(appState.records));
 
+      // Sync serverPagState.rows with bulk-tagged values
+      if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
+        for (var bri = 0; bri < recordIds.length; bri++) {
+          var bRow = serverPagState.rows.find(function(r) { return r._id === recordIds[bri]; });
+          if (bRow) {
+            bRow.tag = tag;
+            if (tag !== 'UPL' && tag !== 'LATE') {
+              bRow.uplReason = '';
+              bRow.upl_reason = '';
+            }
+          }
+        }
+      }
+
       // Invalidate audit cache for all bulk-tagged records
       for (var ri = 0; ri < recordIds.length; ri++) {
         invalidateAuditCache(recordIds[ri]);
@@ -546,7 +560,18 @@ window.fcbApplyTag = async function() {
       showToast('Bulk tagged ' + result.updated + ' record(s) as ' + tagLabel, 'success');
       compactState.selectionMode = false;
       bulkDeselectAll();
-      renderCompactTable();
+
+      // Re-fetch current page from server for data consistency
+      if (typeof serverPagState !== 'undefined' && serverPagState.enabled && typeof serverPageChange === 'function') {
+        try {
+          await serverPageChange(appState.inputPage);
+        } catch (refreshErr) {
+          console.warn('[FCB BulkTag] Server re-fetch failed, using local state:', refreshErr);
+          renderCompactTable();
+        }
+      } else {
+        renderCompactTable();
+      }
     } else {
       showToast('Bulk tag failed: ' + (result.error || 'Unknown error'), 'error');
     }
