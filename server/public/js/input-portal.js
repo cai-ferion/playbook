@@ -971,11 +971,10 @@ function bulkToggleRow(idx, checked) {
 
 function bulkDeselectAll() {
   bulkState.selected.clear();
-  // Uncheck header checkbox
+  // Uncheck header checkbox (may not exist in compact mode)
   var pageSelectAll = document.getElementById('page-select-all');
   if (pageSelectAll) pageSelectAll.checked = false;
   updateBulkToolbar();
-  renderInputTable();
 }
 
 function updateBulkToolbar() {
@@ -983,12 +982,16 @@ function updateBulkToolbar() {
   var countEl = document.getElementById('bulk-count');
   var count = bulkState.selected.size;
 
-  if (count > 0) {
-    toolbar.style.display = 'flex';
-    countEl.textContent = count + ' selected';
-  } else {
-    toolbar.style.display = 'none';
+  if (toolbar) {
+    if (count > 0) {
+      toolbar.style.display = 'flex';
+      if (countEl) countEl.textContent = count + ' selected';
+    } else {
+      toolbar.style.display = 'none';
+    }
   }
+  // Also update floating command bar if present
+  if (typeof updateFloatingCommandBar === 'function') updateFloatingCommandBar();
 }
 
 function getCurrentPageItems() {

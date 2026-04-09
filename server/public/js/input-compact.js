@@ -58,6 +58,7 @@ function getShortRole(role) {
 
 function renderCompactTable() {
   initBulkTagDropdown();
+  initFcbTagDropdown();
   var tbody = document.getElementById('input-table-body');
   var thead = document.getElementById('input-table-head');
   if (!tbody || !thead) return;
@@ -275,7 +276,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked) {
     tagField = '<span class="detail-readonly">' + escapeHtml(r.tag || '\u2014') + '</span>';
   } else {
-    tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" onchange="handleCellEdit(this); compactRefreshRow(\'' + r._id + '\')" onclick="event.stopPropagation()">'
+    tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
       + '<option value="">\u2014</option>'
       + tagOpts.map(function(t) { return '<option value="' + t + '" ' + (r.tag === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
       + '</select>';
@@ -371,6 +372,19 @@ window.compactToggleExpand = function(recordId, idx) {
       setTimeout(function() { newPanel.classList.add('open'); }, 10);
     }
   }
+};
+
+// Refresh the detail panel content after a tag change (without full re-render)
+window.compactRefreshDetailPanel = function(recordId, idx) {
+  var panel = document.getElementById('detail-panel-' + recordId);
+  if (!panel || !panel.classList.contains('open')) return;
+  var r = null;
+  for (var i = 0; i < appState.records.length; i++) {
+    if (appState.records[i]._id === recordId) { r = appState.records[i]; break; }
+  }
+  if (!r) return;
+  var locked = isRowLocked(r);
+  panel.innerHTML = renderDetailPanel(r, idx, locked);
 };
 
 // Refresh a single row's tag chip after edit (without full re-render)

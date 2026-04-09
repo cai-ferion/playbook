@@ -1219,8 +1219,12 @@ function getFilteredInputRecords() {
 }
 
 function goInputPage(page) {
-  appState.inputPage = page;
-  renderInputTable();
+  if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+    serverPageChange(page);
+  } else {
+    appState.inputPage = page;
+    renderInputTable();
+  }
 }
 
 function renderInputTable() {
@@ -1628,13 +1632,22 @@ function handleCellEdit(el) {
 
     const editCount = Object.keys(appState.pendingEdits).length;
     const editCountEl = document.getElementById('input-edit-count');
-    editCountEl.textContent = `${editCount} record(s) edited`;
-    editCountEl.style.display = 'inline';
-    document.getElementById('save-btn').disabled = false;
-    document.getElementById('undo-btn').disabled = false;
+    if (editCountEl) { editCountEl.textContent = `${editCount} record(s) edited`; editCountEl.style.display = 'inline'; }
+    const saveBtn = document.getElementById('save-btn');
+    const undoBtn = document.getElementById('undo-btn');
+    if (saveBtn) saveBtn.disabled = false;
+    if (undoBtn) undoBtn.disabled = false;
 
     if (key === 'tag') {
-      renderInputTable();
+      // In compact mode, just refresh the tag chip + detail panel without full re-render
+      var rec = appState.records[idx];
+      if (rec && typeof compactRefreshRow === 'function') {
+        compactRefreshRow(rec._id);
+        // Also refresh the detail panel reason field (UPL reason becomes editable/readonly based on tag)
+        compactRefreshDetailPanel(rec._id, idx);
+      } else {
+        renderInputTable();
+      }
     }
   }
 }

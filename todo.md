@@ -1196,3 +1196,8 @@
 - [x] Fluid hover and click micro-animations on all interactive elements
 - [x] Premium visual feel — shadows, gradients, transitions
 - [x] Ensure filter bar, pagination, and toolbar are responsive
+
+## Batch 116 — Input Portal Functionality Audit & Fix
+- [ ] Audit all function references between input-compact.js, input-portal.js, and app.js
+- [ ] Fix broken or incorrectly wired functions
+- [ ] Verify filters, editing, saving, bulk ops, pagination all work end-to-end
