@@ -1250,3 +1250,9 @@
 - [x] Dashboard title gradient text effect
 - [x] Created dashboard-restyle.css (dedicated CSS file)
 - [x] Created dashboard-anim.js (dedicated animation module)
+
+## Batch 121b — Dashboard Light Theme Rework
+- [x] Rework dashboard-restyle.css from dark mode to polished light theme
+- [x] Preserve all animations, hover effects, and structural improvements
+- [x] Update color palette: light background, dark text, accent colors adjusted for light context
+- [x] Test in browser and verify readability
