@@ -1636,7 +1636,7 @@ function handleCellEdit(el) {
       var spRow = serverPagState.rows.find(function(r) { return r._id === editedRecId; });
       if (spRow) {
         // Map frontend keys to both frontend and DB column names
-        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], billingCode: ['billingCode', 'billing_code'] };
+        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], billingCode: ['billingCode', 'billing_code'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'] };
         var targets = keyMap[key] || [key];
         for (var ti = 0; ti < targets.length; ti++) { spRow[targets[ti]] = value; }
         if (key === 'tag' && value !== 'UPL' && value !== 'LATE') {
@@ -1694,6 +1694,9 @@ function handleUndoAll() {
         sRow.ot_hours = origRec.ot;
         sRow.billingCode = origRec.billingCode;
         sRow.billing_code = origRec.billingCode;
+        sRow.role = origRec.role;
+        sRow.actualPlanningGroup = origRec.actualPlanningGroup;
+        sRow.planning_group = origRec.actualPlanningGroup;
       }
     }
   }
@@ -1732,7 +1735,7 @@ async function confirmSave() {
     for (const [idx, changes] of Object.entries(appState.pendingEdits)) {
       const record = appState.records[parseInt(idx)];
       const edit = { _id: record._id || '' };
-      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', billingCode: 'billing_code' };
+      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', billingCode: 'billing_code', role: 'role', actualPlanningGroup: 'planning_group' };
       for (const [field, value] of Object.entries(changes)) {
         const dbCol = fieldMap[field] || field;
         edit[dbCol] = value;
@@ -1747,7 +1750,7 @@ async function confirmSave() {
 
       // Sync serverPagState.rows with saved values so re-render shows fresh data
       if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
-        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', billing_code: 'billingCode' };
+        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', billing_code: 'billingCode', role: 'role', planning_group: 'actualPlanningGroup' };
         for (const edit of edits) {
           const row = serverPagState.rows.find(r => r._id === edit._id);
           if (row) {

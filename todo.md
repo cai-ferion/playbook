@@ -1278,3 +1278,13 @@
 - [x] Diagnose slow SRT Billing Upload (V2) — root cause: row-by-row INSERT for 10,041 rows
 - [x] Optimize upload handler: bulk INSERT (500 rows/SQL), client batch 1000, skipSync on intermediate batches
 - [x] Benchmarked: 10,003 rows uploaded in 6.8 seconds (was >30s before)
+
+## Batch 123 — Attendance Detail Panel Revisions
+- [x] Add role and planning_group columns to io_attendance table (per-day fields)
+- [x] Update backend: return role/PG in attendance detail API, accept role/PG edits in save endpoint
+- [x] Track role/PG changes in audit trail
+- [x] Restructure detail panel layout: details (Tag, Reason, OT Hours, Role, PG, etc.) on left, Audit Trail on right
+- [x] Add Role dropdown (specific options: Agent, Operational SME, Quality & Policy Expert, Team Lead, Manager)
+- [x] Add Planning Group dropdown (specific options: S-ABF, CS-ABF, RM_CTR, FAD_CTR, QPE_CTR, SME_CTR, MULTIPLE)
+- [x] Role/PG edits are part of "Edit" workflow — only saved on "Save Changes" click
+- [x] Remove Billing Compliance V2 tab from Billing Compliance page

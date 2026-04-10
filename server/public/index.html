@@ -507,7 +507,6 @@
           <div class="billing-tab-bar" style="display:flex;gap:0;margin:16px 0 0 0;border-bottom:2px solid var(--border);">
             <button class="billing-tab-btn active" data-tab="billing-dashboard" onclick="switchBillingTab('billing-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--fg);cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;transition:all 0.2s;">Billing Dashboard</button>
             <button class="billing-tab-btn" data-tab="ot-dashboard" onclick="switchBillingTab('ot-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">OT Dashboard</button>
-            <button class="billing-tab-btn" data-tab="billing-v2" onclick="switchBillingTab('billing-v2')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">Billing Compliance V2</button>
           </div>
 
           <!-- Tab 1: Billing Dashboard -->
@@ -618,107 +617,7 @@
             </div>
           </div><!-- end billing-tab-ot-dashboard -->
 
-          <!-- Tab 3: Billing Compliance V2 -->
-          <div id="billing-tab-billing-v2" class="billing-tab-content" style="display:none;margin-top:16px;">
 
-            <!-- V2 Controls -->
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-              <label class="filter-label" style="font-weight:600;">Week Ending:</label>
-              <select class="form-select" id="billing-v2-week-select" onchange="loadBillingComplianceV2()" style="min-width:160px;"></select>
-              <span id="billing-v2-freshness" style="font-size:11px;color:var(--text-muted);margin-left:auto;"></span>
-            </div>
-
-            <!-- V2 KPI Cards -->
-            <div id="billing-v2-kpis" style="display:none;margin-bottom:16px;">
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;">
-                <div class="card" style="padding:12px;text-align:center;">
-                  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target HC</div>
-                  <div id="v2-kpi-target-hc" style="font-size:24px;font-weight:700;color:var(--fg);">—</div>
-                </div>
-                <div class="card" style="padding:12px;text-align:center;">
-                  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Production HC</div>
-                  <div id="v2-kpi-production-hc" style="font-size:24px;font-weight:700;color:var(--fg);">—</div>
-                </div>
-                <div class="card" style="padding:12px;text-align:center;">
-                  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target Hours</div>
-                  <div id="v2-kpi-target-hrs" style="font-size:24px;font-weight:700;color:var(--fg);">—</div>
-                </div>
-                <div class="card" style="padding:12px;text-align:center;">
-                  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Payload</div>
-                  <div id="v2-kpi-payload" style="font-size:24px;font-weight:700;color:var(--fg);">—</div>
-                </div>
-                <div class="card" style="padding:12px;text-align:center;">
-                  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Gap Hours</div>
-                  <div id="v2-kpi-gap" style="font-size:24px;font-weight:700;color:var(--fg);">—</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- V2 Loading -->
-            <div class="loading-overlay" id="billing-v2-loading" style="display:none;">
-              <div class="spinner"></div>
-              <div class="loading-text">Loading Compliance Data...</div>
-            </div>
-
-            <!-- V2 Empty State -->
-            <div id="billing-v2-empty" style="text-align:center;padding:40px 20px;color:var(--text-secondary);">
-              <p>Select a week ending to view Billing Compliance V2 data.</p>
-              <p style="font-size:12px;">Upload SRT Billing data and set targets in Admin Tools first.</p>
-            </div>
-
-            <!-- V2 Compliance Table -->
-            <div id="billing-v2-table-container" style="display:none;">
-              <div style="overflow-x:auto;">
-                <table class="data-table billing-table" id="billing-v2-compliance-table">
-                  <thead>
-                    <tr>
-                      <th style="min-width:140px;">Planning Group</th>
-                      <th style="min-width:120px;">Role</th>
-                      <th style="text-align:center;">Target HC</th>
-                      <th style="text-align:center;">Prod. HC</th>
-                      <th style="text-align:center;">Present HC</th>
-                      <th style="text-align:center;">Delivered Hrs</th>
-                      <th style="text-align:center;">OT Hrs</th>
-                      <th style="text-align:center;font-weight:700;">Total Payload</th>
-                      <th style="text-align:center;">Target Hrs</th>
-                      <th style="text-align:center;">Gap Hrs</th>
-                      <th style="text-align:center;">Gap HC-Days</th>
-                      <th style="text-align:center;min-width:80px;">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="billing-v2-compliance-body"></tbody>
-                  <tfoot id="billing-v2-compliance-foot"></tfoot>
-                </table>
-              </div>
-            </div>
-
-            <!-- V2 Daily Drilldown Panel -->
-            <div id="billing-v2-drilldown" style="display:none;margin-top:16px;">
-              <div class="card" style="padding:16px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                  <h4 id="billing-v2-drilldown-title" style="margin:0;font-size:14px;">Daily Breakdown</h4>
-                  <button class="btn btn-outline btn-sm" onclick="closeBillingV2Drilldown()" style="font-size:11px;">Close</button>
-                </div>
-                <div style="overflow-x:auto;">
-                  <table class="data-table" id="billing-v2-drilldown-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th style="text-align:center;">A/P</th>
-                        <th style="text-align:center;">Prod. HC</th>
-                        <th style="text-align:center;">Present HC</th>
-                        <th style="text-align:center;">Delivered Hrs</th>
-                        <th style="text-align:center;">OT Hrs</th>
-                        <th style="text-align:center;font-weight:700;">Total Payload</th>
-                      </tr>
-                    </thead>
-                    <tbody id="billing-v2-drilldown-body"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-          </div><!-- end billing-tab-billing-v2 -->
 
         </div>
       </div>
@@ -1662,7 +1561,7 @@
   <script src="js/admin.js?v=102g"></script>
   <script src="js/billing.js?v=102g"></script>
   <script src="js/billing-v2.js?v=122"></script>
-  <script src="js/billing-v2-page.js?v=122"></script>
+
   <script src="js/performance.js?v=102g"></script>
   <script src="js/compass.js?v=102g"></script>
   <script src="js/compass-omnibar.js?v=102g"></script>

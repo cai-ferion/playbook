@@ -276,7 +276,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked) {
     tagField = '<span class="detail-readonly">' + escapeHtml(r.tag || '\u2014') + '</span>';
   } else {
-    tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
+    tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + tagOpts.map(function(t) { return '<option value="' + t + '" ' + (r.tag === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
       + '</select>';
@@ -286,7 +286,7 @@ function renderDetailPanel(r, idx, locked) {
   var reasonField;
   var canEditReason = !locked && (r.tag === 'UPL' || r.tag === 'LATE');
   if (canEditReason) {
-    reasonField = '<select class="detail-select" data-idx="' + idx + '" data-key="uplReason" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
+    reasonField = '<select class="detail-select" data-idx="' + idx + '" data-key="uplReason" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + UPL_REASONS.map(function(rr) { return '<option value="' + rr + '" ' + (r.uplReason === rr ? 'selected' : '') + '>' + rr + '</option>'; }).join('')
       + '</select>';
@@ -314,29 +314,63 @@ function renderDetailPanel(r, idx, locked) {
     remarksField = '<textarea class="detail-textarea" data-idx="' + idx + '" data-key="remarks" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">' + escapeHtml(r.remarks || '') + '</textarea>';
   }
 
-  return '<div class="detail-panel-grid">'
-    // Row 1: Editable fields
-    + '<div class="detail-section"><span class="detail-label">Tag</span>' + tagField + '</div>'
-    + '<div class="detail-section"><span class="detail-label">Reason</span>' + reasonField + '</div>'
-    + '<div class="detail-section"><span class="detail-label">OT Hours</span>' + otField + '</div>'
-    // Divider
+  // Role dropdown (per-day editable)
+  var ROLE_OPTIONS = ['Agent', 'Operational SME', 'Quality & Policy Expert'];
+  var roleField;
+  if (locked) {
+    roleField = '<span class="detail-readonly">' + escapeHtml(r.role || '\u2014') + '</span>';
+  } else {
+    roleField = '<select class="detail-select" data-idx="' + idx + '" data-key="role" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
+      + '<option value="">\u2014</option>'
+      + ROLE_OPTIONS.map(function(ro) { return '<option value="' + ro + '" ' + (r.role === ro ? 'selected' : '') + '>' + ro + '</option>'; }).join('')
+      + '</select>';
+  }
+
+  // Planning Group dropdown (per-day editable)
+  var PG_OPTIONS = ['S-ABF', 'CS-ABF', 'RM_CTR', 'FAD_CTR', 'CSO_CTR', 'SME_CTR', 'QPE_CTR'];
+  var pgField;
+  if (locked) {
+    pgField = '<span class="detail-readonly">' + escapeHtml(r.actualPlanningGroup || '\u2014') + '</span>';
+  } else {
+    pgField = '<select class="detail-select" data-idx="' + idx + '" data-key="actualPlanningGroup" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
+      + '<option value="">\u2014</option>'
+      + PG_OPTIONS.map(function(pg) { return '<option value="' + pg + '" ' + (r.actualPlanningGroup === pg ? 'selected' : '') + '>' + pg + '</option>'; }).join('')
+      + '</select>';
+  }
+
+  // === TWO-COLUMN LAYOUT: Details (left) | Audit Trail (right) ===
+  return '<div class="detail-panel-split">'
+    // LEFT COLUMN: Item details
+    + '<div class="detail-panel-left">'
+    + '<div class="detail-panel-grid">'
+    // Row 1: Tag, Reason, OT Hours
+    + '<div class="detail-section"><span class="detail-label">TAG</span>' + tagField + '</div>'
+    + '<div class="detail-section"><span class="detail-label">REASON</span>' + reasonField + '</div>'
+    + '<div class="detail-section"><span class="detail-label">OT HOURS</span>' + otField + '</div>'
     + '<div class="detail-divider"></div>'
-    // Row 2: Remarks (full width)
-    + '<div class="detail-section" style="grid-column:1/-1;"><span class="detail-label">Remarks</span>' + remarksField + '</div>'
-    // Divider
+    // Row 2: Remarks (full width within left column)
+    + '<div class="detail-section" style="grid-column:1/-1;"><span class="detail-label">REMARKS</span>' + remarksField + '</div>'
     + '<div class="detail-divider"></div>'
-    // Row 3: Read-only info
-    + '<div class="detail-section"><span class="detail-label">Status</span><span class="detail-value">' + escapeHtml(r.status || '\u2014') + '</span></div>'
-    + '<div class="detail-section"><span class="detail-label">Billing Code</span><span class="detail-value">' + escapeHtml(r.billingCode || '\u2014') + '</span></div>'
-    + '<div class="detail-section"><span class="detail-label">Planning Group</span><span class="detail-value">' + escapeHtml(r.actualPlanningGroup || '\u2014') + '</span></div>'
-    // Inline Audit Trail
+    // Row 3: Status, Billing Code
+    + '<div class="detail-section"><span class="detail-label">STATUS</span><span class="detail-value">' + escapeHtml(r.status || '\u2014') + '</span></div>'
+    + '<div class="detail-section"><span class="detail-label">BILLING CODE</span><span class="detail-value">' + escapeHtml(r.billingCode || '\u2014') + '</span></div>'
+    + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-divider"></div>'
-    + '<div class="detail-section detail-audit-inline" style="grid-column:1/-1;">'
+    // Row 4: Role and Planning Group (editable dropdowns)
+    + '<div class="detail-section"><span class="detail-label">ROLE</span>' + roleField + '</div>'
+    + '<div class="detail-section"><span class="detail-label">PLANNING GROUP</span>' + pgField + '</div>'
+    + '<div class="detail-section"></div>' /* spacer */
+    + '</div>'
+    + '</div>'
+    // RIGHT COLUMN: Audit Trail
+    + '<div class="detail-panel-right">'
+    + '<div class="detail-section detail-audit-inline">'
     + '<span class="detail-label">'
     + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
-    + 'Audit Trail</span>'
+    + 'AUDIT TRAIL</span>'
     + '<div class="inline-audit-container" id="inline-audit-' + r._id + '">'
     + '<div class="inline-audit-loading"><div class="inline-audit-spinner"></div> Loading...</div>'
+    + '</div>'
     + '</div>'
     + '</div>'
     + '</div>';

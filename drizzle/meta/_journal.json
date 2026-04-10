@@ -50,6 +50,13 @@
       "when": 1775784185518,
       "tag": "0006_polite_mandarin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1775858520911,
+      "tag": "0007_wise_shadow_king",
+      "breakpoints": true
     }
   ]
 }

@@ -422,7 +422,8 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const fieldMap: Record<string, string> = {
       tag: "tag", upl_reason: "upl_reason", remarks: "remarks",
-      ot_hours: "ot_hours", billing_code: "billing_code"
+      ot_hours: "ot_hours", billing_code: "billing_code",
+      role: "role", planning_group: "planning_group"
     };
 
     const auditEntries: any[] = [];
