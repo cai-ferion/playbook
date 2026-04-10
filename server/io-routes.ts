@@ -19,6 +19,8 @@ import {
   ioGchatQueue,
   ioOtRequests,
   ioOtConfig,
+  ioSrtBill,
+  ioBillingTargetsV2,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
@@ -2075,6 +2077,464 @@ router.post("/productivity-hours/upload", async (req: Request, res: Response) =>
     res.json({ success: true, inserted, updated, total: records.length });
   } catch (err: any) {
     console.error("[IO API] productivity-hours upload error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Billing Compliance V2 — SRT Bill Upload
+// ============================================================
+
+/**
+ * POST /api/io/srt-bill-upload
+ * Accepts JSON body: { rows: Array<{date, ohr, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group}> }
+ * Upserts into io_srt_bill by (date, ohr_id).
+ * Syncs latest Actuals planning_group + role back to io_employees.
+ */
+router.post("/srt-bill-upload", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { rows } = req.body;
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: "rows array is required" });
+    }
+    const now = new Date().toISOString();
+    let inserted = 0, updated = 0;
+
+    // Batch upsert in chunks of 100
+    for (let i = 0; i < rows.length; i += 100) {
+      const chunk = rows.slice(i, i + 100);
+      for (const r of chunk) {
+        const dateStr = String(r.date || '').trim();
+        const ohrStr = String(r.ohr || '').trim();
+        if (!dateStr || !ohrStr) continue;
+        const result: any = await db.execute(
+          sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group, created_at)
+              VALUES (${dateStr}, ${ohrStr}, ${String(r.srt_id || '')}, ${String(r.billing_name || '')}, ${String(r.srt_status || '')}, ${String(r.actual_vs_projection || '')}, ${String(r.role || '')}, ${String(r.planning_group || '')}, ${now})
+              ON DUPLICATE KEY UPDATE
+                srt_id = VALUES(srt_id),
+                billing_name = VALUES(billing_name),
+                srt_status = VALUES(srt_status),
+                actual_vs_projection = VALUES(actual_vs_projection),
+                role = VALUES(role),
+                planning_group = VALUES(planning_group),
+                created_at = VALUES(created_at)`
+        );
+        const info = Array.isArray(result[0]) ? result[0] : result;
+        if (info.affectedRows === 1) inserted++;
+        else if (info.affectedRows === 2) updated++;
+      }
+    }
+
+    // Sync latest Actuals data back to io_employees
+    // For each employee, find their most recent Actuals row and update planning_group + actual_role
+    let synced = 0;
+    try {
+      const syncResult: any = await db.execute(
+        sql`UPDATE io_employees e
+            INNER JOIN (
+              SELECT ohr_id, role, planning_group
+              FROM io_srt_bill
+              WHERE actual_vs_projection = 'Actuals'
+                AND date = (
+                  SELECT MAX(s2.date) FROM io_srt_bill s2
+                  WHERE s2.ohr_id = io_srt_bill.ohr_id AND s2.actual_vs_projection = 'Actuals'
+                )
+            ) latest ON e.ohr_id = latest.ohr_id
+            SET e.planning_group = latest.planning_group,
+                e.actual_role = latest.role
+            WHERE e.planning_group != latest.planning_group
+               OR e.actual_role != latest.role`
+      );
+      const syncInfo = Array.isArray(syncResult[0]) ? syncResult[0] : syncResult;
+      synced = syncInfo.affectedRows || 0;
+    } catch (syncErr: any) {
+      console.error("[IO API] srt-bill-upload employee sync error:", syncErr.message);
+    }
+
+    res.json({ success: true, inserted, updated, total: rows.length, employeesSynced: synced });
+  } catch (err: any) {
+    console.error("[IO API] srt-bill-upload error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/srt-bill/summary — get summary of uploaded SRT bill data
+router.get("/srt-bill/summary", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const result: any = await db.execute(
+      sql`SELECT
+            MIN(date) as min_date,
+            MAX(date) as max_date,
+            COUNT(DISTINCT ohr_id) as unique_employees,
+            COUNT(*) as total_rows,
+            SUM(CASE WHEN actual_vs_projection = 'Actuals' THEN 1 ELSE 0 END) as actuals_count,
+            SUM(CASE WHEN actual_vs_projection = 'Projection' THEN 1 ELSE 0 END) as projection_count
+          FROM io_srt_bill`
+    );
+    const rows = Array.isArray(result[0]) ? result[0] : result;
+    res.json(rows[0] || {});
+  } catch (err: any) {
+    console.error("[IO API] srt-bill/summary error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/io/srt-bill — clear all SRT bill data (for re-upload)
+router.delete("/srt-bill", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    await db.execute(sql`DELETE FROM io_srt_bill`);
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[IO API] srt-bill DELETE error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Billing Compliance V2 — Targets CRUD
+// ============================================================
+
+// GET /api/io/billing-targets-v2?week_ending=YYYY-MM-DD
+router.get("/billing-targets-v2", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const we = req.query.week_ending ? String(req.query.week_ending) : null;
+    let result: any;
+    if (we) {
+      result = await db.execute(
+        sql`SELECT * FROM io_billing_targets_v2 WHERE week_ending = ${we} ORDER BY planning_group, role`
+      );
+    } else {
+      result = await db.execute(
+        sql`SELECT * FROM io_billing_targets_v2 ORDER BY week_ending DESC, planning_group, role`
+      );
+    }
+    const rows = Array.isArray(result[0]) ? result[0] : result;
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] billing-targets-v2 GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/billing-targets-v2 — upsert targets
+// Body: { targets: Array<{week_ending, planning_group, role, target_hc, target_hours}> }
+router.post("/billing-targets-v2", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { targets } = req.body;
+    if (!targets || !Array.isArray(targets)) {
+      return res.status(400).json({ error: "targets array is required" });
+    }
+    const now = new Date().toISOString();
+    let upserted = 0;
+    for (const t of targets) {
+      await db.execute(
+        sql`INSERT INTO io_billing_targets_v2 (week_ending, planning_group, role, target_hc, target_hours, created_at, updated_at)
+            VALUES (${String(t.week_ending)}, ${String(t.planning_group)}, ${String(t.role)}, ${Number(t.target_hc) || 0}, ${Number(t.target_hours) || 0}, ${now}, ${now})
+            ON DUPLICATE KEY UPDATE
+              target_hc = VALUES(target_hc),
+              target_hours = VALUES(target_hours),
+              updated_at = VALUES(updated_at)`
+      );
+      upserted++;
+    }
+    res.json({ success: true, upserted });
+  } catch (err: any) {
+    console.error("[IO API] billing-targets-v2 POST error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/billing-targets-v2/weeks — get distinct week_ending values
+router.get("/billing-targets-v2/weeks", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const result: any = await db.execute(
+      sql`SELECT DISTINCT week_ending FROM io_billing_targets_v2 ORDER BY week_ending DESC`
+    );
+    const rows = Array.isArray(result[0]) ? result[0] : result;
+    res.json(rows.map((r: any) => r.week_ending));
+  } catch (err: any) {
+    console.error("[IO API] billing-targets-v2/weeks error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Billing Compliance V2 — Compliance Calculation Engine
+// ============================================================
+
+/**
+ * GET /api/io/billing-compliance-v2?week_ending=YYYY-MM-DD
+ * 
+ * Joins io_srt_bill (Production employees per day per PG×Role)
+ * with io_attendance (P/LATE tags + OT hours) to compute:
+ * - Target HC and Target Hours from io_billing_targets_v2
+ * - Production HC (distinct employees in SRT with status=Production)
+ * - Present HC (employees with P or LATE tag in attendance)
+ * - Delivered Hours (present_days × 8)
+ * - OT Hours (sum of ot_hours from attendance)
+ * - Total Payload (delivered + OT)
+ * - Gap analysis (target - delivered)
+ * - Actual vs Projection breakdown per day
+ */
+router.get("/billing-compliance-v2", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const weekEnding = String(req.query.week_ending || '');
+    if (!weekEnding) return res.status(400).json({ error: "week_ending is required" });
+
+    // Compute week start (Sunday) from week ending (Saturday)
+    const weDate = new Date(weekEnding + 'T00:00:00Z');
+    const wsDate = new Date(weDate);
+    wsDate.setUTCDate(wsDate.getUTCDate() - 6);
+    const weekStart = wsDate.toISOString().slice(0, 10);
+    const weekEnd = weekEnding;
+
+    // 1. Get all SRT bill rows for this week (Production status only)
+    const srtResult: any = await db.execute(
+      sql`SELECT date, ohr_id, srt_status, actual_vs_projection, role, planning_group
+          FROM io_srt_bill
+          WHERE date >= ${weekStart} AND date <= ${weekEnd}
+            AND srt_status = 'Production'
+          ORDER BY date, planning_group, role`
+    );
+    const srtRows = Array.isArray(srtResult[0]) ? srtResult[0] : srtResult;
+
+    // 2. Get all attendance records for this week
+    const attResult: any = await db.execute(
+      sql`SELECT ohr_id, log_date, tag, ot_hours
+          FROM io_attendance
+          WHERE log_date >= ${weekStart} AND log_date <= ${weekEnd}
+          ORDER BY log_date`
+    );
+    const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
+
+    // 3. Get targets for this week
+    const tgtResult: any = await db.execute(
+      sql`SELECT planning_group, role, target_hc, target_hours
+          FROM io_billing_targets_v2
+          WHERE week_ending = ${weekEnding}`
+    );
+    const tgtRows = Array.isArray(tgtResult[0]) ? tgtResult[0] : tgtResult;
+    const targetMap = new Map<string, { target_hc: number; target_hours: number }>();
+    for (const t of tgtRows) {
+      targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
+    }
+
+    // Build attendance lookup: ohr|date -> { tag, ot_hours }
+    const attMap = new Map<string, { tag: string; ot_hours: number }>();
+    for (const a of attRows) {
+      attMap.set(`${a.ohr_id}|${a.log_date}`, {
+        tag: a.tag || '',
+        ot_hours: parseFloat(a.ot_hours) || 0
+      });
+    }
+
+    // Build compliance data per PG×Role
+    // Structure: { pg|role -> { dates: { date -> { srt_employees: Set, present: Set, ot_hours, actual_vs_projection } } } }
+    const complianceMap = new Map<string, {
+      planning_group: string;
+      role: string;
+      dates: Map<string, {
+        srt_employees: Set<string>;
+        present_employees: Set<string>;
+        ot_hours: number;
+        actual_vs_projection: string;
+      }>;
+    }>();
+
+    for (const row of srtRows) {
+      const key = `${row.planning_group}|${row.role}`;
+      if (!complianceMap.has(key)) {
+        complianceMap.set(key, {
+          planning_group: row.planning_group,
+          role: row.role,
+          dates: new Map()
+        });
+      }
+      const entry = complianceMap.get(key)!;
+      if (!entry.dates.has(row.date)) {
+        entry.dates.set(row.date, {
+          srt_employees: new Set(),
+          present_employees: new Set(),
+          ot_hours: 0,
+          actual_vs_projection: row.actual_vs_projection || 'Actuals'
+        });
+      }
+      const dayData = entry.dates.get(row.date)!;
+      dayData.srt_employees.add(row.ohr_id);
+
+      // Check attendance for this employee on this date
+      const attKey = `${row.ohr_id}|${row.date}`;
+      const att = attMap.get(attKey);
+      if (att && (att.tag === 'P' || att.tag === 'LATE')) {
+        dayData.present_employees.add(row.ohr_id);
+        dayData.ot_hours += att.ot_hours;
+      }
+    }
+
+    // Build response table
+    const PG_ROLE_ORDER = [
+      'CEI_TASKFORCE_CTR|Agent',
+      'CEI_TASKFORCE_CTR|Operational SME',
+      'CEI_TASKFORCE_CTR|Quality & Policy Expert',
+      'CSO_CTR|Agent',
+      'FAD_CTR|Agent',
+      'MASA_MAFSA_CTR_SCALED_REVIEW|Agent',
+      'MASA_MAFSA_CTR_SCALED_REVIEW|Operational SME',
+      'MASA_MAFSA_CTR_SCALED_REVIEW|Quality & Policy Expert',
+      'QPE_CTR|Quality & Policy Expert',
+      'RECALL_MEASUREMENT_CTR|Agent',
+      'SME_CTR|Operational SME',
+    ];
+
+    const complianceTable: any[] = [];
+    const dailyDrilldown: any[] = [];
+
+    // Collect all keys (use PG_ROLE_ORDER first, then any extras)
+    const allKeys = new Set<string>(PG_ROLE_ORDER);
+    Array.from(complianceMap.keys()).forEach(k => allKeys.add(k));
+
+    for (const key of Array.from(allKeys)) {
+      const entry = complianceMap.get(key);
+      const [pg, role] = key.split('|');
+      const target = targetMap.get(key) || { target_hc: 0, target_hours: 0 };
+
+      let totalProductionHC = 0;
+      let totalPresentHC = 0;
+      let totalDeliveredHours = 0;
+      let totalOtHours = 0;
+      let dayCount = 0;
+
+      const dayDetails: any[] = [];
+
+      if (entry) {
+        // Sort dates
+        const sortedDates = Array.from(entry.dates.keys()).sort();
+        for (const date of sortedDates) {
+          const day = entry.dates.get(date)!;
+          const productionHC = day.srt_employees.size;
+          const presentHC = day.present_employees.size;
+          const deliveredHrs = presentHC * 8;
+          const otHrs = Math.round(day.ot_hours * 100) / 100;
+
+          totalProductionHC += productionHC;
+          totalPresentHC += presentHC;
+          totalDeliveredHours += deliveredHrs;
+          totalOtHours += otHrs;
+          dayCount++;
+
+          dayDetails.push({
+            date,
+            actual_vs_projection: day.actual_vs_projection,
+            production_hc: productionHC,
+            present_hc: presentHC,
+            delivered_hours: deliveredHrs,
+            ot_hours: otHrs,
+            total_payload: deliveredHrs + otHrs
+          });
+        }
+      }
+
+      const totalPayload = Math.round((totalDeliveredHours + totalOtHours) * 100) / 100;
+      const gapHours = Math.round((target.target_hours - totalPayload) * 100) / 100;
+      // Gap HC-days: how many person-days short (gap_hours / 8)
+      const gapHCDays = Math.round((gapHours / 8) * 100) / 100;
+      const status = totalPayload >= target.target_hours ? 'MET' : 'BEHIND';
+
+      // Average production HC across days (for the summary row)
+      const avgProductionHC = dayCount > 0 ? Math.round(totalProductionHC / dayCount) : 0;
+      const avgPresentHC = dayCount > 0 ? Math.round((totalPresentHC / dayCount) * 10) / 10 : 0;
+
+      complianceTable.push({
+        planning_group: pg,
+        role: role,
+        target_hc: target.target_hc,
+        target_hours: target.target_hours,
+        production_hc: avgProductionHC,
+        present_hc: avgPresentHC,
+        delivered_hours: totalDeliveredHours,
+        ot_hours: Math.round(totalOtHours * 100) / 100,
+        total_payload: totalPayload,
+        gap_hours: gapHours,
+        gap_hc_days: gapHCDays,
+        status,
+        day_count: dayCount
+      });
+
+      dailyDrilldown.push({
+        planning_group: pg,
+        role: role,
+        days: dayDetails
+      });
+    }
+
+    // Compute totals row
+    const totals = {
+      target_hc: complianceTable.reduce((s, r) => s + r.target_hc, 0),
+      target_hours: complianceTable.reduce((s, r) => s + r.target_hours, 0),
+      production_hc: complianceTable.reduce((s, r) => s + r.production_hc, 0),
+      present_hc: Math.round(complianceTable.reduce((s, r) => s + r.present_hc, 0) * 10) / 10,
+      delivered_hours: complianceTable.reduce((s, r) => s + r.delivered_hours, 0),
+      ot_hours: Math.round(complianceTable.reduce((s, r) => s + r.ot_hours, 0) * 100) / 100,
+      total_payload: Math.round(complianceTable.reduce((s, r) => s + r.total_payload, 0) * 100) / 100,
+      gap_hours: Math.round(complianceTable.reduce((s, r) => s + r.gap_hours, 0) * 100) / 100,
+      gap_hc_days: Math.round(complianceTable.reduce((s, r) => s + r.gap_hc_days, 0) * 100) / 100,
+    };
+
+    res.json({
+      week_ending: weekEnding,
+      week_start: weekStart,
+      compliance: complianceTable,
+      drilldown: dailyDrilldown,
+      totals
+    });
+  } catch (err: any) {
+    console.error("[IO API] billing-compliance-v2 error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/billing-compliance-v2/weeks — available weeks from SRT bill data
+router.get("/billing-compliance-v2/weeks", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    // Get min and max dates from SRT bill data
+    const result: any = await db.execute(
+      sql`SELECT MIN(date) as min_date, MAX(date) as max_date FROM io_srt_bill`
+    );
+    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const { min_date, max_date } = rows[0] || {};
+    if (!min_date || !max_date) return res.json([]);
+
+    // Generate Saturday week-endings that overlap with the data range
+    const weeks: string[] = [];
+    const start = new Date(min_date + 'T00:00:00Z');
+    const end = new Date(max_date + 'T00:00:00Z');
+    // Find first Saturday >= min_date
+    const cursor = new Date(start);
+    cursor.setUTCDate(cursor.getUTCDate() + ((6 - cursor.getUTCDay() + 7) % 7));
+    while (cursor <= end || cursor.getTime() - end.getTime() < 7 * 86400000) {
+      weeks.push(cursor.toISOString().slice(0, 10));
+      cursor.setUTCDate(cursor.getUTCDate() + 7);
+      if (weeks.length > 52) break; // safety
+    }
+    res.json(weeks);
+  } catch (err: any) {
+    console.error("[IO API] billing-compliance-v2/weeks error:", err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -1256,3 +1256,20 @@
 - [x] Preserve all animations, hover effects, and structural improvements
 - [x] Update color palette: light background, dark text, accent colors adjusted for light context
 - [x] Test in browser and verify readability
+
+## Batch 122 — Billing Compliance V2 System
+- [x] Create io_srt_bill database table (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group)
+- [x] Create io_billing_targets_v2 database table (week_ending, planning_group, role, target_hc, target_hours)
+- [x] POST /api/io/srt-bill/upload — parse XLSX batch, upsert into io_srt_bill
+- [x] POST /api/io/billing-targets-v2 — upsert targets
+- [x] GET /api/io/billing-targets-v2 — query targets by week_ending
+- [x] GET /api/io/billing-compliance-v2/:weekEnding — core compliance engine (join SRT + attendance + targets)
+- [x] Admin Tools: SRT Billing Upload panel with file upload and status badge
+- [x] Admin Tools: Billing Targets V2 editor (editable table per week x PG x Role, + New Week, Copy from Previous)
+- [x] Billing Compliance V2 page: week selector, placeholder message when no data
+- [x] Billing Compliance V2 page: main compliance table (PG x Role with all columns)
+- [x] Billing Compliance V2 page: daily drill-down panel on row click
+- [x] Billing Compliance V2 page: color coding (At Risk red, Met green, Surplus blue)
+- [x] Billing Compliance V2 tab added to existing Billing Compliance page (3rd tab)
+- [x] Employee sync: SRT upload updates io_employees planning_group and actual_role from latest SRT data
+- [x] Test end-to-end: all 6 API endpoints verified, Admin Tools panels render, V2 tab functional

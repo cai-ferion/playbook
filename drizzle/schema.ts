@@ -409,3 +409,46 @@ export const ioProductivityHours = mysqlTable("io_productivity_hours", {
 
 export type IoProductivityHours = typeof ioProductivityHours.$inferSelect;
 export type InsertIoProductivityHours = typeof ioProductivityHours.$inferInsert;
+
+// ============================================================
+// Billing Compliance V2 Tables
+// ============================================================
+
+/**
+ * io_srt_bill — Daily SRT billing data per employee.
+ * Source of truth: uploaded BILLINGTEMPLATE.xlsx (SRT_BILL sheet).
+ * Each row = one employee on one date with their billing status, role, and planning group.
+ */
+export const ioSrtBill = mysqlTable("io_srt_bill", {
+  id: int("id").autoincrement().primaryKey(),
+  date: varchar("date", { length: 16 }).notNull(),              // YYYY-MM-DD
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  srt_id: varchar("srt_id", { length: 50 }),
+  billing_name: varchar("billing_name", { length: 255 }),
+  srt_status: varchar("srt_status", { length: 50 }),             // Production, Nesting, Exit, Training, Attrition Backfill Training
+  actual_vs_projection: varchar("actual_vs_projection", { length: 20 }), // Actuals or Projection
+  role: varchar("role", { length: 100 }),                        // Agent, Operational SME, Quality & Policy Expert
+  planning_group: varchar("planning_group", { length: 100 }),    // e.g. MASA_MAFSA_CTR_SCALED_REVIEW
+  created_at: varchar("created_at", { length: 64 }),
+});
+
+export type IoSrtBill = typeof ioSrtBill.$inferSelect;
+export type InsertIoSrtBill = typeof ioSrtBill.$inferInsert;
+
+/**
+ * io_billing_targets_v2 — Weekly billing targets per Planning Group × Role.
+ * Editable via Admin Tools. Used by Billing Compliance V2 to compute gap analysis.
+ */
+export const ioBillingTargetsV2 = mysqlTable("io_billing_targets_v2", {
+  id: int("id").autoincrement().primaryKey(),
+  week_ending: varchar("week_ending", { length: 16 }).notNull(), // YYYY-MM-DD (Saturday)
+  planning_group: varchar("planning_group", { length: 100 }).notNull(),
+  role: varchar("role", { length: 100 }).notNull(),
+  target_hc: int("target_hc").default(0),
+  target_hours: decimal("target_hours", { precision: 10, scale: 2 }).default("0"),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoBillingTargetsV2 = typeof ioBillingTargetsV2.$inferSelect;
+export type InsertIoBillingTargetsV2 = typeof ioBillingTargetsV2.$inferInsert;
