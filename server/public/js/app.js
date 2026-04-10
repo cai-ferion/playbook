@@ -1903,6 +1903,14 @@ function renderDashboard() {
   renderFLMBreakdown(records);
   renderAssetInventory(records);
   renderAgentList(records);
+
+  // Trigger dashboard animations (counters, stagger, pulse)
+  if (window.dashboardAnimations) {
+    setTimeout(function() {
+      window.dashboardAnimations.replay();
+      window.dashboardAnimations.animateKPIs();
+    }, 50);
+  }
 }
 
 // ===== Shift Breakdown =====

@@ -1230,3 +1230,23 @@
 - [x] Fix fcbApplyTag (input-compact.js): sync serverPagState.rows + re-fetch
 - [x] Fix handleUndoAll: sync serverPagState.rows from restored originalRecords
 - [x] Bump cache versions to v=120
+
+## Batch 121 — Anchor Dashboard UI Restyling
+- [x] New color palette: dark navy-charcoal gradient, frosted glass cards, neon KPI accents
+- [x] KPI cards: colored top accent bars (red=shrinkage, coral=UPL, blue=PL, amber=late), glow orbs
+- [x] Animated number counters (ease-out cubic, 900ms duration)
+- [x] Staggered card entrance animations (dashCardReveal keyframes)
+- [x] Hover effects: card lift + shadow expansion + glow, table row highlight
+- [x] Pulse animation on critical shrinkage KPI (>5%)
+- [x] Dark-themed data tables (shift breakdown, supervisor wise, asset inventory)
+- [x] Shift section headers with cyan accent, overall rows with emphasis background
+- [x] Filter bar: dark glass pills with hover/active states
+- [x] Clear Filters button: red accent styling
+- [x] Record count badge: cyan accent
+- [x] Custom scrollbars for data containers
+- [x] Fullscreen overlay dark backdrop
+- [x] Responsive breakpoints (1200px, 768px)
+- [x] MutationObserver animation guard to prevent infinite re-entry loop
+- [x] Dashboard title gradient text effect
+- [x] Created dashboard-restyle.css (dedicated CSS file)
+- [x] Created dashboard-anim.js (dedicated animation module)
