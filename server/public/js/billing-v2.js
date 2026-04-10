@@ -254,17 +254,18 @@ async function applySrtV2Upload() {
     progressFill.style.width = '20%';
     progressText.textContent = 'Uploading rows...';
 
-    // Step 2: Upload in batches of 500
-    const batchSize = 500;
+    // Step 2: Upload in batches of 1000 (bulk INSERT for speed)
+    const batchSize = 1000;
     const total = srtV2ParsedRows.length;
     let uploaded = 0;
 
     for (let i = 0; i < total; i += batchSize) {
       const batch = srtV2ParsedRows.slice(i, i + batchSize);
+      const isLastBatch = (i + batchSize >= total);
       const resp = await fetch(`${IO_API_BASE}/srt-bill-upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: batch })
+        body: JSON.stringify({ rows: batch, skipSync: !isLastBatch })
       });
       const result = await resp.json();
       if (!result.success) throw new Error(result.error || 'Upload failed');

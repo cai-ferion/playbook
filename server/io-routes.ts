@@ -2095,65 +2095,84 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
-    const { rows } = req.body;
+    const { rows, skipSync } = req.body;
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ error: "rows array is required" });
     }
     const now = new Date().toISOString();
-    let inserted = 0, updated = 0;
+    let totalAffected = 0;
 
-    // Batch upsert in chunks of 100
-    for (let i = 0; i < rows.length; i += 100) {
-      const chunk = rows.slice(i, i + 100);
+    // Bulk upsert using multi-row INSERT with raw SQL for performance
+    // Process in chunks of 500 rows per SQL statement
+    const BULK_SIZE = 500;
+    for (let i = 0; i < rows.length; i += BULK_SIZE) {
+      const chunk = rows.slice(i, i + BULK_SIZE);
+      const validRows: string[][] = [];
       for (const r of chunk) {
         const dateStr = String(r.date || '').trim();
         const ohrStr = String(r.ohr || '').trim();
         if (!dateStr || !ohrStr) continue;
-        const result: any = await db.execute(
-          sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group, created_at)
-              VALUES (${dateStr}, ${ohrStr}, ${String(r.srt_id || '')}, ${String(r.billing_name || '')}, ${String(r.srt_status || '')}, ${String(r.actual_vs_projection || '')}, ${String(r.role || '')}, ${String(r.planning_group || '')}, ${now})
-              ON DUPLICATE KEY UPDATE
-                srt_id = VALUES(srt_id),
-                billing_name = VALUES(billing_name),
-                srt_status = VALUES(srt_status),
-                actual_vs_projection = VALUES(actual_vs_projection),
-                role = VALUES(role),
-                planning_group = VALUES(planning_group),
-                created_at = VALUES(created_at)`
+        validRows.push([
+          dateStr, ohrStr,
+          String(r.srt_id || '').trim(),
+          String(r.billing_name || '').trim(),
+          String(r.srt_status || '').trim(),
+          String(r.actual_vs_projection || '').trim(),
+          String(r.role || '').trim(),
+          String(r.planning_group || '').trim(),
+          now
+        ]);
+      }
+      if (validRows.length === 0) continue;
+
+      // Build bulk INSERT using drizzle sql tagged template with sql.join
+      const valueSets = validRows.map(r =>
+        sql`(${r[0]}, ${r[1]}, ${r[2]}, ${r[3]}, ${r[4]}, ${r[5]}, ${r[6]}, ${r[7]}, ${r[8]})`
+      );
+      const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group, created_at)
+        VALUES ${sql.join(valueSets, sql`, `)}
+        ON DUPLICATE KEY UPDATE
+          srt_id = VALUES(srt_id),
+          billing_name = VALUES(billing_name),
+          srt_status = VALUES(srt_status),
+          actual_vs_projection = VALUES(actual_vs_projection),
+          role = VALUES(role),
+          planning_group = VALUES(planning_group),
+          created_at = VALUES(created_at)`;
+
+      const result: any = await db.execute(bulkQuery);
+      const info = Array.isArray(result[0]) ? result[0] : result;
+      totalAffected += info.affectedRows || 0;
+    }
+
+    // Sync latest Actuals data back to io_employees (only on last batch)
+    let synced = 0;
+    if (!skipSync) {
+      try {
+        const syncResult: any = await db.execute(
+          sql`UPDATE io_employees e
+              INNER JOIN (
+                SELECT ohr_id, role, planning_group
+                FROM io_srt_bill
+                WHERE actual_vs_projection = 'Actuals'
+                  AND date = (
+                    SELECT MAX(s2.date) FROM io_srt_bill s2
+                    WHERE s2.ohr_id = io_srt_bill.ohr_id AND s2.actual_vs_projection = 'Actuals'
+                  )
+              ) latest ON e.ohr_id = latest.ohr_id
+              SET e.planning_group = latest.planning_group,
+                  e.actual_role = latest.role
+              WHERE e.planning_group != latest.planning_group
+                 OR e.actual_role != latest.role`
         );
-        const info = Array.isArray(result[0]) ? result[0] : result;
-        if (info.affectedRows === 1) inserted++;
-        else if (info.affectedRows === 2) updated++;
+        const syncInfo = Array.isArray(syncResult[0]) ? syncResult[0] : syncResult;
+        synced = syncInfo.affectedRows || 0;
+      } catch (syncErr: any) {
+        console.error("[IO API] srt-bill-upload employee sync error:", syncErr.message);
       }
     }
 
-    // Sync latest Actuals data back to io_employees
-    // For each employee, find their most recent Actuals row and update planning_group + actual_role
-    let synced = 0;
-    try {
-      const syncResult: any = await db.execute(
-        sql`UPDATE io_employees e
-            INNER JOIN (
-              SELECT ohr_id, role, planning_group
-              FROM io_srt_bill
-              WHERE actual_vs_projection = 'Actuals'
-                AND date = (
-                  SELECT MAX(s2.date) FROM io_srt_bill s2
-                  WHERE s2.ohr_id = io_srt_bill.ohr_id AND s2.actual_vs_projection = 'Actuals'
-                )
-            ) latest ON e.ohr_id = latest.ohr_id
-            SET e.planning_group = latest.planning_group,
-                e.actual_role = latest.role
-            WHERE e.planning_group != latest.planning_group
-               OR e.actual_role != latest.role`
-      );
-      const syncInfo = Array.isArray(syncResult[0]) ? syncResult[0] : syncResult;
-      synced = syncInfo.affectedRows || 0;
-    } catch (syncErr: any) {
-      console.error("[IO API] srt-bill-upload employee sync error:", syncErr.message);
-    }
-
-    res.json({ success: true, inserted, updated, total: rows.length, employeesSynced: synced });
+    res.json({ success: true, totalAffected, total: rows.length, employeesSynced: synced });
   } catch (err: any) {
     console.error("[IO API] srt-bill-upload error:", err);
     res.status(500).json({ error: err.message });

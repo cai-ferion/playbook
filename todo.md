@@ -1273,3 +1273,8 @@
 - [x] Billing Compliance V2 tab added to existing Billing Compliance page (3rd tab)
 - [x] Employee sync: SRT upload updates io_employees planning_group and actual_role from latest SRT data
 - [x] Test end-to-end: all 6 API endpoints verified, Admin Tools panels render, V2 tab functional
+
+## Batch 122b — SRT Billing Upload Performance Fix
+- [x] Diagnose slow SRT Billing Upload (V2) — root cause: row-by-row INSERT for 10,041 rows
+- [x] Optimize upload handler: bulk INSERT (500 rows/SQL), client batch 1000, skipSync on intermediate batches
+- [x] Benchmarked: 10,003 rows uploaded in 6.8 seconds (was >30s before)
