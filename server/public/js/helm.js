@@ -1015,10 +1015,10 @@ async function helmShowNewRequestForm() {
       console.warn('Failed to pre-check OT requests:', e);
     }
   }
-  // Filter request types based on role & planning group:
-  // - S-ABF & CS-ABF Agents: only see OT Request (hide Attendance Backdated Change Tag)
-  // - All others (non S-ABF/CS-ABF agents, TL, Manager, SME, etc.): only see Attendance Backdated Change Tag (hide OT Request)
-  const filteredRequestTypes = isOtMechAgent
+  // Filter request types based on role (Batch 124 fix):
+  // - ALL Agents: see OT Request (and S-ABF/CS-ABF agents also get auto-OT flow)
+  // - Non-agents (TL, Manager, SME, etc.): see Attendance Backdated Change Tag only
+  const filteredRequestTypes = isAgent
     ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
     : HELM_REQUEST_TYPES.filter(t => t.value !== 'ot_request');
   const typeOptions = filteredRequestTypes.map(t =>
@@ -1029,8 +1029,8 @@ async function helmShowNewRequestForm() {
     `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmSelectRequestAgent('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)} (${escapeHtml(e.ohr_id)})</div>`
   ).join('');
 
-  // For S-ABF/CS-ABF agents: auto-select OT Request, hide dropdown, show OT fields immediately
-  const agentAutoOT = isOtMechAgent;
+  // For ALL agents: auto-select OT Request, hide dropdown, show OT fields immediately
+  const agentAutoOT = isAgent;
 
   // Calculate next week ending (Friday) for the OT commitment info
   // Week = Sat–Fri; next WE = the Friday of next week

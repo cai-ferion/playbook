@@ -17,7 +17,6 @@ const OMNIBAR_FILTER_FIELDS = [
   { key: 'role', label: 'Role', type: 'multi', recordKey: 'role', searchable: false, sortable: false },
   { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false, sortable: false },
   { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
-  { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode', searchable: true, sortable: true },
   { key: 'blanks', label: 'Blank Tags', type: 'toggle' },
 ];
 
@@ -28,7 +27,7 @@ const OMNIBAR_SORT_FIELDS = [
   { key: 'tag', label: 'Tag', recordKey: 'tag' },
   { key: 'actualPlanningGroup', label: 'Planning Group', recordKey: 'actualPlanningGroup' },
   { key: 'shiftTime', label: 'Shift Time', recordKey: 'shiftTime' },
-  { key: 'billingCode', label: 'Billing Code', recordKey: 'billingCode' },
+
 ];
 
 // Active view state
@@ -504,7 +503,7 @@ async function omnibarApplyView() {
     if (f.type === 'multi' && f.values && f.values.length > 0) {
       var keyMap = {
         tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
-        actualPlanningGroup: 'planning_group_in', billingCode: 'billing_code_in',
+        actualPlanningGroup: 'planning_group_in',
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
       var paramKey = keyMap[f.key];
@@ -575,7 +574,7 @@ async function serverPageChange(newPage) {
     if (f.type === 'multi' && f.values && f.values.length > 0) {
       var keyMap = {
         tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
-        actualPlanningGroup: 'planning_group_in', billingCode: 'billing_code_in',
+        actualPlanningGroup: 'planning_group_in',
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
       var paramKey = keyMap[f.key];

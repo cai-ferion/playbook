@@ -165,9 +165,13 @@ router.get("/attendance", async (req: Request, res: Response) => {
             agent_in, flm_in, planning_group_in, billing_code_in,
             status_in, shift_time_in, role_in, blanks_only,
             // Server-side sort & pagination
-            sort_by, sort_dir, paginated } = req.query;
+            sort_by, sort_dir, paginated, exclude_managers } = req.query;
 
     const conditions: any[] = [];
+    // Exclude Managers from attendance results (Batch 124)
+    if (exclude_managers === 'true') {
+      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (SELECT ohr_id FROM io_employees WHERE actual_role = 'Manager')`);
+    }
     if (ohr_id) conditions.push(eq(ioAttendance.ohr_id, String(ohr_id)));
     if (log_date) conditions.push(eq(ioAttendance.log_date, String(log_date)));
     const gteDate = log_date_gte || attendance_date_gte || date_gte;
@@ -346,20 +350,8 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const [current] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, recordId)).limit(1);
     if (!current) return res.status(404).json({ error: "Record not found" });
 
-    // is_locked enforcement (Batch 100): WO/PL records from Final Cut Schedule are locked.
-    // Only Managers (actual_role='Manager') and admin (740045023) can edit locked records.
-    if (current.is_locked) {
-      if (actorOhr !== "740045023") {
-        // Look up actor's role
-        const [actorEmpLock] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, actorOhr)).limit(1);
-        const actorRole = actorEmpLock?.actual_role || '';
-        if (actorRole !== 'Manager') {
-          return res.status(403).json({ error: "This record is locked. Only Managers or Admin can edit locked records." });
-        }
-      }
-    }
-
     // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin)
+    // Note: is_locked field enforcement removed (Batch 124). Only date-based + OT mechanism locks remain.
     // Exception: OT-only edits are allowed on past dates within the current operational week (Sat-Fri)
     if (actorOhr !== "740045023") {
       const now = new Date();
@@ -909,16 +901,8 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
       const [record] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, id)).limit(1);
       if (!record) continue;
 
-      // is_locked enforcement (Batch 100): locked records only editable by Managers + admin
-      if (record.is_locked && actor_ohr !== "740045023") {
-        const [actorEmpBulk] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, actor_ohr)).limit(1);
-        if (!actorEmpBulk || actorEmpBulk.actual_role !== 'Manager') {
-          locked++;
-          continue;
-        }
-      }
-
       // Date-based lock: yesterday and earlier locked after 11 AM PHT (except admin)
+      // Note: is_locked enforcement removed (Batch 124)
       if (actor_ohr !== "740045023") {
         const nowD = new Date();
         const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);

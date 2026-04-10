@@ -24,7 +24,6 @@ const TABLE_COLUMNS = [
   { key: 'actualPlanningGroup', label: 'Planning Group' },
   { key: 'status', label: 'Status' },
   { key: 'shiftTime', label: 'Shift Time' },
-  { key: 'billingCode', label: 'Code' },
 ];
 
 // ===== Application State =====
@@ -559,7 +558,7 @@ function normalizeRecord(att) {
  * Get the total count of attendance records (for progress bar).
  */
 async function getAttendanceCount(startDate, endDate) {
-  const params = new URLSearchParams({ count_only: 'true' });
+  const params = new URLSearchParams({ count_only: 'true', exclude_managers: 'true' });
   if (startDate) params.set('log_date_gte', startDate);
   if (endDate) params.set('log_date_lte', endDate);
   const resp = await fetch(`${IO_API_BASE}/attendance?${params}`);
@@ -584,7 +583,7 @@ async function fetchRecordsForRange(startDate, endDate, onProgress) {
   const pageSize = 1000;
 
   while (true) {
-    const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
+    const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset), exclude_managers: 'true' });
     if (startDate) params.set('log_date_gte', startDate);
     if (endDate) params.set('log_date_lte', endDate);
 
@@ -745,6 +744,7 @@ async function fetchPaginatedAttendance({ startDate, endDate, limit = 50, offset
     paginated: 'true',
     limit: String(limit),
     offset: String(offset),
+    exclude_managers: 'true',
   });
 
   if (startDate) params.set('log_date_gte', startDate);

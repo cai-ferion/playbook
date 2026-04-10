@@ -1288,3 +1288,10 @@
 - [x] Add Planning Group dropdown (specific options: S-ABF, CS-ABF, RM_CTR, FAD_CTR, QPE_CTR, SME_CTR, MULTIPLE)
 - [x] Role/PG edits are part of "Edit" workflow — only saved on "Save Changes" click
 - [x] Remove Billing Compliance V2 tab from Billing Compliance page
+
+## Batch 124 — Input Portal & Task Board Fixes
+- [x] Auto-populate Role and Planning Group per attendance day from employee data
+- [x] Remove all Managers from Input Portal attendance list (exclude_managers filter + DB cleanup)
+- [x] Fix locking: removed is_locked enforcement from PATCH and bulk-tag, only date-based 11 AM PHT + previous day lock remains
+- [x] Remove Billing Code from detail panel, table columns, filters, sort, and edit section
+- [x] Fix Task Board: ALL agents now see OT Request form on New Request (was only S-ABF/CS-ABF)

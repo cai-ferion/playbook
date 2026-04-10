@@ -351,9 +351,9 @@ function renderDetailPanel(r, idx, locked) {
     // Row 2: Remarks (full width within left column)
     + '<div class="detail-section" style="grid-column:1/-1;"><span class="detail-label">REMARKS</span>' + remarksField + '</div>'
     + '<div class="detail-divider"></div>'
-    // Row 3: Status, Billing Code
+    // Row 3: Status
     + '<div class="detail-section"><span class="detail-label">STATUS</span><span class="detail-value">' + escapeHtml(r.status || '\u2014') + '</span></div>'
-    + '<div class="detail-section"><span class="detail-label">BILLING CODE</span><span class="detail-value">' + escapeHtml(r.billingCode || '\u2014') + '</span></div>'
+    + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-divider"></div>'
     // Row 4: Role and Planning Group (editable dropdowns)

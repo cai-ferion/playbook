@@ -307,39 +307,7 @@
 
 
         <!-- Billing Code Edit Section -->
-          <div class="billing-code-edit-section omnibar-billing" id="billing-code-edit-section" style="display:none;">
-            <div class="billing-code-edit-header">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <strong>Edit Billing Code</strong>
-            </div>
-            <div class="billing-code-edit-controls">
-              <div class="filter-group">
-                <label class="filter-label">Agent Name:</label>
-                <select class="form-select form-select-sm" id="bc-edit-agent" onchange="onBcEditAgentChange()"></select>
-              </div>
-              <div class="filter-group">
-                <label class="filter-label">Start Date:</label>
-                <input type="date" class="form-input form-input-sm" id="bc-edit-start-date">
-              </div>
-              <div class="filter-group">
-                <label class="filter-label">End Date:</label>
-                <input type="date" class="form-input form-input-sm" id="bc-edit-end-date">
-              </div>
-              <div class="filter-group">
-                <label class="filter-label">Current Code:</label>
-                <span class="bc-current-code" id="bc-edit-current">—</span>
-              </div>
-              <div class="filter-group">
-                <label class="filter-label">New Code:</label>
-                <select class="form-select form-select-sm" id="bc-edit-new-code">
-                  <option value="">— Select —</option>
-                </select>
-              </div>
-              <div class="filter-group" style="align-self:flex-end;">
-                <button class="btn btn-primary btn-sm" onclick="applyBillingCodeEditToPending()">Apply</button>
-              </div>
-            </div>
-          </div>
+          <!-- Billing Code Edit section removed (Batch 124) -->
 
         <!-- Old Bulk Selection Toolbar (hidden, replaced by floating command bar) -->
         <div class="bulk-toolbar" id="bulk-toolbar" style="display:none !important;">
