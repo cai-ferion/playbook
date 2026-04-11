@@ -1381,3 +1381,8 @@
 - [x] Add Sync History nav item visible only to OHR 740045023 (both login paths)
 - [x] Add sync-history.css with status card, table, badge, toast, and pagination styles
 - [x] Test end-to-end: manual sync trigger → log written → API returns correct data (2 test runs verified)
+
+## Batch 137 — Move Sync History under Anchor
+- [x] Move Sync History nav item from sidebar bottom into Anchor collapsible group
+- [x] Update switchView anchorViews array to include sync-history
+- [x] Remove standalone sync-history nav from sidebar bottom (kept only inside Anchor group)

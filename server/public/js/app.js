@@ -829,7 +829,7 @@ async function switchView(view) {
   });
 
   // Auto-expand collapsible group if a child view is selected
-  const anchorViews = ['input', 'dashboard', 'billing', 'alerts'];
+  const anchorViews = ['input', 'dashboard', 'billing', 'alerts', 'sync-history'];
   if (anchorViews.includes(view)) {
     const anchorGroup = document.getElementById('nav-group-anchor');
     if (anchorGroup) anchorGroup.classList.add('expanded');
