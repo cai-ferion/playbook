@@ -245,7 +245,7 @@ function renderBillingComplianceTable(data) {
   const rows = [...data.compliance].sort((a, b) => a.compliance_pct - b.compliance_pct);
 
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--fg-muted);">No billing data found for the selected week.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--fg-muted);">No billing data found for the selected week.</td></tr>';
     return;
   }
 
@@ -273,6 +273,8 @@ function renderBillingComplianceTable(data) {
       </td>
       <td class="cell-center">${fmtNum(r.total_billed, 1)}</td>
       <td class="cell-center">${fmtNum(r.target_hours, 0)}</td>
+      <td class="cell-center${r.upl_days > 0 ? ' bc-delta-neg' : ''}" style="font-weight:${r.upl_days > 0 ? '600' : '400'}">${r.upl_days || '—'}</td>
+      <td class="cell-center${r.pl_days > 0 ? ' bc-delta-warn' : ''}" style="font-weight:${r.pl_days > 0 ? '600' : '400'}">${r.pl_days || '—'}</td>
       <td class="cell-center bc-compliance-cell">
         ${complianceBadgeHTML(r.compliance_pct)}
         ${progressBarHTML(r.compliance_pct, r.target_hours)}
@@ -299,6 +301,8 @@ function renderBillingComplianceTable(data) {
     <td class="bc-label-cell"><strong>TOTAL</strong></td>
     <td class="cell-center"><strong>${fmtNum(t.total_billed, 1)}</strong></td>
     <td class="cell-center"><strong>${fmtNum(t.target_hours, 0)}</strong></td>
+    <td class="cell-center"><strong>${t.upl_days || '—'}</strong></td>
+    <td class="cell-center"><strong>${t.pl_days || '—'}</strong></td>
     <td class="cell-center">${complianceBadgeHTML(t.compliance_pct)}</td>
     <td class="cell-center ${tg98cls}"><strong>${signedHrs(t.goal_to_98)}</strong></td>
     <td class="cell-center ${tg100cls}"><strong>${signedHrs(t.goal_to_100)}</strong></td>
@@ -331,7 +335,8 @@ function showBillingDrilldown(row) {
   let html = `<div class="bc-drill-summary">
     <div class="bc-drill-stat"><span class="bc-drill-stat-label">Unique HC</span><span class="bc-drill-stat-value">${row.unique_hc}</span></div>
     <div class="bc-drill-stat"><span class="bc-drill-stat-label">Billable Days</span><span class="bc-drill-stat-value">${row.billable_days}</span></div>
-    <div class="bc-drill-stat"><span class="bc-drill-stat-label">UPL Days</span><span class="bc-drill-stat-value">${row.upl_days}</span></div>
+    <div class="bc-drill-stat"><span class="bc-drill-stat-label">UPL Days</span><span class="bc-drill-stat-value" style="${row.upl_days > 0 ? 'color:var(--bc-red);' : ''}">${row.upl_days}</span></div>
+    <div class="bc-drill-stat"><span class="bc-drill-stat-label">PL Days</span><span class="bc-drill-stat-value" style="${row.pl_days > 0 ? 'color:var(--bc-amber);' : ''}">${row.pl_days}</span></div>
     <div class="bc-drill-stat"><span class="bc-drill-stat-label">OT Hours</span><span class="bc-drill-stat-value">${fmtNum(row.ot_hours, 1)}</span></div>
   </div>`;
 
@@ -344,6 +349,7 @@ function showBillingDrilldown(row) {
         <th style="text-align:center;">HC</th>
         <th style="text-align:center;">Billable</th>
         <th style="text-align:center;">UPL</th>
+        <th style="text-align:center;">PL</th>
         <th style="text-align:center;">Delivered Hrs</th>
         <th style="text-align:center;">OT Hrs</th>
         <th style="text-align:center;">Total Billed</th>
@@ -362,6 +368,7 @@ function showBillingDrilldown(row) {
       <td style="text-align:center;">${d.headcount}</td>
       <td style="text-align:center;">${d.billable_days}</td>
       <td style="text-align:center;${d.upl_days > 0 ? 'color:var(--bc-red);font-weight:600;' : ''}">${d.upl_days || '—'}</td>
+      <td style="text-align:center;${d.pl_days > 0 ? 'color:var(--bc-amber);font-weight:600;' : ''}">${d.pl_days || '—'}</td>
       <td style="text-align:center;">${fmtNum(d.delivered_hours, 1)}</td>
       <td style="text-align:center;${d.ot_hours > 0 ? 'color:var(--bc-green);font-weight:600;' : ''}">${d.ot_hours > 0 ? fmtNum(d.ot_hours, 1) : '—'}</td>
       <td style="text-align:center;font-weight:600;">${fmtNum(d.total_billed, 1)}</td>
@@ -370,7 +377,7 @@ function showBillingDrilldown(row) {
 
   // Running total
   html += `<tr style="border-top:2px solid var(--border);font-weight:700;">
-    <td colspan="5" style="text-align:right;">Running Total</td>
+    <td colspan="6" style="text-align:right;">Running Total</td>
     <td style="text-align:center;">${fmtNum(row.delivered_hours, 1)}</td>
     <td style="text-align:center;">${fmtNum(row.ot_hours, 1)}</td>
     <td style="text-align:center;">${fmtNum(row.total_billed, 1)}</td>

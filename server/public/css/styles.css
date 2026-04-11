@@ -4786,6 +4786,10 @@ body {
   color: var(--bc-red) !important;
   font-weight: 600;
 }
+.bc-delta-warn {
+  color: var(--bc-amber) !important;
+  font-weight: 600;
+}
 
 /* Row hover & click */
 .bc-row {

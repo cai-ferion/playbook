@@ -2394,11 +2394,12 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
 
     // Build per-combo attendance aggregation
     // For each combo, aggregate: billable days, UPL days, OT hours, per-day breakdown
-    type DayBucket = { billable: number; upl: number; ot_hours: number; total: number; employees: Set<string> };
+    type DayBucket = { billable: number; upl: number; pl: number; ot_hours: number; total: number; employees: Set<string> };
     type ComboData = {
       days: Map<string, DayBucket>;
       totalBillable: number;
       totalUPL: number;
+      totalPL: number;
       totalOtHours: number;
       totalScheduled: number;
       uniqueEmployees: Set<string>;
@@ -2419,14 +2420,14 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
       if (!comboDataMap.has(key)) {
         comboDataMap.set(key, {
           days: new Map(),
-          totalBillable: 0, totalUPL: 0, totalOtHours: 0, totalScheduled: 0,
+          totalBillable: 0, totalUPL: 0, totalPL: 0, totalOtHours: 0, totalScheduled: 0,
           uniqueEmployees: new Set()
         });
       }
       const cd = comboDataMap.get(key)!;
       cd.uniqueEmployees.add(a.ohr_id);
       if (!cd.days.has(a.log_date)) {
-        cd.days.set(a.log_date, { billable: 0, upl: 0, ot_hours: 0, total: 0, employees: new Set() });
+        cd.days.set(a.log_date, { billable: 0, upl: 0, pl: 0, ot_hours: 0, total: 0, employees: new Set() });
       }
       const day = cd.days.get(a.log_date)!;
       day.total++;
@@ -2442,6 +2443,10 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
       if (tag === 'UPL') {
         day.upl++;
         cd.totalUPL++;
+      }
+      if (tag === 'PL') {
+        day.pl++;
+        cd.totalPL++;
       }
       if (['P','LATE','OT','UPL','PL'].includes(tag)) {
         cd.totalScheduled++;
@@ -2485,6 +2490,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
 
       const billableDays = cd ? cd.totalBillable : 0;
       const uplDays = cd ? cd.totalUPL : 0;
+      const plDays = cd ? cd.totalPL : 0;
       const otHoursActual = cd ? cd.totalOtHours : 0;
       const deliveredHours = billableDays * HOURS_PER_SHIFT;
       const totalBilled = deliveredHours + otHoursActual;
@@ -2528,6 +2534,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
             date,
             billable_days: d.billable,
             upl_days: d.upl,
+            pl_days: d.pl,
             delivered_hours: d.billable * HOURS_PER_SHIFT,
             ot_hours: Math.round(d.ot_hours * 100) / 100,
             total_billed: (d.billable * HOURS_PER_SHIFT) + d.ot_hours,
@@ -2557,6 +2564,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
         days_remaining: daysRemaining,
         billable_days: billableDays,
         upl_days: uplDays,
+        pl_days: plDays,
         unique_hc: cd ? cd.uniqueEmployees.size : 0,
         day_breakdown: dayBreakdown
       });
@@ -2574,6 +2582,8 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
       goal_to_102: Math.round(complianceRows.reduce((s: number, r: any) => s + r.goal_to_102, 0) * 100) / 100,
       ots_needed: Math.round(complianceRows.reduce((s: number, r: any) => s + r.ots_needed, 0) * 100) / 100,
       hc_needed: complianceRows.reduce((s: number, r: any) => s + r.hc_needed, 0),
+      upl_days: complianceRows.reduce((s: number, r: any) => s + r.upl_days, 0),
+      pl_days: complianceRows.reduce((s: number, r: any) => s + r.pl_days, 0),
     };
     const totalTarget = totals.target_hours;
     totals.compliance_pct = totalTarget > 0 ? Math.round((totals.total_billed / totalTarget) * 10000) / 100 : 0;

@@ -1331,3 +1331,9 @@
 ## Batch 128 — Planning Group Realignment for New Alignees
 - [x] Set planning_group to S-ABF for agents under Galula, Bantasan, Escamillas, Abiang, Javier (io_employees + historical attendance from Apr 7)
 - [x] Set planning_group to CS-ABF for agents under Esmino, Natividad (io_employees + historical attendance from Apr 7)
+
+## Batch 129 — UPL/PL Days in Billing Compliance Table
+- [x] Update backend API to return upl_days and pl_days per PG×Role per week
+- [x] Add UPL Days and PL Days columns to compliance table (after Target Hours, before Compliance %)
+- [x] Add UPL/PL counts to drill-down summary stats
+- [x] Include UPL/PL in the TOTAL row
