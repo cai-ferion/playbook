@@ -654,52 +654,27 @@
             </div>
           </div>
 
-          <!-- Upload Cards Row (side by side) -->
-          <div class="admin-upload-row">
-            <!-- Section 1: SRT Status Update -->
-            <div class="card admin-card admin-card-half">
-              <div class="card-header">
-                <span class="card-title">UPDATE SRT STATUS</span>
-              </div>
-              <div class="admin-card-body">
-                <p class="admin-help">Upload Billing Projection File &mdash; Update SRT Status for all Billed Resources.</p>
-                <div class="admin-upload-area" id="srt-upload-area">
-                  <input type="file" id="srt-file-input" accept=".xlsb,.xlsx,.xls" style="display:none" onchange="handleSrtFileSelect(event)">
-                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('srt-file-input').click()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Upload
-                  </button>
-                  <span class="admin-file-name" id="srt-file-name">No file selected</span>
-                </div>
-                <div class="admin-progress" id="srt-progress" style="display:none;">
-                  <div class="progress-bar"><div class="progress-fill" id="srt-progress-fill"></div></div>
-                  <span class="progress-text" id="srt-progress-text">Processing...</span>
-                </div>
-                <div class="admin-result" id="srt-result" style="display:none;"></div>
-              </div>
+          <!-- Sync Billing Data from Google Sheet -->
+          <div class="card admin-card" style="margin-bottom:20px;">
+            <div class="card-header">
+              <span class="card-title">SYNC BILLING DATA</span>
+              <span id="billing-sync-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
             </div>
-
-            <!-- Section 2: Billing Code Update -->
-            <div class="card admin-card admin-card-half">
-              <div class="card-header">
-                <span class="card-title">UPDATE BILLING CODES</span>
+            <div class="admin-card-body">
+              <p class="admin-help">Sync billing data from the <strong>TEMPLATE_BILLING</strong> Google Sheet &mdash; updates Billing Role, Planning Group, SRT Status, Billing Name, and Actual vs Projection for all matching attendance rows.</p>
+              <div id="billing-sync-last" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"></div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button class="btn btn-primary btn-sm" id="billing-sync-btn" onclick="runBillingSync()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Sync from Sheet
+                </button>
+                <a href="https://docs.google.com/spreadsheets/d/12H0ZBV1SleJ1N4-HQpdC7TIyOKdxxT40JmZvO6L__PY/edit" target="_blank" class="btn btn-outline btn-sm" style="font-size:12px;">Open Sheet</a>
               </div>
-              <div class="admin-card-body">
-                <p class="admin-help">Upload Attribute Manager File &mdash; Update Billing Code for all Billed Resources.</p>
-                <div class="admin-upload-area" id="billing-upload-area">
-                  <input type="file" id="billing-file-input" accept=".csv" style="display:none" onchange="handleBillingFileSelect(event)">
-                  <button class="btn btn-outline btn-sm" onclick="document.getElementById('billing-file-input').click()">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Upload
-                  </button>
-                  <span class="admin-file-name" id="billing-file-name">No file selected</span>
-                </div>
-                <div class="admin-progress" id="billing-progress" style="display:none;">
-                  <div class="progress-bar"><div class="progress-fill" id="billing-progress-fill"></div></div>
-                  <span class="progress-text" id="billing-progress-text">Processing...</span>
-                </div>
-                <div class="admin-result" id="billing-result" style="display:none;"></div>
+              <div class="admin-progress" id="billing-sync-progress" style="display:none;margin-top:12px;">
+                <div class="progress-bar"><div class="progress-fill" id="billing-sync-progress-fill" style="width:0%;"></div></div>
+                <span class="progress-text" id="billing-sync-progress-text">Syncing...</span>
               </div>
+              <div class="admin-result" id="billing-sync-result" style="display:none;margin-top:8px;"></div>
             </div>
           </div>
 
@@ -728,80 +703,7 @@
             </div>
           </div>
 
-          <!-- SRT Preview (full width below) -->
-          <div class="admin-preview" id="srt-preview" style="display:none;">
-            <h4>Preview: SRT Status Changes</h4>
-            <div class="admin-preview-stats" id="srt-preview-stats"></div>
-            <div class="admin-preview-filters" id="srt-preview-filters" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap;"></div>
-            <div class="admin-preview-table-wrapper">
-              <table class="data-table admin-preview-table" id="srt-preview-table">
-                <thead><tr><th>OHR</th><th>Name</th><th>Current Status</th><th>New Status</th></tr></thead>
-                <tbody id="srt-preview-body"></tbody>
-              </table>
-            </div>
-            <div class="admin-actions">
-              <button class="btn btn-outline btn-sm" onclick="cancelSrtUpload()">Cancel</button>
-              <button class="btn btn-primary btn-sm" id="srt-apply-btn" onclick="applySrtChanges()">Apply Changes</button>
-            </div>
-          </div>
 
-          <!-- Billing Preview (full width below) -->
-          <div class="admin-preview" id="billing-preview" style="display:none;">
-            <h4>Preview: Billing Code Changes</h4>
-            <div class="admin-preview-stats" id="billing-preview-stats"></div>
-            <div class="admin-preview-table-wrapper">
-              <table class="data-table admin-preview-table" id="billing-preview-table">
-                <thead><tr><th>OHR</th><th>Name</th><th>SRT ID</th><th>Designation</th><th>Planning Group</th><th>Mapped PG</th><th>Mapped Role</th><th>Code</th></tr></thead>
-                <tbody id="billing-preview-body"></tbody>
-              </table>
-            </div>
-            <p class="admin-help" style="margin-top:8px;"><strong>Date Range:</strong> <span id="billing-date-range"></span></p>
-            <div class="admin-actions">
-              <button class="btn btn-outline btn-sm" onclick="cancelBillingUpload()">Cancel</button>
-              <button class="btn btn-primary btn-sm" id="billing-apply-btn" onclick="applyBillingChanges()">Apply Changes</button>
-            </div>
-          </div>
-
-          <!-- ===== Billing Compliance V2: SRT Billing Upload ===== -->
-          <div class="card admin-card" style="margin-top:20px;">
-            <div class="card-header">
-              <span class="card-title">SRT BILLING UPLOAD (V2)</span>
-              <span id="srt-v2-status-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
-            </div>
-            <div class="admin-card-body">
-              <p class="admin-help">Upload the <strong>BILLINGTEMPLATE.xlsx</strong> file (SRT_BILL sheet) &mdash; imports daily billing data per employee with Planning Group &times; Role. Replaces any existing SRT Bill data.</p>
-              <div id="srt-v2-current-data" style="margin-bottom:12px;font-size:12px;color:var(--text-secondary);"></div>
-              <div class="admin-upload-area" id="srt-v2-upload-area">
-                <input type="file" id="srt-v2-file-input" accept=".xlsx,.xlsb,.xls" style="display:none" onchange="handleSrtV2FileSelect(event)">
-                <button class="btn btn-outline btn-sm" onclick="document.getElementById('srt-v2-file-input').click()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Upload BILLINGTEMPLATE.xlsx
-                </button>
-                <span class="admin-file-name" id="srt-v2-file-name">No file selected</span>
-              </div>
-              <div class="admin-progress" id="srt-v2-progress" style="display:none;">
-                <div class="progress-bar"><div class="progress-fill" id="srt-v2-progress-fill"></div></div>
-                <span class="progress-text" id="srt-v2-progress-text">Processing...</span>
-              </div>
-              <div class="admin-result" id="srt-v2-result" style="display:none;"></div>
-            </div>
-          </div>
-
-          <!-- SRT V2 Preview -->
-          <div class="admin-preview" id="srt-v2-preview" style="display:none;">
-            <h4>Preview: SRT Billing Data</h4>
-            <div id="srt-v2-preview-stats" style="margin-bottom:12px;"></div>
-            <div class="admin-preview-table-wrapper" style="max-height:300px;overflow-y:auto;">
-              <table class="data-table admin-preview-table" id="srt-v2-preview-table">
-                <thead><tr><th>Planning Group</th><th>Role</th><th>Employee Count</th><th>Days</th><th>Actuals</th><th>Projection</th></tr></thead>
-                <tbody id="srt-v2-preview-body"></tbody>
-              </table>
-            </div>
-            <div class="admin-actions" style="margin-top:12px;">
-              <button class="btn btn-outline btn-sm" onclick="cancelSrtV2Upload()">Cancel</button>
-              <button class="btn btn-primary btn-sm" id="srt-v2-apply-btn" onclick="applySrtV2Upload()">Apply &amp; Upload</button>
-            </div>
-          </div>
 
           <!-- ===== Billing Compliance V2: Billing Targets Editor ===== -->
           <div class="card admin-card" style="margin-top:20px;">

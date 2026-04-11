@@ -1402,3 +1402,20 @@
 - [x] Remove GChat notification calls from helm.js (task assignment + supervisor backdate)
 - [x] Update tests in batch15, batch25, batch26 to verify GChat removal
 - [x] All 303 tests passing
+
+## Batch 140 — Billing Sheet Sync + Admin Tools Cleanup
+- [x] Add actual_vs_projection column to io_attendance schema + migration
+- [x] Build server-side billing sync endpoint (reads BILLING Google Sheet, updates matching io_attendance rows with role, planning_group, snap_billing_name, snap_status, actual_vs_projection)
+- [x] Rewrite gws CLI call from execSync (hung on 2MB output) to async exec with 10MB maxBuffer — sheet reads in ~1.5s
+- [x] Rewrite batch UPDATE from row-by-row (hung for 20+ min on 10K rows) to temp table + UPDATE JOIN — completes in ~7s
+- [x] Add composite index idx_ohr_date on io_attendance(ohr_id, log_date) for fast JOIN lookups
+- [x] Add unique index idx_srt_date_ohr on io_srt_bill(date, ohr_id) for ON DUPLICATE KEY UPDATE
+- [x] Add "Sync Billing Data" card in Admin Tools with status indicator + run button
+- [x] Remove all CSV file upload functionality from Admin Tools (SRT upload + Billing CSV upload already removed)
+- [x] Fix planning group long-to-short code mapping (MASA_MAFSA_CTR_SCALED_REVIEW → S-ABF, CEI_TASKFORCE_CTR → CS-ABF)
+- [x] Log billing sync runs to io_sync_log (sync_type: billing_sheet)
+- [x] Fix admin.js sync_type filter mismatch (billing-sheet → billing_sheet)
+- [x] Sync latest Actuals data back to io_employees (planning_group + actual_role)
+- [x] Upsert all billing rows into io_srt_bill for historical tracking
+- [x] First successful run: 10,041 sheet rows → 9,979 attendance updated, 3 employees synced, 20,082 SRT bill upserted in 97s
+- [x] All 303 tests passing

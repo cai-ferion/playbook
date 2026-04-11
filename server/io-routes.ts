@@ -26,6 +26,15 @@ import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzl
 import crypto from "crypto";
 const router = Router();
 
+// Normalize long PG codes from Google Sheet / SRT to short codes used in DB
+const PG_NORMALIZE: Record<string, string> = {
+  'MASA_MAFSA_CTR_SCALED_REVIEW': 'S-ABF',
+  'CEI_TASKFORCE_CTR': 'CS-ABF',
+};
+function normalizePg(raw: string): string {
+  return PG_NORMALIZE[raw] || raw;
+}
+
 
 
 // ============================================================
@@ -1896,6 +1905,7 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
         const dateStr = String(r.date || '').trim();
         const ohrStr = String(r.ohr || '').trim();
         if (!dateStr || !ohrStr) continue;
+        const normalizedPg = normalizePg(String(r.planning_group || '').trim());
         validRows.push([
           dateStr, ohrStr,
           String(r.srt_id || '').trim(),
@@ -1903,7 +1913,7 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
           String(r.srt_status || '').trim(),
           String(r.actual_vs_projection || '').trim(),
           String(r.role || '').trim(),
-          String(r.planning_group || '').trim(),
+          normalizedPg,
           now
         ]);
       }
@@ -2514,6 +2524,287 @@ router.get("/sync-log/latest", async (req: Request, res: Response) => {
     res.json(rows[0] || null);
   } catch (err: any) {
     console.error("[IO API] sync-log/latest GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/io/billing-sheet-sync
+ * Reads the BILLING Google Sheet and updates matching io_attendance rows
+ * with role, planning_group, snap_billing_name, snap_status, actual_vs_projection.
+ * Also syncs latest Actuals data back to io_employees.
+ * Admin-only (740045023).
+ */
+router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
+  console.log("[BILLING SYNC] Endpoint hit");
+  const ADMIN_OHR = "740045023";
+  const actorOhr = String(req.headers["x-actor-ohr"] || req.headers["x-user-ohr"] || "").trim();
+  if (actorOhr !== ADMIN_OHR) {
+    return res.status(403).json({ error: "Admin only" });
+  }
+
+  const SHEET_ID = "12H0ZBV1SleJ1N4-HQpdC7TIyOKdxxT40JmZvO6L__PY";
+  const SHEET_RANGE = "BILLING!A2:H";
+  const startTime = Date.now();
+
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    // 1. Read the Google Sheet via gws CLI (async exec with large maxBuffer)
+    const { exec: execCb } = await import("child_process");
+    const fs = await import("fs");
+    const gwsCmd = `gws sheets spreadsheets values get --params '{"spreadsheetId":"${SHEET_ID}","range":"${SHEET_RANGE}"}'`;
+    let sheetData: any;
+    try {
+      // Build clean env with gws token for auth
+      const cleanEnv: Record<string, string> = { ...process.env } as any;
+      const tokenFile = "/home/ubuntu/.gws_token";
+      try {
+        const token = fs.readFileSync(tokenFile, "utf-8").trim();
+        if (token) cleanEnv.GOOGLE_WORKSPACE_CLI_TOKEN = token;
+      } catch { /* ignore */ }
+      // Strip uv-injected paths that break gws
+      if (cleanEnv.PATH) {
+        cleanEnv.PATH = cleanEnv.PATH.split(":").filter((p: string) => !p.includes(".cache/uv")).join(":");
+      }
+      console.log(`[BILLING SYNC] Token present: ${!!cleanEnv.GOOGLE_WORKSPACE_CLI_TOKEN}, len: ${(cleanEnv.GOOGLE_WORKSPACE_CLI_TOKEN || '').length}`);
+      console.log(`[BILLING SYNC] Running gws CLI (async)...`);
+
+      // Use async exec with 10MB maxBuffer to handle ~2MB sheet output
+      const gwsOutput = await new Promise<string>((resolve, reject) => {
+        execCb(gwsCmd, {
+          timeout: 120000,
+          maxBuffer: 10 * 1024 * 1024,
+          cwd: "/home/ubuntu",
+          env: cleanEnv,
+          shell: "/bin/bash",
+        }, (error, stdout, stderr) => {
+          if (error) {
+            console.error("[BILLING SYNC] gws stderr:", stderr?.substring(0, 500));
+            reject(new Error(stderr?.trim() || error.message));
+          } else {
+            resolve(stdout);
+          }
+        });
+      });
+
+      sheetData = JSON.parse(gwsOutput);
+      console.log(`[BILLING SYNC] Sheet read OK — ${(sheetData.values || []).length} rows`);
+    } catch (gwsErr: any) {
+      console.error("[BILLING SYNC] gws CLI error:", gwsErr.message);
+      return res.status(500).json({ error: "Failed to read Google Sheet. Check gws auth." });
+    }
+    const rows: string[][] = sheetData.values || [];
+    if (rows.length === 0) {
+      return res.json({ success: true, message: "Sheet is empty", totalRows: 0, updated: 0, skipped: 0 });
+    }
+
+    // 2. Parse sheet rows: columns are date(A), ohr(B), srt_id(C), billing_name(D), srt_status(E), actual_vs_projection(F), role(G), planning_group(H)
+    // Date format from sheet: YYYY-DD-MM → need to convert to YYYY-MM-DD
+    const parseSheetDate = (raw: string): string | null => {
+      const parts = raw.split("-");
+      if (parts.length !== 3) return null;
+      const [yyyy, dd, mm] = parts;
+      const m = parseInt(mm, 10);
+      const d = parseInt(dd, 10);
+      if (isNaN(m) || isNaN(d) || m < 1 || m > 12 || d < 1 || d > 31) return null;
+      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    };
+
+    interface BillingRow {
+      log_date: string;
+      ohr_id: string;
+      srt_id: string;
+      billing_name: string;
+      srt_status: string;
+      actual_vs_projection: string;
+      role: string;
+      planning_group: string;
+    }
+
+    const parsed: BillingRow[] = [];
+    let parseErrors = 0;
+    for (const row of rows) {
+      if (row.length < 8) { parseErrors++; continue; }
+      const logDate = parseSheetDate(row[0]?.trim() || "");
+      const ohrId = row[1]?.trim() || "";
+      if (!logDate || !ohrId) { parseErrors++; continue; }
+      parsed.push({
+        log_date: logDate,
+        ohr_id: ohrId,
+        srt_id: row[2]?.trim() || "",
+        billing_name: row[3]?.trim() || "",
+        srt_status: row[4]?.trim() || "",
+        actual_vs_projection: row[5]?.trim() || "",
+        role: row[6]?.trim() || "",
+        planning_group: normalizePg(row[7]?.trim() || ""),
+      });
+    }
+
+    // 3. Batch update io_attendance rows using temp table + UPDATE JOIN for performance
+    //    (10K individual UPDATEs over remote DB is too slow; this approach does it in ~20 bulk INSERTs + 1 JOIN UPDATE)
+    let updated = 0;
+    let skipped = 0;
+    try {
+      // Create temp table
+      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+      await db.execute(sql`CREATE TEMPORARY TABLE _billing_staging (
+        ohr_id VARCHAR(20) NOT NULL,
+        log_date VARCHAR(30) NOT NULL,
+        role VARCHAR(100),
+        planning_group VARCHAR(100),
+        billing_name VARCHAR(255),
+        srt_status VARCHAR(50),
+        actual_vs_projection VARCHAR(20),
+        PRIMARY KEY (ohr_id, log_date)
+      )`);
+
+      // Bulk insert into staging in batches of 500
+      const STAGE_BATCH = 500;
+      for (let i = 0; i < parsed.length; i += STAGE_BATCH) {
+        const chunk = parsed.slice(i, i + STAGE_BATCH);
+        const valueSets = chunk.map(r =>
+          sql`(${r.ohr_id}, ${r.log_date}, ${r.role}, ${r.planning_group}, ${r.billing_name}, ${r.srt_status}, ${r.actual_vs_projection})`
+        );
+        await db.execute(
+          sql`INSERT INTO _billing_staging (ohr_id, log_date, role, planning_group, billing_name, srt_status, actual_vs_projection)
+              VALUES ${sql.join(valueSets, sql`, `)}
+              ON DUPLICATE KEY UPDATE role = VALUES(role)`
+        );
+      }
+      console.log(`[BILLING SYNC] Staging table loaded with ${parsed.length} rows`);
+
+      // Single UPDATE JOIN — orders of magnitude faster than row-by-row
+      const updateResult: any = await db.execute(
+        sql`UPDATE io_attendance a
+            INNER JOIN _billing_staging s ON a.ohr_id = s.ohr_id AND a.log_date = s.log_date
+            SET a.role = s.role,
+                a.planning_group = s.planning_group,
+                a.snap_billing_name = s.billing_name,
+                a.snap_status = s.srt_status,
+                a.actual_vs_projection = s.actual_vs_projection`
+      );
+      updated = updateResult[0]?.affectedRows ?? 0;
+      skipped = parsed.length - updated;
+      console.log(`[BILLING SYNC] JOIN UPDATE complete — ${updated} rows updated, ${skipped} unmatched`);
+
+      // Clean up
+      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+    } catch (batchErr: any) {
+      console.error(`[BILLING SYNC] Batch update error:`, batchErr.message);
+      // Fallback: mark all as skipped
+      skipped = parsed.length;
+    }
+
+    // 4. Sync latest Actuals data back to io_employees
+    let employeesSynced = 0;
+    try {
+      // Build a temp map of latest Actuals per employee from the sheet
+      const latestActuals = new Map<string, BillingRow>();
+      for (const r of parsed) {
+        if (r.actual_vs_projection !== "Actuals") continue;
+        const existing = latestActuals.get(r.ohr_id);
+        if (!existing || r.log_date > existing.log_date) {
+          latestActuals.set(r.ohr_id, r);
+        }
+      }
+      // Update io_employees with latest Actuals planning_group and role
+      for (const [ohrId, latest] of Array.from(latestActuals.entries())) {
+        const syncResult: any = await db.execute(
+          sql`UPDATE io_employees
+              SET planning_group = ${latest.planning_group},
+                  actual_role = ${latest.role}
+              WHERE ohr_id = ${ohrId}
+                AND (planning_group != ${latest.planning_group} OR actual_role != ${latest.role})`
+        );
+        if ((syncResult[0]?.affectedRows ?? 0) > 0) employeesSynced++;
+      }
+    } catch (syncErr: any) {
+      console.error("[BILLING SYNC] Employee sync error:", syncErr.message);
+    }
+
+    // 5. Also upsert into io_srt_bill for historical tracking
+    let srtBillUpserted = 0;
+    try {
+      const SRT_BATCH = 500;
+      for (let i = 0; i < parsed.length; i += SRT_BATCH) {
+        const chunk = parsed.slice(i, i + SRT_BATCH);
+        const now = new Date().toISOString();
+        const valueSets = chunk.map(r =>
+          sql`(${r.log_date}, ${r.ohr_id}, ${r.srt_id}, ${r.billing_name}, ${r.srt_status}, ${r.actual_vs_projection}, ${r.role}, ${r.planning_group}, ${now})`
+        );
+        const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group, created_at)
+          VALUES ${sql.join(valueSets, sql`, `)}
+          ON DUPLICATE KEY UPDATE
+            srt_id = VALUES(srt_id),
+            billing_name = VALUES(billing_name),
+            srt_status = VALUES(srt_status),
+            actual_vs_projection = VALUES(actual_vs_projection),
+            role = VALUES(role),
+            planning_group = VALUES(planning_group),
+            created_at = VALUES(created_at)`;
+        const result: any = await db.execute(bulkQuery);
+        srtBillUpserted += result[0]?.affectedRows ?? 0;
+      }
+    } catch (srtErr: any) {
+      console.error("[BILLING SYNC] SRT bill upsert error:", srtErr.message);
+    }
+
+    // 6. Log to io_sync_log
+    const durationMs = Date.now() - startTime;
+    try {
+      await db.insert(ioSyncLog).values({
+        sync_type: "billing_sheet",
+        trigger: "manual",
+        status: "success",
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date().toISOString(),
+        duration_ms: durationMs,
+        rows_updated: updated,
+        rows_appended: 0,
+        total_db_rows: updated + skipped,
+        total_sheet_rows: parsed.length,
+        error_message: parseErrors > 0 ? `${parseErrors} rows skipped due to parse errors` : null,
+        output_log: `Sheet rows: ${rows.length}, Parsed: ${parsed.length}, Updated: ${updated}, Skipped: ${skipped}, Employees synced: ${employeesSynced}, SRT bill upserted: ${srtBillUpserted}`,
+      });
+    } catch (logErr: any) {
+      console.error("[BILLING SYNC] Log write error:", logErr.message);
+    }
+
+    console.log(`[BILLING SYNC] Done in ${durationMs}ms — Updated: ${updated}, Skipped: ${skipped}, Employees: ${employeesSynced}`);
+    res.json({
+      success: true,
+      totalSheetRows: rows.length,
+      parsed: parsed.length,
+      updated,
+      skipped,
+      parseErrors,
+      employeesSynced,
+      srtBillUpserted,
+      durationMs,
+    });
+  } catch (err: any) {
+    // Log failure
+    const durationMs = Date.now() - startTime;
+    try {
+      const db = await getDb();
+      if (db) {
+        await db.insert(ioSyncLog).values({
+          sync_type: "billing_sheet",
+          trigger: "manual",
+          status: "error",
+          started_at: new Date(startTime).toISOString(),
+          completed_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          rows_updated: 0,
+          rows_appended: 0,
+          error_message: err.message,
+          output_log: err.stack?.substring(0, 500),
+        });
+      }
+    } catch (_) {}
+    console.error("[BILLING SYNC] Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
