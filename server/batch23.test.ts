@@ -9,18 +9,21 @@ const readHTML = () =>
 
 // ===== Anchor: YTD Doughnut in own column, trend charts to the right =====
 
-describe('Batch 23 — Anchor YTD Chart Layout', () => {
+describe('Batch 23 — Anchor YTD Chart Layout [V3 Replaced]', () => {
   const html = readHTML();
 
-  it('YTD doughnut has its own card (billing-doughnut-card)', () => {
-    expect(html).toContain('billing-doughnut-card');
-    expect(html).toContain('billing-compliance-doughnut');
+  it('[V3] billing compliance table and KPI cards exist', () => {
+    // The old YTD doughnut and trend charts were replaced by the
+    // server-driven compliance dashboard with KPI cards and traffic-light table.
+    expect(html).toContain('id="billing-v3-table"');
+    expect(html).toContain('id="billing-kpi-cards"');
   });
 
-  it('trend charts are in the right stack, separate from doughnut', () => {
-    const doughnutPos = html.indexOf('billing-doughnut-card');
-    const rightStackPos = html.indexOf('billing-right-stack');
-    expect(doughnutPos).toBeLessThan(rightStackPos);
+  it('[V3] compliance table has 11-column header', () => {
+    expect(html).toContain('PG × Role');
+    expect(html).toContain('Compliance %');
+    expect(html).toContain('OTs Needed');
+    expect(html).toContain('HC Needed');
   });
 });
 
@@ -124,14 +127,16 @@ describe('Batch 23 — Compass 6-Level Dispute Flow', () => {
     expect(compass).toContain('function disputesShowLV6RetainMarkdown()');
   });
 
-  // No old status names
-  it('no old status names remain', () => {
-    expect(compass).not.toContain("'Markdown Disputed - SME'");
-    expect(compass).not.toContain("'Markdown Accepted - SME'");
-    expect(compass).not.toContain("'QA Retention Accepted - SME'");
-    expect(compass).not.toContain("'QA Retention Rejected - SME'");
-    expect(compass).not.toContain("'Trainer Decision Accepted - SME'");
-    expect(compass).not.toContain("'Trainer Decision Rejected - SME'");
+  // No old status names used as action targets (the QA_DISPUTE_HIDDEN_STATUSES
+  // backward-compat filter array may still reference legacy names for filtering)
+  it('no old status names used as action targets', () => {
+    // These should not appear as status: 'X' action targets
+    expect(compass).not.toContain("status: 'Markdown Disputed - SME'");
+    expect(compass).not.toContain("status: 'Markdown Accepted - SME'");
+    expect(compass).not.toContain("status: 'QA Retention Accepted - SME'");
+    expect(compass).not.toContain("status: 'QA Retention Rejected - SME'");
+    expect(compass).not.toContain("status: 'Trainer Decision Accepted - SME'");
+    expect(compass).not.toContain("status: 'Trainer Decision Rejected - SME'");
   });
 });
 

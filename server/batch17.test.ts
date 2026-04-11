@@ -8,19 +8,18 @@ describe("Batch 17 — Revisions", () => {
     const billingJs = fs.readFileSync(path.join(__dirname, "../server/public/js/billing.js"), "utf-8");
     const indexHtml = fs.readFileSync(path.join(__dirname, "../server/public/index.html"), "utf-8");
 
-    it("should use configurable threshold instead of 95%", () => {
-      expect(billingJs).toContain("pct >= threshold");
-      expect(billingJs).not.toContain("pct >= 95");
+    it("[V3] compliance is now server-driven with 98/100/102 goal columns", () => {
+      // The old client-side threshold selector was replaced by server-driven
+      // goal_to_98, goal_to_100, goal_to_102 columns in the V3 rewrite.
+      expect(billingJs).toContain('goal_to_98');
+      expect(billingJs).toContain('goal_to_100');
+      expect(billingJs).toContain('goal_to_102');
     });
 
-    it("should support threshold selector with 98/100/102 options", () => {
-      expect(billingJs).toContain("switchYTDThreshold");
-      expect(billingJs).toContain("_ytdCurrentThreshold");
-    });
-
-    it("should show 100% THRESHOLD in HTML title by default", () => {
-      expect(indexHtml).toContain("100% THRESHOLD");
-      expect(indexHtml).not.toContain("95% THRESHOLD");
+    it("[V3] has Goal 98%, 100%, 102% column headers", () => {
+      expect(indexHtml).toContain('Goal 98%');
+      expect(indexHtml).toContain('Goal 100%');
+      expect(indexHtml).toContain('Goal 102%');
     });
   });
 

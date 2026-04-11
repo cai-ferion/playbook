@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playbook</title>
   <link rel="icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/favicon_c4d47f68.png" type="image/png">
-  <link rel="stylesheet" href="css/styles.css?v=105">
+  <link rel="stylesheet" href="css/styles.css?v=126">
   <link rel="stylesheet" href="css/input-redesign.css?v=120">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
@@ -447,27 +447,70 @@
             <div class="loading-text">Loading Data...</div>
           </div>
 
+          <!-- KPI Summary Cards -->
+          <div id="billing-kpi-cards" style="display:none;">
+            <div class="billing-kpi-grid">
+              <div class="billing-kpi-card" id="kpi-compliance">
+                <div class="kpi-label">TOTAL COMPLIANCE</div>
+                <div class="kpi-value" id="kpi-compliance-value">—</div>
+                <div class="kpi-sub" id="kpi-compliance-sub"></div>
+              </div>
+              <div class="billing-kpi-card" id="kpi-hours-gap">
+                <div class="kpi-label">HOURS GAP TO 100%</div>
+                <div class="kpi-value" id="kpi-hours-gap-value">—</div>
+                <div class="kpi-sub" id="kpi-hours-gap-sub"></div>
+              </div>
+              <div class="billing-kpi-card" id="kpi-ot-needed">
+                <div class="kpi-label">OT HOURS NEEDED</div>
+                <div class="kpi-value" id="kpi-ot-needed-value">—</div>
+                <div class="kpi-sub" id="kpi-ot-needed-sub"></div>
+              </div>
+              <div class="billing-kpi-card" id="kpi-hc-needed">
+                <div class="kpi-label">HC NEEDED</div>
+                <div class="kpi-value" id="kpi-hc-needed-value">—</div>
+                <div class="kpi-sub" id="kpi-hc-needed-sub"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Week info bar -->
+          <div id="billing-week-info" style="display:none;margin-bottom:12px;">
+            <span id="billing-week-range" style="font-size:12px;color:var(--text-secondary);"></span>
+            <span id="billing-days-badge" style="margin-left:12px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span>
+          </div>
+
+          <!-- Compliance Table -->
           <div id="billing-compliance-table" style="display:none;">
             <div class="billing-table-wrapper">
-              <table class="data-table billing-table">
+              <table class="data-table billing-table" id="billing-v3-table">
                 <thead>
                   <tr>
-                    <th>Billing Code</th>
-                    <th style="text-align:center">Forecasted P</th>
-                    <th style="text-align:center">OT Rendered</th>
-                    <th style="text-align:center">Delivered Hours</th>
-                    <th id="billing-th-forecast-ot" style="text-align:center;display:none;">Forecasted OT</th>
-                    <th id="billing-th-forecast-upl" style="text-align:center;display:none;">Forecasted UPL</th>
-                    <th style="text-align:center">UPL Count</th>
-                    <th style="text-align:center">PL Count</th>
-                    <th style="text-align:center">Actual Weekly Compliance %</th>
-                    <th style="text-align:center">Goal | 98%</th>
-                    <th style="text-align:center">Goal | 100%</th>
-                    <th style="text-align:center">Goal | 102%</th>
+                    <th style="text-align:left">PG × Role</th>
+                    <th style="text-align:center">Delivered Hrs</th>
+                    <th style="text-align:center">Target Hrs</th>
+                    <th style="text-align:center;min-width:160px;">Compliance %</th>
+                    <th style="text-align:center">Goal 98%</th>
+                    <th style="text-align:center">Goal 100%</th>
+                    <th style="text-align:center">Goal 102%</th>
+                    <th style="text-align:center">Pred. UPL</th>
+                    <th style="text-align:center">Pred. OT</th>
+                    <th style="text-align:center">OTs Needed</th>
+                    <th style="text-align:center">HC Needed</th>
                   </tr>
                 </thead>
                 <tbody id="billing-compliance-body"></tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Daily drill-down panel -->
+          <div id="billing-drilldown" style="display:none;margin-top:12px;">
+            <div class="card admin-card">
+              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="card-title" id="billing-drilldown-title">DAILY BREAKDOWN</span>
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('billing-drilldown').style.display='none'" style="font-size:11px;">Close</button>
+              </div>
+              <div class="admin-card-body" id="billing-drilldown-body"></div>
             </div>
           </div>
 
@@ -477,74 +520,9 @@
             <button class="billing-tab-btn" data-tab="ot-dashboard" onclick="switchBillingTab('ot-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">OT Dashboard</button>
           </div>
 
-          <!-- Tab 1: Billing Dashboard -->
+          <!-- Tab 1: Billing Dashboard (YTD analytics placeholder) -->
           <div id="billing-tab-billing-dashboard" class="billing-tab-content" style="margin-top:16px;">
-          <!-- Side-by-side: Billing Code Reference + YTD Compliance + Stacked Prediction Charts -->
-          <div class="billing-side-panels">
-            <!-- Billing Code Reference (wider) -->
-            <div class="card admin-card billing-ref-card">
-              <div class="card-header">
-                <span class="card-title">BILLING CODE REFERENCE</span>
-              </div>
-              <div class="admin-card-body">
-                <table class="data-table admin-preview-table" style="font-size:12px;" id="billing-code-ref-table">
-                  <thead><tr><th>PG</th><th>Role</th><th>Code</th><th style="white-space:nowrap;">Target Hrs</th></tr></thead>
-                  <tbody id="billing-code-ref-body">
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- YTD Compliance Doughnut Chart with threshold selector -->
-            <div class="card admin-card billing-doughnut-card">
-              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                <span class="card-title" id="billing-ytd-title">YTD COMPLIANCE — 100% THRESHOLD</span>
-                <div class="billing-threshold-selector" style="display:flex;gap:4px;">
-                  <button class="billing-threshold-btn" data-threshold="98" onclick="switchYTDThreshold(98)">98%</button>
-                  <button class="billing-threshold-btn active" data-threshold="100" onclick="switchYTDThreshold(100)">100%</button>
-                  <button class="billing-threshold-btn" data-threshold="102" onclick="switchYTDThreshold(102)">102%</button>
-                </div>
-              </div>
-              <div class="admin-card-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;">
-                <canvas id="billing-compliance-doughnut" width="280" height="280"></canvas>
-              </div>
-              <!-- Weekly breakdown table (always visible) -->
-              <div id="billing-ytd-breakdown" style="padding:0 12px 12px;"></div>
-            </div>
-
-            <!-- Right column: 3 prediction charts stacked -->
-            <div class="billing-right-stack">
-              <!-- UPL Reason Trends -->
-              <div class="card admin-card">
-                <div class="card-header">
-                  <span class="card-title">UPL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
-                </div>
-                <div class="admin-card-body">
-                  <canvas id="billing-upl-trends-chart" height="180"></canvas>
-                </div>
-              </div>
-
-              <!-- LATE Reason Trends -->
-              <div class="card admin-card">
-                <div class="card-header">
-                  <span class="card-title">LATE REASON TRENDS &amp; 3-MONTH PREDICTION</span>
-                </div>
-                <div class="admin-card-body">
-                  <canvas id="billing-late-trends-chart" height="180"></canvas>
-                </div>
-              </div>
-
-              <!-- PL Reason Trends -->
-              <div class="card admin-card">
-                <div class="card-header">
-                  <span class="card-title">PL REASON TRENDS &amp; 3-MONTH PREDICTION</span>
-                </div>
-                <div class="admin-card-body">
-                  <canvas id="billing-pl-trends-chart" height="180"></canvas>
-                </div>
-              </div>
-            </div>
-          </div>
+            <div style="padding:40px;text-align:center;color:var(--text-secondary);font-size:13px;">YTD analytics and trend charts will be shown here in a future update.</div>
           </div><!-- end billing-tab-billing-dashboard -->
 
           <!-- Tab 2: OT Dashboard -->
@@ -1527,7 +1505,7 @@
   <script src="js/notifications.js?v=102g"></script>
   <script src="js/maintenance.js?v=102g"></script>
   <script src="js/admin.js?v=102g"></script>
-  <script src="js/billing.js?v=102g"></script>
+  <script src="js/billing.js?v=126"></script>
   <script src="js/billing-v2.js?v=122"></script>
 
   <script src="js/performance.js?v=102g"></script>

@@ -1302,3 +1302,20 @@
 - [x] Rename existing "Role" and "Planning Group" labels to "Billing Role" and "Billing Planning Group"
 - [x] Add read-only "Internal Role" and "Internal Planning Group" fields in detail panel
 - [x] Update normalizeRecord to include internal_role and internal_planning_group
+
+## Batch 126 — Billing Compliance Dashboard Rebuild
+- [x] Seed billing targets from screenshot into io_billing_targets_v2 table
+- [x] Build compliance engine API: GET /api/io/billing-compliance (weekly compliance for 11 PG×Role combos)
+- [x] Compliance %: delivered hours (P/Late/OT × 7.5) vs target hours
+- [x] Goal to 98%, 100%, 102%: signed hour deltas
+- [x] Predictive UPL: YTD weekly avg UPL rate per PG×Role, projected for remaining days
+- [x] Predictive OT: YTD weekly avg OT hours per PG×Role, projected for remaining days
+- [x] OTs needed: additional OT hours to close gap to target
+- [x] HC needed: additional headcount (full shifts) to close gap to target
+- [x] Rebuild Billing Compliance tab frontend: KPI summary cards + compliance table
+- [x] Traffic light system (green ≥100%, amber 95-99.9%, red <95%)
+- [x] Progress bars with 98%/100%/102% markers
+- [x] Signed deltas with color coding
+- [x] Row click drill-down: day-by-day breakdown
+- [x] Retain OT Dashboard tab as-is
+- [x] Ensure Saturday-Friday workweek scheme across all Playbook features

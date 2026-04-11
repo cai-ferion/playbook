@@ -19,41 +19,20 @@ describe('Batch 22 — Anchor Billing Table & Charts', () => {
   const html = readHTML();
   const css = readPublicCSS('styles.css');
 
-  it('billing code reference table has white-space:nowrap on Target Hrs header', () => {
-    expect(html).toContain('style="white-space:nowrap;">Target Hrs</th>');
+  it('[V3] billing compliance table has Target Hrs column header', () => {
+    expect(html).toContain('Target Hrs');
   });
 
-  it('billing ref card is wider (420px) for better column display', () => {
-    expect(css).toContain('flex: 0 0 420px');
+  it('[V3] billing KPI cards exist', () => {
+    expect(html).toContain('id="billing-kpi-cards"');
+    expect(html).toContain('id="kpi-compliance"');
   });
 
-  it('billing ref card table values are center-aligned via CSS', () => {
-    expect(css).toContain('.billing-ref-card .data-table td');
-    expect(css).toContain('text-align: center');
-  });
-
-  it('billing-right-stack layout exists for stacked charts', () => {
-    expect(css).toContain('.billing-right-stack');
-    expect(css).toContain('flex-direction: column');
-  });
-
-  it('UPL, LATE, PL trend chart canvases exist in the right stack', () => {
-    expect(html).toContain('id="billing-upl-trends-chart"');
-    expect(html).toContain('id="billing-late-trends-chart"');
-    expect(html).toContain('id="billing-pl-trends-chart"');
-    // They should be inside billing-right-stack
-    expect(html).toContain('billing-right-stack');
-  });
-
-  it('YTD compliance doughnut is in its own column, trend charts are in the right stack', () => {
-    const doughnutPos = html.indexOf('billing-doughnut-card');
-    const rightStackStart = html.indexOf('billing-right-stack');
-    const uplPos = html.indexOf('billing-upl-trends-chart');
-    // Doughnut should be in its own card before the right stack
-    expect(doughnutPos).toBeGreaterThan(-1);
-    expect(rightStackStart).toBeGreaterThan(-1);
-    expect(doughnutPos).toBeLessThan(rightStackStart);
-    expect(uplPos).toBeGreaterThan(rightStackStart);
+  it('[V3] billing compliance CSS has KPI grid and traffic-light styles', () => {
+    expect(css).toContain('.billing-kpi-grid');
+    expect(css).toContain('.billing-kpi-card');
+    expect(css).toContain('--bc-green');
+    expect(css).toContain('--bc-red');
   });
 });
 

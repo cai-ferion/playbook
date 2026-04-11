@@ -2279,53 +2279,78 @@ router.get("/billing-targets-v2/weeks", async (req: Request, res: Response) => {
 // ============================================================
 
 /**
- * GET /api/io/billing-compliance-v2?week_ending=YYYY-MM-DD
- * 
- * Joins io_srt_bill (Production employees per day per PG×Role)
- * with io_attendance (P/LATE tags + OT hours) to compute:
- * - Target HC and Target Hours from io_billing_targets_v2
- * - Production HC (distinct employees in SRT with status=Production)
- * - Present HC (employees with P or LATE tag in attendance)
- * - Delivered Hours (present_days × 8)
- * - OT Hours (sum of ot_hours from attendance)
- * - Total Payload (delivered + OT)
- * - Gap analysis (target - delivered)
- * - Actual vs Projection breakdown per day
+ * GET /api/io/billing-compliance?week_ending=YYYY-MM-DD
+ *
+ * Billing Compliance Dashboard Engine.
+ * Work week = Saturday to Friday. week_ending = the Friday.
+ *
+ * For each of the 11 PG×Role combos, computes:
+ *  - Delivered hours (P/LATE/OT attendance days × 7.5)
+ *  - OT hours (sum of ot_hours field)
+ *  - Total billed = delivered + OT
+ *  - Compliance % = total_billed / target_hours × 100
+ *  - Goal to 98%, 100%, 102% (signed hour deltas)
+ *  - Predictive UPL (YTD weekly avg UPL rate, projected for remaining days)
+ *  - Predictive OT (YTD weekly avg OT hours, projected for remaining days)
+ *  - OTs needed to close gap to target
+ *  - HC needed (additional full-week headcount to close gap)
  */
-router.get("/billing-compliance-v2", async (req: Request, res: Response) => {
+router.get("/billing-compliance", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
     const weekEnding = String(req.query.week_ending || '');
     if (!weekEnding) return res.status(400).json({ error: "week_ending is required" });
 
-    // Compute week start (Sunday) from week ending (Saturday)
+    const HOURS_PER_SHIFT = 7.5;
+
+    // Work week: Saturday to Friday. week_ending = Friday.
     const weDate = new Date(weekEnding + 'T00:00:00Z');
     const wsDate = new Date(weDate);
-    wsDate.setUTCDate(wsDate.getUTCDate() - 6);
+    wsDate.setUTCDate(wsDate.getUTCDate() - 6); // Saturday
     const weekStart = wsDate.toISOString().slice(0, 10);
     const weekEnd = weekEnding;
 
-    // 1. Get all SRT bill rows for this week (Production status only)
-    const srtResult: any = await db.execute(
-      sql`SELECT date, ohr_id, srt_status, actual_vs_projection, role, planning_group
-          FROM io_srt_bill
-          WHERE date >= ${weekStart} AND date <= ${weekEnd}
-            AND srt_status = 'Production'
-          ORDER BY date, planning_group, role`
-    );
-    const srtRows = Array.isArray(srtResult[0]) ? srtResult[0] : srtResult;
+    // Determine how many days have passed and remain
+    // Today in PHT (UTC+8)
+    const nowPHT = new Date(Date.now() + 8 * 3600000);
+    const todayStr = nowPHT.toISOString().slice(0, 10);
+    // Count working days in the week (Sat-Fri = 7 days)
+    const totalDaysInWeek = 7;
+    // Days elapsed = days from weekStart up to min(today, weekEnd)
+    const effectiveEnd = todayStr < weekEnd ? todayStr : weekEnd;
+    const daysElapsed = Math.max(0, Math.min(totalDaysInWeek,
+      Math.floor((new Date(effectiveEnd + 'T00:00:00Z').getTime() - new Date(weekStart + 'T00:00:00Z').getTime()) / 86400000) + 1
+    ));
+    const daysRemaining = Math.max(0, totalDaysInWeek - daysElapsed);
+    const isCurrentWeek = todayStr >= weekStart && todayStr <= weekEnd;
+    const isCompletedWeek = todayStr > weekEnd;
 
-    // 2. Get all attendance records for this week
+    // The 11 PG×Role combos (using billing PG short codes stored in attendance)
+    const PG_ROLE_COMBOS = [
+      { pg: 'S-ABF', role: 'Agent', label: 'S-ABF × Agent' },
+      { pg: 'S-ABF', role: 'Operational SME', label: 'S-ABF × SME' },
+      { pg: 'S-ABF', role: 'Quality & Policy Expert', label: 'S-ABF × QA' },
+      { pg: 'CS-ABF', role: 'Agent', label: 'CS-ABF × Agent' },
+      { pg: 'CS-ABF', role: 'Operational SME', label: 'CS-ABF × SME' },
+      { pg: 'CS-ABF', role: 'Quality & Policy Expert', label: 'CS-ABF × QA' },
+      { pg: 'CSO_CTR', role: 'Agent', label: 'CSO × Agent' },
+      { pg: 'FAD_CTR', role: 'Agent', label: 'FAD × Agent' },
+      { pg: 'RECALL_MEASUREMENT_CTR', role: 'Agent', label: 'RECALL × Agent' },
+      { pg: 'SME_CTR', role: '*', label: 'SME_CTR × Any' },
+      { pg: 'QPE_CTR', role: '*', label: 'QPE_CTR × Any' },
+    ];
+
+    // 1. Attendance data for this week
     const attResult: any = await db.execute(
-      sql`SELECT ohr_id, log_date, tag, ot_hours
+      sql`SELECT ohr_id, log_date, tag, ot_hours, planning_group, role
           FROM io_attendance
           WHERE log_date >= ${weekStart} AND log_date <= ${weekEnd}
-          ORDER BY log_date`
+            AND planning_group IS NOT NULL AND role IS NOT NULL`
     );
     const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
 
-    // 3. Get targets for this week
+    // 2. Targets for this week
     const tgtResult: any = await db.execute(
       sql`SELECT planning_group, role, target_hc, target_hours
           FROM io_billing_targets_v2
@@ -2337,208 +2362,268 @@ router.get("/billing-compliance-v2", async (req: Request, res: Response) => {
       targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
     }
 
-    // Build attendance lookup: ohr|date -> { tag, ot_hours }
-    const attMap = new Map<string, { tag: string; ot_hours: number }>();
-    for (const a of attRows) {
-      attMap.set(`${a.ohr_id}|${a.log_date}`, {
-        tag: a.tag || '',
-        ot_hours: parseFloat(a.ot_hours) || 0
+    // 3. YTD data for predictive UPL and OT rates
+    // YTD = from Jan 1 to the Saturday before this week (exclude current week)
+    const ytdEnd = new Date(wsDate);
+    ytdEnd.setUTCDate(ytdEnd.getUTCDate() - 1); // Friday before this week
+    const ytdEndStr = ytdEnd.toISOString().slice(0, 10);
+    const ytdStartStr = weDate.getUTCFullYear() + '-01-01';
+
+    const ytdResult: any = await db.execute(
+      sql`SELECT planning_group, role,
+            COUNT(DISTINCT CONCAT(YEAR(log_date), '-', WEEK(log_date, 6))) as weeks_count,
+            SUM(CASE WHEN tag = 'UPL' THEN 1 ELSE 0 END) as total_upl,
+            SUM(CASE WHEN tag IN ('P','LATE') THEN 1 ELSE 0 END) as total_present,
+            SUM(CASE WHEN tag IN ('P','LATE') AND ot_hours IS NOT NULL AND ot_hours != '' AND CAST(ot_hours AS DECIMAL(10,2)) > 0 THEN CAST(ot_hours AS DECIMAL(10,2)) ELSE 0 END) as total_ot_hours
+          FROM io_attendance
+          WHERE log_date >= ${ytdStartStr} AND log_date <= ${ytdEndStr}
+            AND planning_group IS NOT NULL AND role IS NOT NULL
+          GROUP BY planning_group, role`
+    );
+    const ytdRows = Array.isArray(ytdResult[0]) ? ytdResult[0] : ytdResult;
+    // Build YTD lookup: pg|role -> { weeks, upl_per_week, ot_per_week }
+    const ytdMap = new Map<string, { weeks: number; upl_per_week: number; ot_per_week: number }>();
+    for (const y of ytdRows) {
+      const weeks = Number(y.weeks_count) || 1;
+      ytdMap.set(`${y.planning_group}|${y.role}`, {
+        weeks,
+        upl_per_week: Number(y.total_upl) / weeks,
+        ot_per_week: Number(y.total_ot_hours) / weeks
       });
     }
 
-    // Build compliance data per PG×Role
-    // Structure: { pg|role -> { dates: { date -> { srt_employees: Set, present: Set, ot_hours, actual_vs_projection } } } }
-    const complianceMap = new Map<string, {
-      planning_group: string;
-      role: string;
-      dates: Map<string, {
-        srt_employees: Set<string>;
-        present_employees: Set<string>;
-        ot_hours: number;
-        actual_vs_projection: string;
-      }>;
-    }>();
+    // Build per-combo attendance aggregation
+    // For each combo, aggregate: billable days, UPL days, OT hours, per-day breakdown
+    type DayBucket = { billable: number; upl: number; ot_hours: number; total: number; employees: Set<string> };
+    type ComboData = {
+      days: Map<string, DayBucket>;
+      totalBillable: number;
+      totalUPL: number;
+      totalOtHours: number;
+      totalScheduled: number;
+      uniqueEmployees: Set<string>;
+    };
 
-    for (const row of srtRows) {
-      const key = `${row.planning_group}|${row.role}`;
-      if (!complianceMap.has(key)) {
-        complianceMap.set(key, {
-          planning_group: row.planning_group,
-          role: row.role,
-          dates: new Map()
+    const comboDataMap = new Map<string, ComboData>();
+    const getComboKey = (pg: string, role: string): string | null => {
+      // Match against the 11 combos
+      for (const c of PG_ROLE_COMBOS) {
+        if (c.pg === pg && (c.role === '*' || c.role === role)) return `${c.pg}|${c.role}`;
+      }
+      return null;
+    }
+
+    for (const a of attRows) {
+      const key = getComboKey(a.planning_group, a.role);
+      if (!key) continue;
+      if (!comboDataMap.has(key)) {
+        comboDataMap.set(key, {
+          days: new Map(),
+          totalBillable: 0, totalUPL: 0, totalOtHours: 0, totalScheduled: 0,
+          uniqueEmployees: new Set()
         });
       }
-      const entry = complianceMap.get(key)!;
-      if (!entry.dates.has(row.date)) {
-        entry.dates.set(row.date, {
-          srt_employees: new Set(),
-          present_employees: new Set(),
-          ot_hours: 0,
-          actual_vs_projection: row.actual_vs_projection || 'Actuals'
-        });
+      const cd = comboDataMap.get(key)!;
+      cd.uniqueEmployees.add(a.ohr_id);
+      if (!cd.days.has(a.log_date)) {
+        cd.days.set(a.log_date, { billable: 0, upl: 0, ot_hours: 0, total: 0, employees: new Set() });
       }
-      const dayData = entry.dates.get(row.date)!;
-      dayData.srt_employees.add(row.ohr_id);
-
-      // Check attendance for this employee on this date
-      const attKey = `${row.ohr_id}|${row.date}`;
-      const att = attMap.get(attKey);
-      if (att && (att.tag === 'P' || att.tag === 'LATE')) {
-        dayData.present_employees.add(row.ohr_id);
-        dayData.ot_hours += att.ot_hours;
+      const day = cd.days.get(a.log_date)!;
+      day.total++;
+      day.employees.add(a.ohr_id);
+      const tag = (a.tag || '').toUpperCase();
+      if (tag === 'P' || tag === 'LATE' || tag === 'OT') {
+        day.billable++;
+        cd.totalBillable++;
+        const otHrs = parseFloat(a.ot_hours) || 0;
+        day.ot_hours += otHrs;
+        cd.totalOtHours += otHrs;
+      }
+      if (tag === 'UPL') {
+        day.upl++;
+        cd.totalUPL++;
+      }
+      if (['P','LATE','OT','UPL','PL'].includes(tag)) {
+        cd.totalScheduled++;
       }
     }
 
-    // Build response table
-    const PG_ROLE_ORDER = [
-      'CEI_TASKFORCE_CTR|Agent',
-      'CEI_TASKFORCE_CTR|Operational SME',
-      'CEI_TASKFORCE_CTR|Quality & Policy Expert',
-      'CSO_CTR|Agent',
-      'FAD_CTR|Agent',
-      'MASA_MAFSA_CTR_SCALED_REVIEW|Agent',
-      'MASA_MAFSA_CTR_SCALED_REVIEW|Operational SME',
-      'MASA_MAFSA_CTR_SCALED_REVIEW|Quality & Policy Expert',
-      'QPE_CTR|Quality & Policy Expert',
-      'RECALL_MEASUREMENT_CTR|Agent',
-      'SME_CTR|Operational SME',
-    ];
+    // Build compliance rows
+    const complianceRows: any[] = [];
 
-    const complianceTable: any[] = [];
-    const dailyDrilldown: any[] = [];
+    for (const combo of PG_ROLE_COMBOS) {
+      const key = `${combo.pg}|${combo.role}`;
+      const cd = comboDataMap.get(key);
 
-    // Collect all keys (use PG_ROLE_ORDER first, then any extras)
-    const allKeys = new Set<string>(PG_ROLE_ORDER);
-    Array.from(complianceMap.keys()).forEach(k => allKeys.add(k));
+      // Target: for wildcard roles (*), sum all targets matching the PG
+      let targetHours = 0;
+      if (combo.role === '*') {
+        for (const [k, v] of Array.from(targetMap.entries())) {
+          if (k.startsWith(combo.pg + '|')) targetHours += v.target_hours;
+        }
+      } else {
+        targetHours = (targetMap.get(key) || { target_hours: 0 }).target_hours;
+      }
 
-    for (const key of Array.from(allKeys)) {
-      const entry = complianceMap.get(key);
-      const [pg, role] = key.split('|');
-      const target = targetMap.get(key) || { target_hc: 0, target_hours: 0 };
+      // YTD predictive rates: for wildcard roles, sum across all roles for the PG
+      let ytdUplPerWeek = 0;
+      let ytdOtPerWeek = 0;
+      if (combo.role === '*') {
+        for (const [k, v] of Array.from(ytdMap.entries())) {
+          if (k.startsWith(combo.pg + '|')) {
+            ytdUplPerWeek += v.upl_per_week;
+            ytdOtPerWeek += v.ot_per_week;
+          }
+        }
+      } else {
+        const ytd = ytdMap.get(key);
+        if (ytd) {
+          ytdUplPerWeek = ytd.upl_per_week;
+          ytdOtPerWeek = ytd.ot_per_week;
+        }
+      }
 
-      let totalProductionHC = 0;
-      let totalPresentHC = 0;
-      let totalDeliveredHours = 0;
-      let totalOtHours = 0;
-      let dayCount = 0;
+      const billableDays = cd ? cd.totalBillable : 0;
+      const uplDays = cd ? cd.totalUPL : 0;
+      const otHoursActual = cd ? cd.totalOtHours : 0;
+      const deliveredHours = billableDays * HOURS_PER_SHIFT;
+      const totalBilled = deliveredHours + otHoursActual;
 
-      const dayDetails: any[] = [];
+      // Compliance %
+      const compliancePct = targetHours > 0 ? (totalBilled / targetHours) * 100 : 0;
 
-      if (entry) {
-        // Sort dates
-        const sortedDates = Array.from(entry.dates.keys()).sort();
+      // Goal deltas (positive = surplus, negative = deficit)
+      const goalTo98 = totalBilled - (targetHours * 0.98);
+      const goalTo100 = totalBilled - targetHours;
+      const goalTo102 = totalBilled - (targetHours * 1.02);
+
+      // Predictive UPL: YTD avg UPL per week, scaled to remaining days
+      // UPL per day = ytdUplPerWeek / 7, then × daysRemaining
+      const predictiveUplDays = isCompletedWeek ? 0 : (ytdUplPerWeek / 7) * daysRemaining;
+      const predictiveUplHours = predictiveUplDays * HOURS_PER_SHIFT;
+
+      // Predictive OT: YTD avg OT hours per week, scaled to remaining days
+      const predictiveOtHours = isCompletedWeek ? 0 : (ytdOtPerWeek / 7) * daysRemaining;
+
+      // Projected end-of-week billed (current + predicted OT for remaining days + remaining billable days)
+      // Remaining billable = (current daily billable rate) × daysRemaining - predictive UPL
+      const dailyBillableRate = daysElapsed > 0 ? billableDays / daysElapsed : 0;
+      const projectedRemainingBillable = Math.max(0, (dailyBillableRate * daysRemaining) - predictiveUplDays);
+      const projectedTotalBilled = totalBilled + (projectedRemainingBillable * HOURS_PER_SHIFT) + predictiveOtHours;
+
+      // OTs needed: hours gap to 100% target minus projected OT
+      const gapToTarget = targetHours - projectedTotalBilled;
+      const otsNeeded = Math.max(0, gapToTarget);
+
+      // HC needed: additional full-week headcount (person × 7 days × 7.5 hrs)
+      const hcNeeded = daysRemaining > 0 ? Math.max(0, Math.ceil(gapToTarget / (daysRemaining * HOURS_PER_SHIFT))) : 0;
+
+      // Day-by-day breakdown
+      const dayBreakdown: any[] = [];
+      if (cd) {
+        const sortedDates = Array.from(cd.days.keys()).sort();
         for (const date of sortedDates) {
-          const day = entry.dates.get(date)!;
-          const productionHC = day.srt_employees.size;
-          const presentHC = day.present_employees.size;
-          const deliveredHrs = presentHC * 8;
-          const otHrs = Math.round(day.ot_hours * 100) / 100;
-
-          totalProductionHC += productionHC;
-          totalPresentHC += presentHC;
-          totalDeliveredHours += deliveredHrs;
-          totalOtHours += otHrs;
-          dayCount++;
-
-          dayDetails.push({
+          const d = cd.days.get(date)!;
+          dayBreakdown.push({
             date,
-            actual_vs_projection: day.actual_vs_projection,
-            production_hc: productionHC,
-            present_hc: presentHC,
-            delivered_hours: deliveredHrs,
-            ot_hours: otHrs,
-            total_payload: deliveredHrs + otHrs
+            billable_days: d.billable,
+            upl_days: d.upl,
+            delivered_hours: d.billable * HOURS_PER_SHIFT,
+            ot_hours: Math.round(d.ot_hours * 100) / 100,
+            total_billed: (d.billable * HOURS_PER_SHIFT) + d.ot_hours,
+            headcount: d.employees.size
           });
         }
       }
 
-      const totalPayload = Math.round((totalDeliveredHours + totalOtHours) * 100) / 100;
-      const gapHours = Math.round((target.target_hours - totalPayload) * 100) / 100;
-      // Gap HC-days: how many person-days short (gap_hours / 8)
-      const gapHCDays = Math.round((gapHours / 8) * 100) / 100;
-      const status = totalPayload >= target.target_hours ? 'MET' : 'BEHIND';
-
-      // Average production HC across days (for the summary row)
-      const avgProductionHC = dayCount > 0 ? Math.round(totalProductionHC / dayCount) : 0;
-      const avgPresentHC = dayCount > 0 ? Math.round((totalPresentHC / dayCount) * 10) / 10 : 0;
-
-      complianceTable.push({
-        planning_group: pg,
-        role: role,
-        target_hc: target.target_hc,
-        target_hours: target.target_hours,
-        production_hc: avgProductionHC,
-        present_hc: avgPresentHC,
-        delivered_hours: totalDeliveredHours,
-        ot_hours: Math.round(totalOtHours * 100) / 100,
-        total_payload: totalPayload,
-        gap_hours: gapHours,
-        gap_hc_days: gapHCDays,
-        status,
-        day_count: dayCount
-      });
-
-      dailyDrilldown.push({
-        planning_group: pg,
-        role: role,
-        days: dayDetails
+      complianceRows.push({
+        planning_group: combo.pg,
+        role: combo.role,
+        label: combo.label,
+        target_hours: targetHours,
+        delivered_hours: Math.round(deliveredHours * 100) / 100,
+        ot_hours: Math.round(otHoursActual * 100) / 100,
+        total_billed: Math.round(totalBilled * 100) / 100,
+        compliance_pct: Math.round(compliancePct * 100) / 100,
+        goal_to_98: Math.round(goalTo98 * 100) / 100,
+        goal_to_100: Math.round(goalTo100 * 100) / 100,
+        goal_to_102: Math.round(goalTo102 * 100) / 100,
+        predictive_upl_hours: Math.round(predictiveUplHours * 100) / 100,
+        predictive_ot_hours: Math.round(predictiveOtHours * 100) / 100,
+        projected_total_billed: Math.round(projectedTotalBilled * 100) / 100,
+        ots_needed: Math.round(otsNeeded * 100) / 100,
+        hc_needed: hcNeeded,
+        days_elapsed: daysElapsed,
+        days_remaining: daysRemaining,
+        billable_days: billableDays,
+        upl_days: uplDays,
+        unique_hc: cd ? cd.uniqueEmployees.size : 0,
+        day_breakdown: dayBreakdown
       });
     }
 
-    // Compute totals row
+    // Totals
     const totals = {
-      target_hc: complianceTable.reduce((s, r) => s + r.target_hc, 0),
-      target_hours: complianceTable.reduce((s, r) => s + r.target_hours, 0),
-      production_hc: complianceTable.reduce((s, r) => s + r.production_hc, 0),
-      present_hc: Math.round(complianceTable.reduce((s, r) => s + r.present_hc, 0) * 10) / 10,
-      delivered_hours: complianceTable.reduce((s, r) => s + r.delivered_hours, 0),
-      ot_hours: Math.round(complianceTable.reduce((s, r) => s + r.ot_hours, 0) * 100) / 100,
-      total_payload: Math.round(complianceTable.reduce((s, r) => s + r.total_payload, 0) * 100) / 100,
-      gap_hours: Math.round(complianceTable.reduce((s, r) => s + r.gap_hours, 0) * 100) / 100,
-      gap_hc_days: Math.round(complianceTable.reduce((s, r) => s + r.gap_hc_days, 0) * 100) / 100,
+      target_hours: complianceRows.reduce((s: number, r: any) => s + r.target_hours, 0),
+      delivered_hours: Math.round(complianceRows.reduce((s: number, r: any) => s + r.delivered_hours, 0) * 100) / 100,
+      ot_hours: Math.round(complianceRows.reduce((s: number, r: any) => s + r.ot_hours, 0) * 100) / 100,
+      total_billed: Math.round(complianceRows.reduce((s: number, r: any) => s + r.total_billed, 0) * 100) / 100,
+      compliance_pct: 0 as number,
+      goal_to_98: Math.round(complianceRows.reduce((s: number, r: any) => s + r.goal_to_98, 0) * 100) / 100,
+      goal_to_100: Math.round(complianceRows.reduce((s: number, r: any) => s + r.goal_to_100, 0) * 100) / 100,
+      goal_to_102: Math.round(complianceRows.reduce((s: number, r: any) => s + r.goal_to_102, 0) * 100) / 100,
+      ots_needed: Math.round(complianceRows.reduce((s: number, r: any) => s + r.ots_needed, 0) * 100) / 100,
+      hc_needed: complianceRows.reduce((s: number, r: any) => s + r.hc_needed, 0),
     };
+    const totalTarget = totals.target_hours;
+    totals.compliance_pct = totalTarget > 0 ? Math.round((totals.total_billed / totalTarget) * 10000) / 100 : 0;
 
     res.json({
       week_ending: weekEnding,
       week_start: weekStart,
-      compliance: complianceTable,
-      drilldown: dailyDrilldown,
+      days_elapsed: daysElapsed,
+      days_remaining: daysRemaining,
+      is_current_week: isCurrentWeek,
+      is_completed_week: isCompletedWeek,
+      compliance: complianceRows,
       totals
     });
   } catch (err: any) {
-    console.error("[IO API] billing-compliance-v2 error:", err);
+    console.error("[IO API] billing-compliance error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/io/billing-compliance-v2/weeks — available weeks from SRT bill data
-router.get("/billing-compliance-v2/weeks", async (req: Request, res: Response) => {
+// GET /api/io/billing-compliance/weeks — available weeks (Sat-Fri, ending on Friday)
+router.get("/billing-compliance/weeks", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
-    // Get min and max dates from SRT bill data
+    // Get min and max dates from attendance data
     const result: any = await db.execute(
-      sql`SELECT MIN(date) as min_date, MAX(date) as max_date FROM io_srt_bill`
+      sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE planning_group IS NOT NULL`
     );
     const rows = Array.isArray(result[0]) ? result[0] : result;
     const { min_date, max_date } = rows[0] || {};
     if (!min_date || !max_date) return res.json([]);
 
-    // Generate Saturday week-endings that overlap with the data range
+    // Generate Friday week-endings (Sat-Fri work week)
     const weeks: string[] = [];
     const start = new Date(min_date + 'T00:00:00Z');
     const end = new Date(max_date + 'T00:00:00Z');
-    // Find first Saturday >= min_date
+    // Find first Friday >= min_date
     const cursor = new Date(start);
-    cursor.setUTCDate(cursor.getUTCDate() + ((6 - cursor.getUTCDay() + 7) % 7));
+    const dayOfWeek = cursor.getUTCDay(); // 0=Sun
+    const daysToFriday = (5 - dayOfWeek + 7) % 7;
+    cursor.setUTCDate(cursor.getUTCDate() + daysToFriday);
     while (cursor <= end || cursor.getTime() - end.getTime() < 7 * 86400000) {
       weeks.push(cursor.toISOString().slice(0, 10));
       cursor.setUTCDate(cursor.getUTCDate() + 7);
-      if (weeks.length > 52) break; // safety
+      if (weeks.length > 52) break;
     }
     res.json(weeks);
   } catch (err: any) {
-    console.error("[IO API] billing-compliance-v2/weeks error:", err);
+    console.error("[IO API] billing-compliance/weeks error:", err);
     res.status(500).json({ error: err.message });
   }
 });

@@ -66,20 +66,11 @@ describe("Batch 16 — Billing Code Reference Target Hours", () => {
     expect(indexHtml).toContain("Target Hrs");
   });
 
-  it("has billing-code-ref-body tbody for dynamic rendering", () => {
-    expect(indexHtml).toContain("billing-code-ref-body");
-  });
-
-  it("has renderBillingCodeReference function", () => {
-    expect(billingJs).toContain("function renderBillingCodeReference");
-  });
-
-  it("has billingUpdateTargetHours function for admin editing", () => {
-    expect(billingJs).toContain("function billingUpdateTargetHours");
-  });
-
-  it("has loadBillingTargetHours to load from server", () => {
-    expect(billingJs).toContain("function loadBillingTargetHours");
+  it("[V3] billing code ref removed — targets now managed via admin panel", () => {
+    // The old billing-code-ref-body, renderBillingCodeReference, billingUpdateTargetHours,
+    // and loadBillingTargetHours were removed in the V3 rewrite.
+    // Targets are now managed via the Billing Targets V2 admin panel.
+    expect(billingJs).toContain('function renderBillingComplianceTable');
   });
 
   it("has billing-target-hours GET endpoint on server", () => {

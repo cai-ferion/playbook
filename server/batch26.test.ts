@@ -57,35 +57,34 @@ describe("Batch 26 — Revisions", () => {
     });
   });
 
-  // 4. Billing Compliance doughnut chart — YTD per-week compliance
-  describe("Billing Compliance Charts", () => {
-    it("should render YTD doughnut from per-week data via renderYTDComplianceDoughnut", () => {
+  // 4. Billing Compliance V3 — server-driven dashboard
+  describe("Billing Compliance V3 Dashboard", () => {
+    it("[V3] should fetch from server-side billing-compliance API", () => {
       const billingJs = fs.readFileSync(
         path.join(__dirname, "public/js/billing.js"),
         "utf-8"
       );
-      // Should fetch billing-ytd-weekly and render with renderYTDComplianceDoughnut
-      expect(billingJs).toContain("billing-ytd-weekly");
-      expect(billingJs).toContain("renderYTDComplianceDoughnut");
+      expect(billingJs).toContain("/billing-compliance?week_ending=");
+      expect(billingJs).toContain("/billing-compliance/weeks");
     });
 
-    it("should have YTD COMPLIANCE title for doughnut chart", () => {
+    it("[V3] should have KPI cards in HTML", () => {
       const html = fs.readFileSync(
         path.join(__dirname, "public/index.html"),
         "utf-8"
       );
-      expect(html).toContain("YTD COMPLIANCE");
+      expect(html).toContain('id="billing-kpi-cards"');
+      expect(html).toContain('id="kpi-compliance"');
     });
 
-    it("should compute PG-weeks passing/failing across all weeks", () => {
+    it("[V3] should render traffic-light compliance table", () => {
       const billingJs = fs.readFileSync(
         path.join(__dirname, "public/js/billing.js"),
         "utf-8"
       );
-      // Should group by week and iterate BILLING_CODE_ORDER per week
-      expect(billingJs).toContain("byWeek");
-      expect(billingJs).toContain("codeFailCount");
-      expect(billingJs).toContain("PG-wks");
+      expect(billingJs).toContain("renderBillingComplianceTable");
+      expect(billingJs).toContain("bc-badge");
+      expect(billingJs).toContain("bc-progress-fill");
     });
   });
 
