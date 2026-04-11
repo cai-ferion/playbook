@@ -9,10 +9,13 @@
 import cron from "node-cron";
 import { exec } from "child_process";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { getDb } from "./db.js";
 import { ioSyncLog } from "../drizzle/schema.js";
 
-const SYNC_SCRIPT = "/home/ubuntu/sync-attendance-to-gsheets.py";
+const __dirname_local = path.dirname(fileURLToPath(import.meta.url));
+const SYNC_SCRIPT = path.join(__dirname_local, "sync-attendance-to-gsheets.py");
 const TOKEN_FILE = "/home/ubuntu/.gws_token";
 
 /**
@@ -125,6 +128,12 @@ export function runAttendanceSync(trigger: string = "manual"): Promise<{
     }
     delete cleanEnv.PYTHONHOME;
     delete cleanEnv.PYTHONPATH;
+
+    // Inject GWS token from file so gws CLI can authenticate in subprocess
+    if (!cleanEnv.GOOGLE_WORKSPACE_CLI_TOKEN && fs.existsSync(TOKEN_FILE)) {
+      const token = fs.readFileSync(TOKEN_FILE, "utf-8").trim();
+      if (token) cleanEnv.GOOGLE_WORKSPACE_CLI_TOKEN = token;
+    }
 
     exec(cmd, {
       timeout: 300000, // 5 min max

@@ -1432,3 +1432,11 @@
 - [x] Remove billingCode from data.js data layer
 - [x] Remove orphaned .billing-code-* and .billing-doughnut-* and .billing-ytd-* CSS
 - [x] Run tests and verify all 301 tests pass (2 billing code tests correctly removed)
+## Batch 142 — Fix DB→Sheet Sync Script (Lost on Sandbox Hibernation)
+- [x] Recreate sync-attendance-to-gsheets.py inside project directory (was at /home/ubuntu/ outside repo)
+- [x] Update column mapping: remove Billing Code column (now 15 cols A-O instead of 16 A-P)
+- [x] Update gsheets-sync.ts to use path.join(__dirname) for script path (survives hibernation)
+- [x] Inject GOOGLE_WORKSPACE_CLI_TOKEN from token file into subprocess env
+- [x] Fix gws CLI syntax: --body → --json for update/append calls
+- [x] Optimize updates: contiguous range grouping with 200-row batch cap (26 API calls vs 5120 row-by-row)
+- [x] First successful run: 5120 updated + 7641 appended in 51.4s (12761 DB rows synced)
