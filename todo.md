@@ -1372,3 +1372,12 @@
 - [x] Add manual trigger endpoint (POST /api/io/sync-attendance, admin-only)
 - [x] Test end-to-end sync from server (5,412 rows synced, 8 new rows appended)
 - [x] Add .bashrc hook to auto-refresh GWS token file on sandbox startup
+
+## Batch 136 — Sync History Page
+- [x] Create io_sync_log DB table (id, sync_type, trigger, status, started_at, completed_at, duration_ms, rows_updated, rows_appended, total_db_rows, total_sheet_rows, error_message, output_log)
+- [x] Build API endpoints: GET /api/io/sync-log (paginated list), GET /api/io/sync-log/latest (last sync status) — admin-only (OHR 740045023)
+- [x] Build Sync History page UI with last sync status indicator card + full log table with expandable detail rows
+- [x] Wire gsheets-sync.ts to parse Python script output and write log entries on each sync run (manual + cron triggers)
+- [x] Add Sync History nav item visible only to OHR 740045023 (both login paths)
+- [x] Add sync-history.css with status card, table, badge, toast, and pagination styles
+- [x] Test end-to-end: manual sync trigger → log written → API returns correct data (2 test runs verified)

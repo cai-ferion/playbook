@@ -395,6 +395,10 @@ async function handleLogin() {
     const adminNav = document.getElementById('nav-admin');
     if (adminNav) adminNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
+    // Show Sync History nav only for admin OHR
+    const syncHistoryNav = document.getElementById('nav-sync-history');
+    if (syncHistoryNav) syncHistoryNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
+
     // Hide entire Anchor group from Agents
     const anchorGroupEl = document.getElementById('nav-group-anchor');
     if (anchorGroupEl) {
@@ -538,6 +542,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Show Admin Tools nav only for admin OHR
       const adminNav2 = document.getElementById('nav-admin');
       if (adminNav2) adminNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
+
+      // Show Sync History nav only for admin OHR
+      const syncHistoryNav2 = document.getElementById('nav-sync-history');
+      if (syncHistoryNav2) syncHistoryNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
       // Hide entire Anchor group from Agents
       const anchorGroupEl2 = document.getElementById('nav-group-anchor');
@@ -809,7 +817,7 @@ function updateRefreshDisplay() {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'sync-history', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -854,7 +862,7 @@ async function switchView(view) {
 
   const titles = {
     input: 'Input Portal', dashboard: 'Command Dashboard', alerts: 'Risk Intelligence',
-    admin: 'Admin Tools', billing: 'Billing Compliance',
+    admin: 'Admin Tools', billing: 'Billing Compliance', 'sync-history': 'Sync History',
     'compass-input': 'Coaching Profile', 'compass-disputes': 'Disputes Area',
     'sandbox-input': 'Input Portal', 'sandbox-review': 'Review Area', 'sandbox-analytics': 'Analytics',
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
@@ -886,6 +894,7 @@ async function switchView(view) {
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
   if (view === 'productivity-hrs') { if (typeof initProductivityHrs === 'function') initProductivityHrs(); }
+  if (view === 'sync-history') { if (typeof initSyncHistory === 'function') initSyncHistory(); }
 }
 
 /**

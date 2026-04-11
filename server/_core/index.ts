@@ -115,7 +115,7 @@ async function startServer() {
       return res.status(403).json({ error: "Admin only" });
     }
     try {
-      const result = await runAttendanceSync();
+      const result = await runAttendanceSync("manual");
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ error: e.message });

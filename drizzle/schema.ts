@@ -456,3 +456,30 @@ export const ioBillingTargetsV2 = mysqlTable("io_billing_targets_v2", {
 
 export type IoBillingTargetsV2 = typeof ioBillingTargetsV2.$inferSelect;
 export type InsertIoBillingTargetsV2 = typeof ioBillingTargetsV2.$inferInsert;
+
+
+// ============================================================
+// Sync Log Table
+// ============================================================
+
+/**
+ * io_sync_log — Tracks each sync run (DB → Google Sheets).
+ * Used by the Sync History page for audit and troubleshooting.
+ */
+export const ioSyncLog = mysqlTable("io_sync_log", {
+  id: int("id").autoincrement().primaryKey(),
+  sync_type: varchar("sync_type", { length: 50 }).notNull(), // 'attendance', 'roster', etc.
+  trigger: varchar("trigger", { length: 50 }).notNull(), // 'cron_0130', 'cron_1630', 'manual'
+  status: varchar("status", { length: 20 }).notNull(), // 'success', 'error', 'running'
+  started_at: varchar("started_at", { length: 64 }).notNull(),
+  completed_at: varchar("completed_at", { length: 64 }),
+  duration_ms: int("duration_ms"),
+  rows_updated: int("rows_updated").default(0),
+  rows_appended: int("rows_appended").default(0),
+  total_db_rows: int("total_db_rows").default(0),
+  total_sheet_rows: int("total_sheet_rows").default(0),
+  error_message: text("error_message"),
+  output_log: text("output_log"),
+});
+export type IoSyncLog = typeof ioSyncLog.$inferSelect;
+export type InsertIoSyncLog = typeof ioSyncLog.$inferInsert;

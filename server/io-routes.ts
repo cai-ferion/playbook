@@ -21,6 +21,7 @@ import {
   ioOtConfig,
   ioSrtBill,
   ioBillingTargetsV2,
+  ioSyncLog,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
 import crypto from "crypto";
@@ -2665,6 +2666,56 @@ router.get("/billing-compliance/weeks", async (req: Request, res: Response) => {
     res.json(weeks);
   } catch (err: any) {
     console.error("[IO API] billing-compliance/weeks error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Sync Log (admin-only: OHR 740045023)
+// ============================================================
+
+// GET /api/io/sync-log — list sync log entries (newest first)
+router.get("/sync-log", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = req.headers["x-user-ohr"] as string || req.headers["x-actor-ohr"] as string;
+    if (actorOhr !== "740045023") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const limit = Number(req.query.limit) || 50;
+    const offset = Number(req.query.offset) || 0;
+
+    const [rows, countResult] = await Promise.all([
+      db.select().from(ioSyncLog).orderBy(desc(ioSyncLog.id)).limit(limit).offset(offset),
+      db.select({ count: sql<number>`COUNT(*)` }).from(ioSyncLog),
+    ]);
+
+    res.json({
+      rows,
+      total: Number(countResult[0]?.count || 0),
+    });
+  } catch (err: any) {
+    console.error("[IO API] sync-log GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/sync-log/latest — get the most recent sync entry
+router.get("/sync-log/latest", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = req.headers["x-user-ohr"] as string || req.headers["x-actor-ohr"] as string;
+    if (actorOhr !== "740045023") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const rows = await db.select().from(ioSyncLog).orderBy(desc(ioSyncLog.id)).limit(1);
+    res.json(rows[0] || null);
+  } catch (err: any) {
+    console.error("[IO API] sync-log/latest GET error:", err);
     res.status(500).json({ error: err.message });
   }
 });
