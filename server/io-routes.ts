@@ -1583,6 +1583,225 @@ router.post("/ot-requests/approve", async (req: Request, res: Response) => {
   }
 });
 
+// POST /ot-requests/:requestId/cancel — agent cancels their approved OT, redistributes to next waitlisted
+router.post("/ot-requests/:requestId/cancel", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { requestId } = req.params;
+    const actorOhr = req.headers["x-actor-ohr"] as string || req.body.actor_ohr || "";
+    const actorName = req.headers["x-actor-name"] as string || req.body.actor_name || "";
+
+    // Fetch the OT request
+    const [otReq] = await db.select().from(ioOtRequests)
+      .where(eq(ioOtRequests.request_id, requestId));
+    if (!otReq) return res.status(404).json({ error: "OT request not found" });
+    if (otReq.status !== "approved") {
+      return res.status(400).json({ error: `Cannot cancel — OT request status is '${otReq.status}', not 'approved'` });
+    }
+    // Only the requesting agent (or admin 740045023) can cancel
+    if (actorOhr !== otReq.ohr_id && actorOhr !== "740045023") {
+      return res.status(403).json({ error: "Only the requesting agent can cancel their own OT" });
+    }
+
+    const now = new Date().toISOString();
+    const OT_HOURS = 2.5;
+    const appliedDate = otReq.applied_date || "";
+    const pg = otReq.planning_group || "";
+
+    // 1. Mark OT request as cancelled
+    await db.update(ioOtRequests)
+      .set({ status: "cancelled", approved_at: null, applied_date: null })
+      .where(eq(ioOtRequests.id, otReq.id));
+
+    // 2. Clear OT hours from attendance for the applied date
+    if (appliedDate) {
+      const attRows = await db.select().from(ioAttendance)
+        .where(and(eq(ioAttendance.ohr_id, otReq.ohr_id), eq(ioAttendance.log_date, appliedDate)));
+      if (attRows.length > 0) {
+        await db.update(ioAttendance)
+          .set({ ot_hours: "0" })
+          .where(eq(ioAttendance.id, attRows[0].id));
+      }
+    }
+
+    // 3. Audit log for cancellation
+    await db.insert(ioAuditLog).values({
+      record_type: "ot_request",
+      record_id: otReq.request_id,
+      action: "cancelled",
+      field_name: "status",
+      old_value: "approved",
+      new_value: "cancelled",
+      actor_ohr: actorOhr,
+      actor_name: actorName || otReq.agent_name,
+      timestamp: now,
+      metadata: JSON.stringify({ applied_date: appliedDate, planning_group: pg }),
+    });
+
+    // 4. Notify the cancelling agent
+    const appliedDateFormatted = appliedDate
+      ? new Date(appliedDate + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+      : "N/A";
+    await db.insert(ioNotifications).values({
+      type: "ot_cancelled",
+      title: "OT Cancelled",
+      message: `Your OT commitment (${otReq.request_id}) for ${appliedDateFormatted} has been cancelled.`,
+      actor_ohr: actorOhr,
+      actor_name: actorName || otReq.agent_name,
+      target_ohr: otReq.ohr_id,
+      metadata: JSON.stringify({ request_id: otReq.request_id, applied_date: appliedDate, planning_group: pg }),
+      is_read: false,
+      created_at: now,
+    });
+
+    // 5. Redistribute: find next pending (waitlisted) agent in the same PG via FIFO
+    let redistributed: any = null;
+    if (pg) {
+      const waitlisted = await db.select().from(ioOtRequests)
+        .where(and(eq(ioOtRequests.planning_group, pg), eq(ioOtRequests.status, "pending")))
+        .orderBy(asc(ioOtRequests.submitted_at));
+
+      if (waitlisted.length > 0) {
+        // Compute the Sat-Fri week boundaries from the cancelled OT's applied date (or today)
+        const refDateStr = appliedDate || new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().split("T")[0];
+        const refDate = new Date(refDateStr + "T00:00:00Z");
+        const refDow = refDate.getUTCDay();
+        const daysSinceSat = refDow === 6 ? 0 : (refDow + 1);
+        const weekSaturday = new Date(refDate);
+        weekSaturday.setUTCDate(weekSaturday.getUTCDate() - daysSinceSat);
+        weekSaturday.setUTCHours(0, 0, 0, 0);
+        const weekFriday = new Date(weekSaturday);
+        weekFriday.setUTCDate(weekFriday.getUTCDate() + 6);
+        const weekSatStr = weekSaturday.toISOString().split("T")[0];
+        const weekFriStr = weekFriday.toISOString().split("T")[0];
+
+        // Pre-fetch employees and leaves for cascade
+        const allEmployees = await db.select().from(ioEmployees)
+          .where(eq(ioEmployees.planning_group, pg));
+        const empMap = new Map(allEmployees.map((e: any) => [e.ohr_id, e]));
+
+        const allLeaves = await db.select().from(ioLeaves)
+          .where(eq(ioLeaves.planning_group, pg));
+        const weekLeaves = allLeaves.filter((lv: any) => {
+          if (lv.status !== "approved" && lv.status !== "Approved") return false;
+          const start = lv.start_date || "";
+          const end = lv.end_date || start;
+          return start <= weekFriStr && end >= weekSatStr;
+        });
+
+        for (const nextReq of waitlisted) {
+          const emp = empMap.get(nextReq.ohr_id);
+          const workOffDays = parseWorkOffDays(emp?.work_off || "");
+          const agentLeaves = weekLeaves.filter((lv: any) => lv.ohr_id === nextReq.ohr_id);
+          const agentAtt = await db.select().from(ioAttendance)
+            .where(and(
+              gte(ioAttendance.log_date, weekSatStr),
+              lte(ioAttendance.log_date, weekFriStr),
+              eq(ioAttendance.ohr_id, nextReq.ohr_id)
+            ));
+
+          const cascadeDate = findOtDay(weekSaturday, workOffDays, agentLeaves, agentAtt);
+          if (!cascadeDate) continue; // No valid day — try next waitlisted agent
+
+          // Approve this waitlisted request
+          await db.update(ioOtRequests)
+            .set({ status: "approved", approved_at: now, applied_date: cascadeDate, approved_by: "SYSTEM (Cancel Cascade)", approved_by_ohr: "SYSTEM" })
+            .where(eq(ioOtRequests.id, nextReq.id));
+
+          // Write OT to attendance
+          const attRows = await db.select().from(ioAttendance)
+            .where(and(eq(ioAttendance.ohr_id, nextReq.ohr_id), eq(ioAttendance.log_date, cascadeDate)));
+          if (attRows.length > 0) {
+            await db.update(ioAttendance)
+              .set({ ot_hours: String(OT_HOURS) })
+              .where(eq(ioAttendance.id, attRows[0].id));
+          } else {
+            const attId = crypto.randomBytes(8).toString("hex");
+            await db.insert(ioAttendance).values({
+              id: attId,
+              ohr_id: nextReq.ohr_id,
+              log_date: cascadeDate,
+              ot_hours: String(OT_HOURS),
+              created_at: now,
+              snap_full_name: emp?.full_name || nextReq.agent_name,
+              snap_supervisor: emp?.supervisor_name || "",
+              snap_planning_group: emp?.planning_group || "",
+              snap_shift_time: emp?.shift_time || "",
+              snap_actual_role: emp?.actual_role || "",
+              snap_billing_name: emp?.billing_name || "",
+              snap_status: emp?.srt_status || "",
+            });
+          }
+
+          // Audit log for cascade
+          await db.insert(ioAuditLog).values({
+            record_type: "ot_request",
+            record_id: nextReq.request_id,
+            action: "cancel_cascade_approved",
+            field_name: "status",
+            old_value: "pending",
+            new_value: "approved",
+            actor_ohr: "SYSTEM",
+            actor_name: "OT Cancel Cascade",
+            timestamp: now,
+            metadata: JSON.stringify({ cascaded_from: otReq.request_id, original_agent: otReq.ohr_id, applied_date: cascadeDate }),
+          });
+
+          // Notify the newly approved agent
+          const cascadeDateFormatted = new Date(cascadeDate + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+          const cascadeNotifs: any[] = [{
+            type: "ot_applied",
+            title: "OT Applied (Redistribution)",
+            message: `Your OT commitment (${nextReq.request_id}) for 2.5 hour(s) has been applied on ${cascadeDateFormatted}.`,
+            actor_ohr: "SYSTEM",
+            actor_name: "OT Cancel Redistribution",
+            target_ohr: nextReq.ohr_id,
+            metadata: JSON.stringify({ request_id: nextReq.request_id, hours: OT_HOURS, applied_date: cascadeDate, redistributed_from: otReq.request_id }),
+            is_read: false,
+            created_at: now,
+          }];
+          // Notify the newly approved agent's supervisor
+          if (emp?.supervisor_ohr) {
+            cascadeNotifs.push({
+              type: "ot_applied",
+              title: "OT Applied (Redistribution) — Agent Update",
+              message: `OT for ${nextReq.agent_name} (2.5 hr) has been applied on ${cascadeDateFormatted}.`,
+              actor_ohr: "SYSTEM",
+              actor_name: "OT Cancel Redistribution",
+              target_ohr: emp.supervisor_ohr,
+              metadata: JSON.stringify({ request_id: nextReq.request_id, agent_ohr: nextReq.ohr_id, agent_name: nextReq.agent_name, hours: OT_HOURS, applied_date: cascadeDate }),
+              is_read: false,
+              created_at: now,
+            });
+          }
+          await db.insert(ioNotifications).values(cascadeNotifs);
+
+          redistributed = {
+            request_id: nextReq.request_id,
+            ohr_id: nextReq.ohr_id,
+            agent_name: nextReq.agent_name,
+            applied_date: cascadeDate,
+          };
+          console.log(`[OT-Cancel] Redistributed ${otReq.request_id} → ${nextReq.request_id} (${nextReq.agent_name}) on ${cascadeDate}`);
+          break; // Only redistribute to one agent
+        }
+      }
+    }
+
+    console.log(`[OT-Cancel] Cancelled ${otReq.request_id} (${otReq.agent_name}). Redistributed: ${redistributed ? redistributed.request_id : 'none'}`);
+    res.json({
+      ok: true,
+      cancelled_request_id: otReq.request_id,
+      cancelled_agent: otReq.agent_name,
+      redistributed,
+    });
+  } catch (err: any) {
+    console.error("[IO API] ot-requests/cancel error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /ot-requests/open-form — OM opens OT form for a planning group (sends notifications)
 router.post("/ot-requests/open-form", async (req: Request, res: Response) => {
   try {

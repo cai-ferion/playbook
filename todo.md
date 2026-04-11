@@ -1440,3 +1440,14 @@
 - [x] Fix gws CLI syntax: --body → --json for update/append calls
 - [x] Optimize updates: contiguous range grouping with 200-row batch cap (26 API calls vs 5120 row-by-row)
 - [x] First successful run: 5120 updated + 7641 appended in 51.4s (12761 DB rows synced)
+
+## Batch 143 — OT Cancellation with Waitlist Redistribution
+- [x] Add cancel OT endpoint (POST /api/io/ot-requests/:id/cancel)
+- [x] On cancel: set OT request status to "cancelled", remove OT from attendance row
+- [x] On cancel: auto-redistribute OT slot to next pending agent in same PG (FIFO)
+- [x] Apply redistributed OT to next agent's available shift (reuses findOtDay logic — skips WO/leave/past days)
+- [x] Send ot_cancelled notification to cancelling agent
+- [x] Send ot_applied notification to newly approved agent + supervisor
+- [x] Add "Cancel OT" button in Task Board detail view (approved OT requests only, requesting agent only)
+- [x] Guard: only requesting agent or admin can cancel; only approved status cancellable
+- [x] All 301 tests passing; guard rails verified (404 non-existent, 400 wrong status)

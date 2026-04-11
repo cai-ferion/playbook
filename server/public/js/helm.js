@@ -1621,6 +1621,13 @@ function helmOpenApprovalDetail(taskId) {
       Reject
     </button>`;
   }
+  // Cancel OT button: shown to the requesting agent (or admin) when OT is approved
+  if (task._isOtRequest && approvalStatus === 'Approved' && cu && (cu.ohr_id === task._otData?.ohr_id || cu.ohr_id === '740045023')) {
+    footerHtml += `<button class="btn btn-sm" style="background:#EF4444;color:#fff;border:none;" onclick="helmCancelOt('${escapeAttr(taskId)}')" id="btn-cancel-ot">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Cancel OT
+    </button>`;
+  }
   formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
@@ -1658,6 +1665,51 @@ async function helmApproveRequest(taskId, decision) {
     helmApplyApprovalsFilters();
   } catch (e) {
     showToast('Failed to update request: ' + e.message, 'error');
+  }
+}
+
+/**
+ * Cancel an approved OT request. Redistributes to next waitlisted agent automatically.
+ */
+async function helmCancelOt(taskId) {
+  try {
+    const task = HELM.tasks.find(t => t.task_id === taskId);
+    if (!task || !task._isOtRequest) throw new Error('OT request not found');
+    const requestId = task._otData?.request_id;
+    if (!requestId) throw new Error('Missing OT request ID');
+
+    // Confirmation dialog
+    if (!confirm('Are you sure you want to cancel this OT commitment? Your OT slot will be redistributed to the next waitlisted agent.')) return;
+
+    const btn = document.getElementById('btn-cancel-ot');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling...'; }
+
+    const cu = (typeof currentUser !== 'undefined') ? currentUser : {};
+    const resp = await fetch(`${IO_API_BASE}/ot-requests/${requestId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Actor-Ohr': cu.ohr_id || '',
+        'X-Actor-Name': cu.full_name || '',
+      },
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Cancel failed');
+
+    let msg = 'OT cancelled successfully.';
+    if (data.redistributed) {
+      msg += ` Redistributed to ${data.redistributed.agent_name} on ${data.redistributed.applied_date}.`;
+    } else {
+      msg += ' No waitlisted agents to redistribute to.';
+    }
+    showToast(msg, 'success');
+    helmCloseForm();
+    await helmFetchTasks();
+    helmApplyApprovalsFilters();
+  } catch (e) {
+    showToast('Failed to cancel OT: ' + e.message, 'error');
+    const btn = document.getElementById('btn-cancel-ot');
+    if (btn) { btn.disabled = false; btn.textContent = 'Cancel OT'; }
   }
 }
 

@@ -180,6 +180,7 @@ function getNotifIcon(type) {
     ot_form_reopen: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M1 4v6h6"/></svg>',
     ot_applied: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
     ot_waitlisted: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    ot_cancelled: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
   };
   return icons[type] || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
 }
@@ -188,7 +189,7 @@ function getNotifTagLabel(type) {
   const labels = {
     upl_notice: 'UPL', late_notice: 'LATE', absent_alert: 'Absent',
     ot_request_submitted: 'OT', ot_form_open: 'OT Form', ot_form_reopen: 'OT Reopen',
-    ot_applied: 'OT Applied', ot_waitlisted: 'Waitlisted',
+    ot_applied: 'OT Applied', ot_waitlisted: 'Waitlisted', ot_cancelled: 'OT Cancelled',
     task_assigned: 'Task', backdate_request: 'Backdate',
     record_save: 'Saved',
   };
@@ -202,7 +203,7 @@ function getNotifColor(type) {
     backdate_request: '#0ea5e9', coaching_issued: '#f97316', system_alert: '#ef4444',
     daily_summary: '#06b6d4', login: '#8b5cf6', srt_upload: '#3b82f6', absent_alert: '#ef4444',
     ot_request_submitted: '#10b981', ot_form_open: '#3b82f6', ot_form_reopen: '#8b5cf6',
-    ot_applied: '#22c55e', ot_waitlisted: '#f59e0b',
+    ot_applied: '#22c55e', ot_waitlisted: '#f59e0b', ot_cancelled: '#ef4444',
   };
   return colors[type] || '#9ca3af';
 }
