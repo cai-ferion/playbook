@@ -91,6 +91,8 @@ export const ioAttendance = mysqlTable("io_attendance", {
   locked_at: varchar("locked_at", { length: 64 }),
   role: varchar("role", { length: 100 }),
   planning_group: varchar("planning_group", { length: 100 }),
+  internal_role: varchar("internal_role", { length: 100 }),
+  internal_planning_group: varchar("internal_planning_group", { length: 100 }),
 });
 
 export type IoAttendance = typeof ioAttendance.$inferSelect;

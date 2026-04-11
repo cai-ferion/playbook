@@ -356,9 +356,14 @@ function renderDetailPanel(r, idx, locked) {
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-divider"></div>'
-    // Row 4: Role and Planning Group (editable dropdowns)
-    + '<div class="detail-section"><span class="detail-label">ROLE</span>' + roleField + '</div>'
-    + '<div class="detail-section"><span class="detail-label">PLANNING GROUP</span>' + pgField + '</div>'
+    // Row 4: Billing Role and Billing Planning Group (editable dropdowns)
+    + '<div class="detail-section"><span class="detail-label">BILLING ROLE</span>' + roleField + '</div>'
+    + '<div class="detail-section"><span class="detail-label">BILLING PLANNING GROUP</span>' + pgField + '</div>'
+    + '<div class="detail-section"></div>' /* spacer */
+    + '<div class="detail-divider"></div>'
+    // Row 5: Internal Role and Internal Planning Group (read-only, from io_employees)
+    + '<div class="detail-section"><span class="detail-label">INTERNAL ROLE</span><span class="detail-value">' + escapeHtml(r.internalRole || '\u2014') + '</span></div>'
+    + '<div class="detail-section"><span class="detail-label">INTERNAL PLANNING GROUP</span><span class="detail-value">' + escapeHtml(r.internalPlanningGroup || '\u2014') + '</span></div>'
     + '<div class="detail-section"></div>' /* spacer */
     + '</div>'
     + '</div>'

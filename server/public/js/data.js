@@ -544,6 +544,8 @@ function normalizeRecord(att) {
     flm: (att.snap_supervisor || emp.supervisor_name || '').trim(),
     role: (att.role || att.snap_actual_role || emp.actual_role || '').trim(),
     actualPlanningGroup: (att.planning_group || att.snap_planning_group || emp.planning_group || '').trim(),
+    internalRole: (att.internal_role || emp.actual_role || '').trim(),
+    internalPlanningGroup: (att.internal_planning_group || emp.planning_group || '').trim(),
     shiftTime: (att.snap_shift_time || emp.shift_time || '').trim(),
     status: (att.snap_status || emp.srt_status || '').trim(),
     completePlanningGroup: (emp.complete_planning_group || '').trim(),

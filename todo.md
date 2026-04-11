@@ -1295,3 +1295,10 @@
 - [x] Fix locking: removed is_locked enforcement from PATCH and bulk-tag, only date-based 11 AM PHT + previous day lock remains
 - [x] Remove Billing Code from detail panel, table columns, filters, sort, and edit section
 - [x] Fix Task Board: ALL agents now see OT Request form on New Request (was only S-ABF/CS-ABF)
+
+## Batch 125 — Internal Role/PG Fields in Attendance Detail
+- [x] Add internal_role and internal_planning_group columns to io_attendance table
+- [x] Backfill internal_role/internal_planning_group from io_employees for all existing records (44,900 rows)
+- [x] Rename existing "Role" and "Planning Group" labels to "Billing Role" and "Billing Planning Group"
+- [x] Add read-only "Internal Role" and "Internal Planning Group" fields in detail panel
+- [x] Update normalizeRecord to include internal_role and internal_planning_group
