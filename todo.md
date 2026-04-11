@@ -1350,3 +1350,10 @@
 ## Batch 132 — OT Approval Visibility Fix + Pred Rounding
 - [x] Fix OM (740030270) not seeing OT approval controls on the OT Dashboard
 - [x] Round Pred. UPL and Pred. OT to whole numbers in the compliance table
+
+## Batch 133 — Attendance Tag Fixes + Roster Corrections
+- [x] Fix 4 tag discrepancies (follow Sheet tag): Gabrillo LATE, Fernandez LATE, Cabural LATE, Amurao EXIT
+- [x] Fix 23 conflicting tag discrepancies (follow Sheet tag, except blanks follow DB tag)
+- [x] Generate full OT hours discrepancy report (all 107 mismatches)
+- [x] Update Poblete (740032326) from Inactive to Active in io_employees
+- [x] Update Reyes (740044575) role to Trainer in io_employees
