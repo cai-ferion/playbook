@@ -1340,3 +1340,9 @@
 
 ## Batch 130 — Blanks Count as P in Billing Compliance
 - [x] Treat blank/null tags as 'P' (billable) in the compliance engine
+
+## Batch 131 — Perpetual Billing Targets + Admin Editor
+- [x] Update compliance engine to carry forward targets perpetually (use most recent known targets for any week without explicit targets)
+- [x] Build admin-only billing targets editor API (GET/PUT, restricted to OHR 740045023)
+- [x] Build admin-only billing targets editor UI on the Billing Compliance page
+- [x] Targets editable per PG×Role with effective date support

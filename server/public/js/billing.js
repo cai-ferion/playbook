@@ -91,8 +91,15 @@ async function initBillingCompliance() {
   await initBillingWeekSelector();
   await loadBillingCompliance();
 
-  // OT Dashboard visibility check
+  // Show Edit Targets button for admin only
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const ADMIN_OHR = '740045023';
+  if (cu && cu.ohr_id === ADMIN_OHR) {
+    const editBtn = document.getElementById('billing-edit-targets-btn');
+    if (editBtn) editBtn.style.display = '';
+  }
+
+  // OT Dashboard visibility check
   const OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
   if (cu) {
     const OT_TAB_EXEMPT_OHRS = ['703212987', '740044909', '740045023'];
@@ -601,5 +608,137 @@ async function otDashOpenForm() {
     showToast(`OT form opened for ${pg} — ${result.notifications_sent} agent(s) notified`, 'success');
   } catch (e) {
     showToast(e.message || 'Failed to open OT form', 'error');
+  }
+}
+
+
+// ===== Billing Targets Editor (Admin Only) =====
+const BILLING_PG_ROLE_COMBOS = [
+  { pg: 'S-ABF', role: 'Agent', label: 'S-ABF × Agent' },
+  { pg: 'S-ABF', role: 'SME', label: 'S-ABF × SME' },
+  { pg: 'S-ABF', role: 'QA', label: 'S-ABF × QA' },
+  { pg: 'CS-ABF', role: 'Agent', label: 'CS-ABF × Agent' },
+  { pg: 'CS-ABF', role: 'SME', label: 'CS-ABF × SME' },
+  { pg: 'CS-ABF', role: 'QA', label: 'CS-ABF × QA' },
+  { pg: 'R-ABF', role: 'Agent', label: 'R-ABF × Agent' },
+  { pg: 'R-ABF', role: 'SME', label: 'R-ABF × SME' },
+  { pg: 'SME_CTR', role: '*', label: 'SME_CTR' },
+  { pg: 'QPE_CTR', role: '*', label: 'QPE_CTR' },
+  { pg: 'CS-ABF', role: 'TL', label: 'CS-ABF × TL' },
+];
+
+async function openBillingTargetsEditor() {
+  const editor = document.getElementById('billing-targets-editor');
+  if (!editor) return;
+  editor.style.display = '';
+
+  const select = document.getElementById('billing-week-select');
+  const weekEnding = select ? select.value : '';
+
+  // Load current targets for the selected week (or carried-forward)
+  let existingTargets = {};
+  try {
+    // Use the compliance API which already handles carry-forward
+    if (_billingLastData && _billingLastData.compliance) {
+      for (const r of _billingLastData.compliance) {
+        existingTargets[`${r.planning_group}|${r.role}`] = {
+          target_hc: Math.round(r.target_hours / 52.5) || 0, // approx HC from hours
+          target_hours: r.target_hours
+        };
+      }
+    }
+    // Also try to get exact targets from the API
+    const resp = await fetch(`${IO_API_BASE}/billing-targets-v2${weekEnding ? '?week_ending=' + weekEnding : ''}`);
+    if (resp.ok) {
+      const rows = await resp.json();
+      for (const r of rows) {
+        existingTargets[`${r.planning_group}|${r.role}`] = {
+          target_hc: Number(r.target_hc) || 0,
+          target_hours: Number(r.target_hours) || 0
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load existing targets:', e);
+  }
+
+  const tbody = document.getElementById('billing-targets-edit-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  for (const combo of BILLING_PG_ROLE_COMBOS) {
+    const key = `${combo.pg}|${combo.role}`;
+    const existing = existingTargets[key] || { target_hc: 0, target_hours: 0 };
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:left;font-weight:500;">${escapeHtml(combo.label)}</td>
+      <td style="text-align:center;">
+        <input type="number" class="form-input" style="width:100px;text-align:center;font-size:13px;padding:4px 8px;"
+          data-pg="${combo.pg}" data-role="${combo.role}" data-field="target_hc"
+          value="${existing.target_hc}" min="0" step="1">
+      </td>
+      <td style="text-align:center;">
+        <input type="number" class="form-input" style="width:120px;text-align:center;font-size:13px;padding:4px 8px;"
+          data-pg="${combo.pg}" data-role="${combo.role}" data-field="target_hours"
+          value="${existing.target_hours}" min="0" step="0.5">
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function closeBillingTargetsEditor() {
+  const editor = document.getElementById('billing-targets-editor');
+  if (editor) editor.style.display = 'none';
+}
+
+async function saveBillingTargets() {
+  const select = document.getElementById('billing-week-select');
+  const weekEnding = select ? select.value : '';
+  if (!weekEnding) {
+    showToast('Please select a week ending first.', 'error');
+    return;
+  }
+
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  if (!cu || cu.ohr_id !== '740045023') {
+    showToast('Only the designated admin can edit billing targets.', 'error');
+    return;
+  }
+
+  const inputs = document.querySelectorAll('#billing-targets-edit-body input[data-field]');
+  const targetsByKey = {};
+  for (const inp of inputs) {
+    const pg = inp.getAttribute('data-pg');
+    const role = inp.getAttribute('data-role');
+    const field = inp.getAttribute('data-field');
+    const key = `${pg}|${role}`;
+    if (!targetsByKey[key]) targetsByKey[key] = { planning_group: pg, role, week_ending: weekEnding };
+    targetsByKey[key][field] = Number(inp.value) || 0;
+  }
+
+  const targets = Object.values(targetsByKey);
+  const saveBtn = document.getElementById('billing-targets-save-btn');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/billing-targets-v2`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-Ohr': cu.ohr_id },
+      body: JSON.stringify({ targets })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to save targets');
+    }
+    const result = await resp.json();
+    showToast(`Billing targets saved for ${weekEnding} (${result.upserted} rows)`, 'success');
+    closeBillingTargetsEditor();
+    // Reload compliance data to reflect new targets
+    await loadBillingCompliance();
+  } catch (e) {
+    showToast(e.message || 'Failed to save targets', 'error');
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Targets'; }
   }
 }

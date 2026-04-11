@@ -2228,12 +2228,17 @@ router.get("/billing-targets-v2", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/io/billing-targets-v2 — upsert targets
+// POST /api/io/billing-targets-v2 — upsert targets (admin-only: OHR 740045023)
 // Body: { targets: Array<{week_ending, planning_group, role, target_hc, target_hours}> }
 router.post("/billing-targets-v2", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
+    // Admin gate: only OHR 740045023 can edit targets
+    const userOhr = (req as any).userOhr || req.headers['x-user-ohr'];
+    if (userOhr !== '740045023') {
+      return res.status(403).json({ error: "Only the designated admin can edit billing targets." });
+    }
     const { targets } = req.body;
     if (!targets || !Array.isArray(targets)) {
       return res.status(400).json({ error: "targets array is required" });
@@ -2350,13 +2355,26 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
     );
     const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
 
-    // 2. Targets for this week
-    const tgtResult: any = await db.execute(
+    // 2. Targets for this week (carry forward from most recent known week if none set)
+    let tgtResult: any = await db.execute(
       sql`SELECT planning_group, role, target_hc, target_hours
           FROM io_billing_targets_v2
           WHERE week_ending = ${weekEnding}`
     );
-    const tgtRows = Array.isArray(tgtResult[0]) ? tgtResult[0] : tgtResult;
+    let tgtRows = Array.isArray(tgtResult[0]) ? tgtResult[0] : tgtResult;
+
+    // If no targets for this specific week, carry forward from the most recent prior week
+    if (tgtRows.length === 0) {
+      const fallbackResult: any = await db.execute(
+        sql`SELECT planning_group, role, target_hc, target_hours
+            FROM io_billing_targets_v2
+            WHERE week_ending = (
+              SELECT MAX(week_ending) FROM io_billing_targets_v2 WHERE week_ending <= ${weekEnding}
+            )`
+      );
+      tgtRows = Array.isArray(fallbackResult[0]) ? fallbackResult[0] : fallbackResult;
+    }
+
     const targetMap = new Map<string, { target_hc: number; target_hours: number }>();
     for (const t of tgtRows) {
       targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
