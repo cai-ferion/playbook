@@ -2363,21 +2363,32 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
     );
     let tgtRows = Array.isArray(tgtResult[0]) ? tgtResult[0] : tgtResult;
 
-    // If no targets for this specific week, carry forward from the most recent prior week
-    if (tgtRows.length === 0) {
+    // Build target map — if no targets for this week, carry forward from the most recent prior week
+    const targetMap = new Map<string, { target_hc: number; target_hours: number }>();
+    for (const t of tgtRows) {
+      targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
+    }
+
+    // Check if any of the known PG_ROLE_COMBOS have targets; if not, carry forward
+    const hasRealTargets = PG_ROLE_COMBOS.some(c => {
+      if (c.role === '*') {
+        return Array.from(targetMap.keys()).some(k => k.startsWith(c.pg + '|'));
+      }
+      return targetMap.has(`${c.pg}|${c.role}`);
+    });
+
+    if (!hasRealTargets) {
       const fallbackResult: any = await db.execute(
         sql`SELECT planning_group, role, target_hc, target_hours
             FROM io_billing_targets_v2
             WHERE week_ending = (
-              SELECT MAX(week_ending) FROM io_billing_targets_v2 WHERE week_ending <= ${weekEnding}
+              SELECT MAX(week_ending) FROM io_billing_targets_v2 WHERE week_ending < ${weekEnding}
             )`
       );
-      tgtRows = Array.isArray(fallbackResult[0]) ? fallbackResult[0] : fallbackResult;
-    }
-
-    const targetMap = new Map<string, { target_hc: number; target_hours: number }>();
-    for (const t of tgtRows) {
-      targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
+      const fallbackRows = Array.isArray(fallbackResult[0]) ? fallbackResult[0] : fallbackResult;
+      for (const t of fallbackRows) {
+        targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
+      }
     }
 
     // 3. YTD data for predictive UPL and OT rates
