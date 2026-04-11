@@ -1346,3 +1346,7 @@
 - [x] Build admin-only billing targets editor API (GET/PUT, restricted to OHR 740045023)
 - [x] Build admin-only billing targets editor UI on the Billing Compliance page
 - [x] Targets editable per PG×Role with effective date support
+
+## Batch 132 — OT Approval Visibility Fix + Pred Rounding
+- [x] Fix OM (740030270) not seeing OT approval controls on the OT Dashboard
+- [x] Round Pred. UPL and Pred. OT to whole numbers in the compliance table

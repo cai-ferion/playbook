@@ -102,7 +102,7 @@ async function initBillingCompliance() {
   // OT Dashboard visibility check
   const OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
   if (cu) {
-    const OT_TAB_EXEMPT_OHRS = ['703212987', '740044909', '740045023'];
+    const OT_TAB_EXEMPT_OHRS = ['703212987', '740044909', '740045023', '740030270'];
     if (!OT_TAB_EXEMPT_OHRS.includes(cu.ohr_id)) {
       try {
         const empResp = await fetch(`${IO_API_BASE}/employees`);
@@ -289,8 +289,8 @@ function renderBillingComplianceTable(data) {
       <td class="cell-center ${g98cls}">${signedHrs(r.goal_to_98)}</td>
       <td class="cell-center ${g100cls}">${signedHrs(r.goal_to_100)}</td>
       <td class="cell-center ${g102cls}">${signedHrs(r.goal_to_102)}</td>
-      <td class="cell-center" style="color:var(--text-secondary);font-style:italic;">${fmtNum(r.predictive_upl_hours, 1)}</td>
-      <td class="cell-center" style="color:var(--text-secondary);font-style:italic;">${fmtNum(r.predictive_ot_hours, 1)}</td>
+      <td class="cell-center" style="color:var(--text-secondary);font-style:italic;">${fmtNum(r.predictive_upl_hours, 0)}</td>
+      <td class="cell-center" style="color:var(--text-secondary);font-style:italic;">${fmtNum(r.predictive_ot_hours, 0)}</td>
       <td class="cell-center" style="font-weight:600;${r.ots_needed > 0 ? 'color:var(--bc-red);' : ''}">${fmtNum(r.ots_needed, 1)}</td>
       <td class="cell-center" style="font-weight:600;${r.hc_needed > 0 ? 'color:var(--bc-red);' : ''}">${r.hc_needed}</td>
     `;
