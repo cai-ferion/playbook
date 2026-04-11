@@ -2433,7 +2433,8 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
       day.total++;
       day.employees.add(a.ohr_id);
       const tag = (a.tag || '').toUpperCase();
-      if (tag === 'P' || tag === 'LATE' || tag === 'OT') {
+      // Blank/null tags treated as 'P' (billable) for compliance
+      if (tag === 'P' || tag === 'LATE' || tag === 'OT' || tag === '') {
         day.billable++;
         cd.totalBillable++;
         const otHrs = parseFloat(a.ot_hours) || 0;
@@ -2448,7 +2449,8 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
         day.pl++;
         cd.totalPL++;
       }
-      if (['P','LATE','OT','UPL','PL'].includes(tag)) {
+      // Blank tags also count as scheduled (treated as P)
+      if (['P','LATE','OT','UPL','PL',''].includes(tag)) {
         cd.totalScheduled++;
       }
     }

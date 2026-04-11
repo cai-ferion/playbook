@@ -1337,3 +1337,6 @@
 - [x] Add UPL Days and PL Days columns to compliance table (after Target Hours, before Compliance %)
 - [x] Add UPL/PL counts to drill-down summary stats
 - [x] Include UPL/PL in the TOTAL row
+
+## Batch 130 — Blanks Count as P in Billing Compliance
+- [x] Treat blank/null tags as 'P' (billable) in the compliance engine
