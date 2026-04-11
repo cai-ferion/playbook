@@ -1327,3 +1327,7 @@
 - [x] Restyle OT Dashboard with modern UI improvements
 - [x] Update 15 agent supervisor realignments effective April 7, 2026 (io_employees + historical attendance)
 - [x] Update Renier Marilao → Cris Dacanay David as supervisor effective Feb 23, 2026 (io_employees + historical attendance)
+
+## Batch 128 — Planning Group Realignment for New Alignees
+- [x] Set planning_group to S-ABF for agents under Galula, Bantasan, Escamillas, Abiang, Javier (io_employees + historical attendance from Apr 7)
+- [x] Set planning_group to CS-ABF for agents under Esmino, Natividad (io_employees + historical attendance from Apr 7)
