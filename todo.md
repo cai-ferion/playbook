@@ -1357,3 +1357,10 @@
 - [x] Generate full OT hours discrepancy report (all 107 mismatches)
 - [x] Update Poblete (740032326) from Inactive to Active in io_employees
 - [x] Update Reyes (740044575) role to Trainer in io_employees
+
+## Batch 134 — DB → Google Sheets Attendance Sync
+- [x] Build sync script: push io_attendance data to ATTEND_26 sheet (from 04/04/26 onward)
+- [x] Handle existing rows (update) and new rows (append)
+- [x] Map all 16 columns correctly (Concat, Tag, Billing Code, UPL Reason, Remarks, OT, Date, OHR, Agent, FLM, Role, PG, Shift, Status, Week Ending, Month)
+- [x] Schedule twice-daily sync at 1:30 AM and 4:30 PM PHT
+- [x] Test the sync with a dry run
