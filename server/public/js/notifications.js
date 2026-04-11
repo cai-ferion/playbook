@@ -120,7 +120,8 @@ async function loadNotifications() {
 
     notifState.notifications = data.filter(n => {
       if (n.type === 'system_maintenance' || n.title === 'MAINTENANCE_FLAG') return false;
-      if (n.target_ohr && n.target_ohr !== userOhr && userOhr !== '740045023') return false;
+      // Only show notifications targeted to the current user, or broadcast (no target_ohr)
+      if (n.target_ohr && n.target_ohr !== userOhr) return false;
       return true;
     });
 

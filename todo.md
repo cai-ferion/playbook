@@ -1386,3 +1386,8 @@
 - [x] Move Sync History nav item from sidebar bottom into Anchor collapsible group
 - [x] Update switchView anchorViews array to include sync-history
 - [x] Remove standalone sync-history nav from sidebar bottom (kept only inside Anchor group)
+
+## Batch 138 — Fix Absence Alert Routing
+- [x] Investigate auto-mailer logic: backend routing is correct (agent + supervisor only)
+- [x] Fix frontend filter: removed admin bypass in notifications.js line 123 that showed ALL targeted notifications to OHR 740045023
+- [x] Admin (740045023) now only sees notifications targeted to their own OHR or broadcast notifications
