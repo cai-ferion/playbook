@@ -1319,3 +1319,11 @@
 - [x] Row click drill-down: day-by-day breakdown
 - [x] Retain OT Dashboard tab as-is
 - [x] Ensure Saturday-Friday workweek scheme across all Playbook features
+
+## Batch 127 — Billing Compliance Polish + Supervisor Realignment
+- [x] Fix progress bar number overlap (98/100/102 markers overlapping)
+- [x] Remove "Any" role label from PG-only combos (QPE_CTR, SME_CTR)
+- [x] Remove "Billing Dashboard" tab — merge into single page with OT Dashboard as section below compliance table
+- [x] Restyle OT Dashboard with modern UI improvements
+- [x] Update 15 agent supervisor realignments effective April 7, 2026 (io_employees + historical attendance)
+- [x] Update Renier Marilao → Cris Dacanay David as supervisor effective Feb 23, 2026 (io_employees + historical attendance)

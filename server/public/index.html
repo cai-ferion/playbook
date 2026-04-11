@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playbook</title>
   <link rel="icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/favicon_c4d47f68.png" type="image/png">
-  <link rel="stylesheet" href="css/styles.css?v=126">
+  <link rel="stylesheet" href="css/styles.css?v=127">
   <link rel="stylesheet" href="css/input-redesign.css?v=120">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
@@ -514,54 +514,56 @@
             </div>
           </div>
 
-          <!-- Tab switcher -->
-          <div class="billing-tab-bar" style="display:flex;gap:0;margin:16px 0 0 0;border-bottom:2px solid var(--border);">
-            <button class="billing-tab-btn active" data-tab="billing-dashboard" onclick="switchBillingTab('billing-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--fg);cursor:pointer;border-bottom:2px solid var(--accent);margin-bottom:-2px;transition:all 0.2s;">Billing Dashboard</button>
-            <button class="billing-tab-btn" data-tab="ot-dashboard" onclick="switchBillingTab('ot-dashboard')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">OT Dashboard</button>
-          </div>
+          <!-- OT Dashboard Section -->
+          <div id="ot-dashboard-section" class="ot-dash-section">
 
-          <!-- Tab 1: Billing Dashboard (YTD analytics placeholder) -->
-          <div id="billing-tab-billing-dashboard" class="billing-tab-content" style="margin-top:16px;">
-            <div style="padding:40px;text-align:center;color:var(--text-secondary);font-size:13px;">YTD analytics and trend charts will be shown here in a future update.</div>
-          </div><!-- end billing-tab-billing-dashboard -->
+            <!-- Section Header -->
+            <div class="ot-dash-header">
+              <div class="ot-dash-header-left">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-primary, #3b82f6);">
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <h3 class="ot-dash-title">OT Dashboard</h3>
+                <span class="ot-dash-subtitle" id="ot-dash-count-badge"></span>
+              </div>
+            </div>
 
-          <!-- Tab 2: OT Dashboard -->
-          <div id="billing-tab-ot-dashboard" class="billing-tab-content" style="display:none;margin-top:16px;">
-
-            <!-- Approval controls -->
-            <div id="ot-dash-approval-controls" style="display:flex;align-items:flex-end;gap:12px;margin-bottom:16px;flex-wrap:wrap;padding:16px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;">
-              <div style="flex:0 0 auto;">
-                <label style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Planning Group <span style="color:var(--danger);">*</span></label>
-                <select class="form-input" id="ot-dash-pg-select" onchange="otDashOnPgChange()" style="min-width:200px;">
+            <!-- Approval Controls -->
+            <div id="ot-dash-approval-controls" class="ot-dash-controls">
+              <div class="ot-dash-control-group">
+                <label class="ot-dash-label">Planning Group <span style="color:var(--danger, #ef4444);">*</span></label>
+                <select class="form-input ot-dash-select" id="ot-dash-pg-select" onchange="otDashOnPgChange()">
                   <option value="">— Select Planning Group —</option>
                 </select>
               </div>
-              <div style="flex:0 0 auto;">
-                <label style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">OT Hours Needed</label>
-                <input type="number" class="form-input" id="ot-dash-hours-input" placeholder="e.g. 10" min="0.5" step="0.5" style="width:120px;">
+              <div class="ot-dash-control-group">
+                <label class="ot-dash-label">OT Hours Needed</label>
+                <input type="number" class="form-input ot-dash-input" id="ot-dash-hours-input" placeholder="e.g. 10" min="0.5" step="0.5">
               </div>
-              <button class="btn btn-primary btn-sm" id="ot-dash-apply-btn" onclick="otDashApply()" disabled style="opacity:0.5;cursor:not-allowed;">Apply</button>
-              <button class="btn btn-outline btn-sm" id="ot-dash-open-form-btn" onclick="otDashOpenForm()">Open OT Form</button>
+              <div class="ot-dash-control-actions">
+                <button class="btn btn-primary btn-sm ot-dash-btn-apply" id="ot-dash-apply-btn" onclick="otDashApply()" disabled>Apply</button>
+                <button class="btn btn-outline btn-sm ot-dash-btn-open" id="ot-dash-open-form-btn" onclick="otDashOpenForm()">Open OT Form</button>
+              </div>
             </div>
 
-            <!-- OT Requests table -->
-            <div style="overflow-x:auto;">
-              <table class="data-table" id="ot-dash-table" style="width:100%;font-size:13px;">
+            <!-- OT Requests Table -->
+            <div class="ot-dash-table-wrap">
+              <table class="ot-dash-table" id="ot-dash-table">
                 <thead>
                   <tr>
-                    <th style="padding:8px 12px;text-align:left;">Date Submitted</th>
-                    <th style="padding:8px 12px;text-align:left;">Agent Name</th>
-                    <th style="padding:8px 12px;text-align:left;">Planning Group</th>
-                    <th style="padding:8px 12px;text-align:center;">Status</th>
-                    <th style="padding:8px 12px;text-align:left;">Applied Date</th>
+                    <th>Date Submitted</th>
+                    <th>Agent Name</th>
+                    <th>Planning Group</th>
+                    <th style="text-align:center;">Status</th>
+                    <th>Applied Date</th>
                   </tr>
                 </thead>
                 <tbody id="ot-dash-table-body">
-                  <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">Loading...</td></tr>
+                  <tr><td colspan="5" class="ot-dash-empty">Loading...</td></tr>
                 </tbody>
               </table>
             </div>
-          </div><!-- end billing-tab-ot-dashboard -->
+          </div><!-- end ot-dashboard-section -->
 
 
 
@@ -1505,7 +1507,7 @@
   <script src="js/notifications.js?v=102g"></script>
   <script src="js/maintenance.js?v=102g"></script>
   <script src="js/admin.js?v=102g"></script>
-  <script src="js/billing.js?v=126"></script>
+  <script src="js/billing.js?v=127"></script>
   <script src="js/billing-v2.js?v=122"></script>
 
   <script src="js/performance.js?v=102g"></script>

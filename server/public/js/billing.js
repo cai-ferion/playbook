@@ -5,18 +5,7 @@
  * Work week: Saturday → Friday (week_ending = Friday).
  */
 
-// ===== Tab Switching =====
-function switchBillingTab(tabId) {
-  document.querySelectorAll('.billing-tab-content').forEach(el => el.style.display = 'none');
-  const target = document.getElementById('billing-tab-' + tabId);
-  if (target) target.style.display = '';
-  document.querySelectorAll('.billing-tab-btn').forEach(btn => {
-    const isActive = btn.dataset.tab === tabId;
-    btn.classList.toggle('active', isActive);
-    btn.style.color = isActive ? 'var(--fg)' : 'var(--text-secondary)';
-    btn.style.borderBottomColor = isActive ? 'var(--accent)' : 'transparent';
-  });
-}
+// Tab switching removed — OT Dashboard is now a section below compliance table
 
 // ===== State =====
 let _billingWeeksLoaded = false;
@@ -44,7 +33,7 @@ function complianceBadgeHTML(pct) {
   return `<span class="bc-badge ${cls}">${fmtPct(pct)}</span>`;
 }
 
-// Progress bar with 98/100/102 markers
+// Progress bar with 98/100/102 markers (labels removed to prevent overlap)
 function progressBarHTML(pct, targetHours) {
   if (!targetHours || targetHours <= 0) return '<span style="color:var(--text-secondary);">N/A</span>';
   const capped = Math.min(pct, 110); // cap visual at 110%
@@ -59,11 +48,6 @@ function progressBarHTML(pct, targetHours) {
       <div class="bc-marker" style="left:${m98}%;" title="98%"></div>
       <div class="bc-marker bc-marker-100" style="left:${m100}%;" title="100%"></div>
       <div class="bc-marker" style="left:${m102}%;" title="102%"></div>
-    </div>
-    <div class="bc-progress-labels">
-      <span style="left:${m98}%">98</span>
-      <span style="left:${m100}%">100</span>
-      <span style="left:${m102}%">102</span>
     </div>
   </div>`;
 }
@@ -285,7 +269,7 @@ function renderBillingComplianceTable(data) {
     tr.innerHTML = `
       <td class="bc-label-cell">
         <span class="bc-tl-dot ${tl}"></span>
-        <strong>${escapeHtml(r.label)}</strong>
+        <strong>${escapeHtml(r.label.replace(' × Any', ''))}</strong>
       </td>
       <td class="cell-center">${fmtNum(r.total_billed, 1)}</td>
       <td class="cell-center">${fmtNum(r.target_hours, 0)}</td>
@@ -334,7 +318,7 @@ function showBillingDrilldown(row) {
   const body = document.getElementById('billing-drilldown-body');
   if (!panel || !body) return;
 
-  if (title) title.textContent = `DAILY BREAKDOWN — ${row.label}`;
+  if (title) title.textContent = `DAILY BREAKDOWN — ${row.label.replace(' × Any', '')}`;
   panel.style.display = '';
 
   const days = row.day_breakdown || [];
@@ -477,8 +461,12 @@ function otDashRender() {
   const tbody = document.getElementById('ot-dash-table-body');
   if (!tbody) return;
 
+  // Update count badge
+  const badge = document.getElementById('ot-dash-count-badge');
+  if (badge) badge.textContent = OT_DASH.filteredRequests.length + ' request' + (OT_DASH.filteredRequests.length !== 1 ? 's' : '');
+
   if (OT_DASH.filteredRequests.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-secondary);">No OT requests found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="ot-dash-empty">No OT requests found.</td></tr>';
     return;
   }
 
@@ -486,25 +474,22 @@ function otDashRender() {
   OT_DASH.filteredRequests.forEach(r => {
     const submittedDate = r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
     const approvedDate = r.applied_date ? new Date(r.applied_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-    const statusColor = r.status === 'approved' ? 'var(--accent)' : r.status === 'forfeited' ? '#dc2626' : 'var(--fg)';
-    const rowBg = r.status === 'approved' ? 'background:rgba(var(--accent-rgb, 46,125,50),0.06);'
-      : r.status === 'forfeited' ? 'background:rgba(220,38,38,0.04);' : '';
 
-    let statusLabel, statusBadgeBg, statusBadgeColor;
+    let statusLabel, statusCls;
     if (r.status === 'approved') {
-      statusLabel = 'Approved'; statusBadgeBg = 'rgba(22,163,74,0.1)'; statusBadgeColor = '#16a34a';
+      statusLabel = 'Approved'; statusCls = 'ot-status-approved';
     } else if (r.status === 'forfeited') {
-      statusLabel = 'Forfeited'; statusBadgeBg = 'rgba(220,38,38,0.1)'; statusBadgeColor = '#dc2626';
+      statusLabel = 'Forfeited'; statusCls = 'ot-status-rejected';
     } else {
-      statusLabel = 'Waitlisted'; statusBadgeBg = 'rgba(234,179,8,0.1)'; statusBadgeColor = '#b45309';
+      statusLabel = 'Waitlisted'; statusCls = 'ot-status-waitlisted';
     }
 
-    html += `<tr style="${rowBg}">
-      <td style="padding:8px 12px;">${submittedDate}</td>
-      <td style="padding:8px 12px;">${escapeHtml(r.agent_name || '—')}</td>
-      <td style="padding:8px 12px;">${escapeHtml(r.planning_group || '—')}</td>
-      <td style="padding:8px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:${statusBadgeBg};color:${statusBadgeColor};">${statusLabel}</span></td>
-      <td style="padding:8px 12px;color:${statusColor};">${approvedDate}</td>
+    html += `<tr>
+      <td>${submittedDate}</td>
+      <td>${escapeHtml(r.agent_name || '—')}</td>
+      <td>${escapeHtml(r.planning_group || '—')}</td>
+      <td style="text-align:center;"><span class="ot-status-badge ${statusCls}">${statusLabel}</span></td>
+      <td>${approvedDate}</td>
     </tr>`;
   });
   tbody.innerHTML = html;

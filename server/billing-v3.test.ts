@@ -48,17 +48,12 @@ describe('Billing Compliance Dashboard V3', () => {
       expect(html).toContain('id="billing-days-badge"');
     });
 
-    it('has tab bar with Billing Dashboard and OT Dashboard tabs', () => {
-      expect(html).toContain('Billing Dashboard');
+    it('[V3] has OT Dashboard as a section (not a tab) below compliance table', () => {
+      expect(html).toContain('id="ot-dashboard-section"');
       expect(html).toContain('OT Dashboard');
-      expect(html).toContain('id="billing-tab-billing-dashboard"');
-      expect(html).toContain('id="billing-tab-ot-dashboard"');
-    });
-
-    it('does NOT have Billing Compliance V2 tab in the billing page tabs', () => {
-      // The V2 tab was removed from the billing page tab bar
-      // (V2 admin tools in Admin section are separate and still exist)
-      expect(html).not.toContain('billing-tab-v2');
+      // Tabs were removed — no billing-tab-billing-dashboard or billing-tab-ot-dashboard
+      expect(html).not.toContain('id="billing-tab-billing-dashboard"');
+      expect(html).not.toContain('billing-tab-btn');
     });
   });
 
