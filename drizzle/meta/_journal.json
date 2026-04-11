@@ -78,6 +78,13 @@
       "when": 1775928074529,
       "tag": "0010_chief_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1775944594629,
+      "tag": "0011_happy_quasimodo",
+      "breakpoints": true
     }
   ]
 }

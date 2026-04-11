@@ -16,27 +16,13 @@ describe("Batch 28 — Input Portal & Helm Fixes", () => {
     });
   });
 
-  // 2. Billing code descriptions
-  describe("Billing code descriptions in Edit dropdown", () => {
-    it("getBillingCodeDesc function should exist in app.js", () => {
+  // 2. Billing code system removed (Batch 141)
+  describe("Billing code system fully removed", () => {
+    it("app.js should NOT contain billing code functions or maps", () => {
       const js = readFileSync(join(ROOT, "server/public/js/app.js"), "utf-8");
-      expect(js).toContain("function getBillingCodeDesc");
-      expect(js).toContain("BILLING_CODE_DESC_MAP");
-    });
-
-    it("should have descriptions for all standard billing codes", () => {
-      const js = readFileSync(join(ROOT, "server/public/js/app.js"), "utf-8");
-      const codes = ["MA", "MS", "MQ", "CA", "CS", "CQ", "SO", "FA", "RM", "SM", "QP", "SV"];
-      for (const code of codes) {
-        expect(js).toContain(`'${code}':`);
-      }
-    });
-
-    it("dropdown options should use getBillingCodeDesc", () => {
-      const js = readFileSync(join(ROOT, "server/public/js/app.js"), "utf-8");
-      const matches = js.match(/getBillingCodeDesc\(code\)/g);
-      expect(matches).toBeTruthy();
-      expect(matches!.length).toBeGreaterThanOrEqual(3); // init + reset + agent change
+      expect(js).not.toContain("function getBillingCodeDesc");
+      expect(js).not.toContain("BILLING_CODE_DESC_MAP");
+      expect(js).not.toContain("billingCode");
     });
   });
 
@@ -69,7 +55,8 @@ describe("Batch 28 — Input Portal & Helm Fixes", () => {
       expect(ts).toContain('String(agent_in).split("|")');
       expect(ts).toContain('String(flm_in).split("|")');
       expect(ts).toContain('String(planning_group_in).split("|")');
-      expect(ts).toContain('String(billing_code_in).split("|")');
+      // billing_code_in removed in Batch 141
+      expect(ts).not.toContain('billing_code_in');
       expect(ts).toContain('String(tag_in).split("|")');
     });
   });

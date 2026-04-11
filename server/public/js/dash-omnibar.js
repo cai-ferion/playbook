@@ -15,7 +15,6 @@
     { key: 'flm', label: 'FLM', type: 'multi', recordKey: 'flm', searchable: true, sortable: true },
     { key: 'actualPlanningGroup', label: 'Planning Group', type: 'multi', recordKey: 'actualPlanningGroup', searchable: true, sortable: true },
     { key: 'day', label: 'Day', type: 'multi', recordKey: '_day', searchable: false, sortable: false },
-    { key: 'billingCode', label: 'Billing Code', type: 'multi', recordKey: 'billingCode', searchable: true, sortable: true },
     { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
     { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false, sortable: false },
   ];

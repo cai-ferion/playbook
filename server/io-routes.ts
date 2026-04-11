@@ -171,7 +171,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
     const { limit, offset, log_date_gte, log_date_lte, log_date, ohr_id, tag, tag_in, count_only,
             attendance_date_gte, attendance_date_lte, date_gte, date_lte,
             // Server-side filter params
-            agent_in, flm_in, planning_group_in, billing_code_in,
+            agent_in, flm_in, planning_group_in,
             status_in, shift_time_in, role_in, blanks_only,
             // Server-side sort & pagination
             sort_by, sort_dir, paginated, exclude_managers } = req.query;
@@ -200,7 +200,6 @@ router.get("/attendance", async (req: Request, res: Response) => {
     if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
     if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
     if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
-    if (billing_code_in) conditions.push(inArray(ioAttendance.billing_code, String(billing_code_in).split("|")));
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
     if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
@@ -230,7 +229,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
       const sortColMap: Record<string, any> = {
         date: ioAttendance.log_date, log_date: ioAttendance.log_date,
         agent: ioAttendance.snap_full_name, flm: ioAttendance.snap_supervisor,
-        tag: ioAttendance.tag, billingCode: ioAttendance.billing_code,
+        tag: ioAttendance.tag,
         actualPlanningGroup: ioAttendance.snap_planning_group,
         shiftTime: ioAttendance.snap_shift_time, role: ioAttendance.snap_actual_role,
         status: ioAttendance.snap_status,
@@ -276,7 +275,7 @@ router.post("/attendance/bulk-import", async (req: Request, res: Response) => {
 
     const { updates, creates } = req.body;
     // updates: [{id, tag?, is_locked?, locked_at?}, ...]
-    // creates: [{id, ohr_id, log_date, tag, billing_code, created_at, snap_*, is_locked, locked_at}, ...]
+    // creates: [{id, ohr_id, log_date, tag, created_at, snap_*, is_locked, locked_at}, ...]
 
     let updatedCount = 0;
     let createdCount = 0;
@@ -423,7 +422,7 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const fieldMap: Record<string, string> = {
       tag: "tag", upl_reason: "upl_reason", remarks: "remarks",
-      ot_hours: "ot_hours", billing_code: "billing_code",
+      ot_hours: "ot_hours",
       role: "role", planning_group: "planning_group"
     };
 
@@ -1090,133 +1089,8 @@ router.post("/upload", async (req: Request, res: Response) => {
   }
 });
 
-// ============================================================
-// Billing YTD Aggregation (server-side to avoid huge payloads)
-// ============================================================
 
-// GET /api/io/attendance/billing-ytd?year=2026
-router.get("/attendance/billing-ytd", async (req: Request, res: Response) => {
-  try {
-    const db = await getDb();
-    if (!db) return res.status(500).json({ error: "Database not available" });
 
-    const year = String(req.query.year || new Date().getFullYear());
-    const startDate = `${year}-01-01`;
-    const today = new Date();
-    const endDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-    // Excluded statuses
-    const excludedStatuses = ['Nesting', 'Attrition Backfill Training', 'Exit'];
-
-    // 1. Billing code compliance summary (Forecasted P, OT, by billing_code)
-    const complianceRows = await db.execute(sql`
-      SELECT
-        a.billing_code,
-        SUM(CASE WHEN a.tag IN ('P', 'LATE', '') OR a.tag IS NULL THEN 1 ELSE 0 END) AS forecasted_p,
-        SUM(COALESCE(a.ot_hours, 0)) AS ot_rendered
-      FROM io_attendance a
-      LEFT JOIN io_employees e ON a.ohr_id = e.ohr_id
-      WHERE a.log_date >= ${startDate}
-        AND a.log_date <= ${endDate}
-        AND (e.employement_status IS NULL OR e.employement_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
-      GROUP BY a.billing_code
-    `);
-
-    // 2. Monthly tag counts for trend charts (UPL, LATE, PL by month)
-    const trendRows = await db.execute(sql`
-      SELECT
-        a.tag,
-        DATE_FORMAT(a.log_date, '%Y-%m') AS month,
-        COUNT(*) AS cnt
-      FROM io_attendance a
-      LEFT JOIN io_employees e ON a.ohr_id = e.ohr_id
-      WHERE a.log_date >= ${startDate}
-        AND a.log_date <= ${endDate}
-        AND a.tag IN ('UPL', 'LATE', 'PL')
-        AND (e.employement_status IS NULL OR e.employement_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
-      GROUP BY a.tag, DATE_FORMAT(a.log_date, '%Y-%m')
-      ORDER BY month
-    `);
-
-    // mysql2 returns [rows, fields] — extract the rows array
-    const compliance = Array.isArray(complianceRows) ? (Array.isArray(complianceRows[0]) ? complianceRows[0] : complianceRows) : [];
-    const trends = Array.isArray(trendRows) ? (Array.isArray(trendRows[0]) ? trendRows[0] : trendRows) : [];
-
-    res.json({ compliance, trends });
-  } catch (err: any) {
-    console.error("[IO API] billing-ytd error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/io/attendance/billing-ytd-weekly?year=2026
-// Returns per-week per-billing-code aggregation for YTD compliance doughnut
-router.get("/attendance/billing-ytd-weekly", async (req: Request, res: Response) => {
-  try {
-    const db = await getDb();
-    if (!db) return res.status(500).json({ error: "Database not available" });
-
-    const year = String(req.query.year || new Date().getFullYear());
-    const startDate = `${year}-01-01`;
-    const today = new Date();
-    const endDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-    // Excluded statuses (use snap_status from attendance table)
-    const excludedStatuses = ['Nesting', 'Attrition Backfill Training', 'Exit'];
-
-    // Get per-week per-billing-code: forecasted_p and ot_rendered
-    // Week is defined as Saturday-Friday. We use the Friday week-ending date.
-    // DAYOFWEEK: 1=Sun,2=Mon,...,7=Sat. Friday=6. We compute the Friday of each record's week.
-    // First get the distinct day count per week for pro-rating partial weeks
-    const dayCountRows = await db.execute(sql`
-      SELECT
-        DATE_FORMAT(
-          DATE_ADD(a.log_date, INTERVAL ((6 - DAYOFWEEK(a.log_date) + 7) % 7) DAY),
-          '%Y-%m-%d'
-        ) AS week_ending,
-        COUNT(DISTINCT a.log_date) AS day_count
-      FROM io_attendance a
-      WHERE a.log_date >= ${startDate}
-        AND a.log_date <= ${endDate}
-        AND (a.snap_status IS NULL OR a.snap_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
-        AND a.billing_code IS NOT NULL
-        AND a.billing_code != ''
-      GROUP BY week_ending
-      ORDER BY week_ending
-    `);
-    const dayCountData = Array.isArray(dayCountRows) ? (Array.isArray(dayCountRows[0]) ? dayCountRows[0] : dayCountRows) : [];
-    const weekDayCounts: Record<string, number> = {};
-    for (const r of dayCountData as any[]) {
-      weekDayCounts[r.week_ending] = parseInt(r.day_count) || 7;
-    }
-
-    const rows = await db.execute(sql`
-      SELECT
-        DATE_FORMAT(
-          DATE_ADD(a.log_date, INTERVAL ((6 - DAYOFWEEK(a.log_date) + 7) % 7) DAY),
-          '%Y-%m-%d'
-        ) AS week_ending,
-        a.billing_code,
-        SUM(CASE WHEN a.tag IN ('P', 'LATE', '') OR a.tag IS NULL THEN 1 ELSE 0 END) AS forecasted_p,
-        SUM(COALESCE(a.ot_hours, 0)) AS ot_rendered,
-        SUM(CASE WHEN a.tag = 'UPL' THEN 1 ELSE 0 END) AS upl_count
-      FROM io_attendance a
-      WHERE a.log_date >= ${startDate}
-        AND a.log_date <= ${endDate}
-        AND (a.snap_status IS NULL OR a.snap_status NOT IN (${sql.raw(excludedStatuses.map(s => `'${s}'`).join(','))}))
-        AND a.billing_code IS NOT NULL
-        AND a.billing_code != ''
-      GROUP BY week_ending, a.billing_code
-      ORDER BY week_ending, a.billing_code
-    `);
-
-    const data = Array.isArray(rows) ? (Array.isArray(rows[0]) ? rows[0] : rows) : [];
-    res.json({ weeks: data, weekDayCounts });
-  } catch (err: any) {
-    console.error("[IO API] billing-ytd-weekly error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ============================================================
 // Billing Target Hours
@@ -1280,7 +1154,7 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
 
     // Default: CSV format
     const columns = [
-      "id", "ohr_id", "log_date", "tag", "billing_code", "upl_reason",
+      "id", "ohr_id", "log_date", "tag", "upl_reason",
       "remarks", "ot_hours", "created_at", "snap_full_name", "snap_supervisor",
       "snap_planning_group", "snap_shift_time", "snap_actual_role",
       "snap_billing_name", "snap_status", "is_locked", "locked_at"

@@ -131,7 +131,6 @@ describe("Database Schema", () => {
     expect(columns).toContain("ohr_id");
     expect(columns).toContain("log_date");
     expect(columns).toContain("tag");
-    expect(columns).toContain("billing_code");
     expect(columns).toContain("upl_reason");
     expect(columns).toContain("remarks");
     expect(columns).toContain("ot_hours");

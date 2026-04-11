@@ -1419,3 +1419,16 @@
 - [x] Upsert all billing rows into io_srt_bill for historical tracking
 - [x] First successful run: 10,041 sheet rows → 9,979 attendance updated, 3 employees synced, 20,082 SRT bill upserted in 97s
 - [x] All 303 tests passing
+## Batch 141 — Remove Billing Code System Entirely
+- [x] Drop billing_code column from io_attendance schema + DB migration
+- [x] Drop billing_code column from io_srt_bill schema + DB migration
+- [x] Remove dead YTD endpoints (/billing-ytd, /billing-ytd-weekly) from io-routes.ts
+- [x] Remove billing_code_in filter from attendance GET endpoint
+- [x] Remove billing_code from attendance save/edit/export flows in io-routes.ts
+- [x] Remove BILLING_CODE_DESC_MAP and billing code edit functions from app.js
+- [x] Remove billingCode from column visibility map and field mappings in app.js
+- [x] Remove "Billing Code" filter from dash-omnibar.js
+- [x] Remove billing_code_edit notification type from notifications.js
+- [x] Remove billingCode from data.js data layer
+- [x] Remove orphaned .billing-code-* and .billing-doughnut-* and .billing-ytd-* CSS
+- [x] Run tests and verify all 301 tests pass (2 billing code tests correctly removed)

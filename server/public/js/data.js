@@ -534,7 +534,6 @@ function normalizeRecord(att) {
   return {
     _id: att.id,
     tag: (att.tag || '').trim(),
-    billingCode: (att.billing_code || '').trim(),
     uplReason: (att.upl_reason || '').trim(),
     remarks: (att.remarks || '').trim(),
     ot: (att.ot_hours || '').toString().trim(),
@@ -696,7 +695,6 @@ async function saveRecords(edits) {
       if (edit.upl_reason !== undefined) payload.upl_reason = edit.upl_reason;
       if (edit.remarks !== undefined) payload.remarks = edit.remarks;
       if (edit.ot_hours !== undefined) payload.ot_hours = edit.ot_hours;
-      if (edit.billing_code !== undefined) payload.billing_code = edit.billing_code;
 
       const actorHeaders = {};
       if (typeof currentUser !== 'undefined' && currentUser) {
@@ -738,7 +736,7 @@ async function saveRecords(edits) {
  * @param {number} params.offset - row offset
  * @param {string} [params.sortBy] - column key to sort by
  * @param {string} [params.sortDir] - 'asc' or 'desc'
- * @param {Object} [params.filters] - { tag_in, agent_in, flm_in, planning_group_in, billing_code_in, status_in, shift_time_in, role_in, blanks_only }
+ * @param {Object} [params.filters] - { tag_in, agent_in, flm_in, planning_group_in, status_in, shift_time_in, role_in, blanks_only }
  * @returns {{ rows: Array, total: number }}
  */
 async function fetchPaginatedAttendance({ startDate, endDate, limit = 50, offset = 0, sortBy, sortDir, filters = {} }) {
@@ -759,7 +757,6 @@ async function fetchPaginatedAttendance({ startDate, endDate, limit = 50, offset
   if (filters.agent_in) params.set('agent_in', filters.agent_in);
   if (filters.flm_in) params.set('flm_in', filters.flm_in);
   if (filters.planning_group_in) params.set('planning_group_in', filters.planning_group_in);
-  if (filters.billing_code_in) params.set('billing_code_in', filters.billing_code_in);
   if (filters.status_in) params.set('status_in', filters.status_in);
   if (filters.shift_time_in) params.set('shift_time_in', filters.shift_time_in);
   if (filters.role_in) params.set('role_in', filters.role_in);

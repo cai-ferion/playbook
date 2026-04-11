@@ -1262,7 +1262,6 @@ body {
 .col-reason { min-width: 160px; }
 .col-remarks { min-width: 240px; }
 .col-ot { width: 60px; max-width: 70px; }
-.col-billing { width: 80px; max-width: 90px; }
 
 .cell-select {
   width: 100%;
@@ -2715,104 +2714,6 @@ body {
   margin: 0 auto;
   display: block;
 }
-.billing-doughnut-card {
-  flex: 0 0 360px;
-  max-width: 360px;
-}
-.billing-threshold-btn {
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg-secondary, #e5e7eb);
-  color: var(--text-secondary, #6b7280);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  opacity: 0.7;
-}
-.billing-threshold-btn:hover {
-  background: var(--bg-secondary, #d1d5db);
-  color: var(--fg);
-  opacity: 0.9;
-}
-.billing-threshold-btn.active {
-  background: #4b5563;
-  color: #fff;
-  border-color: #4b5563;
-  opacity: 1;
-}
-.billing-ytd-breakdown-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 11px;
-}
-.billing-ytd-breakdown-table th,
-.billing-ytd-breakdown-table td {
-  padding: 4px 6px;
-  text-align: center;
-  border: 1px solid var(--border);
-}
-/* Sticky header row */
-.billing-ytd-breakdown-table .ytd-sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #e5e7eb;
-  font-weight: 600;
-  color: var(--fg, #1a1c1f);
-}
-/* Sticky first column */
-.billing-ytd-breakdown-table .ytd-sticky-col {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: #f3f4f6;
-}
-/* Corner cell (header + first col) gets highest z-index */
-.billing-ytd-breakdown-table .ytd-sticky-col.ytd-sticky-header {
-  z-index: 3;
-  background: #e5e7eb;
-}
-.billing-ytd-breakdown-table td.ytd-pass {
-  background: #dcfce7;
-  color: #16a34a;
-  font-weight: 600;
-}
-.billing-ytd-breakdown-table td.ytd-fail {
-  background: #fee2e2;
-  color: #dc2626;
-  font-weight: 600;
-}
-/* Ensure sticky first column cells override pass/fail bg */
-.billing-ytd-breakdown-table td.ytd-sticky-col {
-  background: #f3f4f6;
-}
-.billing-right-stack {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-@media (max-width: 768px) {
-  .billing-side-panels {
-    flex-direction: column;
-  }
-  .billing-ref-card {
-    flex: 1 1 auto;
-    max-width: 100%;
-  }
-  .billing-doughnut-card {
-    flex: 1 1 auto;
-    max-width: 100%;
-  }
-  .billing-right-stack {
-    width: 100%;
-  }
-}
 
 /* ===== SRT Preview Enhancements ===== */
 
@@ -2859,60 +2760,6 @@ body {
   opacity: 0.5;
 }
 
-/* ===== Billing Code Edit Section ===== */
-
-.billing-code-edit-section {
-  margin-top: 16px;
-  padding: 10px 14px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-/* When billing code section is inside the omnibar */
-.omnibar .billing-code-edit-section.omnibar-billing {
-  margin-top: 10px;
-  padding: 10px 0 0;
-  border: none;
-  border-top: 1px solid var(--border-muted);
-  border-radius: 0;
-  background: transparent;
-}
-
-.billing-code-edit-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  color: var(--fg);
-  font-size: 13px;
-}
-
-.billing-code-edit-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.bc-current-code {
-  display: inline-block;
-  padding: 4px 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--fg);
-  min-width: 40px;
-  text-align: center;
-}
-
-.billing-code-edit-note {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--fg-muted);
-}
 
 /* Cell center alignment */
 .cell-center {

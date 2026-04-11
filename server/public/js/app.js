@@ -773,7 +773,7 @@ function buildRosterFromRecords() {
       rosterMap[r.agent] = {
         ohr: r.ohr, fullName: r.agent, flm: r.flm,
         role: r.role, actualPG: r.actualPlanningGroup,
-        shiftTime: r.shiftTime, status: r.status, billingCode: r.billingCode
+        shiftTime: r.shiftTime, status: r.status
       };
     }
   }
@@ -1088,7 +1088,6 @@ function updateAllViews() {
 function populateInputFilterDropdowns() {
   const records = appState.records;
   const tags = [...new Set(records.map(r => r.tag).filter(Boolean))].sort();
-  const billingCodes = [...new Set(records.map(r => r.billingCode).filter(Boolean))].sort();
   const agents = [...new Set(records.map(r => r.agent).filter(Boolean))].sort();
   const flms = [...new Set(records.map(r => r.flm).filter(Boolean))].sort();
   const roles = [...new Set(records.map(r => r.role).filter(Boolean))].sort();
@@ -1097,7 +1096,6 @@ function populateInputFilterDropdowns() {
   const statuses = [...new Set(records.map(r => r.status).filter(Boolean))].sort();
 
   if (appState.multiSelects.tag) appState.multiSelects.tag.setOptions(tags);
-  if (appState.multiSelects.billing) appState.multiSelects.billing.setOptions(billingCodes);
   if (appState.multiSelects.agent) appState.multiSelects.agent.setOptions(agents);
   if (appState.multiSelects.flm) appState.multiSelects.flm.setOptions(flms);
   if (appState.multiSelects.role) appState.multiSelects.role.setOptions(roles);
@@ -1186,8 +1184,6 @@ function getFilteredInputRecords() {
   const ms = appState.multiSelects;
   const tagSel = ms.tag ? ms.tag.getSelected() : [];
   const tagNone = ms.tag && ms.tag.noneMode && tagSel.length === 0;
-  const billingSel = ms.billing ? ms.billing.getSelected() : [];
-  const billingNone = ms.billing && ms.billing.noneMode && billingSel.length === 0;
   const agentSel = ms.agent ? ms.agent.getSelected() : [];
   const agentNone = ms.agent && ms.agent.noneMode && agentSel.length === 0;
   const flmSel = ms.flm ? ms.flm.getSelected() : [];
@@ -1211,7 +1207,6 @@ function getFilteredInputRecords() {
   for (let i = 0; i < records.length; i++) {
     const r = records[i];
     if (tagSel.length > 0 && !tagSel.includes(r.tag)) continue;
-    if (billingSel.length > 0 && !billingSel.includes(r.billingCode)) continue;
     if (startDate && r.date && r.date < startDate) continue;
     if (endDate && r.date && r.date > endDate) continue;
     if (agentSel.length > 0 && !agentSel.includes(r.agent)) continue;
@@ -1393,7 +1388,6 @@ function getColumnWidthClass(key) {
     uplReason: 'col-reason',
     remarks: 'col-remarks',
     ot: 'col-ot',
-    billingCode: 'col-billing',
     agent: 'col-agent',
     flm: 'col-flm',
   };
@@ -1470,150 +1464,7 @@ function isRowLocked(record) {
   return false;
 }
 
-// ===== Billing Code Description Lookup =====
-const BILLING_CODE_DESC_MAP = {
-  'MA': 'S-ABF; Agent',
-  'MS': 'S-ABF; Operational SME',
-  'MQ': 'S-ABF; QA',
-  'SA': 'S-ABF; Team Lead',
-  'CA': 'CS-ABF; Agent',
-  'CS': 'CS-ABF; Operational SME',
-  'CQ': 'CS-ABF; QA',
-  'SC': 'CS-ABF; Team Lead',
-  'SO': 'CSO_CTR; Any',
-  'FA': 'FAD_CTR; Any',
-  'RM': 'RM_CTR; Any',
-  'SM': 'SME_CTR; Any',
-  'QP': 'QPE_CTR; Any',
-  'SV': 'Any; Team Lead',
-  'TR': 'Any; Trainer',
-  'SR': 'RM_CTR; Team Lead',
-};
-function getBillingCodeDesc(code) {
-  return BILLING_CODE_DESC_MAP[code] || code;
-}
 
-// ===== Billing Code Edit Functions =====
-
-let bcEditPendingChanges = {}; // ohr -> { newCode, records: [indices] }
-
-function initBillingCodeEdit() {
-  const section = document.getElementById('billing-code-edit-section');
-  if (!section) return;
-
-  // Show only for Team Lead, Manager, admin, and Joshua Masacote
-  const allowed = currentUser && (
-    currentUser.actual_role === 'Team Lead' ||
-    currentUser.actual_role === 'Manager' ||
-    currentUser.ohr_id === '740045023' ||
-    currentUser.ohr_id === '740044909'
-  );
-  section.style.display = allowed ? 'block' : 'none';
-
-  if (!allowed) return;
-
-  // Populate agent dropdown from current filtered records
-  const agentSelect = document.getElementById('bc-edit-agent');
-  const agents = [...new Set(appState.records.map(r => r.agent).filter(Boolean))].sort();
-  agentSelect.innerHTML = '<option value="">\u2014 Select Agent \u2014</option>';
-  for (const agent of agents) {
-    const opt = document.createElement('option');
-    opt.value = agent;
-    opt.textContent = agent;
-    agentSelect.appendChild(opt);
-  }
-
-  // Populate billing code dropdown with descriptions
-  const codeSelect = document.getElementById('bc-edit-new-code');
-  const allCodes = [...new Set(appState.records.map(r => r.billingCode).filter(Boolean))].sort();
-  codeSelect.innerHTML = '<option value="">\u2014 Select \u2014</option>';
-  for (const code of allCodes) {
-    const opt = document.createElement('option');
-    opt.value = code;
-    opt.textContent = code + ' (' + getBillingCodeDesc(code) + ')';
-    codeSelect.appendChild(opt);
-  }
-
-  var bcEditEl = document.getElementById('bc-edit-current');
-  if (bcEditEl) bcEditEl.textContent = '\u2014';
-  bcEditPendingChanges = {};
-}
-
-function onBcEditAgentChange() {
-  const agentName = document.getElementById('bc-edit-agent').value;
-  const currentEl = document.getElementById('bc-edit-current');
-  const codeSelect = document.getElementById('bc-edit-new-code');
-
-  if (!agentName) {
-    currentEl.textContent = '\u2014';
-    // Reset dropdown to all codes
-    const allCodes = [...new Set(appState.records.map(r => r.billingCode).filter(Boolean))].sort();
-    codeSelect.innerHTML = '<option value="">\u2014 Select \u2014</option>';
-    for (const code of allCodes) {
-      const opt = document.createElement('option');
-      opt.value = code;
-      opt.textContent = code + ' (' + getBillingCodeDesc(code) + ')';
-      codeSelect.appendChild(opt);
-    }
-    return;
-  }
-
-  // Find the current billing code(s) for this agent
-  const agentRecords = appState.records.filter(r => r.agent === agentName);
-  const currentCodes = [...new Set(agentRecords.map(r => r.billingCode).filter(Boolean))];
-  currentEl.textContent = currentCodes.length > 0 ? currentCodes.join(', ') : '(none)';
-
-  // Rebuild New Code dropdown excluding the agent's current code(s)
-  const allCodes = [...new Set(appState.records.map(r => r.billingCode).filter(Boolean))].sort();
-  const filteredCodes = allCodes.filter(c => !currentCodes.includes(c));
-  codeSelect.innerHTML = '<option value="">\u2014 Select \u2014</option>';
-  for (const code of filteredCodes) {
-    const opt = document.createElement('option');
-    opt.value = code;
-    opt.textContent = code + ' (' + getBillingCodeDesc(code) + ')';
-    codeSelect.appendChild(opt);
-  }
-}
-
-function applyBillingCodeEditToPending() {
-  const agentName = document.getElementById('bc-edit-agent').value;
-  const newCode = document.getElementById('bc-edit-new-code').value;
-  const startDate = document.getElementById('bc-edit-start-date')?.value || '';
-  const endDate = document.getElementById('bc-edit-end-date')?.value || '';
-
-  if (!agentName || !newCode) {
-    showToast('Please select an agent and a new billing code.', 'info');
-    return;
-  }
-  if (!startDate || !endDate) {
-    showToast('Please select both a start date and end date.', 'info');
-    return;
-  }
-  if (startDate > endDate) {
-    showToast('Start date cannot be after end date.', 'info');
-    return;
-  }
-
-  // Find records for this agent within the date range and mark billing code changes as pending edits
-  let count = 0;
-  for (let i = 0; i < appState.records.length; i++) {
-    const r = appState.records[i];
-    if (r.agent === agentName && r.date >= startDate && r.date <= endDate && r.billingCode !== newCode) {
-      r.billingCode = newCode;
-      if (!appState.pendingEdits[i]) appState.pendingEdits[i] = {};
-      appState.pendingEdits[i].billingCode = newCode;
-      count++;
-    }
-  }
-
-  if (count > 0) {
-    showToast(`Billing code changed to "${newCode}" for ${count} record(s) of ${agentName} (${startDate} to ${endDate}). Click Save Changes to persist.`, 'success');
-    window.renderInputTable();
-
-  } else {
-    showToast('No records needed updating in the specified date range.', 'info');
-  }
-}
 
 function handleCellEdit(el) {
   const idx = parseInt(el.dataset.idx);
@@ -1645,7 +1496,7 @@ function handleCellEdit(el) {
       var spRow = serverPagState.rows.find(function(r) { return r._id === editedRecId; });
       if (spRow) {
         // Map frontend keys to both frontend and DB column names
-        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], billingCode: ['billingCode', 'billing_code'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'] };
+        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'] };
         var targets = keyMap[key] || [key];
         for (var ti = 0; ti < targets.length; ti++) { spRow[targets[ti]] = value; }
         if (key === 'tag' && value !== 'UPL' && value !== 'LATE') {
@@ -1701,8 +1552,6 @@ function handleUndoAll() {
         sRow.remarks = origRec.remarks;
         sRow.ot = origRec.ot;
         sRow.ot_hours = origRec.ot;
-        sRow.billingCode = origRec.billingCode;
-        sRow.billing_code = origRec.billingCode;
         sRow.role = origRec.role;
         sRow.actualPlanningGroup = origRec.actualPlanningGroup;
         sRow.planning_group = origRec.actualPlanningGroup;
@@ -1727,14 +1576,6 @@ function closeSaveModal() {
 }
 
 async function confirmSave() {
-  // Auto-apply billing code edit if fields are filled
-  const bcAgent = document.getElementById('bc-edit-agent')?.value;
-  const bcNewCode = document.getElementById('bc-edit-new-code')?.value;
-  const bcStartDate = document.getElementById('bc-edit-start-date')?.value;
-  const bcEndDate = document.getElementById('bc-edit-end-date')?.value;
-  if (bcAgent && bcNewCode && bcStartDate && bcEndDate) {
-    applyBillingCodeEditToPending();
-  }
   const btn = document.getElementById('save-confirm-btn');
   btn.disabled = true;
   btn.textContent = 'Saving...';
@@ -1744,7 +1585,7 @@ async function confirmSave() {
     for (const [idx, changes] of Object.entries(appState.pendingEdits)) {
       const record = appState.records[parseInt(idx)];
       const edit = { _id: record._id || '' };
-      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', billingCode: 'billing_code', role: 'role', actualPlanningGroup: 'planning_group' };
+      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', role: 'role', actualPlanningGroup: 'planning_group' };
       for (const [field, value] of Object.entries(changes)) {
         const dbCol = fieldMap[field] || field;
         edit[dbCol] = value;
@@ -1759,7 +1600,7 @@ async function confirmSave() {
 
       // Sync serverPagState.rows with saved values so re-render shows fresh data
       if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
-        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', billing_code: 'billingCode', role: 'role', planning_group: 'actualPlanningGroup' };
+        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', role: 'role', planning_group: 'actualPlanningGroup' };
         for (const edit of edits) {
           const row = serverPagState.rows.find(r => r._id === edit._id);
           if (row) {
