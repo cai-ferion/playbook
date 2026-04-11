@@ -124,17 +124,17 @@ describe("Batch 26 — Revisions", () => {
     });
   });
 
-  // 7. GChat UPL/LATE card redesign
-  describe("GChat UPL/LATE Card Redesign", () => {
-    it("should have buildUplLateGchatCard function in auto-mailer", () => {
+  // 7. GChat UPL/LATE card redesign — GChat removed in Batch 139, in-app notifications remain
+  describe("UPL/LATE Notification Content (GChat removed)", () => {
+    it("should NOT have buildUplLateGchatCard function in auto-mailer (removed Batch 139)", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      expect(autoMailer).toContain("buildUplLateGchatCard");
+      expect(autoMailer).not.toContain("buildUplLateGchatCard");
     });
 
-    it("should include the correct Action Required text", () => {
+    it("should include the correct Action Required text in in-app notifications", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
@@ -151,13 +151,13 @@ describe("Batch 26 — Revisions", () => {
       expect(autoMailer).not.toContain("sendDailySummaryNotification");
     });
 
-    it("should queue GChat cards for UPL/LATE notices", () => {
+    it("should NOT have GChat queue references (removed Batch 139)", () => {
       const autoMailer = fs.readFileSync(
         path.join(__dirname, "auto-mailer.ts"),
         "utf-8"
       );
-      expect(autoMailer).toContain("ioGchatQueue");
-      expect(autoMailer).toContain("gchatQueued");
+      expect(autoMailer).not.toContain("ioGchatQueue");
+      expect(autoMailer).not.toContain("gchatQueued");
     });
   });
 

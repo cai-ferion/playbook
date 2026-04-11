@@ -1391,3 +1391,14 @@
 - [x] Investigate auto-mailer logic: backend routing is correct (agent + supervisor only)
 - [x] Fix frontend filter: removed admin bypass in notifications.js line 123 that showed ALL targeted notifications to OHR 740045023
 - [x] Admin (740045023) now only sees notifications targeted to their own OHR or broadcast notifications
+
+## Batch 139 — Remove All GChat Functionality
+- [x] Remove GChat card builder (buildUplLateGchatCard) and queue insertions from auto-mailer.ts
+- [x] Remove gchat-notify-supervisor and gchat-notify-task endpoints from io-routes.ts
+- [x] Remove GChat queue insertions from OT open-form and auto-open flows in io-routes.ts and auto-mailer.ts
+- [x] Remove ioGchatQueue import from io-routes.ts (schema table kept for DB compatibility)
+- [x] Remove gchat_space_id from employee select queries in auto-mailer.ts
+- [x] Remove GChat ID column from roster.js table and detail modal
+- [x] Remove GChat notification calls from helm.js (task assignment + supervisor backdate)
+- [x] Update tests in batch15, batch25, batch26 to verify GChat removal
+- [x] All 303 tests passing

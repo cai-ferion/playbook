@@ -1,6 +1,6 @@
 /**
  * Auto-Notifier Module
- * Creates in-app notifications AND queues GChat rich cards for UPL/LATE attendance tags.
+ * Creates in-app notifications for UPL/LATE attendance tags.
  * 
  * Schedule: 2:30 AM and 11:30 AM Philippine Time (UTC+8) daily for UPL/LATE.
  */
@@ -9,7 +9,7 @@ import { Express } from "express";
 import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq, and, inArray, sql, gte, lte, asc } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioGchatQueue, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig } from "../drizzle/schema";
+import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig } from "../drizzle/schema";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -66,83 +66,8 @@ async function createNotification(
   });
 }
 
-/**
- * Build the GChat rich card JSON for a UPL or LATE notice.
- * Template matches the user-approved design (4th image from Batch 26).
- */
-function buildUplLateGchatCard(params: {
-  tag: string;
-  agentName: string;
-  readableDate: string;
-  reason: string;
-  remarks: string;
-  supervisorName: string;
-  refId: string;
-}): string {
-  const { tag, agentName, readableDate, reason, remarks, supervisorName, refId } = params;
-  const isUpl = tag === "UPL";
-  const tagTitle = isUpl ? "UPL Notice" : "LATE Notice";
-  const tagLabel = isUpl ? "UPL — Unplanned Leave" : "LATE — Late Attendance";
-  const iconUrl = isUpl
-    ? "https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/warning/default/48px.svg"
-    : "https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/schedule/default/48px.svg";
 
-  const card = [{
-    cardId: `${tag.toLowerCase()}_${refId}`,
-    card: {
-      header: {
-        title: `⚠ ${tagTitle}`,
-        subtitle: agentName,
-        imageUrl: iconUrl,
-        imageType: "CIRCLE"
-      },
-      sections: [
-        {
-          header: "Notification",
-          widgets: [
-            {
-              textParagraph: {
-                text: `Hi <b>${agentName}</b>,\n\nThis is to inform you that your attendance for <b>${readableDate}</b> has been tagged as <b>${tagLabel}</b>.`
-              }
-            }
-          ]
-        },
-        {
-          header: "📋 Attendance Details",
-          widgets: [
-            { decoratedText: { topLabel: "ATTENDANCE TAG", text: `<font color=\"#dc2626\">${tagLabel}</font>`, icon: { knownIcon: "BOOKMARK" } } },
-            { decoratedText: { topLabel: "DATE", text: readableDate, icon: { knownIcon: "INVITE" } } },
-            ...(reason && reason !== "Not specified" ? [{ decoratedText: { topLabel: "REASON", text: reason, icon: { knownIcon: "DESCRIPTION" } } }] : []),
-            ...(remarks && remarks !== "No additional remarks" ? [{ decoratedText: { topLabel: "REMARKS", text: remarks, icon: { knownIcon: "DESCRIPTION" } } }] : [])
-          ]
-        },
-        {
-          header: "⚠ Action Required",
-          widgets: [
-            {
-              textParagraph: {
-                text: `Please coordinate with your supervisor, <b>${supervisorName}</b>, regarding this attendance record. If you believe this tag was applied in error, you may request for your supervisor to change this.`
-              }
-            }
-          ]
-        },
-        {
-          widgets: [
-            {
-              textParagraph: {
-                text: `<i>Playbook Reporting — Automated Attendance Notification System</i>\nRef: ${refId}`
-              }
-            }
-          ]
-        }
-      ]
-    }
-  }];
-
-  return JSON.stringify(card);
-}
-
-async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise<{ sent: number; errors: number; gchatQueued: number }> {
+async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise<{ sent: number; errors: number }> {
   const today = getTodayPHT();
   console.log(`[AutoNotifier] Running UPL/LATE check for date: ${today}`);
 
@@ -166,7 +91,7 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
 
   if (records.length === 0) {
     console.log(`[AutoNotifier] No UPL/LATE records found for ${today}.`);
-    return { sent: 0, errors: 0, gchatQueued: 0 };
+    return { sent: 0, errors: 0 };
   }
 
   console.log(`[AutoNotifier] Found ${records.length} UPL/LATE records for ${today}.`);
@@ -178,12 +103,11 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
       ohr_id: ioEmployees.ohr_id,
       full_name: ioEmployees.full_name,
       supervisor_name: ioEmployees.supervisor_name,
-      gchat_space_id: ioEmployees.gchat_space_id,
     })
     .from(ioEmployees)
     .where(inArray(ioEmployees.ohr_id, ohrIds));
 
-  const employeeMap = new Map<string, { ohr_id: string; full_name: string | null; supervisor_name: string | null; gchat_space_id: string | null }>();
+  const employeeMap = new Map<string, { ohr_id: string; full_name: string | null; supervisor_name: string | null }>();
   for (const emp of employees) {
     if (emp.ohr_id) employeeMap.set(emp.ohr_id, emp);
   }
@@ -199,7 +123,6 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
 
   let sent = 0;
   let errors = 0;
-  let gchatQueued = 0;
 
   for (const record of records) {
     try {
@@ -247,42 +170,14 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
         sent++;
       }
 
-      // Queue GChat rich card notification if employee has a gchat_space_id
-      if (employee?.gchat_space_id) {
-        const refId = `${record.id}${record.ohr_id || ''}`;
-        const cardJson = buildUplLateGchatCard({
-          tag: record.tag || "UPL",
-          agentName,
-          readableDate,
-          reason: record.reason || "Not specified",
-          remarks: record.remarks || "No additional remarks",
-          supervisorName,
-          refId,
-        });
-
-        const fallbackText = `⚠ ${record.tag} Notice\nHi ${agentName},\nYour attendance for ${readableDate} has been tagged as ${tagLabel}.\nPlease coordinate with your supervisor, ${supervisorName}, regarding this attendance record.`;
-
-        await db.insert(ioGchatQueue).values({
-          type: `${(record.tag || "upl").toLowerCase()}_notice`,
-          target_space_id: employee.gchat_space_id,
-          target_name: agentName,
-          card_json: cardJson,
-          fallback_text: fallbackText,
-          status: "pending",
-          metadata: JSON.stringify({ attendance_id: record.id, tag: record.tag, date: record.log_date, ohr_id: record.ohr_id }),
-          created_at: getNowPHT(),
-        });
-
-        gchatQueued++;
-      }
     } catch (err: any) {
       console.error(`[AutoNotifier] Error creating notification for OHR ${record.ohr_id}: ${err.message}`);
       errors++;
     }
   }
 
-  console.log(`[AutoNotifier] Completed: ${sent} in-app notifications, ${gchatQueued} GChat cards queued, ${errors} errors.`);
-  return { sent, errors, gchatQueued };
+  console.log(`[AutoNotifier] Completed: ${sent} in-app notifications, ${errors} errors.`);
+  return { sent, errors };
 }
 
 // ============================================================
@@ -689,38 +584,6 @@ async function autoOpenOtForms(db: ReturnType<typeof drizzle>): Promise<{ opened
           notified += notifValues.length;
         }
 
-        // Queue GChat notifications for agents with gchat_space_id
-        const gchatValues = eligibleAgents
-          .filter((a: any) => a.gchat_space_id)
-          .map((agent: any) => {
-            const cardJson = JSON.stringify({
-              cardsV2: [{
-                cardId: `ot-auto-open-${agent.ohr_id}`,
-                card: {
-                  header: { title: notifTitle, subtitle: pg, imageUrl: '', imageType: 'CIRCLE' },
-                  sections: [{
-                    widgets: [
-                      { textParagraph: { text: `OT commitments are now open for <b>${pg}</b>. Submit your 2.5-hour OT commitment in the Task Board.` } },
-                    ]
-                  }]
-                }
-              }]
-            });
-            return {
-              type: 'ot_form_open',
-              target_space_id: agent.gchat_space_id,
-              target_name: agent.full_name || '',
-              card_json: cardJson,
-              fallback_text: `OT commitments are now open for ${pg}. Submit your 2.5-hour OT commitment in the Task Board.`,
-              status: 'pending',
-              metadata: JSON.stringify({ planning_group: pg, ohr_id: agent.ohr_id }),
-              created_at: nowISO,
-            };
-          });
-        if (gchatValues.length > 0) {
-          await db.insert(ioGchatQueue).values(gchatValues);
-        }
-
         console.log(`[OT-AutoOpen] Opened ${pg}: ${eligibleAgents.length} agents notified`);
       } catch (pgErr: any) {
         errors++;
@@ -766,7 +629,7 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
-  console.log("[AutoNotifier] Scheduled: 2:30 AM PHT, 11:30 AM PHT (UPL/LATE + GChat)");
+  console.log("[AutoNotifier] Scheduled: 2:30 AM PHT, 11:30 AM PHT (UPL/LATE)");
 
   // Schedule: OT Forfeiture check at 11:15 AM PHT = 03:15 UTC daily
   // Runs after the 11 AM PHT attendance lock so yesterday's tags are finalized
@@ -800,7 +663,7 @@ export function registerAutoMailer(app: Express): void {
       const result = await sendUplLateNotifications(db);
       res.json({
         success: true,
-        message: `In-app: ${result.sent}, GChat queued: ${result.gchatQueued}, errors: ${result.errors}`,
+        message: `In-app: ${result.sent}, errors: ${result.errors}`,
         ...result,
       });
     } catch (err: any) {

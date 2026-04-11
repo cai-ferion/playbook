@@ -606,26 +606,6 @@ async function helmSubmitNew() {
     showToast('Task created successfully', 'success');
 
 
-    // Queue GChat notification for each assignee
-    try {
-      await fetch(`${IO_API_BASE}/gchat-notify-task`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          task_id: created.task_id,
-          title: title,
-          description: record.description || '',
-          assigned_by: cu ? cu.full_name : 'Unknown',
-          due_date: record.due_date || '',
-          assignees: _helmSelectedAssignees.map(a => ({
-            ohr: a.ohr,
-            name: a.name
-          }))
-        })
-      });
-    } catch (gchatErr) {
-      console.warn('GChat task notification queue failed:', gchatErr);
-    }
 
     helmCloseForm();
     await helmFetchTasks();
@@ -1314,27 +1294,6 @@ async function helmSubmitNewRequest() {
             requesterName: cu ? cu.full_name : 'Unknown'
           })
         });
-      }
-
-      // Send GChat notification to supervisor
-      try {
-        await fetch(`${IO_API_BASE}/gchat-notify-supervisor`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            request_id: reqId,
-            agent_name: agentName,
-            agent_ohr: agentOhr,
-            date: readableDate,
-            new_tag: newTag,
-            reason: reason,
-            requester_name: cu ? cu.full_name : 'Unknown',
-            requester_ohr: cu ? cu.ohr_id : '',
-            supervisor_name: supervisorName
-          })
-        });
-      } catch (gchatErr) {
-        console.warn('GChat notification failed:', gchatErr);
       }
 
       helmCloseForm();

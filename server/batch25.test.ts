@@ -61,21 +61,22 @@ describe("Batch 25 — Fixes & Enhancements", () => {
     });
   });
 
-  // 4. GChat supervisor notification includes new_tag
-  describe("GChat Supervisor Notification", () => {
-    it("gchat-notify-supervisor endpoint includes new_tag in card", () => {
+  // 4. GChat functionality removed (Batch 139)
+  describe("GChat Removal Verification", () => {
+    it("gchat-notify-supervisor endpoint should be removed from io-routes.ts", () => {
       const ioRoutes = fs.readFileSync(
         path.join(__dirname, "io-routes.ts"),
         "utf-8"
       );
-      expect(ioRoutes).toContain("gchat-notify-supervisor");
-      expect(ioRoutes).toContain("new_tag");
-      expect(ioRoutes).toContain("New Tag");
+      expect(ioRoutes).not.toContain("gchat-notify-supervisor");
+      expect(ioRoutes).not.toContain("gchat-notify-task");
+      expect(ioRoutes).not.toContain("ioGchatQueue");
     });
 
-    it("helm.js sends new_tag in gchat notification payload", () => {
+    it("helm.js should not contain GChat notification calls", () => {
       const helm = readPublicJS("helm.js");
-      expect(helm).toContain("new_tag: newTag");
+      expect(helm).not.toContain("gchat-notify-supervisor");
+      expect(helm).not.toContain("gchat-notify-task");
     });
   });
 
