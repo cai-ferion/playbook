@@ -14,6 +14,7 @@ import { registerIORoutes } from "../io-routes.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import performanceRouter from "../io-performance-routes.js";
+import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,6 +108,20 @@ async function startServer() {
     res.json({ __dirname, cwd: process.cwd(), publicDir, candidates: results });
   });
 
+  // Admin-only manual sync trigger
+  app.post("/api/io/sync-attendance", async (req, res) => {
+    const actorOhr = req.headers["x-actor-ohr"] as string;
+    if (actorOhr !== "740045023") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+    try {
+      const result = await runAttendanceSync();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -131,6 +146,8 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Initialize cron jobs after server is listening
+    initAttendanceSyncCron();
   });
 }
 

@@ -1364,3 +1364,11 @@
 - [x] Map all 16 columns correctly (Concat, Tag, Billing Code, UPL Reason, Remarks, OT, Date, OHR, Agent, FLM, Role, PG, Shift, Status, Week Ending, Month)
 - [x] Schedule twice-daily sync at 1:30 AM and 4:30 PM PHT
 - [x] Test the sync with a dry run
+
+## Batch 135 — Server-side Attendance Sync (node-cron)
+- [x] Install node-cron dependency and wire into server
+- [x] Build server-side sync module delegating to Python script with GWS token file auth
+- [x] Wire cron jobs into server startup: 1:30 AM and 4:30 PM PHT
+- [x] Add manual trigger endpoint (POST /api/io/sync-attendance, admin-only)
+- [x] Test end-to-end sync from server (5,412 rows synced, 8 new rows appended)
+- [x] Add .bashrc hook to auto-refresh GWS token file on sandbox startup
