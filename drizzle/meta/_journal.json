@@ -85,6 +85,13 @@
       "when": 1775944594629,
       "tag": "0011_happy_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1776019468015,
+      "tag": "0012_easy_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

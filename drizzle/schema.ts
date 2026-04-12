@@ -482,3 +482,178 @@ export const ioSyncLog = mysqlTable("io_sync_log", {
 });
 export type IoSyncLog = typeof ioSyncLog.$inferSelect;
 export type InsertIoSyncLog = typeof ioSyncLog.$inferInsert;
+
+
+// ============================================================
+// Compass Overhaul — Normalized Schema
+// ============================================================
+
+/**
+ * compass_coaching_logs — Primary coaching record (normalized).
+ * Dispute comments/attachments moved to compass_dispute_events.
+ */
+export const compassCoachingLogs = mysqlTable("compass_coaching_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  coaching_id: varchar("coaching_id", { length: 20 }).notNull().unique(),
+  coaching_type: varchar("coaching_type", { length: 50 }).notNull(),
+  coaching_date: varchar("coaching_date", { length: 64 }),
+  session_goals: text("session_goals"),
+  coaching_details: text("coaching_details"),
+  status: varchar("status", { length: 100 }).default("Pending Acknowledgement"),
+  coach_ohr: varchar("coach_ohr", { length: 20 }),
+  coach_name: varchar("coach_name", { length: 255 }),
+  coach_email: varchar("coach_email", { length: 320 }),
+  coach_supervisor: varchar("coach_supervisor", { length: 255 }),
+  coach_supervisor_email: varchar("coach_supervisor_email", { length: 320 }),
+  coach_pg: varchar("coach_pg", { length: 100 }),
+  coachee_ohr: varchar("coachee_ohr", { length: 20 }),
+  coachee_name: varchar("coachee_name", { length: 255 }),
+  coachee_email: varchar("coachee_email", { length: 320 }),
+  coachee_supervisor: varchar("coachee_supervisor", { length: 255 }),
+  coachee_supervisor_email: varchar("coachee_supervisor_email", { length: 320 }),
+  coachee_pg: varchar("coachee_pg", { length: 100 }),
+  sme_joiner_name: varchar("sme_joiner_name", { length: 255 }),
+  sme_joiner_email: varchar("sme_joiner_email", { length: 320 }),
+  job_id: varchar("job_id", { length: 100 }),
+  rca_level_1: varchar("rca_level_1", { length: 255 }),
+  rca_level_2: varchar("rca_level_2", { length: 255 }),
+  rca_level_3: varchar("rca_level_3", { length: 255 }),
+  rca_level_4: varchar("rca_level_4", { length: 255 }),
+  rca_level_5: varchar("rca_level_5", { length: 255 }),
+  rca_description: text("rca_description"),
+  infraction_category: varchar("infraction_category", { length: 255 }),
+  infraction: varchar("infraction", { length: 255 }),
+  infraction_description: text("infraction_description"),
+  severity: varchar("severity", { length: 10 }),
+  coachee_ack: boolean("coachee_ack").default(false),
+  coachee_commitments: text("coachee_commitments"),
+  coaching_rating: int("coaching_rating"),
+  coachee_sentiments: text("coachee_sentiments"),
+  ack_date: varchar("ack_date", { length: 64 }),
+  parent_coaching_id: varchar("parent_coaching_id", { length: 20 }),
+  group_session_id: varchar("group_session_id", { length: 20 }),
+  coachee_list: text("coachee_list"),
+  linked_ca_case_id: varchar("linked_ca_case_id", { length: 20 }),
+  attachments: text("attachments"),
+  week_ending: varchar("week_ending", { length: 30 }),
+  month: varchar("month", { length: 30 }),
+  locked_by: varchar("locked_by", { length: 255 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+export type CompassCoachingLog = typeof compassCoachingLogs.$inferSelect;
+export type InsertCompassCoachingLog = typeof compassCoachingLogs.$inferInsert;
+
+/**
+ * compass_dispute_events — Append-only event log for QA Feedback disputes.
+ */
+export const compassDisputeEvents = mysqlTable("compass_dispute_events", {
+  id: int("id").autoincrement().primaryKey(),
+  coaching_id: varchar("coaching_id", { length: 20 }).notNull(),
+  dispute_level: int("dispute_level").notNull(),
+  action: varchar("action", { length: 50 }).notNull(),
+  actor_ohr: varchar("actor_ohr", { length: 20 }).notNull(),
+  actor_name: varchar("actor_name", { length: 255 }).notNull(),
+  actor_role: varchar("actor_role", { length: 100 }),
+  comments: text("comments"),
+  attachments: text("attachments"),
+  created_at: varchar("created_at", { length: 64 }).notNull(),
+});
+export type CompassDisputeEvent = typeof compassDisputeEvents.$inferSelect;
+export type InsertCompassDisputeEvent = typeof compassDisputeEvents.$inferInsert;
+
+/**
+ * compass_ca_cases — Corrective Action case lifecycle.
+ */
+export const compassCaCases = mysqlTable("compass_ca_cases", {
+  id: int("id").autoincrement().primaryKey(),
+  case_id: varchar("case_id", { length: 20 }).notNull().unique(),
+  case_status: varchar("case_status", { length: 50 }).notNull().default("incident_reported"),
+  employee_ohr: varchar("employee_ohr", { length: 20 }).notNull(),
+  employee_name: varchar("employee_name", { length: 255 }),
+  employee_pg: varchar("employee_pg", { length: 100 }),
+  employee_supervisor: varchar("employee_supervisor", { length: 255 }),
+  violation_category_number: int("violation_category_number"),
+  violation_category_name: varchar("violation_category_name", { length: 255 }),
+  violation_subsection: varchar("violation_subsection", { length: 20 }),
+  violation_text: text("violation_text"),
+  violation_type: varchar("violation_type", { length: 50 }),
+  incident_date: varchar("incident_date", { length: 64 }),
+  incident_details: text("incident_details"),
+  evidence_attachments: text("evidence_attachments"),
+  ai_recommended_cap_level: varchar("ai_recommended_cap_level", { length: 20 }),
+  ai_recommendation_reasoning: text("ai_recommendation_reasoning"),
+  recommended_cap_level: varchar("recommended_cap_level", { length: 20 }),
+  final_cap_level: varchar("final_cap_level", { length: 20 }),
+  cap_override_reason: text("cap_override_reason"),
+  active_period_days: int("active_period_days"),
+  active_period_start: varchar("active_period_start", { length: 64 }),
+  active_period_end: varchar("active_period_end", { length: 64 }),
+  nte_required: boolean("nte_required").default(true),
+  nte_issued_date: varchar("nte_issued_date", { length: 64 }),
+  nte_response_deadline: varchar("nte_response_deadline", { length: 64 }),
+  nte_response_date: varchar("nte_response_date", { length: 64 }),
+  nte_response_text: text("nte_response_text"),
+  nte_document_url: text("nte_document_url"),
+  nte_signed_url: text("nte_signed_url"),
+  hearing_required: boolean("hearing_required").default(false),
+  hearing_scheduled_date: varchar("hearing_scheduled_date", { length: 64 }),
+  hearing_conducted: boolean("hearing_conducted").default(false),
+  hearing_notes: text("hearing_notes"),
+  nod_issued_date: varchar("nod_issued_date", { length: 64 }),
+  nod_decision: varchar("nod_decision", { length: 20 }),
+  nod_document_url: text("nod_document_url"),
+  cap_document_url: text("cap_document_url"),
+  cap_signed_url: text("cap_signed_url"),
+  employee_signed: boolean("employee_signed").default(false),
+  employee_signed_date: varchar("employee_signed_date", { length: 64 }),
+  refusal_witnessed: boolean("refusal_witnessed").default(false),
+  witness_names: text("witness_names"),
+  linked_coaching_ids: text("linked_coaching_ids"),
+  linked_prior_case_id: varchar("linked_prior_case_id", { length: 20 }),
+  escalated_to_case_id: varchar("escalated_to_case_id", { length: 20 }),
+  created_by_ohr: varchar("created_by_ohr", { length: 20 }),
+  created_by_name: varchar("created_by_name", { length: 255 }),
+  notes: text("notes"),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+export type CompassCaCase = typeof compassCaCases.$inferSelect;
+export type InsertCompassCaCase = typeof compassCaCases.$inferInsert;
+
+/**
+ * compass_ca_timeline — Append-only event log for CA cases.
+ */
+export const compassCaTimeline = mysqlTable("compass_ca_timeline", {
+  id: int("id").autoincrement().primaryKey(),
+  case_id: varchar("case_id", { length: 20 }).notNull(),
+  event_type: varchar("event_type", { length: 50 }).notNull(),
+  event_date: varchar("event_date", { length: 64 }),
+  actor_ohr: varchar("actor_ohr", { length: 20 }),
+  actor_name: varchar("actor_name", { length: 255 }),
+  details: text("details"),
+  attachments: text("attachments"),
+  created_at: varchar("created_at", { length: 64 }).notNull(),
+});
+export type CompassCaTimeline = typeof compassCaTimeline.$inferSelect;
+export type InsertCompassCaTimeline = typeof compassCaTimeline.$inferInsert;
+
+/**
+ * compass_violation_catalog — GPHR Policy v3.0 Table of Violations and Penalties.
+ */
+export const compassViolationCatalog = mysqlTable("compass_violation_catalog", {
+  id: int("id").autoincrement().primaryKey(),
+  category_number: int("category_number").notNull(),
+  category_name: varchar("category_name", { length: 255 }).notNull(),
+  subsection: varchar("subsection", { length: 20 }).notNull(),
+  violation_code: varchar("violation_code", { length: 20 }),
+  violation_text: text("violation_text").notNull(),
+  recommended_cap: varchar("recommended_cap", { length: 50 }),
+  min_cap_level: int("min_cap_level").default(0),
+  max_cap_level: int("max_cap_level").default(3),
+  requires_nte: boolean("requires_nte").default(true),
+  requires_hearing: boolean("requires_hearing").default(false),
+  nte_response_hours: int("nte_response_hours").default(48),
+});
+export type CompassViolationCatalog = typeof compassViolationCatalog.$inferSelect;
+export type InsertCompassViolationCatalog = typeof compassViolationCatalog.$inferInsert;

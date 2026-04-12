@@ -1457,3 +1457,17 @@
 ## WFM Missing Attendance — Apr 2026
 - [x] Insert 32 missing attendance records for OHRs 740053907, 740054053, 740041868, 740052326 (WO stays WO, all others P)
 - [x] Update all "Nesting" employees to "Active" status in io_employees (15 employees updated)
+
+## Compass Overhaul — Phase 1 (Foundation)
+- [x] Create 5 new tables: compass_coaching_logs, compass_dispute_events, compass_ca_cases, compass_ca_timeline, compass_violation_catalog
+- [x] Seed violation catalog from GPHR Policy v3.0 (132 violations across 7 categories)
+- [x] Build tRPC procedures: coaching CRUD with role-based visibility (13 procedures)
+- [x] Build tRPC procedures: QA Feedback dispute workflow (6-level escalation, server-enforced)
+- [x] Build tRPC procedures: acknowledgement workflow
+- [x] Build React frontend: Coaching Logs list with server-side pagination/filtering
+- [x] Build React frontend: Coaching Log detail view with dispute actions
+- [x] Build React frontend: New Coaching Log form (all 6 types)
+- [x] Build React frontend: QA Disputes Kanban board
+- [x] Build React frontend: Acknowledgement UI with privacy model
+- [x] Migrate existing io_coaching data to new compass_coaching_logs schema (2005 logs, 28 dispute events)
+- [x] Write vitest tests for coaching CRUD and dispute procedures (35 tests, all passing)
