@@ -1453,3 +1453,7 @@
 - [x] All 301 tests passing; guard rails verified (404 non-existent, 400 wrong status)
 
 - [x] Fix: "initBillingCodeEdit is not defined" error when filtering planning group in Compass Input Portal
+
+## WFM Missing Attendance — Apr 2026
+- [x] Insert 32 missing attendance records for OHRs 740053907, 740054053, 740041868, 740052326 (WO stays WO, all others P)
+- [x] Update all "Nesting" employees to "Active" status in io_employees (15 employees updated)
