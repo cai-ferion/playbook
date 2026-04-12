@@ -1535,3 +1535,10 @@
 - [x] Revert switchView function: remove 5 new compass cases, restore old 2
 - [x] Revert role-based visibility: restore original compass nav visibility logic
 - [x] Remove compass-routes.ts registration from Express server
+
+## Cross-Reference Employee Data & Compass Cleanup
+- [x] Read Google Sheet employee data (roles, planning groups)
+- [x] Query io_employees and cross-reference with Sheet
+- [x] Generate discrepancy report for user review
+- [x] Clean up Compass-related tables and data from database (5 tables dropped, schema definitions kept)
+- [x] Apply 80 field corrections from Google Sheet to io_employees database (51 UPDATE statements, all verified)
