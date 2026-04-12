@@ -1484,3 +1484,43 @@
 - [x] Build AI CAP Assistant backend: LLM advisory analyzing full employee history against GPHR Policy v3.0 (2 procedures: recommend + chat)
 - [x] Build AI CAP Assistant React frontend: conversational page with employee context panel and quick prompts
 - [x] Write vitest tests for CA and AI procedures (48 tests, all passing)
+
+## Compass Integration into Legacy Anchor
+- [ ] Replace old Compass sidebar items (Coaching Profile, Disputes Area) with new pages
+- [ ] Port new Compass pages to vanilla JS within Anchor framework: Dashboard, Coaching Logs, QA Disputes, CA Cases, AI Assistant
+- [ ] Wire all new pages to use existing tRPC/API endpoints
+- [ ] Verify all pages render correctly in Anchor layout
+
+## Compass Legacy Integration — Anchor Sidebar Replacement
+
+### Backend: Compass REST API Bridge (compass-routes.ts)
+- [x] Create Express REST routes for all Compass endpoints under /api/io/compass/*
+- [x] Coaching CRUD: list, detail, create, acknowledge, dispute
+- [x] CA Cases CRUD: list, detail, create, transition, generate-document, upload-signed
+- [x] QA Disputes: list with status filtering
+- [x] AI endpoints: recommend (CAP advisory), chat (policy Q&A)
+- [x] Reference data: RCA catalog, ZTP catalog, violations catalog, attendance summary
+- [x] Analytics endpoint: aggregated coaching + CA stats
+- [x] Register compass-routes in Express server (_core/index.ts)
+
+### Frontend: Sidebar Navigation Update
+- [x] Replace old Compass nav items (Coaching Profile, Disputes Area) with 5 new items
+- [x] New nav items: Dashboard, Coaching Logs, QA Disputes, CA Cases, AI Assistant
+- [x] Update role-based visibility: Compass visible to ALL roles, CA Cases hidden from Agents, AI Assistant visible to TL/Manager/SME
+- [x] Update switchView() with 5 new compass view IDs
+- [x] Update view titles mapping
+
+### Frontend: View Containers (index.html)
+- [x] Replace old compass-input and compass-disputes view containers
+- [x] Add 5 new view containers: compass-dashboard, compass-coaching, compass-disputes, compass-ca, compass-ai
+- [x] Each container has loading overlay and detail/form overlays
+
+### Frontend: Vanilla JS Files
+- [x] compass-dashboard.js — Analytics summary with stat cards and quick actions
+- [x] compass-coaching.js — List, detail, new form, acknowledge, RCA cascading dropdowns
+- [x] compass-disputes-v2.js — Kanban board with 6-level escalation
+- [x] compass-ca-cases.js — Full lifecycle management with transitions, doc generation, signed upload
+- [x] compass-ai-assistant.js — Chat interface with quick prompts and markdown rendering
+
+### Script Tags
+- [x] Replace old compass.js and compass-omnibar.js script tags with 5 new JS files

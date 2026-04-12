@@ -21,8 +21,13 @@ import {
   ioSrtBill,
   ioBillingTargetsV2,
   ioSyncLog,
+  compassCoachingLogs,
+  compassDisputeEvents,
+  compassCaCases,
+  compassCaTimeline,
+  compassViolationCatalog,
 } from "../drizzle/schema.js";
-import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or } from "drizzle-orm";
+import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
 import crypto from "crypto";
 const router = Router();
 
