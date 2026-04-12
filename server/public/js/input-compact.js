@@ -173,7 +173,6 @@ function renderCompactTable() {
   }
 
   updateFloatingCommandBar();
-  initBillingCodeEdit();
 }
 
 // ============================================================

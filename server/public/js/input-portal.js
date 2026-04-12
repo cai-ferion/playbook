@@ -683,7 +683,6 @@ function renderInputTableServerSide() {
 
   // Server-side pagination controls
   renderServerPagination(page, totalPages);
-  initBillingCodeEdit();
   updateBulkToolbar();
 }
 
@@ -862,7 +861,6 @@ function renderInputTable() {
   }
 
   renderInputPagination(page, totalPages);
-  initBillingCodeEdit();
   updateBulkToolbar();
 }
 

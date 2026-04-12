@@ -1373,9 +1373,6 @@ function renderInputTable() {
   }
 
   renderInputPagination(page, totalPages);
-
-  // Initialize billing code edit section
-  initBillingCodeEdit();
 }
 
 /**

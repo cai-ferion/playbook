@@ -1451,3 +1451,5 @@
 - [x] Add "Cancel OT" button in Task Board detail view (approved OT requests only, requesting agent only)
 - [x] Guard: only requesting agent or admin can cancel; only approved status cancellable
 - [x] All 301 tests passing; guard rails verified (404 non-existent, 400 wrong status)
+
+- [x] Fix: "initBillingCodeEdit is not defined" error when filtering planning group in Compass Input Portal
