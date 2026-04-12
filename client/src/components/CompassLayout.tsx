@@ -42,8 +42,8 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/compass" },
   { icon: BookOpen, label: "Coaching Logs", path: "/compass/coaching" },
   { icon: Columns3, label: "QA Disputes", path: "/compass/disputes" },
-  { icon: FileWarning, label: "CA Cases", path: "/compass/cases", comingSoon: true },
-  { icon: Sparkles, label: "AI Assistant", path: "/compass/ai", comingSoon: true },
+  { icon: FileWarning, label: "CA Cases", path: "/compass/cases" },
+  { icon: Sparkles, label: "AI Assistant", path: "/compass/ai" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "compass-sidebar-width";
@@ -206,12 +206,6 @@ function CompassLayoutContent({
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => {
-                        if (item.comingSoon) {
-                          import("sonner").then(({ toast }) =>
-                            toast.info(`${item.label} — coming soon`)
-                          );
-                          return;
-                        }
                         setLocation(item.path);
                       }}
                       tooltip={item.label}
@@ -220,14 +214,7 @@ function CompassLayoutContent({
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
                       />
-                      <span className="flex items-center gap-2">
-                        {item.label}
-                        {item.comingSoon && (
-                          <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            Soon
-                          </span>
-                        )}
-                      </span>
+                      <span>{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

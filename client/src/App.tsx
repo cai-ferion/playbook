@@ -14,6 +14,10 @@ const CoachingList = lazy(() => import("./pages/compass/CoachingList"));
 const CoachingDetail = lazy(() => import("./pages/compass/CoachingDetail"));
 const CoachingNew = lazy(() => import("./pages/compass/CoachingNew"));
 const DisputeBoard = lazy(() => import("./pages/compass/DisputeBoard"));
+const CACaseList = lazy(() => import("./pages/compass/CACaseList"));
+const CACaseDetail = lazy(() => import("./pages/compass/CACaseDetail"));
+const CACaseNew = lazy(() => import("./pages/compass/CACaseNew"));
+const AIAssistant = lazy(() => import("./pages/compass/AIAssistant"));
 
 function CompassShell({ children }: { children: React.ReactNode }) {
   return (
@@ -58,6 +62,26 @@ function Router() {
       <Route path="/compass/disputes">
         <CompassShell>
           <DisputeBoard />
+        </CompassShell>
+      </Route>
+      <Route path="/compass/cases">
+        <CompassShell>
+          <CACaseList />
+        </CompassShell>
+      </Route>
+      <Route path="/compass/cases/new">
+        <CompassShell>
+          <CACaseNew />
+        </CompassShell>
+      </Route>
+      <Route path="/compass/cases/:id">
+        <CompassShell>
+          <CACaseDetail />
+        </CompassShell>
+      </Route>
+      <Route path="/compass/ai">
+        <CompassShell>
+          <AIAssistant />
         </CompassShell>
       </Route>
 

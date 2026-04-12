@@ -1471,3 +1471,16 @@
 - [x] Build React frontend: Acknowledgement UI with privacy model
 - [x] Migrate existing io_coaching data to new compass_coaching_logs schema (2005 logs, 28 dispute events)
 - [x] Write vitest tests for coaching CRUD and dispute procedures (35 tests, all passing)
+
+## Compass Overhaul — Phase 2 (CA Cases)
+- [x] Build CA Cases tRPC procedures: CRUD, lifecycle transitions (Incident→NTE→Response→Hearing→NOD→CAP→Active→Closed)
+- [x] Build attendance violation progression tracker (continuous, no cut-off, resets on CAP 1+ served)
+- [x] Build DOCX generation from legal templates (NTE, CAP 0-3, CAP w/o Explanation Letter)
+- [x] Build CA Cases React frontend: case list, detail view with timeline, new case form
+- [x] Wire signed document upload requirement before case advancement
+- [ ] Import existing violations from Google Sheet as historical CA cases
+
+## Compass Overhaul — Phase 3 (AI CAP Assistant)
+- [x] Build AI CAP Assistant backend: LLM advisory analyzing full employee history against GPHR Policy v3.0 (2 procedures: recommend + chat)
+- [x] Build AI CAP Assistant React frontend: conversational page with employee context panel and quick prompts
+- [x] Write vitest tests for CA and AI procedures (48 tests, all passing)
