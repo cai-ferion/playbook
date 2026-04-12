@@ -12,7 +12,6 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerIORoutes } from "../io-routes.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
-import { registerCompassRoutes } from "../compass-routes.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import performanceRouter from "../io-performance-routes.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
@@ -71,9 +70,6 @@ async function startServer() {
   registerIORoutes(app);
   registerIOBackupRoutes(app);
   app.use('/api/io/performance', performanceRouter);
-
-  // Compass module REST API (coaching, CA cases, disputes, AI assistant)
-  registerCompassRoutes(app);
 
   // Auto-mailer for UPL/LATE notifications
   registerAutoMailer(app);

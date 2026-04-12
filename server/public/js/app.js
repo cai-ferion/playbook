@@ -418,18 +418,8 @@ async function handleLogin() {
     const billingNav = document.getElementById('nav-billing');
     if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
-    // Compass — visible to ALL roles
-    const compassNav = document.getElementById('nav-group-compass');
-    if (compassNav) compassNav.style.display = '';
-    // CA Cases nav — hidden from Agents (they can only view their own records, not create)
-    const caNav = document.getElementById('nav-compass-ca');
-    if (caNav) caNav.style.display = (currentUser.actual_role !== 'Agent') ? '' : 'none';
-    // AI Assistant — visible to TL, Manager, SME, admin
-    const aiNav = document.getElementById('nav-compass-ai');
-    if (aiNav) aiNav.style.display = (['Team Lead', 'Manager', 'Operational SME'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
-
-    // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
-    ['nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
+    // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
+    ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
     });
@@ -576,16 +566,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const billingNav2 = document.getElementById('nav-billing');
       if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
-      // Compass — visible to ALL roles
-      const compassNav2 = document.getElementById('nav-group-compass');
-      if (compassNav2) compassNav2.style.display = '';
-      const caNav2 = document.getElementById('nav-compass-ca');
-      if (caNav2) caNav2.style.display = (currentUser.actual_role !== 'Agent') ? '' : 'none';
-      const aiNav2 = document.getElementById('nav-compass-ai');
-      if (aiNav2) aiNav2.style.display = (['Team Lead', 'Manager', 'Operational SME'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
-
-      // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
-      ['nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
+      // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
+      ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
       });
@@ -835,7 +817,7 @@ function updateRefreshDisplay() {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'sync-history', 'compass-dashboard', 'compass-coaching', 'compass-disputes', 'compass-ca', 'compass-ai', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'sync-history', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -852,7 +834,7 @@ async function switchView(view) {
     const anchorGroup = document.getElementById('nav-group-anchor');
     if (anchorGroup) anchorGroup.classList.add('expanded');
   }
-  const compassViews = ['compass-dashboard', 'compass-coaching', 'compass-disputes', 'compass-ca', 'compass-ai'];
+  const compassViews = ['compass-input', 'compass-disputes'];
   if (compassViews.includes(view)) {
     const compassGroup = document.getElementById('nav-group-compass');
     if (compassGroup) compassGroup.classList.add('expanded');
@@ -881,7 +863,7 @@ async function switchView(view) {
   const titles = {
     input: 'Input Portal', dashboard: 'Command Dashboard', alerts: 'Risk Intelligence',
     admin: 'Admin Tools', billing: 'Billing Compliance', 'sync-history': 'Sync History',
-    'compass-dashboard': 'Compass Dashboard', 'compass-coaching': 'Coaching Logs', 'compass-disputes': 'QA Disputes', 'compass-ca': 'CA Cases', 'compass-ai': 'AI Assistant',
+    'compass-input': 'Coaching Profile', 'compass-disputes': 'Disputes Area',
     'sandbox-input': 'Input Portal', 'sandbox-review': 'Review Area', 'sandbox-analytics': 'Analytics',
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
     'helm-board': 'Task Board', 'helm-analytics': 'Analytics',
@@ -905,11 +887,8 @@ async function switchView(view) {
   if (view === 'billing') await initBillingCompliance();
   if (view === 'performance') { if (typeof initPerformance === 'function') await initPerformance(); }
   if (view === 'admin') { if (typeof onAdminViewLoad === 'function') onAdminViewLoad(); }
-  if (view === 'compass-dashboard') { if (typeof initCompassDashboard === 'function') initCompassDashboard(); }
-  if (view === 'compass-coaching') { if (typeof initCompassCoaching === 'function') initCompassCoaching(); }
-  if (view === 'compass-disputes') { if (typeof initCompassDisputesView === 'function') initCompassDisputesView(); }
-  if (view === 'compass-ca') { if (typeof initCompassCaCases === 'function') initCompassCaCases(); }
-  if (view === 'compass-ai') { if (typeof initCompassAiAssistant === 'function') initCompassAiAssistant(); }
+  if (view === 'compass-input') { if (typeof initCompass === 'function') initCompass(); }
+  if (view === 'compass-disputes') { if (typeof initCompassDisputes === 'function') initCompassDisputes(); }
   if (sandboxViews.includes(view)) { if (typeof initSandbox === 'function') initSandbox(view); }
   if (havenViews.includes(view)) { if (typeof initHaven === 'function') initHaven(view); }
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }

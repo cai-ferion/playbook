@@ -1524,3 +1524,14 @@
 
 ### Script Tags
 - [x] Replace old compass.js and compass-omnibar.js script tags with 5 new JS files
+
+## Bug Fix — Published Site Blank Page
+- [ ] Fix: Compass section loads but sub-pages (Dashboard, Coaching, Disputes, CA Cases, AI Assistant) render blank content on published site
+
+## Revert Compass to Original State (User Request)
+- [x] Revert sidebar nav: restore old 2 Compass items (Coaching Profile, Disputes Area)
+- [x] Revert view containers: restore old compass-input and compass-disputes views
+- [x] Revert script tags: restore old compass.js and compass-omnibar.js
+- [x] Revert switchView function: remove 5 new compass cases, restore old 2
+- [x] Revert role-based visibility: restore original compass nav visibility logic
+- [x] Remove compass-routes.ts registration from Express server

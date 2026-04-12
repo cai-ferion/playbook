@@ -140,25 +140,13 @@
             <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="nav-group-items" id="nav-group-items-compass">
-            <button class="nav-item" data-view="compass-dashboard" onclick="switchView('compass-dashboard')" id="nav-compass-dashboard">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              Dashboard
-            </button>
-            <button class="nav-item" data-view="compass-coaching" onclick="switchView('compass-coaching')" id="nav-compass-coaching">
+            <button class="nav-item" data-view="compass-input" onclick="switchView('compass-input')" id="nav-compass-input">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M12 11a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M17 18.5c0-1.4-2.2-2.5-5-2.5s-5 1.1-5 2.5"/></svg>
-              Coaching Logs
+              Coaching Profile
             </button>
             <button class="nav-item" data-view="compass-disputes" onclick="switchView('compass-disputes')" id="nav-compass-disputes">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              QA Disputes
-            </button>
-            <button class="nav-item" data-view="compass-ca" onclick="switchView('compass-ca')" id="nav-compass-ca">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              CA Cases
-            </button>
-            <button class="nav-item" data-view="compass-ai" onclick="switchView('compass-ai')" id="nav-compass-ai">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1.27A7 7 0 0 1 14 22h-4a7 7 0 0 1-6.73-3H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
-              AI Assistant
+              Disputes Area
             </button>
           </div>
         </div>
@@ -856,132 +844,137 @@
         </div>
       </div>
 
-      <!-- ===== View 6a: Compass Dashboard ===== -->
-      <div class="view-container view-hidden" id="view-compass-dashboard">
+      <!-- ===== View 6a: Compass Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-compass-input">
         <div class="module-page">
-          <div class="loading-overlay" id="compass-dash-loading" style="display:none;">
-            <div class="spinner"></div>
-            <div class="loading-text">Loading Dashboard...</div>
-          </div>
-          <div id="compass-dash-content"></div>
-        </div>
-      </div>
 
-      <!-- ===== View 6b: Compass Coaching Logs ===== -->
-      <div class="view-container view-hidden" id="view-compass-coaching">
-        <div class="module-page">
-          <div class="loading-overlay" id="compass-coaching-loading" style="display:none;">
+          <div class="loading-overlay" id="compass-loading" style="display:none;">
             <div class="spinner"></div>
             <div class="loading-text">Loading Coaching Logs...</div>
           </div>
-          <div id="compass-coaching-content"></div>
-          <!-- Coaching Detail Overlay -->
-          <div class="module-form-overlay" id="compass-coaching-detail-overlay" style="display:none;">
-            <div class="module-form-panel">
-              <div class="module-form-header">
-                <h3 id="compass-coaching-detail-title">Coaching Log</h3>
-                <button class="module-form-close" onclick="compassCoachingCloseDetail()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+
+          <div id="compass-content" style="display:none;">
+          <!-- Compass Omnibar -->
+          <div class="omnibar" id="compass-omnibar">
+            <div class="omnibar-top" style="flex-wrap:nowrap;">
+              <button class="btn btn-primary btn-sm" id="compass-new-btn" onclick="compassShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+              </button>
+              <div class="omnibar-chips" id="compass-omnibar-chips" style="flex:1;min-width:0;"></div>
+              <div class="omnibar-actions" style="flex-shrink:0;">
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();compassOmnibarOpenMenu('filter')" title="Add Filter">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  Add Filter
+                </button>
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();compassOmnibarOpenMenu('sort')" title="Add Sort">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  Add Sort
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="compassOmnibarClearAll()" title="Clear All">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
                 </button>
               </div>
-              <div class="module-form-body" id="compass-coaching-detail-body"></div>
-              <div class="module-form-footer" id="compass-coaching-detail-footer"></div>
+              <span class="omnibar-meta" style="flex-shrink:0;font-size:12px;color:var(--fg-muted);">Filtered: <strong id="compass-filtered-count" style="color:var(--fg);">0</strong></span>
+            </div>
+            <div class="omnibar-menu" id="compass-omnibar-menu" style="display:none;"></div>
+          </div>
+          <!-- Hidden filters kept for backward compatibility -->
+          <select class="form-select" id="compass-filter-type" style="display:none;"><option value="All">All Types</option></select>
+          <select class="form-select" id="compass-filter-status" style="display:none;"><option value="All">All Statuses</option></select>
+          <!-- Side-by-side tables: Coaching Given & Coaching Received -->
+          <div class="compass-dual-tables" id="compass-dual-tables">
+            <div class="compass-table-panel">
+              <div class="compass-table-panel-header">
+                <span class="compass-table-panel-title">Coaching Given</span>
+                <span class="compass-table-panel-count"><strong id="compass-given-count">0</strong> records</span>
+              </div>
+              <div class="compass-given-tabs" id="compass-given-tabs">
+                <button class="compass-given-tab active" data-tab="all" onclick="compassSwitchGivenTab('all')">All</button>
+                <button class="compass-given-tab" data-tab="unacknowledged" onclick="compassSwitchGivenTab('unacknowledged')">Unacknowledged <span id="compass-unack-count" class="compass-tab-badge">0</span></button>
+                <button class="compass-given-tab" data-tab="acknowledged" onclick="compassSwitchGivenTab('acknowledged')">Acknowledged <span id="compass-ack-count" class="compass-tab-badge">0</span></button>
+              </div>
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="compass-table-given">
+                  <thead id="compass-table-given-head"></thead>
+                  <tbody id="compass-table-given-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="compass-pagination-given"></div>
+            </div>
+            <div class="compass-table-panel">
+              <div class="compass-table-panel-header">
+                <span class="compass-table-panel-title">Coaching Received</span>
+                <span class="compass-table-panel-count"><strong id="compass-received-count">0</strong> records</span>
+              </div>
+              <div class="compass-given-tabs" id="compass-received-tabs">
+                <button class="compass-given-tab active" data-tab="all" onclick="compassSwitchReceivedTab('all')">All</button>
+                <button class="compass-given-tab" data-tab="unacknowledged" onclick="compassSwitchReceivedTab('unacknowledged')">Unacknowledged <span id="compass-recv-unack-count" class="compass-tab-badge">0</span></button>
+                <button class="compass-given-tab" data-tab="acknowledged" onclick="compassSwitchReceivedTab('acknowledged')">Acknowledged <span id="compass-recv-ack-count" class="compass-tab-badge">0</span></button>
+              </div>
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="compass-table-received">
+                  <thead id="compass-table-received-head"></thead>
+                  <tbody id="compass-table-received-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="compass-pagination-received"></div>
             </div>
           </div>
-          <!-- Coaching New/Edit Form Overlay -->
-          <div class="module-form-overlay" id="compass-coaching-form-overlay" style="display:none;">
+          </div><!-- end compass-content -->
+
+          <!-- New/Edit Form (hidden by default) -->
+          <div class="module-form-overlay" id="compass-form-overlay" style="display:none;">
             <div class="module-form-panel">
               <div class="module-form-header">
-                <h3 id="compass-coaching-form-title">New Coaching Log</h3>
-                <button class="module-form-close" onclick="compassCoachingCloseForm()">
+                <h3 id="compass-form-title">New Coaching Log</h3>
+                <button class="module-form-close" onclick="compassCloseForm()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="module-form-body" id="compass-coaching-form-body"></div>
-              <div class="module-form-footer" id="compass-coaching-form-footer"></div>
+              <div class="module-form-body" id="compass-form-body"></div>
+              <div class="module-form-footer" id="compass-form-footer"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ===== View 6c: Compass QA Disputes ===== -->
+      <!-- ===== View 6b: Compass Disputes Area ===== -->
       <div class="view-container view-hidden" id="view-compass-disputes">
         <div class="module-page">
+          <div class="module-header" style="display:none;"></div>
           <div class="loading-overlay" id="compass-disputes-loading" style="display:none;">
             <div class="spinner"></div>
             <div class="loading-text">Loading Disputes...</div>
           </div>
-          <div id="compass-disputes-content"></div>
-          <!-- Disputes Detail Overlay -->
-          <div class="module-form-overlay" id="compass-disputes-detail-overlay" style="display:none;">
+          <div id="compass-kanban-board" class="kanban-board"></div>
+          <!-- Disputes Detail Overlay (opens within Disputes Area, not Coaching Profile) -->
+          <div class="module-form-overlay" id="disputes-detail-overlay" style="display:none;">
             <div class="module-form-panel">
               <div class="module-form-header">
-                <h3 id="compass-disputes-detail-title">QA Dispute</h3>
-                <button class="module-form-close" onclick="compassDisputesCloseDetail()">
+                <h3 id="disputes-detail-title">Coaching Log</h3>
+                <button class="module-form-close" onclick="disputesCloseDetail()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="module-form-body" id="compass-disputes-detail-body"></div>
-              <div class="module-form-footer" id="compass-disputes-detail-footer"></div>
+              <div class="module-form-body" id="disputes-detail-body"></div>
+              <div class="module-form-footer" id="disputes-detail-footer"></div>
             </div>
           </div>
-          <!-- Disputes Action Overlay -->
-          <div class="module-form-overlay" id="compass-disputes-action-overlay" style="display:none;z-index:1100;">
+          <!-- Disputes Action Popout (on top of detail overlay) -->
+          <div class="module-form-overlay" id="disputes-action-overlay" style="display:none;z-index:1100;">
             <div class="module-form-panel" style="max-width:480px;">
               <div class="module-form-header">
-                <h3 id="compass-disputes-action-title">Action</h3>
-                <button class="module-form-close" onclick="compassDisputesCloseAction()">
+                <h3 id="disputes-action-title">Action</h3>
+                <button class="module-form-close" onclick="disputesCloseAction()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="module-form-body" id="compass-disputes-action-body"></div>
-              <div class="module-form-footer" id="compass-disputes-action-footer"></div>
+              <div class="module-form-body" id="disputes-action-body"></div>
+              <div class="module-form-footer" id="disputes-action-footer"></div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- ===== View 6d: Compass CA Cases ===== -->
-      <div class="view-container view-hidden" id="view-compass-ca">
-        <div class="module-page">
-          <div class="loading-overlay" id="compass-ca-loading" style="display:none;">
-            <div class="spinner"></div>
-            <div class="loading-text">Loading CA Cases...</div>
-          </div>
-          <div id="compass-ca-content"></div>
-          <!-- CA Case Detail Overlay -->
-          <div class="module-form-overlay" id="compass-ca-detail-overlay" style="display:none;">
-            <div class="module-form-panel">
-              <div class="module-form-header">
-                <h3 id="compass-ca-detail-title">CA Case</h3>
-                <button class="module-form-close" onclick="compassCaCloseDetail()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="module-form-body" id="compass-ca-detail-body"></div>
-              <div class="module-form-footer" id="compass-ca-detail-footer"></div>
-            </div>
-          </div>
-          <!-- CA Case New/Edit Form Overlay -->
-          <div class="module-form-overlay" id="compass-ca-form-overlay" style="display:none;">
-            <div class="module-form-panel">
-              <div class="module-form-header">
-                <h3 id="compass-ca-form-title">New CA Case</h3>
-                <button class="module-form-close" onclick="compassCaCloseForm()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="module-form-body" id="compass-ca-form-body"></div>
-              <div class="module-form-footer" id="compass-ca-form-footer"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== View 6e: Compass AI Assistant ===== -->
-      <div class="view-container view-hidden" id="view-compass-ai">
-        <div class="module-page">
-          <div id="compass-ai-content"></div>
         </div>
       </div>
 
@@ -1465,11 +1458,8 @@
   <script src="js/billing-v2.js?v=122"></script>
 
   <script src="js/performance.js?v=102g"></script>
-  <script src="js/compass-dashboard.js?v=200"></script>
-  <script src="js/compass-coaching.js?v=200"></script>
-  <script src="js/compass-disputes-v2.js?v=200"></script>
-  <script src="js/compass-ca-cases.js?v=200"></script>
-  <script src="js/compass-ai-assistant.js?v=200"></script>
+  <script src="js/compass.js?v=102g"></script>
+  <script src="js/compass-omnibar.js?v=102g"></script>
   <script src="js/sandbox.js?v=102g"></script>
   <script src="js/haven.js?v=102g"></script>
   <script src="js/helm.js?v=111"></script>
