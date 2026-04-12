@@ -840,44 +840,8 @@ async function compassOpenDetail(coachingId) {
       footerHtml += ' <button class="btn btn-primary btn-sm" id="compass-ack-trigger-btn" onclick="compassShowAckForm()">Acknowledge</button>';
     }
 
-    // SME actions on QA Feedback
-    if (role === 'SME' || isAdmin) {
-      if (log.status === 'Pending SME Review') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Accepted\')"  >Accept Markdown</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'Markdown Disputed\')"  >Dispute Markdown</button>';
-      }
-      if (log.status === 'Markdown Retained - QA') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'QA Decision Accepted\')"  >Accept Decision</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'QA Decision Rejected\')"  >Reject Decision</button>';
-      }
-      if (log.status === 'Markdown Retained - Trainer') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Trainer Decision Accepted\')"  >Accept Decision</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="compassDisputeAction(\'Trainer Decision Rejected\')"  >Reject Decision</button>';
-      }
-    }
-
-    // QA actions
-    if (role === 'QA' || isAdmin) {
-      if (log.status === 'Markdown Disputed') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - QA\')">Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - QA\')">Retain Markdown</button>';
-      }
-    }
-
-    // Trainer actions
-    if (role === 'Trainer' || isAdmin) {
-      if (log.status === 'QA Decision Rejected') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="compassDisputeAction(\'Markdown Reversed - Trainer\')"  >Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="compassDisputeAction(\'Markdown Retained - Trainer\')"  >Retain Markdown</button>';
-      }
-    }
-
-    // QTP Manager actions
-    if (role === 'Manager' || isAdmin) {
-      if (log.status === 'Trainer Decision Rejected') {
-        footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV6ReverseMarkdown()">Reverse Markdown</button>';
-        footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV6RetainMarkdown()">Retain Markdown</button>';   }
-    }
+    // Dispute action buttons removed from Coaching Profile.
+    // QA Feedback dispute workflow is handled exclusively in the Disputes Area (disputesOpenDetail).
   }
 
   formFooter.innerHTML = footerHtml;

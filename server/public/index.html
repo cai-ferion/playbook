@@ -854,31 +854,18 @@
           </div>
 
           <div id="compass-content" style="display:none;">
-          <!-- Compass Omnibar -->
-          <div class="omnibar" id="compass-omnibar">
-            <div class="omnibar-top" style="flex-wrap:nowrap;">
-              <button class="btn btn-primary btn-sm" id="compass-new-btn" onclick="compassShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add
-              </button>
-              <div class="omnibar-chips" id="compass-omnibar-chips" style="flex:1;min-width:0;"></div>
-              <div class="omnibar-actions" style="flex-shrink:0;">
-                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();compassOmnibarOpenMenu('filter')" title="Add Filter">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                  Add Filter
-                </button>
-                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();compassOmnibarOpenMenu('sort')" title="Add Sort">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-                  Add Sort
-                </button>
-                <button class="btn btn-ghost btn-sm" onclick="compassOmnibarClearAll()" title="Clear All">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Clear
-                </button>
-              </div>
-              <span class="omnibar-meta" style="flex-shrink:0;font-size:12px;color:var(--fg-muted);">Filtered: <strong id="compass-filtered-count" style="color:var(--fg);">0</strong></span>
+          <!-- Compass Toolbar: Add button -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <button class="btn btn-primary btn-sm" id="compass-new-btn" onclick="compassShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
+          </div>
+          <!-- Compass Filter Bar (Input Portal style) -->
+          <div class="filter-bar" id="compass-filter-bar">
+            <div class="filter-bar-row" id="compass-filter-pills">
+              <!-- Pills rendered by compass-omnibar.js -->
             </div>
-            <div class="omnibar-menu" id="compass-omnibar-menu" style="display:none;"></div>
           </div>
           <!-- Hidden filters kept for backward compatibility -->
           <select class="form-select" id="compass-filter-type" style="display:none;"><option value="All">All Types</option></select>

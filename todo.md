@@ -1542,3 +1542,9 @@
 - [x] Generate discrepancy report for user review
 - [x] Clean up Compass-related tables and data from database (5 tables dropped, schema definitions kept)
 - [x] Apply 80 field corrections from Google Sheet to io_employees database (51 UPDATE statements, all verified)
+
+## Revisions — April 13
+- [x] Fix SRT ID scientific notation formatting in io_employees (402 records updated, 0 remaining)
+- [x] Update blank dispute statuses to "Pending SME Review" in io_coaching (44 QA Feedback records updated)
+- [x] Remove Reverse Markdown / Retain Markdown buttons from QA Feedback coaching logs in Coaching Profile
+- [x] Copy Input Portal filtering style (persistent pill-based filter bar) to Coaching Profile

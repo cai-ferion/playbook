@@ -1,392 +1,433 @@
 /**
- * Compass Omnibar — chip-based filter/sort builder for Coaching Profile
- * Mirrors the Input Portal omnibar pattern but operates on COMPASS.logs
+ * Compass Filter Bar — persistent pill-based filter/sort for Coaching Profile
+ * Mirrors the Input Portal filter-bar pattern (filter-bar.css) but operates on COMPASS.logs
  */
 
 (function () {
   'use strict';
 
+  // ===== Filter field definitions =====
+  const COMPASS_PILL_FIELDS = [
+    { key: 'date_range', label: 'Date', type: 'date_range', sortable: true },
+    { key: 'type', label: 'Type', type: 'multi', recordKey: 'coaching_type', searchable: false, sortable: true },
+    { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
+    { key: 'coach', label: 'Coach', type: 'multi', recordKey: 'coach', searchable: true, sortable: true },
+    { key: 'coachee', label: 'Coachee', type: 'multi', recordKey: 'coachee', searchable: true, sortable: true },
+    { key: 'sessionGoal', label: 'Session Goal', type: 'multi', recordKey: 'session_goal', searchable: true, sortable: false, isMultiValue: true },
+  ];
+
+  const COMPASS_PILL_SORT_FIELDS = [
+    { key: 'date_range', label: 'Date', recordKey: 'coaching_date' },
+    { key: 'type', label: 'Type', recordKey: 'coaching_type' },
+    { key: 'coach', label: 'Coach', recordKey: 'coach' },
+    { key: 'coachee', label: 'Coachee', recordKey: 'coachee' },
+  ];
+
   // ===== State =====
-  const COMPASS_OMNI = {
-    filters: [],   // { field, operator, value, label }
-    sorts: [],     // { field, direction, label }
-    menuType: null, // 'filter' | 'sort' | null
-    menuStep: null, // 'field' | 'value'
-    pendingField: null,
-    outsideHandler: null,
+  const compassPillState = {
+    filters: {},
+    sort: { key: 'date_range', direction: 'desc', recordKey: 'coaching_date' },
+    openPill: null,
   };
 
-  // ===== Filter definitions =====
-  const COMPASS_FILTER_FIELDS = [
-    { key: 'dateRange',  label: 'Date Range',   type: 'dateRange' },
-    { key: 'type',       label: 'Type',         type: 'select', options: () => [...new Set(COMPASS.logs.map(l => l.coaching_type).filter(Boolean))].sort() },
-    { key: 'status',     label: 'Status',       type: 'select', options: () => [...new Set(COMPASS.logs.map(l => l.status).filter(Boolean))].sort() },
-    { key: 'coach',      label: 'Coach',        type: 'select', options: () => [...new Set(COMPASS.logs.map(l => l.coach).filter(Boolean))].sort() },
-    { key: 'coachee',    label: 'Coachee',      type: 'select', options: () => [...new Set(COMPASS.logs.map(l => l.coachee).filter(Boolean))].sort() },
-    { key: 'sessionGoal',label: 'Session Goal',  type: 'multi',  options: () => {
-      const goals = new Set();
-      COMPASS.logs.forEach(l => { if (l.session_goal) l.session_goal.split(',').forEach(g => { const t = g.trim(); if (t) goals.add(t); }); });
-      return [...goals].sort();
-    }},
-    { key: 'search',     label: 'Search',       type: 'text' },
-  ];
+  let _compassOutsideListener = null;
+  let _compassApplyDebounce = null;
 
-  const COMPASS_SORT_FIELDS = [
-    { key: 'coaching_date', label: 'Date' },
-    { key: 'coaching_type', label: 'Type' },
-    { key: 'coach',         label: 'Coach' },
-    { key: 'coachee',       label: 'Coachee' },
-    { key: 'status',        label: 'Status' },
-  ];
+  // ===== Helpers =====
 
-  // ===== Menu open/close =====
-
-  function compassOmnibarOpenMenu(type) {
-    COMPASS_OMNI.menuType = type;
-    COMPASS_OMNI.menuStep = 'field';
-    COMPASS_OMNI.pendingField = null;
-    renderMenu();
-
-    // Deferred outside-click listener
-    if (COMPASS_OMNI.outsideHandler) {
-      document.removeEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
-    }
-    setTimeout(() => {
-      COMPASS_OMNI.outsideHandler = function (e) {
-        const menu = document.getElementById('compass-omnibar-menu');
-        if (menu && !menu.contains(e.target)) {
-          compassOmnibarCloseMenu();
-        }
-      };
-      document.addEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
-    }, 10);
-  }
-
-  function compassOmnibarCloseMenu() {
-    const menu = document.getElementById('compass-omnibar-menu');
-    if (menu) menu.style.display = 'none';
-    COMPASS_OMNI.menuType = null;
-    COMPASS_OMNI.menuStep = null;
-    COMPASS_OMNI.pendingField = null;
-    if (COMPASS_OMNI.outsideHandler) {
-      document.removeEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
-      COMPASS_OMNI.outsideHandler = null;
-    }
-  }
-
-  // ===== Menu rendering =====
-
-  function renderMenu() {
-    const menu = document.getElementById('compass-omnibar-menu');
-    if (!menu) return;
-
-    if (COMPASS_OMNI.menuType === 'filter' && COMPASS_OMNI.menuStep === 'field') {
-      // Show available filter fields (exclude already-active ones, except multi/text which can repeat)
-      const activeKeys = new Set(COMPASS_OMNI.filters.map(f => f.field));
-      const available = COMPASS_FILTER_FIELDS.filter(f => !activeKeys.has(f.key) || f.type === 'multi' || f.type === 'text');
-      menu.innerHTML = '<div class="omnibar-menu-title">Add Filter</div>' +
-        available.map(f => `<button class="omnibar-menu-item" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarSelectFilterField('${f.key}')">${escapeHtml(f.label)}</button>`).join('');
-      menu.style.display = 'block';
-    } else if (COMPASS_OMNI.menuType === 'filter' && COMPASS_OMNI.menuStep === 'value') {
-      renderFilterValueMenu();
-    } else if (COMPASS_OMNI.menuType === 'sort') {
-      const activeKeys = new Set(COMPASS_OMNI.sorts.map(s => s.field));
-      const available = COMPASS_SORT_FIELDS.filter(s => !activeKeys.has(s.key));
-      menu.innerHTML = '<div class="omnibar-menu-title">Add Sort</div>' +
-        available.map(s => `
-          <button class="omnibar-menu-item" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarAddSort('${s.key}','asc')">
-            ${escapeHtml(s.label)} ↑ Ascending
-          </button>
-          <button class="omnibar-menu-item" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarAddSort('${s.key}','desc')">
-            ${escapeHtml(s.label)} ↓ Descending
-          </button>
-        `).join('');
-      menu.style.display = 'block';
-    }
-  }
-
-  function renderFilterValueMenu() {
-    const menu = document.getElementById('compass-omnibar-menu');
-    if (!menu) return;
-    const fieldDef = COMPASS_FILTER_FIELDS.find(f => f.key === COMPASS_OMNI.pendingField);
-    if (!fieldDef) { compassOmnibarCloseMenu(); return; }
-
-    if (fieldDef.type === 'dateRange') {
-      menu.innerHTML = `
-        <div class="omnibar-menu-title">Date Range</div>
-        <div class="omnibar-date-picker">
-          <div class="filter-group">
-            <label class="filter-label">Start:</label>
-            <input type="date" class="form-input form-input-sm" id="compass-omni-date-start">
-          </div>
-          <div class="filter-group">
-            <label class="filter-label">End:</label>
-            <input type="date" class="form-input form-input-sm" id="compass-omni-date-end">
-          </div>
-          <button class="btn btn-primary btn-sm" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarAddDateRange()">Add</button>
-        </div>`;
-      menu.style.display = 'block';
-    } else if (fieldDef.type === 'select') {
-      const options = fieldDef.options();
-      menu.innerHTML = `
-        <div class="omnibar-menu-title">${escapeHtml(fieldDef.label)}</div>
-        <div style="padding:4px 8px;"><input type="text" class="form-input form-input-sm" placeholder="Search..." oninput="compassOmnibarFilterMenuItems(this)" style="width:100%;"></div>
-        <div class="omnibar-menu-scroll" style="max-height:220px;overflow-y:auto;">
-          ${options.map(o => `<button class="omnibar-menu-item" data-search="${escapeAttr(o.toLowerCase())}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarAddSelectFilter('${escapeAttr(COMPASS_OMNI.pendingField)}','${escapeAttr(o)}')">${escapeHtml(o)}</button>`).join('')}
-        </div>`;
-      menu.style.display = 'block';
-    } else if (fieldDef.type === 'multi') {
-      const options = fieldDef.options();
-      menu.innerHTML = `
-        <div class="omnibar-menu-title">${escapeHtml(fieldDef.label)}</div>
-        <div style="padding:4px 8px;"><input type="text" class="form-input form-input-sm" placeholder="Search..." oninput="compassOmnibarFilterMenuItems(this)" style="width:100%;"></div>
-        <div class="omnibar-menu-scroll" style="max-height:220px;overflow-y:auto;">
-          ${options.map(o => `<label class="omnibar-menu-check" data-search="${escapeAttr(o.toLowerCase())}" style="display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;cursor:pointer;">
-            <input type="checkbox" value="${escapeAttr(o)}"> ${escapeHtml(o)}
-          </label>`).join('')}
-        </div>
-        <div style="padding:6px 8px;border-top:1px solid var(--border-default);">
-          <button class="btn btn-primary btn-xs" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarAddMultiFilter()">Add Selected</button>
-        </div>`;
-      menu.style.display = 'block';
-    } else if (fieldDef.type === 'text') {
-      menu.innerHTML = `
-        <div class="omnibar-menu-title">Search</div>
-        <div style="padding:8px 12px;display:flex;gap:6px;">
-          <input type="text" id="compass-omni-search-input" class="form-input form-input-sm" placeholder="Type keyword..." style="flex:1;">
-          <button class="btn btn-primary btn-xs" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();compassOmnibarAddTextFilter()">Add</button>
-        </div>`;
-      menu.style.display = 'block';
-    }
-  }
-
-  // ===== Filter/Sort add handlers =====
-
-  window.compassOmnibarSelectFilterField = function (key) {
-    COMPASS_OMNI.pendingField = key;
-    COMPASS_OMNI.menuStep = 'value';
-    renderMenu();
-  };
-
-  window.compassOmnibarAddDateRange = function () {
-    const start = document.getElementById('compass-omni-date-start')?.value || '';
-    const end = document.getElementById('compass-omni-date-end')?.value || '';
-    if (!start && !end) return;
-    // Remove existing dateRange filter
-    COMPASS_OMNI.filters = COMPASS_OMNI.filters.filter(f => f.field !== 'dateRange');
-    const label = start && end ? `${start} → ${end}` : start ? `From ${start}` : `Until ${end}`;
-    COMPASS_OMNI.filters.push({ field: 'dateRange', value: { start, end }, label: `Date: ${label}` });
-    compassOmnibarCloseMenu();
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarAddSelectFilter = function (field, value) {
-    // Remove existing filter for this field
-    COMPASS_OMNI.filters = COMPASS_OMNI.filters.filter(f => f.field !== field);
-    const fieldDef = COMPASS_FILTER_FIELDS.find(f => f.key === field);
-    COMPASS_OMNI.filters.push({ field, value, label: `${fieldDef?.label || field}: ${value}` });
-    compassOmnibarCloseMenu();
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarAddMultiFilter = function () {
-    const menu = document.getElementById('compass-omnibar-menu');
-    if (!menu) return;
-    const checked = menu.querySelectorAll('.omnibar-menu-check input:checked');
-    const values = Array.from(checked).map(cb => cb.value);
-    if (values.length === 0) return;
-    const field = COMPASS_OMNI.pendingField;
-    // Remove existing filter for this field
-    COMPASS_OMNI.filters = COMPASS_OMNI.filters.filter(f => f.field !== field);
-    const fieldDef = COMPASS_FILTER_FIELDS.find(f => f.key === field);
-    const label = values.length <= 2 ? values.join(', ') : `${values.length} selected`;
-    COMPASS_OMNI.filters.push({ field, value: values, label: `${fieldDef?.label || field}: ${label}` });
-    compassOmnibarCloseMenu();
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarAddTextFilter = function () {
-    const input = document.getElementById('compass-omni-search-input');
-    const val = (input?.value || '').trim();
-    if (!val) return;
-    // Remove existing search filter
-    COMPASS_OMNI.filters = COMPASS_OMNI.filters.filter(f => f.field !== 'search');
-    COMPASS_OMNI.filters.push({ field: 'search', value: val, label: `Search: "${val}"` });
-    compassOmnibarCloseMenu();
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarAddSort = function (field, direction) {
-    COMPASS_OMNI.sorts = COMPASS_OMNI.sorts.filter(s => s.field !== field);
-    const fieldDef = COMPASS_SORT_FIELDS.find(f => f.key === field);
-    COMPASS_OMNI.sorts.push({ field, direction, label: `${fieldDef?.label || field} ${direction === 'asc' ? '↑' : '↓'}` });
-    compassOmnibarCloseMenu();
-    compassOmnibarApply();
-  };
-
-  // ===== Remove chip =====
-
-  window.compassOmnibarRemoveFilter = function (idx) {
-    COMPASS_OMNI.filters.splice(idx, 1);
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarEditSort = function (idx) {
-    const sort = COMPASS_OMNI.sorts[idx];
-    if (!sort) return;
-    sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
-    const fieldDef = COMPASS_SORT_FIELDS.find(f => f.key === sort.field);
-    sort.label = `${fieldDef?.label || sort.field} ${sort.direction === 'asc' ? '\u2191' : '\u2193'}`;
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarRemoveSort = function (idx) {
-    COMPASS_OMNI.sorts.splice(idx, 1);
-    compassOmnibarApply();
-  };
-
-  window.compassOmnibarClearAll = function () {
-    COMPASS_OMNI.filters = [];
-    COMPASS_OMNI.sorts = [];
-    compassOmnibarCloseMenu();
-    compassOmnibarApply();
-  };
-
-  // ===== Search helper for menu items =====
-
-  window.compassOmnibarFilterMenuItems = function (input) {
-    const query = (input.value || '').toLowerCase().trim();
-    const container = input.closest('.omnibar-menu');
-    if (!container) return;
-    const items = container.querySelectorAll('.omnibar-menu-item[data-search], .omnibar-menu-check[data-search]');
-    items.forEach(el => {
-      el.style.display = (el.dataset.search || '').includes(query) ? '' : 'none';
-    });
-  };
-
-  // ===== Render chips =====
-
-  window.compassOmnibarEditFilter = function (idx) {
-    const f = COMPASS_OMNI.filters[idx];
-    if (!f) return;
-    const fieldDef = COMPASS_FILTER_FIELDS.find(fd => fd.key === f.field);
-    if (!fieldDef) return;
-    COMPASS_OMNI.pendingField = f.field;
-    COMPASS_OMNI.menuType = 'filter';
-    COMPASS_OMNI.menuStep = 'value';
-    COMPASS_OMNI._editingIdx = idx;
-    renderMenu();
-    if (COMPASS_OMNI.outsideHandler) {
-      document.removeEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
-    }
-    setTimeout(() => {
-      COMPASS_OMNI.outsideHandler = function (e) {
-        const menu = document.getElementById('compass-omnibar-menu');
-        if (menu && !menu.contains(e.target)) compassOmnibarCloseMenu();
-      };
-      document.addEventListener('mousedown', COMPASS_OMNI.outsideHandler, true);
-    }, 10);
-    setTimeout(() => {
-      if (fieldDef.type === 'dateRange' && f.value) {
-        const startEl = document.getElementById('compass-omni-date-start');
-        const endEl = document.getElementById('compass-omni-date-end');
-        if (startEl) startEl.value = f.value.start || '';
-        if (endEl) endEl.value = f.value.end || '';
-      } else if (fieldDef.type === 'multi' && Array.isArray(f.value)) {
-        const checkboxes = document.querySelectorAll('.omnibar-menu-check input[type="checkbox"]');
-        checkboxes.forEach(cb => { if (f.value.includes(cb.value)) cb.checked = true; });
+  function compassGetAllValues(field) {
+    if (!window.COMPASS || !COMPASS.logs) return [];
+    const vals = new Set();
+    COMPASS.logs.forEach(l => {
+      if (field.isMultiValue) {
+        const raw = l[field.recordKey];
+        if (raw) raw.split(',').forEach(g => { const t = g.trim(); if (t) vals.add(t); });
+      } else {
+        const v = l[field.recordKey];
+        if (v) vals.add(v);
       }
-    }, 60);
-  };
+    });
+    return [...vals].sort();
+  }
 
-  function renderChips() {
-    const container = document.getElementById('compass-omnibar-chips');
+  function compassGetFilterSummary(field) {
+    const f = compassPillState.filters[field.key];
+    if (!f) {
+      if (field.type === 'date_range') return 'All';
+      return 'All';
+    }
+    if (field.type === 'date_range') {
+      return (f.startDate || '?') + ' — ' + (f.endDate || '?');
+    }
+    const allValues = compassGetAllValues(field);
+    if (!f.values || f.values.length === 0) return 'None';
+    if (f.values.length === allValues.length) return 'All';
+    if (f.values.length === 1) return f.values[0];
+    return f.values.length + ' selected';
+  }
+
+  function compassIsFiltered(field) {
+    const f = compassPillState.filters[field.key];
+    if (!f) return false;
+    if (field.type === 'date_range') return true;
+    const allValues = compassGetAllValues(field);
+    return f.values && f.values.length > 0 && f.values.length < allValues.length;
+  }
+
+  // ===== Render pills =====
+
+  function compassRenderFilterBar() {
+    const container = document.getElementById('compass-filter-pills');
     if (!container) return;
+
     let html = '';
 
-    COMPASS_OMNI.filters.forEach((f, i) => {
-      html += `<span class="omnibar-chip omnibar-chip-filter">
-        <span class="omnibar-chip-label chip-text-editable" onclick="compassOmnibarEditFilter(${i})" title="Click to edit">${escapeHtml(f.label)}</span>
-        <button class="omnibar-chip-remove" onclick="compassOmnibarRemoveFilter(${i})">&times;</button>
-      </span>`;
-    });
+    for (let fi = 0; fi < COMPASS_PILL_FIELDS.length; fi++) {
+      const field = COMPASS_PILL_FIELDS[fi];
+      const summary = compassGetFilterSummary(field);
+      const isActive = compassIsFiltered(field);
+      const hasSort = compassPillState.sort && compassPillState.sort.key === field.key;
+      const isOpen = compassPillState.openPill === field.key;
 
-    COMPASS_OMNI.sorts.forEach((s, i) => {
-      html += `<span class="omnibar-chip omnibar-chip-sort">
-        <span class="omnibar-chip-label chip-text-editable" onclick="compassOmnibarEditSort(${i})" title="Click to toggle direction">${escapeHtml(s.label)}</span>
-        <button class="omnibar-chip-remove" onclick="compassOmnibarRemoveSort(${i})">&times;</button>
-      </span>`;
-    });
+      let pillClass = 'filter-pill';
+      if (isActive) pillClass += ' active';
+      if (hasSort) pillClass += ' has-sort';
+      if (isOpen) pillClass += ' open';
+
+      const sortIcon = hasSort ? (compassPillState.sort.direction === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+
+      html += '<div class="' + pillClass + '" id="compass-pill-' + field.key + '" onclick="event.stopPropagation(); compassTogglePill(\'' + field.key + '\')">'
+        + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span>'
+        + '<span class="filter-pill-value">' + escapeHtml(summary + sortIcon) + '</span>'
+        + '<span class="filter-pill-icon">\u25BE</span>'
+        + '<div class="filter-dropdown' + (isOpen ? ' open' : '') + '" id="compass-dd-' + field.key + '" onclick="event.stopPropagation();"></div>'
+        + '</div>';
+    }
+
+    // Clear Filters button
+    html += '<button class="filter-bar-clear" onclick="compassClearAllFilters()" title="Reset all filters">'
+      + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+      + ' Clear Filters'
+      + '</button>';
+
+    // Record count
+    const totalFiltered = (COMPASS.filteredGiven ? COMPASS.filteredGiven.length : 0) + (COMPASS.filteredReceived ? COMPASS.filteredReceived.length : 0);
+    html += '<span class="filter-bar-meta" id="compass-filtered-count-bar">Filtered: ' + totalFiltered + '</span>';
 
     container.innerHTML = html;
   }
 
-  // ===== Apply filters & sorts to COMPASS data =====
+  // ===== Toggle pill dropdown =====
 
-  function compassOmnibarApply() {
-    renderChips();
+  window.compassTogglePill = function (key) {
+    if (compassPillState.openPill === key) {
+      compassClosePill();
+      return;
+    }
+    compassPillState.openPill = key;
+    compassRenderFilterBar();
+    compassRenderDropdown(key);
+    _attachCompassOutsideClick();
+  };
+
+  function compassClosePill() {
+    compassPillState.openPill = null;
+    compassRenderFilterBar();
+    _detachCompassOutsideClick();
+  }
+
+  // ===== Render dropdown content =====
+
+  function compassRenderDropdown(key) {
+    const field = COMPASS_PILL_FIELDS.find(f => f.key === key);
+    if (!field) return;
+    const dd = document.getElementById('compass-dd-' + key);
+    if (!dd) return;
+    dd.classList.add('open');
+
+    if (field.type === 'date_range') {
+      compassRenderDateDropdown(dd, field);
+      return;
+    }
+
+    compassRenderMultiDropdown(dd, field);
+  }
+
+  function compassRenderDateDropdown(dd, field) {
+    const f = compassPillState.filters[field.key];
+    const startVal = f ? f.startDate : '';
+    const endVal = f ? f.endDate : '';
+
+    const curSort = compassPillState.sort;
+    const isAsc = curSort && curSort.key === 'date_range' && curSort.direction === 'asc';
+    const isDesc = curSort && curSort.key === 'date_range' && curSort.direction === 'desc';
+
+    dd.innerHTML = '<div class="filter-dropdown-header">'
+      + '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>'
+      + '<div class="filter-dropdown-sort">'
+      + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); compassSetSort(\'date_range\', \'asc\')" title="Oldest first">Old\u2191</button>'
+      + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); compassSetSort(\'date_range\', \'desc\')" title="Newest first">New\u2193</button>'
+      + '</div>'
+      + '</div>'
+      + '<div class="filter-date-row">'
+      + '<div class="filter-group"><label>Start</label>'
+      + '<input type="date" class="form-input form-input-sm" id="compass-date-start" value="' + startVal + '">'
+      + '</div>'
+      + '<div class="filter-group"><label>End</label>'
+      + '<input type="date" class="form-input form-input-sm" id="compass-date-end" value="' + endVal + '">'
+      + '</div>'
+      + '</div>';
+
+    setTimeout(() => {
+      const startEl = document.getElementById('compass-date-start');
+      const endEl = document.getElementById('compass-date-end');
+      if (startEl) startEl.addEventListener('change', compassOnDateChange);
+      if (endEl) endEl.addEventListener('change', compassOnDateChange);
+    }, 30);
+  }
+
+  function compassOnDateChange() {
+    const start = (document.getElementById('compass-date-start') || {}).value || '';
+    const end = (document.getElementById('compass-date-end') || {}).value || '';
+    if (!start && !end) {
+      delete compassPillState.filters['date_range'];
+    } else {
+      if (start && end && start > end) { showToast('Start date cannot be after end date', 'info'); return; }
+      compassPillState.filters['date_range'] = {
+        key: 'date_range', label: 'Date', type: 'date_range', startDate: start, endDate: end
+      };
+    }
+    // Update pill text
+    const field = COMPASS_PILL_FIELDS[0];
+    const pill = document.getElementById('compass-pill-' + field.key);
+    if (pill) {
+      const valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) valSpan.textContent = compassGetFilterSummary(field);
+    }
+    compassDebouncedApply();
+  }
+
+  function compassRenderMultiDropdown(dd, field) {
+    const values = compassGetAllValues(field);
+    const f = compassPillState.filters[field.key];
+    const selectedSet = new Set(f ? f.values : values); // default: all selected
+    const searchable = field.searchable || values.length > 15;
+
+    let html = '<div class="filter-dropdown-header">';
+    html += '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>';
+
+    // Sort buttons (if sortable)
+    if (field.sortable) {
+      const sortField = COMPASS_PILL_SORT_FIELDS.find(sf => sf.key === field.key);
+      if (sortField) {
+        const curSort = compassPillState.sort;
+        const isAsc = curSort && curSort.key === field.key && curSort.direction === 'asc';
+        const isDesc = curSort && curSort.key === field.key && curSort.direction === 'desc';
+        html += '<div class="filter-dropdown-sort">'
+          + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); compassSetSort(\'' + field.key + '\', \'asc\')" title="Sort A\u2192Z">A\u2191</button>'
+          + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); compassSetSort(\'' + field.key + '\', \'desc\')" title="Sort Z\u2192A">Z\u2193</button>'
+          + '</div>';
+      }
+    }
+    html += '</div>';
+
+    if (searchable) {
+      html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" id="compass-dd-search-' + field.key + '" placeholder="Search..." oninput="compassFilterDropdownSearch(\'' + field.key + '\')"></div>';
+    }
+
+    // Select All / Deselect All
+    html += '<div class="filter-dropdown-actions">'
+      + '<button class="filter-action-link" onclick="event.stopPropagation(); compassSelectAll(\'' + field.key + '\')">Select All</button>'
+      + '<button class="filter-action-link" onclick="event.stopPropagation(); compassDeselectAll(\'' + field.key + '\')" style="color:#DC2626;">Deselect All</button>'
+      + '</div>';
+
+    html += '<div class="filter-dropdown-list" id="compass-dd-list-' + field.key + '">';
+    for (let i = 0; i < values.length; i++) {
+      const v = values[i];
+      const checked = selectedSet.has(v) ? 'checked' : '';
+      html += '<label class="filter-dropdown-item"><input type="checkbox" value="' + escapeAttr(v) + '" ' + checked + ' onchange="compassOnCheckboxChange(\'' + field.key + '\')"><span>' + escapeHtml(v) + '</span></label>';
+    }
+    html += '</div>';
+
+    dd.innerHTML = html;
+
+    if (searchable) {
+      setTimeout(() => {
+        const si = document.getElementById('compass-dd-search-' + field.key);
+        if (si) si.focus();
+      }, 50);
+    }
+  }
+
+  // ===== Checkbox / sort handlers =====
+
+  window.compassOnCheckboxChange = function (key) {
+    const field = COMPASS_PILL_FIELDS.find(f => f.key === key);
+    if (!field) return;
+    const listEl = document.getElementById('compass-dd-list-' + key);
+    if (!listEl) return;
+    const checked = [];
+    listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => { checked.push(cb.value); });
+    const allValues = compassGetAllValues(field);
+
+    if (checked.length === allValues.length) {
+      delete compassPillState.filters[key];
+    } else {
+      compassPillState.filters[key] = { key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey };
+    }
+
+    // Update pill summary without closing dropdown
+    const pill = document.getElementById('compass-pill-' + key);
+    if (pill) {
+      const valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) {
+        const sortIcon = (compassPillState.sort && compassPillState.sort.key === key)
+          ? (compassPillState.sort.direction === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+        valSpan.textContent = compassGetFilterSummary(field) + sortIcon;
+      }
+      if (compassIsFiltered(field)) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    }
+
+    compassDebouncedApply();
+  };
+
+  window.compassSetSort = function (key, direction) {
+    const curSort = compassPillState.sort;
+    if (curSort && curSort.key === key && curSort.direction === direction) {
+      compassPillState.sort = null;
+    } else {
+      const sortField = COMPASS_PILL_SORT_FIELDS.find(sf => sf.key === key);
+      compassPillState.sort = { key, direction, recordKey: sortField ? sortField.recordKey : key };
+    }
+    const wasOpen = compassPillState.openPill;
+    compassRenderFilterBar();
+    if (wasOpen) {
+      compassPillState.openPill = wasOpen;
+      compassRenderFilterBar();
+      compassRenderDropdown(wasOpen);
+    }
+    compassDebouncedApply();
+  };
+
+  window.compassSelectAll = function (key) {
+    const listEl = document.getElementById('compass-dd-list-' + key);
+    if (!listEl) return;
+    listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true;
+    });
+    delete compassPillState.filters[key];
+    const field = COMPASS_PILL_FIELDS.find(f => f.key === key);
+    if (field) {
+      const pill = document.getElementById('compass-pill-' + key);
+      if (pill) {
+        const valSpan = pill.querySelector('.filter-pill-value');
+        if (valSpan) valSpan.textContent = 'All';
+        pill.classList.remove('active');
+      }
+    }
+    compassDebouncedApply();
+  };
+
+  window.compassDeselectAll = function (key) {
+    const listEl = document.getElementById('compass-dd-list-' + key);
+    if (!listEl) return;
+    listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false;
+    });
+    const stillChecked = [];
+    listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => { stillChecked.push(cb.value); });
+    const field = COMPASS_PILL_FIELDS.find(f => f.key === key);
+    compassPillState.filters[key] = { key, label: field.label, type: 'multi', values: stillChecked, recordKey: field.recordKey };
+    const pill = document.getElementById('compass-pill-' + key);
+    if (pill) {
+      const valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) valSpan.textContent = stillChecked.length === 0 ? 'None' : stillChecked.length + ' selected';
+      pill.classList.add('active');
+    }
+    compassDebouncedApply();
+  };
+
+  window.compassFilterDropdownSearch = function (key) {
+    const searchEl = document.getElementById('compass-dd-search-' + key);
+    const listEl = document.getElementById('compass-dd-list-' + key);
+    if (!searchEl || !listEl) return;
+    const q = searchEl.value.toLowerCase();
+    listEl.querySelectorAll('.filter-dropdown-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(q) ? '' : 'none';
+    });
+  };
+
+  // ===== Clear all =====
+
+  window.compassClearAllFilters = function () {
+    compassClosePill();
+    compassPillState.filters = {};
+    compassPillState.sort = { key: 'date_range', direction: 'desc', recordKey: 'coaching_date' };
+    compassRenderFilterBar();
+    compassApplyNow();
+  };
+
+  // ===== Apply (instant, debounced) =====
+
+  function compassDebouncedApply() {
+    clearTimeout(_compassApplyDebounce);
+    _compassApplyDebounce = setTimeout(compassApplyNow, 250);
+  }
+
+  function compassApplyNow() {
+    compassRenderFilterBar();
 
     let data = [...COMPASS.logs];
 
     // Apply each filter
-    COMPASS_OMNI.filters.forEach(f => {
-      switch (f.field) {
-        case 'dateRange': {
-          const { start, end } = f.value;
-          if (start) data = data.filter(l => l.coaching_date && l.coaching_date.slice(0, 10) >= start);
-          if (end) data = data.filter(l => l.coaching_date && l.coaching_date.slice(0, 10) <= end);
+    Object.values(compassPillState.filters).forEach(f => {
+      switch (f.key) {
+        case 'date_range': {
+          const { startDate, endDate } = f;
+          if (startDate) data = data.filter(l => l.coaching_date && l.coaching_date.slice(0, 10) >= startDate);
+          if (endDate) data = data.filter(l => l.coaching_date && l.coaching_date.slice(0, 10) <= endDate);
           break;
         }
-        case 'type':
-          data = data.filter(l => l.coaching_type === f.value);
-          break;
-        case 'status':
-          data = data.filter(l => l.status === f.value);
-          break;
-        case 'coach':
-          data = data.filter(l => l.coach === f.value);
-          break;
-        case 'coachee':
-          data = data.filter(l => l.coachee === f.value);
-          break;
-        case 'sessionGoal': {
-          const goals = Array.isArray(f.value) ? f.value : [f.value];
-          data = data.filter(l => {
-            if (!l.session_goal) return false;
-            const logGoals = l.session_goal.split(',').map(g => g.trim());
-            return goals.some(g => logGoals.includes(g));
-          });
-          break;
-        }
-        case 'search': {
-          const q = f.value.toLowerCase();
-          data = data.filter(l =>
-            (l.coachee || '').toLowerCase().includes(q) ||
-            (l.coach || '').toLowerCase().includes(q) ||
-            (l.coachee_ohr || '').includes(q) ||
-            String(l.coaching_id || l.id || '').toLowerCase().includes(q)
-          );
+        default: {
+          if (f.type === 'multi' && f.values) {
+            const field = COMPASS_PILL_FIELDS.find(fd => fd.key === f.key);
+            if (field && field.isMultiValue) {
+              // Multi-value field (e.g., session_goal is comma-separated)
+              data = data.filter(l => {
+                const raw = l[f.recordKey];
+                if (!raw) return false;
+                const logVals = raw.split(',').map(g => g.trim());
+                return f.values.some(v => logVals.includes(v));
+              });
+            } else {
+              data = data.filter(l => f.values.includes(l[f.recordKey]));
+            }
+          }
           break;
         }
       }
     });
 
-    // Apply sorts
-    if (COMPASS_OMNI.sorts.length > 0) {
+    // Apply sort
+    const sort = compassPillState.sort;
+    if (sort) {
       data.sort((a, b) => {
-        for (const s of COMPASS_OMNI.sorts) {
-          let va = a[s.field] || '';
-          let vb = b[s.field] || '';
-          if (s.field === 'coaching_date') {
-            va = va ? new Date(va).getTime() : 0;
-            vb = vb ? new Date(vb).getTime() : 0;
-          } else {
-            va = String(va).toLowerCase();
-            vb = String(vb).toLowerCase();
-          }
-          if (va < vb) return s.direction === 'asc' ? -1 : 1;
-          if (va > vb) return s.direction === 'asc' ? 1 : -1;
+        let va = a[sort.recordKey] || '';
+        let vb = b[sort.recordKey] || '';
+        if (sort.recordKey === 'coaching_date') {
+          va = va ? new Date(va).getTime() : 0;
+          vb = vb ? new Date(vb).getTime() : 0;
+        } else {
+          va = String(va).toLowerCase();
+          vb = String(vb).toLowerCase();
         }
+        if (va < vb) return sort.direction === 'asc' ? -1 : 1;
+        if (va > vb) return sort.direction === 'asc' ? 1 : -1;
         return 0;
       });
     } else {
@@ -413,10 +454,6 @@
     }
 
     COMPASS.filtered = [...COMPASS.filteredGiven, ...COMPASS.filteredReceived];
-
-    // Update count
-    const countEl = document.getElementById('compass-filtered-count');
-    if (countEl) countEl.textContent = COMPASS.filteredGiven.length + COMPASS.filteredReceived.length;
 
     // Update per-panel counts
     const givenCountEl = document.getElementById('compass-given-count');
@@ -475,22 +512,47 @@
     compassRenderTable('received');
   }
 
-  // ===== Override compassApplyFilters to use omnibar =====
-  // The original compassApplyFilters reads from DOM inputs.
-  // We override it to delegate to the omnibar apply if omnibar is present.
+  // ===== Outside click =====
+
+  function _attachCompassOutsideClick() {
+    if (_compassOutsideListener) return;
+    setTimeout(() => {
+      _compassOutsideListener = function (e) {
+        const bar = document.getElementById('compass-filter-bar');
+        if (bar && bar.contains(e.target)) return;
+        compassClosePill();
+      };
+      document.addEventListener('mousedown', _compassOutsideListener);
+    }, 10);
+  }
+
+  function _detachCompassOutsideClick() {
+    if (_compassOutsideListener) {
+      document.removeEventListener('mousedown', _compassOutsideListener);
+      _compassOutsideListener = null;
+    }
+  }
+
+  // ===== Override compassApplyFilters to use pill bar =====
   const _origCompassApplyFilters = window.compassApplyFilters;
   window.compassApplyFilters = function () {
-    const omnibar = document.getElementById('compass-omnibar');
-    if (omnibar) {
-      // If no filters set yet (initial load), just apply with empty filters
-      compassOmnibarApply();
+    const filterBar = document.getElementById('compass-filter-bar');
+    if (filterBar) {
+      compassApplyNow();
     } else if (_origCompassApplyFilters) {
       _origCompassApplyFilters();
     }
   };
 
-  // Expose for HTML onclick handlers
-  window.compassOmnibarOpenMenu = compassOmnibarOpenMenu;
-  window.compassOmnibarCloseMenu = compassOmnibarCloseMenu;
+  // ===== Expose for HTML onclick handlers =====
+  window.compassTogglePill = window.compassTogglePill;
+  window.compassClearAllFilters = window.compassClearAllFilters;
+
+  // ===== escapeAttr helper (if not already global) =====
+  if (typeof window.escapeAttr !== 'function') {
+    window.escapeAttr = function (s) {
+      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    };
+  }
 
 })();
