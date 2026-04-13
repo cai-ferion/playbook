@@ -2276,10 +2276,13 @@ router.post("/billing-targets-v2", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
-    // Admin gate: only OHR 740045023 can edit targets
+    // Permission gate: owner (740045023), assistant (740044909), and Managers
     const userOhr = (req as any).userOhr || req.headers['x-user-ohr'];
-    if (userOhr !== '740045023') {
-      return res.status(403).json({ error: "Only the designated admin can edit billing targets." });
+    const userRole = (req as any).userRole || req.headers['x-user-role'] || '';
+    const BILLING_EDIT_OHRS = ['740045023', '740044909'];
+    const canEdit = BILLING_EDIT_OHRS.includes(String(userOhr)) || String(userRole) === 'Manager';
+    if (!canEdit) {
+      return res.status(403).json({ error: "Only Managers and designated admins can edit billing targets." });
     }
     const { targets } = req.body;
     if (!targets || !Array.isArray(targets)) {
@@ -2381,11 +2384,11 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
       { pg: 'CS-ABF', role: 'Agent', label: 'CS-ABF × Agent' },
       { pg: 'CS-ABF', role: 'Operational SME', label: 'CS-ABF × SME' },
       { pg: 'CS-ABF', role: 'Quality & Policy Expert', label: 'CS-ABF × QA' },
-      { pg: 'CSO_CTR', role: 'Agent', label: 'CSO × Agent' },
-      { pg: 'FAD_CTR', role: 'Agent', label: 'FAD × Agent' },
-      { pg: 'RECALL_MEASUREMENT_CTR', role: 'Agent', label: 'RECALL × Agent' },
-      { pg: 'SME_CTR', role: '*', label: 'SME_CTR × Any' },
-      { pg: 'QPE_CTR', role: '*', label: 'QPE_CTR × Any' },
+      { pg: 'RECALL_MEASUREMENT_CTR', role: 'Agent', label: 'RECALL_MEASUREMENT_CTR' },
+      { pg: 'CSO_CTR', role: 'Agent', label: 'CSO_CTR' },
+      { pg: 'FAD_CTR', role: 'Agent', label: 'FAD_CTR' },
+      { pg: 'SME_CTR', role: '*', label: 'SME_CTR' },
+      { pg: 'QPE_CTR', role: '*', label: 'QPE_CTR' },
     ];
 
     // 1. Attendance data for this week

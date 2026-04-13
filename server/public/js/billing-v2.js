@@ -7,17 +7,17 @@
 // Constants
 // ============================================================
 const PG_ROLE_COMBOS_V2 = [
-  { planning_group: 'CS-ABF', role: 'Agent' },
-  { planning_group: 'CS-ABF', role: 'Operational SME' },
-  { planning_group: 'CS-ABF', role: 'Quality & Policy Expert' },
-  { planning_group: 'CSO_CTR', role: 'Agent' },
-  { planning_group: 'FAD_CTR', role: 'Agent' },
   { planning_group: 'S-ABF', role: 'Agent' },
   { planning_group: 'S-ABF', role: 'Operational SME' },
   { planning_group: 'S-ABF', role: 'Quality & Policy Expert' },
-  { planning_group: 'QPE_CTR', role: 'Quality & Policy Expert' },
+  { planning_group: 'CS-ABF', role: 'Agent' },
+  { planning_group: 'CS-ABF', role: 'Operational SME' },
+  { planning_group: 'CS-ABF', role: 'Quality & Policy Expert' },
   { planning_group: 'RECALL_MEASUREMENT_CTR', role: 'Agent' },
+  { planning_group: 'CSO_CTR', role: 'Agent' },
+  { planning_group: 'FAD_CTR', role: 'Agent' },
   { planning_group: 'SME_CTR', role: 'Operational SME' },
+  { planning_group: 'QPE_CTR', role: 'Quality & Policy Expert' },
 ];
 
 // Short labels for planning groups

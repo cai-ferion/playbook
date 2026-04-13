@@ -1664,3 +1664,12 @@
   - [x] Fixed BILLING_PG_ROLE_COMBOS in billing.js to use full role names matching attendance data
   - [x] Frontend and server-side PG_ROLE_COMBOS now aligned (11 combos each)
   - Result: Total compliance went from 202.2% (wrong) to 109.4% (correct)
+
+## Billing Targets Editor Overhaul
+
+- [x] Remove CS-ABF × TL and R-ABF × SME from billing target combos (not billing groups)
+- [x] Rename R-ABF × Agent to just RECALL_MEASUREMENT_CTR
+- [x] Add CSO_CTR and FAD_CTR billing groups with 185 target hours each
+- [x] Remove Target HC column from billing targets editor
+- [x] Stylize the billing targets editor table
+- [x] Ensure billing targets editable by OHR 740045023, OHR 740044909, and Managers

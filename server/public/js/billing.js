@@ -91,10 +91,11 @@ async function initBillingCompliance() {
   await initBillingWeekSelector();
   await loadBillingCompliance();
 
-  // Show Edit Targets button for admin only
+  // Show Edit Targets button for owner, assistant, and managers
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const ADMIN_OHR = '740045023';
-  if (cu && cu.ohr_id === ADMIN_OHR) {
+  const BILLING_EDIT_OHRS = ['740045023', '740044909'];
+  const canEditTargets = cu && (BILLING_EDIT_OHRS.includes(cu.ohr_id) || cu.actual_role === 'Manager');
+  if (canEditTargets) {
     const editBtn = document.getElementById('billing-edit-targets-btn');
     if (editBtn) editBtn.style.display = '';
   }
@@ -620,9 +621,9 @@ const BILLING_PG_ROLE_COMBOS = [
   { pg: 'CS-ABF', role: 'Agent', label: 'CS-ABF × Agent' },
   { pg: 'CS-ABF', role: 'Operational SME', label: 'CS-ABF × SME' },
   { pg: 'CS-ABF', role: 'Quality & Policy Expert', label: 'CS-ABF × QA' },
-  { pg: 'CSO_CTR', role: 'Agent', label: 'CSO × Agent' },
-  { pg: 'FAD_CTR', role: 'Agent', label: 'FAD × Agent' },
-  { pg: 'RECALL_MEASUREMENT_CTR', role: 'Agent', label: 'RECALL × Agent' },
+  { pg: 'RECALL_MEASUREMENT_CTR', role: 'Agent', label: 'RECALL_MEASUREMENT_CTR' },
+  { pg: 'CSO_CTR', role: 'Agent', label: 'CSO_CTR' },
+  { pg: 'FAD_CTR', role: 'Agent', label: 'FAD_CTR' },
   { pg: 'SME_CTR', role: '*', label: 'SME_CTR' },
   { pg: 'QPE_CTR', role: '*', label: 'QPE_CTR' },
 ];
@@ -666,19 +667,18 @@ async function openBillingTargetsEditor() {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  for (const combo of BILLING_PG_ROLE_COMBOS) {
+  for (let i = 0; i < BILLING_PG_ROLE_COMBOS.length; i++) {
+    const combo = BILLING_PG_ROLE_COMBOS[i];
     const key = `${combo.pg}|${combo.role}`;
-    const existing = existingTargets[key] || { target_hc: 0, target_hours: 0 };
+    const existing = existingTargets[key] || { target_hours: 0 };
     const tr = document.createElement('tr');
+    tr.className = 'billing-editor-row' + (i % 2 === 0 ? '' : ' billing-editor-row-alt');
     tr.innerHTML = `
-      <td style="text-align:left;font-weight:500;">${escapeHtml(combo.label)}</td>
-      <td style="text-align:center;">
-        <input type="number" class="form-input" style="width:100px;text-align:center;font-size:13px;padding:4px 8px;"
-          data-pg="${combo.pg}" data-role="${combo.role}" data-field="target_hc"
-          value="${existing.target_hc}" min="0" step="1">
+      <td class="billing-editor-label">
+        <span class="billing-editor-pg-badge">${escapeHtml(combo.label)}</span>
       </td>
-      <td style="text-align:center;">
-        <input type="number" class="form-input" style="width:120px;text-align:center;font-size:13px;padding:4px 8px;"
+      <td class="billing-editor-input-cell">
+        <input type="number" class="billing-editor-input"
           data-pg="${combo.pg}" data-role="${combo.role}" data-field="target_hours"
           value="${existing.target_hours}" min="0" step="0.5">
       </td>
@@ -701,8 +701,10 @@ async function saveBillingTargets() {
   }
 
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  if (!cu || cu.ohr_id !== '740045023') {
-    showToast('Only the designated admin can edit billing targets.', 'error');
+  const BILLING_SAVE_OHRS = ['740045023', '740044909'];
+  const canSaveTargets = cu && (BILLING_SAVE_OHRS.includes(cu.ohr_id) || cu.actual_role === 'Manager');
+  if (!canSaveTargets) {
+    showToast('Only Managers and designated admins can edit billing targets.', 'error');
     return;
   }
 
@@ -724,7 +726,7 @@ async function saveBillingTargets() {
   try {
     const resp = await fetch(`${IO_API_BASE}/billing-targets-v2`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-Ohr': cu.ohr_id },
+      headers: { 'Content-Type': 'application/json', 'X-User-Ohr': cu.ohr_id, 'X-User-Role': cu.actual_role || '' },
       body: JSON.stringify({ targets })
     });
     if (!resp.ok) {
