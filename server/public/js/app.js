@@ -871,9 +871,10 @@ async function switchView(view) {
   var viewTitleEl = document.getElementById('view-title');
   if (viewTitleEl) viewTitleEl.textContent = titles[view] || view;
 
-  // Show Export CSV button only on Input Portal
+  // Show Export CSV button on Input Portal for all non-agents
   const exportBtn = document.getElementById('export-csv-btn');
-  if (exportBtn) exportBtn.style.display = view === 'input' ? '' : 'none';
+  const isNonAgent = currentUser && currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent';
+  if (exportBtn) exportBtn.style.display = (view === 'input' && (isNonAgent || (currentUser && currentUser.ohr_id === '740045023'))) ? '' : 'none';
 
   // Show "Last refreshed" only on Input Portal
   const headerMeta = document.getElementById('header-meta');

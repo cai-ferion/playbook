@@ -1612,3 +1612,7 @@
   - Added Team Lead and Trainer to ROLE_OPTIONS dropdown in compact detail panel
   - Added RECALL_MEASUREMENT_CTR and MULTIPLE to PG_OPTIONS dropdown
   - Server-side PATCH route already accepts role and planning_group — no actor-role restriction exists
+
+## Revisions — April 14 (Batch 2)
+- [x] Show Export CSV button for all non-agents (not just admin)
+- [x] Restrict PL tag dropdown to Managers + OHR 740045023 + OHR 740044909 only (6 occurrences across input-compact.js, input-portal.js)

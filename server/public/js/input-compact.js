@@ -268,7 +268,7 @@ function renderCompactRow(item) {
 function renderDetailPanel(r, idx, locked) {
   // Tag dropdown
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
-  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
   var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
 
   var tagField;
@@ -639,7 +639,7 @@ function initFcbTagDropdown() {
   var sel = document.getElementById('fcb-tag-select');
   if (!sel) return;
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
-  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
   var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
   while (sel.options.length > 2) sel.remove(2);
   tagOpts.forEach(function(t) {

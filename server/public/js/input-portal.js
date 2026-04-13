@@ -784,7 +784,7 @@ function initBulkTagDropdown() {
   var sel = document.getElementById('bulk-tag-select');
   if (!sel) return;
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
-  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
   var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
   // Keep the first two static options (Select Tag, blank), remove old dynamic ones
   while (sel.options.length > 2) sel.remove(2);
@@ -898,7 +898,7 @@ function renderTableRow(item) {
     if (col.key === 'tag') {
       // PL restricted to Managers and OHR 740045023 only
       var cu = typeof currentUser !== 'undefined' ? currentUser : null;
-      var canSeePL = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+      var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
       var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
       return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" onchange="handleCellEdit(this)">' 
         + '<option value="" ' + (!val ? 'selected' : '') + '>\u2014</option>'
