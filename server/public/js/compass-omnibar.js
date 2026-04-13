@@ -35,7 +35,19 @@
 
   // ===== Helpers =====
 
+  // Predefined option sets — always show these regardless of data presence
+  const COMPASS_DEFINED_OPTIONS = {
+    coaching_type: ['CAP 0 Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+    status: ['Pending Acknowledgement', 'Acknowledged', 'Pending SME Review', 'Markdown Disputed - SME', 'Markdown Retained - QA', 'QA Decision Rejected', 'Markdown Retained - Trainer', 'Trainer Decision Rejected - SME', 'Markdown Retained - QTP Manager', 'Markdown Overturned'],
+    session_goal: ['AES/Scorecard Discussion', 'Attendance & Tardiness', 'Compliance & Behavior', 'Escalation', 'Internal Discussion', 'Performance & Metrics', 'Performance Improvement Plan', 'Professional & Personal Development'],
+  };
+
   function compassGetAllValues(field) {
+    // If we have predefined options for this field, use them
+    const predefined = COMPASS_DEFINED_OPTIONS[field.recordKey];
+    if (predefined) return [...predefined].sort();
+
+    // Otherwise, derive from data
     if (typeof COMPASS === 'undefined' || !COMPASS.logs) return [];
     const vals = new Set();
     COMPASS.logs.forEach(l => {

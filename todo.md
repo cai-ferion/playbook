@@ -1569,3 +1569,10 @@
 - [x] Auto-populate previous warnings in NTE form from existing NTEs
 - [x] Add NTE view/edit from coaching log detail view (CAP badge + View NTE button)
 - [x] Server-side NTE CRUD routes (GET/POST/PATCH /api/io/coaching-nte)
+
+## Revisions — April 13 (Batch 4)
+- [x] Delete coaching log CL-53ba172e from DB
+- [x] Add CAP radio button for Follow-Up Session (fixed hyphen mismatch: 'Follow Up Session' → 'Follow-Up Session')
+- [x] Fix CAP 1-3 → NTE redirect (moved NTE form open before compassCloseForm)
+- [x] Migrate old session goals in DB to nearest applicable new goal (1,996 rows updated)
+- [x] Filter dropdowns: show all defined options via COMPASS_DEFINED_OPTIONS (Type, Status, Session Goal)

@@ -1493,7 +1493,7 @@ function compassOnTypeChange() {
   // Show CAP level section for CAP 0 Coaching and Follow Up Session
   const capSection = document.getElementById('compass-cap-level-section');
   if (capSection) {
-    capSection.style.display = (type === 'CAP 0 Coaching' || type === 'Follow Up Session') ? '' : 'none';
+    capSection.style.display = (type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? '' : 'none';
     // Reset CAP radios when type changes
     const radios = document.querySelectorAll('input[name="compass-cap-level"]');
     radios.forEach(r => r.checked = r.value === '');
@@ -1747,7 +1747,7 @@ async function compassSubmitNew() {
   const parentLog = (type === 'Follow-Up Session') ? COMPASS.selectedParentLog : null;
 
   // Get CAP level if applicable
-  const capLevel = (type === 'CAP 0 Coaching' || type === 'Follow Up Session') ? compassGetSelectedCapLevel() : '';
+  const capLevel = (type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? compassGetSelectedCapLevel() : '';
 
   const record = {
     coaching_type: type,
@@ -1866,11 +1866,12 @@ async function compassSubmitNew() {
 
     showToast('Coaching log created successfully', 'success');
 
-    compassCloseForm();
-    await compassFetchLogs();
+    // Check if NTE form should open (CAP 1-3 selected)
+    const shouldOpenNte = capLevel && ['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel) && newId;
 
-    // Redirect to NTE form if CAP 1-3 was selected
-    if (capLevel && ['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel) && newId) {
+    if (shouldOpenNte) {
+      // Don't close the overlay — replace the form content with NTE form
+      await compassFetchLogs();
       compassOpenNteForm({
         coaching_id: newId,
         employee_name: coachee ? coachee.full_name : (parentLog ? parentLog.coachee : ''),
@@ -1879,6 +1880,9 @@ async function compassSubmitNew() {
         coach_name: coach ? coach.full_name : '',
         coach_ohr: coach ? coach.ohr_id : ''
       });
+    } else {
+      compassCloseForm();
+      await compassFetchLogs();
     }
   } catch (e) {
     console.error('Failed to create coaching log:', e);
