@@ -468,8 +468,20 @@
     const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
     const role = currentUser ? currentUser.actual_role : '';
 
-    if (isAdmin740 || role === 'Manager') {
-      // Admin + Managers — see ALL coaching logs
+    if (isAdmin740 && COMPASS.viewMode === 'tl') {
+      // Admin in TL mode — scope to their team like a Team Lead
+      const myName = currentUser.full_name;
+      const teamOhrs = new Set();
+      if (COMPASS.employees && COMPASS.employees.length) {
+        COMPASS.employees.forEach(e => {
+          if (e.supervisor_name === myName) teamOhrs.add(e.ohr_id);
+        });
+      }
+      teamOhrs.add(currentUser.ohr_id); // include self
+      COMPASS.filteredGiven = data.filter(l => teamOhrs.has(l.coachee_ohr));
+      COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
+    } else if (isAdmin740 || role === 'Manager') {
+      // Admin (all mode) + Managers — see ALL coaching logs
       COMPASS.filteredGiven = data;
       COMPASS.filteredReceived = [];
     } else if (role === 'Agent') {

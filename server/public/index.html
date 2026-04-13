@@ -823,6 +823,13 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add
             </button>
+            <!-- Admin View Toggle (visible only to 740045023) -->
+            <div id="compass-view-toggle" style="display:none;flex-shrink:0;">
+              <div style="display:inline-flex;border-radius:6px;overflow:hidden;border:1px solid #cbd5e1;font-size:12px;font-weight:600;">
+                <button id="compass-toggle-all" onclick="compassSetViewMode('all')" style="padding:5px 12px;border:none;cursor:pointer;transition:background .15s,color .15s;background:#1a365d;color:#fff;">All Logs</button>
+                <button id="compass-toggle-tl" onclick="compassSetViewMode('tl')" style="padding:5px 12px;border:none;cursor:pointer;transition:background .15s,color .15s;background:#f8fafc;color:#64748b;">My Team</button>
+              </div>
+            </div>
             <div class="filter-bar-row" id="compass-filter-pills" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;">
               <!-- Pills rendered by compass-omnibar.js -->
             </div>

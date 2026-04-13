@@ -2081,20 +2081,55 @@ document.addEventListener('click', function(e) {
 
 // ===== Init =====
 
+// Admin view mode: 'all' = see everything, 'tl' = TL-scoped view
+if (typeof COMPASS !== 'undefined') COMPASS.viewMode = 'all';
+
+function compassSetViewMode(mode) {
+  COMPASS.viewMode = mode;
+  COMPASS.pageGiven = 1;
+  COMPASS.pageReceived = 1;
+  // Update toggle button styles
+  const btnAll = document.getElementById('compass-toggle-all');
+  const btnTL = document.getElementById('compass-toggle-tl');
+  if (btnAll && btnTL) {
+    if (mode === 'all') {
+      btnAll.style.background = '#1a365d'; btnAll.style.color = '#fff';
+      btnTL.style.background = '#f8fafc'; btnTL.style.color = '#64748b';
+    } else {
+      btnTL.style.background = '#1a365d'; btnTL.style.color = '#fff';
+      btnAll.style.background = '#f8fafc'; btnAll.style.color = '#64748b';
+    }
+  }
+  // Re-run the omnibar filter pipeline (which includes role-based splitting)
+  if (typeof compassApplyNow === 'function') {
+    compassApplyNow();
+  } else {
+    compassApplyFilters();
+  }
+}
+
 async function initCompass() {
   await compassFetchEmployees();
   await compassFetchLogs();
 
   const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
+  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
 
   // Initialize dual-table pagination
   COMPASS.pageGiven = 1;
   COMPASS.pageReceived = 1;
+  COMPASS.viewMode = 'all'; // default for admin
 
   // Hide "Add" button for Agents (all other roles can create coaching logs)
   const newBtn = document.getElementById('compass-new-btn');
   if (newBtn) {
     newBtn.style.display = isAgent ? 'none' : '';
+  }
+
+  // Show view toggle only for admin (740045023)
+  const viewToggle = document.getElementById('compass-view-toggle');
+  if (viewToggle) {
+    viewToggle.style.display = isAdmin740 ? 'flex' : 'none';
   }
 
   compassApplyFilters();

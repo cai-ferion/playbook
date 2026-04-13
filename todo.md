@@ -1688,3 +1688,6 @@
 - [x] SMEs: see logs filed to their TL's team + logs filed to them (verified via DB: 120 Given, 9 Received)
 - [x] QAs & Trainers: see logs they filed + logs filed to them (verified via DB: 9 Given, 7 Received)
 - [x] Agents: see only logs filed to them, hide Add button (verified: 6 Received, no Add button, no Given panel)
+
+## Coaching Profile — Admin View Toggle
+- [x] Add toggle for admin (740045023) to switch between "All Logs" and "TL View" in Coaching Profile (verified: All=1998, MyTeam=149)
