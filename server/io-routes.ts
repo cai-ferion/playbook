@@ -512,6 +512,38 @@ router.get("/coaching", async (req: Request, res: Response) => {
     }
 
     const lim = limit ? Number(limit) : 2000;
+    const { lean } = req.query;
+
+    if (lean === '1') {
+      // Lightweight list view: exclude coaching_details (heavy HTML) to reduce payload ~80%
+      const rows = await db.select({
+        id: ioCoaching.id,
+        coaching_id: ioCoaching.coaching_id,
+        coaching_type: ioCoaching.coaching_type,
+        coach: ioCoaching.coach,
+        coach_ohr: ioCoaching.coach_ohr,
+        coach_meta_email: ioCoaching.coach_meta_email,
+        coach_sup: ioCoaching.coach_sup,
+        coach_sup_email: ioCoaching.coach_sup_email,
+        coach_pg: ioCoaching.coach_pg,
+        coaching_date: ioCoaching.coaching_date,
+        coachee: ioCoaching.coachee,
+        coachee_ohr: ioCoaching.coachee_ohr,
+        coachee_meta_email: ioCoaching.coachee_meta_email,
+        coachee_sup: ioCoaching.coachee_sup,
+        coachee_sup_email: ioCoaching.coachee_sup_email,
+        coachee_pg: ioCoaching.coachee_pg,
+        session_goal: ioCoaching.session_goal,
+        status: ioCoaching.status,
+        cap_level: ioCoaching.cap_level,
+        coachee_list: ioCoaching.coachee_list,
+        job_id: ioCoaching.job_id,
+        created_at: ioCoaching.created_at,
+        updated_at: ioCoaching.updated_at,
+      }).from(ioCoaching).orderBy(desc(ioCoaching.id)).limit(lim);
+      return res.json(rows);
+    }
+
     const rows = await db.select().from(ioCoaching).orderBy(desc(ioCoaching.id)).limit(lim);
     res.json(rows);
   } catch (err: any) {

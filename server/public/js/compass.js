@@ -100,7 +100,7 @@ async function compassFetchLogs() {
   if (content) content.style.display = 'none';
 
   try {
-    const url = `${IO_API_BASE}/coaching?limit=5000`;
+    const url = `${IO_API_BASE}/coaching?limit=5000&lean=1`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('Failed to fetch coaching logs');
     COMPASS.logs = await resp.json();
@@ -653,9 +653,25 @@ function compassRenderAnalytics() {
 // ===== Detail / Edit View =====
 
 async function compassOpenDetail(coachingId) {
-  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
+  let log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
   if (!log) return;
   COMPASS.editingId = log.coaching_id || log.id;
+
+  // Fetch full record on demand if coaching_details is missing (lean mode)
+  if (log.coaching_details === undefined) {
+    try {
+      const fullResp = await fetch(`${IO_API_BASE}/coaching?coaching_id=${encodeURIComponent(log.coaching_id || log.id)}`);
+      if (fullResp.ok) {
+        const fullRows = await fullResp.json();
+        if (fullRows.length > 0) {
+          // Merge full data into cached log
+          Object.assign(log, fullRows[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch full coaching details:', e);
+    }
+  }
 
   // Ensure employees are loaded for supervisor visibility check
   if (!COMPASS.employees || COMPASS.employees.length === 0) {
@@ -1852,6 +1868,21 @@ async function compassSubmitNew() {
     return;
   }
 
+  // CAP 1-3: defer coaching log creation — open NTE form first, create both on NTE submit
+  const shouldOpenNte = capLevel && ['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel);
+  if (shouldOpenNte) {
+    await compassOpenNteForm({
+      coaching_id: null, // will be created on NTE submit
+      employee_name: coachee ? coachee.full_name : (parentLog ? parentLog.coachee : ''),
+      ohr_id: coacheeOhr,
+      cap_level: capLevel,
+      coach_name: coach ? coach.full_name : '',
+      coach_ohr: coach ? coach.ohr_id : '',
+      pendingCoachingRecord: record // pass the full record to create later
+    });
+    return;
+  }
+
   try {
     const url = `${IO_API_BASE}/coaching`;
     const resp = await fetch(url, {
@@ -1866,24 +1897,8 @@ async function compassSubmitNew() {
 
     showToast('Coaching log created successfully', 'success');
 
-    // Check if NTE form should open (CAP 1-3 selected)
-    const shouldOpenNte = capLevel && ['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel) && newId;
-
-    if (shouldOpenNte) {
-      // Don't close the overlay — replace the form content with NTE form
-      await compassFetchLogs();
-      await compassOpenNteForm({
-        coaching_id: newId,
-        employee_name: coachee ? coachee.full_name : (parentLog ? parentLog.coachee : ''),
-        ohr_id: coacheeOhr,
-        cap_level: capLevel,
-        coach_name: coach ? coach.full_name : '',
-        coach_ohr: coach ? coach.ohr_id : ''
-      });
-    } else {
-      compassCloseForm();
-      await compassFetchLogs();
-    }
+    compassCloseForm();
+    await compassFetchLogs();
   } catch (e) {
     console.error('Failed to create coaching log:', e);
     showToast('Failed to create coaching log: ' + e.message, 'error');
@@ -2362,9 +2377,20 @@ function compassRenderAttachmentList() {
 var _disputesEditingId = null;
 
 async function disputesOpenDetail(coachingId) {
-  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
+  let log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
   if (!log) return;
   _disputesEditingId = log.coaching_id || log.id;
+
+  // Fetch full record on demand if coaching_details is missing (lean mode)
+  if (log.coaching_details === undefined) {
+    try {
+      const fullResp = await fetch(`${IO_API_BASE}/coaching?coaching_id=${encodeURIComponent(log.coaching_id || log.id)}`);
+      if (fullResp.ok) {
+        const fullRows = await fullResp.json();
+        if (fullRows.length > 0) Object.assign(log, fullRows[0]);
+      }
+    } catch (e) { console.warn('Failed to fetch full coaching details:', e); }
+  }
 
   const titleEl = document.getElementById('disputes-detail-title');
   const bodyEl = document.getElementById('disputes-detail-body');
@@ -3700,8 +3726,12 @@ async function disputesSubmitLV6RetainMarkdown() {
 
 // ===== Notice to Explain (NTE) Form =====
 
+// Global variable to hold the deferred coaching record when CAP 1-3 is selected
+let COMPASS_PENDING_COACHING_RECORD = null;
+
 async function compassOpenNteForm(params) {
-  // params: { coaching_id, employee_name, ohr_id, cap_level, coach_name, coach_ohr }
+  // params: { coaching_id, employee_name, ohr_id, cap_level, coach_name, coach_ohr, pendingCoachingRecord? }
+  COMPASS_PENDING_COACHING_RECORD = params.pendingCoachingRecord || null;
   const overlay = document.getElementById('compass-form-overlay');
   const formTitle = document.getElementById('compass-form-title');
   const formBody = document.getElementById('compass-form-body');
@@ -3822,7 +3852,7 @@ async function compassOpenNteForm(params) {
     `;
 
     formFooter.innerHTML = `
-      <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Skip for Now</button>
+      <button class="btn btn-outline btn-sm" onclick="COMPASS_PENDING_COACHING_RECORD = null; compassCloseForm();">Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="compassSubmitNte()">Save NTE</button>
     `;
 
@@ -3830,7 +3860,6 @@ async function compassOpenNteForm(params) {
 }
 
 async function compassSubmitNte() {
-  const coachingId = document.getElementById('nte-coaching-id')?.value;
   const employeeName = document.getElementById('nte-employee-name')?.value;
   const ohrId = document.getElementById('nte-ohr-id')?.value;
   const capLevel = document.getElementById('nte-cap-level')?.value;
@@ -3848,21 +3877,36 @@ async function compassSubmitNte() {
   if (!policyViolated || policyViolated === '<br>') { showToast('Please specify the policy violated', 'error'); return; }
   if (!expectedBehavior || expectedBehavior === '<br>') { showToast('Please describe the expected behavior', 'error'); return; }
 
-  const nteRecord = {
-    coaching_id: coachingId,
-    employee_name: employeeName,
-    ohr_id: ohrId,
-    cap_level: capLevel,
-    date_of_incident: dateOfIncident,
-    incident_description: incidentDesc,
-    policy_violated: policyViolated,
-    expected_behavior: expectedBehavior,
-    deadline_for_improvement: deadline,
-    issued_by: issuedBy,
-    issued_by_ohr: issuedByOhr
-  };
+  let coachingId = document.getElementById('nte-coaching-id')?.value;
 
   try {
+    // If there's a pending coaching record (CAP 1-3 flow), create it first
+    if (COMPASS_PENDING_COACHING_RECORD) {
+      const coachResp = await fetch(`${IO_API_BASE}/coaching`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(COMPASS_PENDING_COACHING_RECORD)
+      });
+      if (!coachResp.ok) throw new Error('Failed to create coaching log');
+      const created = await coachResp.json();
+      coachingId = created?.coaching_id || (Array.isArray(created) ? created[0]?.coaching_id : null) || created?.id;
+      COMPASS_PENDING_COACHING_RECORD = null;
+    }
+
+    const nteRecord = {
+      coaching_id: coachingId,
+      employee_name: employeeName,
+      ohr_id: ohrId,
+      cap_level: capLevel,
+      date_of_incident: dateOfIncident,
+      incident_description: incidentDesc,
+      policy_violated: policyViolated,
+      expected_behavior: expectedBehavior,
+      deadline_for_improvement: deadline,
+      issued_by: issuedBy,
+      issued_by_ohr: issuedByOhr
+    };
+
     const resp = await fetch(`${IO_API_BASE}/coaching-nte`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3870,11 +3914,12 @@ async function compassSubmitNte() {
     });
     if (!resp.ok) throw new Error('Failed to save NTE');
 
-    showToast('Notice to Explain saved successfully', 'success');
+    showToast('Coaching log and NTE saved successfully', 'success');
     compassCloseForm();
+    await compassFetchLogs();
   } catch (e) {
     console.error('Failed to save NTE:', e);
-    showToast('Failed to save NTE: ' + e.message, 'error');
+    showToast('Failed to save: ' + e.message, 'error');
   }
 }
 

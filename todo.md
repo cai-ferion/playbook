@@ -1583,3 +1583,7 @@
 
 ## Revisions — April 13 (Batch 6)
 - [x] Fix blank Coaching Profile and Disputes Area pages (stray opening brace at line 3726 from .then() to async/await conversion)
+
+## Revisions — April 13 (Batch 7)
+- [x] Fix CAP 1-3 flow: defer coaching log creation until NTE is submitted (COMPASS_PENDING_COACHING_RECORD pattern)
+- [x] Optimize Compass page performance: lean API query (5.1MB→1.4MB, 72% reduction), on-demand detail fetch for coaching_details
