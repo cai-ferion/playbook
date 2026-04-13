@@ -1635,3 +1635,6 @@
 - [x] Integrate waving fox mascot into login page (auth card hero image)
 - [x] Integrate shrug fox mascot into empty states (16 instances across 9 JS files)
 - [x] All mascot URLs migrated to webdev CDN lifecycle (--webdev flag)
+
+## Revisions — April 14 (Batch 6)
+- [x] Replace Playbook logo and favicon with the arctic fox icon face (3 locations: browser tab favicon, login page logo, sidebar logo)
