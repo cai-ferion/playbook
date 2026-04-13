@@ -1681,3 +1681,10 @@
 - [x] Remove "Upload Productivity Hours" section from Admin Tools
 - [x] Remove "Billing Targets V2" section from Admin Tools
 - [x] Fix Compass form lag/latency when filling the coaching form
+
+## Coaching Profile — Role-Based Visibility Rules
+- [x] Managers: see all coaching logs (verified: 1998 Given, 0 Received)
+- [x] Team Leaders: see logs filed to their team (regardless of coach) + logs filed to them (verified: 44 Given, 1 Received)
+- [x] SMEs: see logs filed to their TL's team + logs filed to them (verified via DB: 120 Given, 9 Received)
+- [x] QAs & Trainers: see logs they filed + logs filed to them (verified via DB: 9 Given, 7 Received)
+- [x] Agents: see only logs filed to them, hide Add button (verified: 6 Received, no Add button, no Given panel)

@@ -381,7 +381,8 @@ async function handleLogin() {
       employement_status: emp.employement_status,
       planning_group: emp.planning_group || '',
       complete_planning_group: emp.complete_planning_group || '',
-      actualPlanningGroup: emp.planning_group || ''
+      actualPlanningGroup: emp.planning_group || '',
+      supervisor_name: emp.supervisor_name || ''
     };
 
     sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
@@ -417,8 +418,15 @@ async function handleLogin() {
     const billingNav = document.getElementById('nav-billing');
     if (billingNav) billingNav.style.display = (currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
 
-    // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
-    ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
+    // Compass — visible to all roles except Agents (role-based coaching visibility)
+    const compassNav = document.getElementById('nav-group-compass');
+    if (compassNav) {
+      const isAgentNonAdmin = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR;
+      compassNav.style.display = isAgentNonAdmin ? 'none' : '';
+    }
+
+    // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
+    ['nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
     });
@@ -565,8 +573,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const billingNav2 = document.getElementById('nav-billing');
       if (billingNav2) billingNav2.style.display = (currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
 
-      // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
-      ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
+      // Compass — visible to all roles except Agents (role-based coaching visibility)
+      const compassNav2 = document.getElementById('nav-group-compass');
+      if (compassNav2) {
+        const isAgentNonAdmin2 = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2;
+        compassNav2.style.display = isAgentNonAdmin2 ? 'none' : '';
+      }
+
+      // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
+      ['nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
       });

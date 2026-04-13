@@ -464,18 +464,51 @@
       });
     }
 
-    // Split into given/received based on current user
+    // Split into given/received based on current user role
     const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
-    const isAgent = currentUser && currentUser.actual_role === 'Agent' && !isAdmin740;
+    const role = currentUser ? currentUser.actual_role : '';
 
-    if (isAdmin740) {
-      // Admin override — sees ALL coaching logs
+    if (isAdmin740 || role === 'Manager') {
+      // Admin + Managers — see ALL coaching logs
       COMPASS.filteredGiven = data;
       COMPASS.filteredReceived = [];
-    } else if (isAgent) {
+    } else if (role === 'Agent') {
+      // Agents — only see logs filed TO them
       COMPASS.filteredGiven = [];
       COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
+    } else if (role === 'Team Lead') {
+      // Team Leaders — see logs filed to their team (anyone whose supervisor_name matches
+      // the TL's full_name) regardless of who the coach is, plus logs filed to them personally.
+      const myName = currentUser.full_name;
+      const teamOhrs = new Set();
+      if (COMPASS.employees && COMPASS.employees.length) {
+        COMPASS.employees.forEach(e => {
+          if (e.supervisor_name === myName) teamOhrs.add(e.ohr_id);
+        });
+      }
+      teamOhrs.add(currentUser.ohr_id); // include self
+      COMPASS.filteredGiven = data.filter(l => teamOhrs.has(l.coachee_ohr));
+      COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
+    } else if (role === 'Operational SME') {
+      // SMEs — see logs filed to their TL's team (supervisor_name of the SME is a TL;
+      // the TL's team = all employees whose supervisor_name matches that TL name),
+      // plus logs filed to them personally.
+      const myTlName = currentUser.supervisor_name || '';
+      const teamOhrs = new Set();
+      if (COMPASS.employees && COMPASS.employees.length && myTlName) {
+        COMPASS.employees.forEach(e => {
+          if (e.supervisor_name === myTlName) teamOhrs.add(e.ohr_id);
+        });
+      }
+      teamOhrs.add(currentUser.ohr_id); // include self
+      COMPASS.filteredGiven = data.filter(l => teamOhrs.has(l.coachee_ohr));
+      COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
+    } else if (role === 'Quality & Policy Expert' || role === 'Trainer') {
+      // QAs & Trainers — see logs they filed + logs filed to them
+      COMPASS.filteredGiven = data.filter(l => l.coach_ohr === currentUser.ohr_id);
+      COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
     } else if (currentUser) {
+      // Fallback for any other role
       COMPASS.filteredGiven = data.filter(l => l.coach_ohr === currentUser.ohr_id);
       COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
     } else {
@@ -523,6 +556,7 @@
     if (recvUnackCountEl) recvUnackCountEl.textContent = unackRecv.length;
 
     // Hide Given panel for agents
+    const isAgent = role === 'Agent' && !isAdmin740;
     const dualTables = document.getElementById('compass-dual-tables');
     if (dualTables) {
       const panels = dualTables.querySelectorAll('.compass-table-panel');
