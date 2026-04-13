@@ -1600,3 +1600,15 @@
   - [x] Refined pagination, tabs, and subpage tabs
   - [x] Entrance animations (fadeUp, slideIn, countUp)
   - [x] Consistent indigo (#6366F1) accent color system throughout
+
+## Revisions — April 14
+- [x] Fix Team Lead Internal Roles in Input Portal (1,685 attendance records corrected: 12 Team Leads + 3 Trainers)
+- [x] Grant non-agents visibility on all Anchor pages (Input Portal, Dashboard, Billing Compliance, Risk Intelligence) except Sync History
+  - Updated both login and session-restore blocks in app.js
+  - Risk Intelligence: was TL/Manager/Trainer only → now all non-agents (QPE included)
+  - Billing Compliance: was TL/Manager only → now all non-agents (QPE, Trainer included)
+  - Sync History: remains admin-only ✓
+- [x] Confirm/fix Billing Role & Planning Group edit permissions for Managers and Team Leads
+  - Added Team Lead and Trainer to ROLE_OPTIONS dropdown in compact detail panel
+  - Added RECALL_MEASUREMENT_CTR and MULTIPLE to PG_OPTIONS dropdown
+  - Server-side PATCH route already accepts role and planning_group — no actor-role restriction exists

@@ -314,7 +314,7 @@ function renderDetailPanel(r, idx, locked) {
   }
 
   // Role dropdown (per-day editable)
-  var ROLE_OPTIONS = ['Agent', 'Operational SME', 'Quality & Policy Expert'];
+  var ROLE_OPTIONS = ['Agent', 'Operational SME', 'Quality & Policy Expert', 'Team Lead', 'Trainer'];
   var roleField;
   if (locked) {
     roleField = '<span class="detail-readonly">' + escapeHtml(r.role || '\u2014') + '</span>';
@@ -326,7 +326,7 @@ function renderDetailPanel(r, idx, locked) {
   }
 
   // Planning Group dropdown (per-day editable)
-  var PG_OPTIONS = ['S-ABF', 'CS-ABF', 'RM_CTR', 'FAD_CTR', 'CSO_CTR', 'SME_CTR', 'QPE_CTR'];
+  var PG_OPTIONS = ['S-ABF', 'CS-ABF', 'RECALL_MEASUREMENT_CTR', 'FAD_CTR', 'CSO_CTR', 'SME_CTR', 'QPE_CTR', 'MULTIPLE'];
   var pgField;
   if (locked) {
     pgField = '<span class="detail-readonly">' + escapeHtml(r.actualPlanningGroup || '\u2014') + '</span>';

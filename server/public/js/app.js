@@ -409,14 +409,13 @@ async function handleLogin() {
       }
     }
 
-    // Show Risk Intelligence nav only for Team Lead, Manager, Trainer
+    // Show Risk Intelligence nav for all non-Agents
     const alertsNav = document.getElementById('nav-alerts');
-    const allowedRoles = ['Team Lead', 'Manager', 'Trainer'];
-    if (alertsNav) alertsNav.style.display = allowedRoles.includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
+    if (alertsNav) alertsNav.style.display = (currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
 
-    // Show Billing Compliance nav for Team Lead and Manager only
+    // Show Billing Compliance nav for all non-Agents
     const billingNav = document.getElementById('nav-billing');
-    if (billingNav) billingNav.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
+    if (billingNav) billingNav.style.display = (currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
 
     // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
     ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
@@ -557,14 +556,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      // Show Risk Intelligence nav only for Team Lead, Manager, Trainer
+      // Show Risk Intelligence nav for all non-Agents
       const alertsNav2 = document.getElementById('nav-alerts');
-      const allowedRoles2 = ['Team Lead', 'Manager', 'Trainer'];
-      if (alertsNav2) alertsNav2.style.display = allowedRoles2.includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
+      if (alertsNav2) alertsNav2.style.display = (currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
 
-      // Show Billing Compliance nav for Team Lead and Manager only
+      // Show Billing Compliance nav for all non-Agents
       const billingNav2 = document.getElementById('nav-billing');
-      if (billingNav2) billingNav2.style.display = (['Team Lead', 'Manager'].includes(currentUser.actual_role) || currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
+      if (billingNav2) billingNav2.style.display = (currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
 
       // Compass, Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
       ['nav-group-compass', 'nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
