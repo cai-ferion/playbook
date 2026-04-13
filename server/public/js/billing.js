@@ -615,16 +615,16 @@ async function otDashOpenForm() {
 // ===== Billing Targets Editor (Admin Only) =====
 const BILLING_PG_ROLE_COMBOS = [
   { pg: 'S-ABF', role: 'Agent', label: 'S-ABF × Agent' },
-  { pg: 'S-ABF', role: 'SME', label: 'S-ABF × SME' },
-  { pg: 'S-ABF', role: 'QA', label: 'S-ABF × QA' },
+  { pg: 'S-ABF', role: 'Operational SME', label: 'S-ABF × SME' },
+  { pg: 'S-ABF', role: 'Quality & Policy Expert', label: 'S-ABF × QA' },
   { pg: 'CS-ABF', role: 'Agent', label: 'CS-ABF × Agent' },
-  { pg: 'CS-ABF', role: 'SME', label: 'CS-ABF × SME' },
-  { pg: 'CS-ABF', role: 'QA', label: 'CS-ABF × QA' },
-  { pg: 'R-ABF', role: 'Agent', label: 'R-ABF × Agent' },
-  { pg: 'R-ABF', role: 'SME', label: 'R-ABF × SME' },
+  { pg: 'CS-ABF', role: 'Operational SME', label: 'CS-ABF × SME' },
+  { pg: 'CS-ABF', role: 'Quality & Policy Expert', label: 'CS-ABF × QA' },
+  { pg: 'CSO_CTR', role: 'Agent', label: 'CSO × Agent' },
+  { pg: 'FAD_CTR', role: 'Agent', label: 'FAD × Agent' },
+  { pg: 'RECALL_MEASUREMENT_CTR', role: 'Agent', label: 'RECALL × Agent' },
   { pg: 'SME_CTR', role: '*', label: 'SME_CTR' },
   { pg: 'QPE_CTR', role: '*', label: 'QPE_CTR' },
-  { pg: 'CS-ABF', role: 'TL', label: 'CS-ABF × TL' },
 ];
 
 async function openBillingTargetsEditor() {

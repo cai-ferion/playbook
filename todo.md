@@ -1656,3 +1656,11 @@
 - [x] Stitch frames into horizontal sprite sheets (1280x256px each) and upload to CDN
 - [x] Update mascot.css with CSS steps() sprite animations (ping-pong loop: 1→2→3→4→5→4→3→2→1)
 - [x] Integrate sprite sheet animations into the site (14 HTML + 18 JS = 32 total sprite divs)
+
+## Bug Fix — April 14 (Batch 9)
+- [x] Fix incorrect billing compliance calculations after target hours adjustment
+  - Root cause: Frontend editor used short role names (SME/QA/TL) and wrong PG (R-ABF) but server expected full names (Operational SME/Quality & Policy Expert) and RECALL_MEASUREMENT_CTR
+  - [x] Corrected 7 target records in DB for week 2026-04-17 (renamed roles + PG)
+  - [x] Fixed BILLING_PG_ROLE_COMBOS in billing.js to use full role names matching attendance data
+  - [x] Frontend and server-side PG_ROLE_COMBOS now aligned (11 combos each)
+  - Result: Total compliance went from 202.2% (wrong) to 109.4% (correct)
