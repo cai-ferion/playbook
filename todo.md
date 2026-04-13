@@ -1694,3 +1694,8 @@
 
 ## Bug Fix — Billing Role/Planning Group Save Failure
 - [x] Fix: Saving Billing Role and Billing Planning Group changes fails with an error (root cause: saveRecords in data.js was not including role/planning_group in PATCH payload)
+
+## Public API Endpoint — /api/public/data
+- [x] Build GET /api/public/data endpoint exposing io_employees and io_attendance
+- [x] Return JSON with items array: { id, title, category, description, url, updatedAt }
+- [x] Enable CORS from any origin, no authentication required
