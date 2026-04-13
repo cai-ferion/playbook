@@ -160,6 +160,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
 }
 
 .sh-table thead th {
@@ -254,6 +255,8 @@
   padding: 16px 20px;
   background: var(--bg-inset);
   border-top: 1px solid var(--border-muted);
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .sh-detail-error {
@@ -263,7 +266,11 @@
   border-radius: var(--radius);
   font-size: 12px;
   margin-bottom: 10px;
-  word-break: break-word;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .sh-detail-stats {

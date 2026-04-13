@@ -1548,3 +1548,13 @@
 - [x] Update blank dispute statuses to "Pending SME Review" in io_coaching (44 QA Feedback records updated)
 - [x] Remove Reverse Markdown / Retain Markdown buttons from QA Feedback coaching logs in Coaching Profile
 - [x] Copy Input Portal filtering style (persistent pill-based filter bar) to Coaching Profile
+- [x] Re-run DB to G Sheet sync for ATTEND_26 (3 employees missing: 740053907, 740041868, 740052326)
+
+## Revisions — April 13 (Batch 2)
+- [x] QA Feedback: Hide Acknowledgement section when status is not acknowledgement-related (e.g. Markdown Dispute, QA Decision Rejected)
+- [x] Filter bar: Move Add button to first position (leftmost), filters to its right
+- [x] Filter bar: Fix empty dropdown choices when clicking filter buttons (values sourced from COMPASS.logs after fetch)
+- [x] Root Cause Analysis: Indent values to fix L3 Contributing Cause alignment issue (min-width 140→170px)
+- [x] Delete 5 experimental QA Feedback logs (CL-b7c94265, CL-57b90f69, CL-d49ae370, CL-9e5011b6, CL-e4063022)
+- [x] Rename "General Coaching" to "CAP 0 Coaching" everywhere (code + 246 DB records updated)
+- [x] Sync History: Wrap error/log text so it doesn't extend too far right (word-break, overflow-wrap, table-layout:fixed)

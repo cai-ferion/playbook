@@ -20,7 +20,7 @@ const COMPASS = {
   pageGiven: 1,
   pageReceived: 1,
 
-  COACHING_TYPES: ['General Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+  COACHING_TYPES: ['CAP 0 Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
     'Pending SME Review',
@@ -777,6 +777,11 @@ async function compassOpenDetail(coachingId) {
   html += '</div>'; // close current section
 
   // ===== SECTION 2: ACKNOWLEDGEMENT =====
+  // For QA Feedback logs, only show Acknowledgement section when status is acknowledgement-related
+  const ACK_ELIGIBLE_STATUSES = ['Pending Acknowledgement', 'Acknowledged'];
+  const showAckSection = log.coaching_type !== 'QA Feedback' || ACK_ELIGIBLE_STATUSES.includes(log.status);
+
+  if (showAckSection) {
   html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Acknowledgement</h4>';
 
   // Wrap ack details in a div that can be hidden when Acknowledge form is shown
@@ -820,6 +825,7 @@ async function compassOpenDetail(coachingId) {
   </div>`;
 
   html += '</div>'; // close Section 2
+  } // end showAckSection
 
   formBody.innerHTML = html;
 
@@ -1383,7 +1389,7 @@ async function compassShowNewForm() {
   if (!isQA) {
     const typeSelect = document.getElementById('compass-new-type');
     if (typeSelect) {
-      typeSelect.value = 'General Coaching';
+      typeSelect.value = 'CAP 0 Coaching';
       compassOnTypeChange();
     }
   }
@@ -1751,7 +1757,7 @@ async function compassSubmitNew() {
     for (const item of coacheeList) {
       const emp = item.emp || COMPASS.employees.find(e => e.ohr_id === item.ohr);
       const individualRecord = {
-        coaching_type: 'General Coaching',
+        coaching_type: 'CAP 0 Coaching',
         coach: coach ? coach.full_name : '',
         coach_ohr: coach ? coach.ohr_id : '',
         coach_meta_email: coach ? (coach.meta_email || '') : '',
@@ -2177,7 +2183,7 @@ document.addEventListener('selectionchange', function() {
 
 // ===== Multi-Select Goal Helpers =====
 
-// Goals to hide for "General Coaching" type
+// Goals to hide for "CAP 0 Coaching" type
 const NEW_SESSION_HIDDEN_GOALS = ['Coaching Observation', 'Quality Error Findings'];
 
 function compassFilterGoalOptions(type) {
@@ -2186,7 +2192,7 @@ function compassFilterGoalOptions(type) {
   const labels = dropdown.querySelectorAll('label.multi-select-option');
   labels.forEach(label => {
     const goalName = label.getAttribute('data-goal');
-    if (type === 'General Coaching' && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
+    if (type === 'CAP 0 Coaching' && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
       label.style.display = 'none';
       // Also uncheck if hidden
       const cb = label.querySelector('input[type="checkbox"]');

@@ -384,6 +384,19 @@
 
     let data = [...COMPASS.logs];
 
+    // Hide QA Feedback logs with active dispute statuses from Coaching Profile
+    const QA_DISPUTE_HIDDEN_STATUSES = [
+      'Markdown Disputed - SME',
+      'Markdown Retained - QA',
+      'QA Decision Rejected - SME',
+      'Markdown Retained - Trainer',
+      'Trainer Decision Rejected - SME',
+    ];
+    data = data.filter(l => {
+      if (l.coaching_type !== 'QA Feedback') return true;
+      return !QA_DISPUTE_HIDDEN_STATUSES.includes(l.status);
+    });
+
     // Apply each filter
     Object.values(compassPillState.filters).forEach(f => {
       switch (f.key) {
@@ -440,9 +453,14 @@
     }
 
     // Split into given/received based on current user
-    const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
+    const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+    const isAgent = currentUser && currentUser.actual_role === 'Agent' && !isAdmin740;
 
-    if (isAgent) {
+    if (isAdmin740) {
+      // Admin override — sees ALL coaching logs
+      COMPASS.filteredGiven = data;
+      COMPASS.filteredReceived = [];
+    } else if (isAgent) {
       COMPASS.filteredGiven = [];
       COMPASS.filteredReceived = data.filter(l => l.coachee_ohr === currentUser.ohr_id);
     } else if (currentUser) {

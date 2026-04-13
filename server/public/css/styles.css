@@ -3186,11 +3186,11 @@ body {
 }
 .detail-row:last-child { border-bottom: none; }
 .detail-label {
-  min-width: 140px; font-size: 12px; font-weight: 600;
+  min-width: 170px; font-size: 12px; font-weight: 600;
   color: var(--fg-muted); flex-shrink: 0;
 }
 .detail-value {
-  font-size: 13px; color: var(--fg); flex: 1;
+  font-size: 13px; color: var(--fg); flex: 1; word-break: break-word;
 }
 .detail-multiline { white-space: pre-wrap; line-height: 1.5; }
 

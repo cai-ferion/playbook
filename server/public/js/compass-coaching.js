@@ -328,7 +328,7 @@ async function ccShowNewForm() {
         <div>
           <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px;">Coaching Type *</label>
           <select id="cc-form-type" class="form-select" style="width:100%;" onchange="ccFormTypeChanged()">
-            <option value="CAP 0">CAP 0 (General Coaching)</option>
+            <option value="CAP 0">CAP 0 Coaching</option>
             <option value="Follow-Up Session">Follow-Up Session</option>
             <option value="Group Coaching">Group Coaching</option>
             <option value="Triad Coaching">Triad Coaching</option>
