@@ -718,6 +718,8 @@ async function saveRecords(edits) {
       if (edit.upl_reason !== undefined) payload.upl_reason = edit.upl_reason;
       if (edit.remarks !== undefined) payload.remarks = edit.remarks;
       if (edit.ot_hours !== undefined) payload.ot_hours = edit.ot_hours;
+      if (edit.role !== undefined) payload.role = edit.role;
+      if (edit.planning_group !== undefined) payload.planning_group = edit.planning_group;
 
       const actorHeaders = {};
       if (typeof currentUser !== 'undefined' && currentUser) {

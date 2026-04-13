@@ -1691,3 +1691,6 @@
 
 ## Coaching Profile — Admin View Toggle
 - [x] Add toggle for admin (740045023) to switch between "All Logs" and "TL View" in Coaching Profile (verified: All=1998, MyTeam=149)
+
+## Bug Fix — Billing Role/Planning Group Save Failure
+- [x] Fix: Saving Billing Role and Billing Planning Group changes fails with an error (root cause: saveRecords in data.js was not including role/planning_group in PATCH payload)
