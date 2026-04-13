@@ -1,4 +1,4 @@
-/* ===== Playbook Mascot Integration ===== */
+/* ===== Playbook Mascot Integration — Lively Animations ===== */
 
 /* --- Login Page Mascot (Waving Fox) --- */
 .auth-mascot {
@@ -12,8 +12,9 @@
   width: 120px;
   height: 120px;
   object-fit: contain;
-  animation: mascotBounce 2s ease-in-out infinite;
   filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.2));
+  animation: mascotWaveHello 3s ease-in-out infinite;
+  transform-origin: center bottom;
 }
 
 .auth-mascot .mascot-greeting {
@@ -26,9 +27,16 @@
   animation: mascotFadeIn 0.6s ease-out 0.3s forwards;
 }
 
-@keyframes mascotBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+/* Waving hello: playful sway left-right with a little hop at the peak */
+@keyframes mascotWaveHello {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); }
+  10%  { transform: translateY(-5px) rotate(-6deg) scale(1.03); }
+  20%  { transform: translateY(-2px) rotate(4deg) scale(1.01); }
+  30%  { transform: translateY(-5px) rotate(-5deg) scale(1.03); }
+  40%  { transform: translateY(-1px) rotate(3deg) scale(1.01); }
+  50%  { transform: translateY(-4px) rotate(-4deg) scale(1.02); }
+  60%  { transform: translateY(0) rotate(0deg) scale(1); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
 }
 
 @keyframes mascotFadeIn {
@@ -41,8 +49,9 @@
   width: 80px;
   height: 80px;
   object-fit: contain;
-  animation: mascotThink 2.5s ease-in-out infinite;
   filter: drop-shadow(0 4px 16px rgba(99, 102, 241, 0.15));
+  animation: mascotThinking 3s ease-in-out infinite;
+  transform-origin: center bottom;
 }
 
 .loading-overlay .loading-text {
@@ -50,12 +59,25 @@
   font-weight: 500;
   color: var(--fg-muted);
   margin-top: 4px;
+  animation: mascotTextPulse 2s ease-in-out infinite;
 }
 
-@keyframes mascotThink {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  25% { transform: rotate(-3deg) scale(1.02); }
-  75% { transform: rotate(3deg) scale(1.02); }
+/* Thinking: head tilt side-to-side, slight lean, then a little "aha" pop */
+@keyframes mascotThinking {
+  0%   { transform: rotate(0deg) translateY(0) scale(1); }
+  12%  { transform: rotate(-5deg) translateY(-2px) scale(1); }
+  24%  { transform: rotate(-5deg) translateY(-2px) scale(1); }
+  36%  { transform: rotate(5deg) translateY(-2px) scale(1); }
+  48%  { transform: rotate(5deg) translateY(-2px) scale(1); }
+  56%  { transform: rotate(0deg) translateY(-6px) scale(1.06); }
+  64%  { transform: rotate(0deg) translateY(0) scale(1); }
+  100% { transform: rotate(0deg) translateY(0) scale(1); }
+}
+
+/* Subtle text pulse for "Loading..." */
+@keyframes mascotTextPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 /* --- Progress Bar Mascot (Thinking Fox) --- */
@@ -63,9 +85,24 @@
   width: 90px;
   height: 90px;
   object-fit: contain;
-  animation: mascotThink 2.5s ease-in-out infinite;
   filter: drop-shadow(0 4px 16px rgba(99, 102, 241, 0.15));
   margin-bottom: 4px;
+  animation: mascotPacing 2.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+/* Pacing back and forth while waiting — side-to-side walk */
+@keyframes mascotPacing {
+  0%   { transform: translateX(0) scaleX(1) translateY(0); }
+  15%  { transform: translateX(12px) scaleX(1) translateY(-3px); }
+  25%  { transform: translateX(12px) scaleX(1) translateY(0); }
+  30%  { transform: translateX(12px) scaleX(-1) translateY(0); }
+  45%  { transform: translateX(-12px) scaleX(-1) translateY(-3px); }
+  55%  { transform: translateX(-12px) scaleX(-1) translateY(0); }
+  60%  { transform: translateX(-12px) scaleX(1) translateY(0); }
+  75%  { transform: translateX(0) scaleX(1) translateY(-3px); }
+  85%  { transform: translateX(0) scaleX(1) translateY(0); }
+  100% { transform: translateX(0) scaleX(1) translateY(0); }
 }
 
 /* --- Empty State Mascot (Shrug Fox) --- */
@@ -84,7 +121,8 @@
   object-fit: contain;
   opacity: 0.85;
   filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.1));
-  animation: mascotShrug 3s ease-in-out infinite;
+  animation: mascotShrugLoop 4s ease-in-out infinite;
+  transform-origin: center bottom;
 }
 
 .mascot-empty-state .empty-title {
@@ -101,10 +139,16 @@
   max-width: 280px;
 }
 
-@keyframes mascotShrug {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  30% { transform: translateY(-4px) rotate(-2deg); }
-  60% { transform: translateY(-4px) rotate(2deg); }
+/* Shrug loop: shoulders up, head tilt, little bounce, then settle */
+@keyframes mascotShrugLoop {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); }
+  8%   { transform: translateY(-3px) rotate(0deg) scale(1.04); }
+  16%  { transform: translateY(-3px) rotate(-4deg) scale(1.04); }
+  24%  { transform: translateY(-3px) rotate(4deg) scale(1.04); }
+  32%  { transform: translateY(-3px) rotate(0deg) scale(1.04); }
+  40%  { transform: translateY(2px) rotate(0deg) scale(0.97); }
+  48%  { transform: translateY(0) rotate(0deg) scale(1); }
+  100% { transform: translateY(0) rotate(0deg) scale(1); }
 }
 
 /* --- Compact Table Empty State --- */
@@ -122,10 +166,35 @@
   object-fit: contain;
   opacity: 0.8;
   filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.1));
+  animation: mascotShrugLoop 4s ease-in-out infinite;
+  transform-origin: center bottom;
 }
 
 .compact-empty-mascot .empty-text {
   font-size: 13px;
   color: var(--fg-muted);
   font-weight: 500;
+}
+
+/* --- Sidebar Logo Fox — subtle idle breathing --- */
+.sidebar-logo img {
+  animation: mascotBreathe 4s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+@keyframes mascotBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* --- Reduce motion for accessibility --- */
+@media (prefers-reduced-motion: reduce) {
+  .auth-mascot img,
+  .loading-overlay .mascot-loader,
+  .progress-container .mascot-loader,
+  .mascot-empty-state img,
+  .compact-empty-mascot img,
+  .sidebar-logo img {
+    animation: none;
+  }
 }

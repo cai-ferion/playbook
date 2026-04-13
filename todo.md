@@ -1638,3 +1638,13 @@
 
 ## Revisions — April 14 (Batch 6)
 - [x] Replace Playbook logo and favicon with the arctic fox icon face (3 locations: browser tab favicon, login page logo, sidebar logo)
+
+## Revisions — April 14 (Batch 7)
+- [x] Enhance fox mascot animations — add lively movement beyond floating
+  - [x] Login waving fox: playful sway left-right with hop at peak (mascotWaveHello)
+  - [x] Loading thinking fox: head tilt side-to-side with "aha" pop (mascotThinking)
+  - [x] Progress bar thinking fox: pacing back-and-forth walk (mascotPacing)
+  - [x] Empty state shrug fox: shoulders up, head tilt, bounce, settle (mascotShrugLoop)
+  - [x] Sidebar logo fox: subtle idle breathing (mascotBreathe)
+  - [x] Loading text: gentle pulse opacity animation (mascotTextPulse)
+  - [x] Added prefers-reduced-motion media query for accessibility
