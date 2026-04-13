@@ -1412,7 +1412,7 @@ async function compassShowNewForm() {
 
   formFooter.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="compassSubmitNew()">Create</button>
+    <button class="btn btn-primary btn-sm" id="compass-submit-btn" onclick="compassSubmitNew()">Create</button>
   `;
 
   overlay.style.display = 'flex';
@@ -1872,7 +1872,7 @@ async function compassSubmitNew() {
     if (shouldOpenNte) {
       // Don't close the overlay — replace the form content with NTE form
       await compassFetchLogs();
-      compassOpenNteForm({
+      await compassOpenNteForm({
         coaching_id: newId,
         employee_name: coachee ? coachee.full_name : (parentLog ? parentLog.coachee : ''),
         ohr_id: coacheeOhr,
@@ -1896,6 +1896,12 @@ function compassOnCapLevelChange() {
   const selected = document.querySelector('input[name="compass-cap-level"]:checked')?.value || '';
   const notice = document.getElementById('compass-cap-notice');
   if (notice) notice.style.display = selected ? '' : 'none';
+
+  // Change button text: "Next" for CAP 1-3 (will open NTE form), "Create" otherwise
+  const submitBtn = document.getElementById('compass-submit-btn');
+  if (submitBtn) {
+    submitBtn.textContent = ['CAP 1', 'CAP 2', 'CAP 3'].includes(selected) ? 'Next' : 'Create';
+  }
 }
 
 function compassGetSelectedCapLevel() {
@@ -3694,7 +3700,7 @@ async function disputesSubmitLV6RetainMarkdown() {
 
 // ===== Notice to Explain (NTE) Form =====
 
-function compassOpenNteForm(params) {
+async function compassOpenNteForm(params) {
   // params: { coaching_id, employee_name, ohr_id, cap_level, coach_name, coach_ohr }
   const overlay = document.getElementById('compass-form-overlay');
   const formTitle = document.getElementById('compass-form-title');
@@ -3703,12 +3709,21 @@ function compassOpenNteForm(params) {
 
   formTitle.textContent = `Notice to Explain — ${params.cap_level}`;
 
-  // Fetch previous warnings for this employee
-  const prevWarningsPromise = fetch(`${IO_API_BASE}/coaching-nte?ohr_id=${encodeURIComponent(params.ohr_id)}`)
-    .then(r => r.ok ? r.json() : [])
-    .catch(() => []);
+  // Show overlay immediately with loading state
+  formBody.innerHTML = '<div style="text-align:center; padding:40px; color:var(--fg-muted);">Loading NTE form...</div>';
+  formFooter.innerHTML = '';
+  overlay.style.display = 'flex';
 
-  prevWarningsPromise.then(existingNtes => {
+  // Fetch previous warnings for this employee
+  let existingNtes = [];
+  try {
+    const r = await fetch(`${IO_API_BASE}/coaching-nte?ohr_id=${encodeURIComponent(params.ohr_id)}`);
+    existingNtes = r.ok ? await r.json() : [];
+  } catch (e) {
+    existingNtes = [];
+  }
+
+  {
     const prevWarningsHtml = existingNtes.length > 0
       ? existingNtes.map(n => `<div style="padding:8px 10px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; font-size:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -3812,8 +3827,7 @@ function compassOpenNteForm(params) {
       <button class="btn btn-primary btn-sm" onclick="compassSubmitNte()">Save NTE</button>
     `;
 
-    overlay.style.display = '';
-  });
+    overlay.style.display = 'flex';
 }
 
 async function compassSubmitNte() {
@@ -3929,5 +3943,5 @@ function compassOpenNteDetail(nte) {
     <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Close</button>
   `;
 
-  overlay.style.display = '';
+  overlay.style.display = 'flex';
 }

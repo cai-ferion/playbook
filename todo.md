@@ -1576,3 +1576,7 @@
 - [x] Fix CAP 1-3 → NTE redirect (moved NTE form open before compassCloseForm)
 - [x] Migrate old session goals in DB to nearest applicable new goal (1,996 rows updated)
 - [x] Filter dropdowns: show all defined options via COMPASS_DEFINED_OPTIONS (Type, Status, Session Goal)
+
+## Revisions — April 13 (Batch 5)
+- [x] Fix NTE form not showing after CAP 1-3 selection (root cause: overlay.style.display='' resolved to 'none' from inline default; fixed to 'flex' + converted to async/await)
+- [x] Change "Create" button text to "Next" when CAP 1-3 is selected (via compassOnCapLevelChange)
