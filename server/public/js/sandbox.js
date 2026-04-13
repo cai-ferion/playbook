@@ -363,7 +363,7 @@ function sandboxRenderTable() {
   const pageData = SANDBOX_MOD.filtered.slice(start, start + SANDBOX_MOD.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No insights"><div class="empty-title">No insights found</div><div class="empty-subtitle">Submit a new insight or adjust filters</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No insights found</div><div class="empty-subtitle">Submit a new insight or adjust filters</div></div></td></tr>';
     sandboxRenderPagination();
     return;
   }

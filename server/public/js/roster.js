@@ -440,7 +440,7 @@ function rosterRenderTable() {
 
   if (pageData.length === 0) {
     const colSpan = cols.length;
-    tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No employees"><div class="empty-title">No employees found</div><div class="empty-subtitle">Try adjusting the search or filters</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No employees found</div><div class="empty-subtitle">Try adjusting the search or filters</div></div></td></tr>`;
     rosterRenderPagination();
     return;
   }

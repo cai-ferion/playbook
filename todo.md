@@ -1648,3 +1648,11 @@
   - [x] Sidebar logo fox: subtle idle breathing (mascotBreathe)
   - [x] Loading text: gentle pulse opacity animation (mascotTextPulse)
   - [x] Added prefers-reduced-motion media query for accessibility
+
+## Revisions — April 14 (Batch 8)
+- [x] Generate sprite sheet frames for waving fox (5 frames with arm/body movement)
+- [x] Generate sprite sheet frames for thinking fox (5 frames with head tilt/paw movement)
+- [x] Generate sprite sheet frames for shrugging fox (5 frames with shoulder/arm movement)
+- [x] Stitch frames into horizontal sprite sheets (1280x256px each) and upload to CDN
+- [x] Update mascot.css with CSS steps() sprite animations (ping-pong loop: 1→2→3→4→5→4→3→2→1)
+- [x] Integrate sprite sheet animations into the site (14 HTML + 18 JS = 32 total sprite divs)

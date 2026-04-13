@@ -242,7 +242,7 @@ function helmRenderTable() {
   const pageData = HELM.filtered.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No tasks"><div class="empty-title">No tasks found</div><div class="empty-subtitle">Create a new task or adjust filters</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">Create a new task or adjust filters</div></div></td></tr>';
     helmRenderPagination();
     return;
   }
@@ -337,7 +337,7 @@ function helmRenderReceivedTable() {
   const pageData = HELM.filteredReceived.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No tasks"><div class="empty-title">No tasks found</div><div class="empty-subtitle">Create a new task or adjust filters</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">Create a new task or adjust filters</div></div></td></tr>';
     helmRenderReceivedPagination();
     return;
   }
@@ -1488,7 +1488,7 @@ function helmRenderApprovalsTable() {
   const pageData = HELM.filteredApprovals.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No requests"><div class="empty-title">No requests found</div><div class="empty-subtitle">Try adjusting the filters</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No requests found</div><div class="empty-subtitle">Try adjusting the filters</div></div></td></tr>';
     helmRenderApprovalsPagination();
     return;
   }

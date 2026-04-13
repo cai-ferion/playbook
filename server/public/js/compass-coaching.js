@@ -107,7 +107,7 @@ function ccRenderTable() {
   if (totalEl) totalEl.textContent = ccState.total;
 
   if (!ccState.data.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No logs"><div class="empty-title">No coaching logs found</div><div class="empty-subtitle">Try adjusting the filters or date range</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No coaching logs found</div><div class="empty-subtitle">Try adjusting the filters or date range</div></div></td></tr>`;
     return;
   }
 
