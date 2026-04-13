@@ -5,6 +5,59 @@
  * Sub-page 3: Analytics — coaching metrics and trends
  */
 
+// ===== Performance: Debounce utility =====
+function _compassDebounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// ===== Performance: Virtual dropdown rendering =====
+// Instead of rendering all 400+ employees as DOM nodes upfront,
+// render only visible (filtered) items on demand.
+function _compassRenderDropdownItems(containerId, employees, filterText, onClickFn, roleFilter) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const query = (filterText || '').toLowerCase().trim();
+  let filtered = employees;
+  if (query) {
+    filtered = filtered.filter(e => e.full_name.toLowerCase().includes(query) || e.ohr_id.includes(query));
+  }
+  if (roleFilter) {
+    filtered = filtered.filter(e => roleFilter.includes(e.actual_role));
+  }
+  // Cap at 50 visible items for performance
+  const capped = filtered.slice(0, 50);
+  const moreCount = filtered.length - capped.length;
+  container.innerHTML = capped.map(e =>
+    `<div class="searchable-select-option" data-value="${escapeAttr(e.ohr_id)}" onclick="${onClickFn}('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`
+  ).join('') + (moreCount > 0 ? `<div style="padding:6px 10px;font-size:11px;color:var(--fg-subtle);text-align:center;">+${moreCount} more — type to narrow</div>` : '');
+}
+
+function _compassRenderMultiDropdownItems(containerId, employees, filterText) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // Preserve existing checked state
+  const checkedOhrs = new Set();
+  container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => checkedOhrs.add(cb.value));
+  const query = (filterText || '').toLowerCase().trim();
+  let filtered = employees;
+  if (query) {
+    filtered = filtered.filter(e => e.full_name.toLowerCase().includes(query) || e.ohr_id.includes(query));
+  }
+  const capped = filtered.slice(0, 50);
+  const moreCount = filtered.length - capped.length;
+  container.innerHTML = capped.map(e => {
+    const checked = checkedOhrs.has(e.ohr_id) ? 'checked' : '';
+    return `<label class="multi-coachee-option" data-name="${escapeAttr(e.full_name.toLowerCase())}" data-ohr="${escapeAttr(e.ohr_id)}">
+      <input type="checkbox" value="${escapeAttr(e.ohr_id)}" ${checked} onchange="compassUpdateMultiCoacheeDisplay()">
+      <span>${escapeHtml(e.full_name)}</span>
+    </label>`;
+  }).join('') + (moreCount > 0 ? `<div style="padding:6px 10px;font-size:11px;color:var(--fg-subtle);text-align:center;">+${moreCount} more — type to narrow</div>` : '');
+}
+
 const COMPASS = {
   logs: [],
   filtered: [],
@@ -1209,8 +1262,6 @@ async function compassShowNewForm() {
 
   formTitle.textContent = 'New Coaching Log';
 
-  const employeeOptions = COMPASS.employees.map(e => `<option value="${escapeAttr(e.ohr_id)}">${escapeHtml(e.full_name)} (${e.ohr_id})</option>`).join('');
-
   formBody.innerHTML = `
     <div class="form-section">
       <div class="form-field">
@@ -1227,10 +1278,8 @@ async function compassShowNewForm() {
         <label class="form-label">Coachee <span class="required">*</span></label>
         <div class="searchable-select" id="compass-coachee-wrapper">
           <input type="hidden" id="compass-new-coachee" value="">
-          <input type="text" class="form-input" id="compass-coachee-search" placeholder="Search coachee..." autocomplete="off" onclick="compassToggleCoacheeDropdown(true)" oninput="compassFilterCoachees()">
-          <div class="searchable-select-dropdown" id="compass-coachee-dropdown" style="display:none;">
-            ${COMPASS.employees.map(e => `<div class="searchable-select-option" data-value="${escapeAttr(e.ohr_id)}" onclick="compassSelectCoachee('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`).join('')}
-          </div>
+          <input type="text" class="form-input" id="compass-coachee-search" placeholder="Search coachee..." autocomplete="off" onclick="compassToggleCoacheeDropdown(true)" oninput="_compassFilterCoacheesDebounced()">
+          <div class="searchable-select-dropdown" id="compass-coachee-dropdown" style="display:none;"></div>
         </div>
       </div>
       <div class="form-field" id="compass-coachee-list-field" style="display:none;">
@@ -1242,15 +1291,10 @@ async function compassShowNewForm() {
           </div>
           <div class="multi-coachee-dropdown" id="compass-multi-coachee-dropdown" style="display:none;">
             <div style="padding:6px 8px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:1; display:flex; gap:6px; align-items:center;">
-              <input type="text" class="form-input" id="compass-multi-coachee-search" placeholder="Search employees..." autocomplete="off" oninput="compassFilterMultiCoachees()" style="font-size:12px; padding:6px 8px; flex:1;">
+              <input type="text" class="form-input" id="compass-multi-coachee-search" placeholder="Search employees..." autocomplete="off" oninput="_compassFilterMultiCoacheesDebounced()" style="font-size:12px; padding:6px 8px; flex:1;">
               <button type="button" onclick="compassClearMultiCoachees()" style="white-space:nowrap; font-size:11px; padding:4px 8px; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); color:var(--fg-muted); cursor:pointer; transition:all 0.15s;">Clear All</button>
             </div>
-            <div id="compass-multi-coachee-options" style="max-height:220px; overflow-y:auto;">
-              ${COMPASS.employees.map(e => `<label class="multi-coachee-option" data-name="${escapeAttr(e.full_name.toLowerCase())}" data-ohr="${escapeAttr(e.ohr_id)}">
-                <input type="checkbox" value="${escapeAttr(e.ohr_id)}" onchange="compassUpdateMultiCoacheeDisplay()">
-                <span>${escapeHtml(e.full_name)}</span>
-              </label>`).join('')}
-            </div>
+            <div id="compass-multi-coachee-options" style="max-height:220px; overflow-y:auto;"></div>
           </div>
         </div>
         <div id="compass-multi-coachee-tags" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
@@ -1259,16 +1303,14 @@ async function compassShowNewForm() {
         <label class="form-label">Coachee <span class="required">*</span></label>
         <div class="searchable-select" id="compass-triad-coachee-wrapper">
           <input type="hidden" id="compass-triad-coachee" value="">
-          <input type="text" class="form-input" id="compass-triad-coachee-search" placeholder="Search coachee..." autocomplete="off" onclick="compassToggleTriadCoacheeDropdown(true)" oninput="compassFilterTriadCoachees()">
-          <div class="searchable-select-dropdown" id="compass-triad-coachee-dropdown" style="display:none;">
-            ${COMPASS.employees.map(e => `<div class="searchable-select-option" data-value="${escapeAttr(e.ohr_id)}" onclick="compassSelectTriadCoachee('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`).join('')}
-          </div>
+          <input type="text" class="form-input" id="compass-triad-coachee-search" placeholder="Search coachee..." autocomplete="off" onclick="compassToggleTriadCoacheeDropdown(true)" oninput="_compassFilterTriadCoacheesDebounced()">
+          <div class="searchable-select-dropdown" id="compass-triad-coachee-dropdown" style="display:none;"></div>
         </div>
       </div>
       <div class="form-field" id="compass-followup-field" style="display:none;">
         <label class="form-label">Follow-Up From <span class="required">*</span></label>
         <div class="searchable-select" id="compass-followup-wrapper">
-          <input type="text" class="form-input" id="compass-followup-search" placeholder="Search by coachee name, OHR, ID, or session goal..." autocomplete="off" oninput="compassSearchParentLogs()">
+          <input type="text" class="form-input" id="compass-followup-search" placeholder="Search by coachee name, OHR, ID, or session goal..." autocomplete="off" oninput="_compassSearchParentLogsDebounced()">
           <div class="searchable-select-dropdown" id="compass-followup-dropdown" style="display:none;"></div>
         </div>
         <div id="compass-followup-selected" style="display:none; margin-top:8px; padding:10px 12px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:12px;">
@@ -1545,6 +1587,8 @@ function compassOnTypeChange() {
 }
 
 // ===== Follow-Up Session: Parent Log Search =====
+
+var _compassSearchParentLogsDebounced = _compassDebounce(compassSearchParentLogs, 150);
 
 function compassSearchParentLogs() {
   const query = (document.getElementById('compass-followup-search')?.value || '').trim().toLowerCase();
@@ -1952,14 +1996,11 @@ function compassToggleCoacheeMulti() {
 }
 
 function compassFilterMultiCoachees() {
-  const query = (document.getElementById('compass-multi-coachee-search')?.value || '').toLowerCase().trim();
-  const options = document.querySelectorAll('#compass-multi-coachee-options .multi-coachee-option');
-  options.forEach(opt => {
-    const name = opt.dataset.name || '';
-    const ohr = opt.dataset.ohr || '';
-    opt.style.display = (!query || name.includes(query) || ohr.includes(query)) ? '' : 'none';
-  });
+  const query = document.getElementById('compass-multi-coachee-search')?.value || '';
+  _compassRenderMultiDropdownItems('compass-multi-coachee-options', COMPASS.employees, query);
 }
+
+var _compassFilterMultiCoacheesDebounced = _compassDebounce(compassFilterMultiCoachees, 120);
 
 function compassUpdateMultiCoacheeDisplay() {
   const checkboxes = document.querySelectorAll('#compass-multi-coachee-options input[type="checkbox"]:checked');
@@ -2045,24 +2086,15 @@ function compassToggleCoacheeDropdown(show) {
 }
 
 function compassFilterCoachees() {
-  const search = (document.getElementById('compass-coachee-search')?.value || '').toLowerCase().trim();
+  const search = document.getElementById('compass-coachee-search')?.value || '';
+  const roleFilter = COMPASS._triadRoleFilter || null;
+  _compassRenderDropdownItems('compass-coachee-dropdown', COMPASS.employees, search, 'compassSelectCoachee', roleFilter);
   const dropdown = document.getElementById('compass-coachee-dropdown');
-  if (!dropdown) return;
-  const options = dropdown.querySelectorAll('.searchable-select-option');
-  const allowedRoles = COMPASS._triadRoleFilter || null;
-  options.forEach(opt => {
-    const text = opt.textContent.toLowerCase();
-    const ohr = opt.dataset.value || '';
-    let visible = text.includes(search);
-    // Apply role filter if active (Triad Coaching)
-    if (visible && allowedRoles) {
-      const emp = COMPASS.employees.find(e => e.ohr_id === ohr);
-      if (!emp || !allowedRoles.includes(emp.actual_role)) visible = false;
-    }
-    opt.style.display = visible ? '' : 'none';
-  });
-  dropdown.style.display = 'block';
+  if (dropdown) dropdown.style.display = 'block';
 }
+
+// Debounced version for oninput
+var _compassFilterCoacheesDebounced = _compassDebounce(compassFilterCoachees, 120);
 
 /**
  * Filter the single-coachee dropdown to only show employees with specified roles.
@@ -2106,16 +2138,13 @@ function compassToggleTriadCoacheeDropdown(show) {
 }
 
 function compassFilterTriadCoachees() {
-  const search = (document.getElementById('compass-triad-coachee-search')?.value || '').toLowerCase().trim();
+  const search = document.getElementById('compass-triad-coachee-search')?.value || '';
+  _compassRenderDropdownItems('compass-triad-coachee-dropdown', COMPASS.employees, search, 'compassSelectTriadCoachee', null);
   const dropdown = document.getElementById('compass-triad-coachee-dropdown');
-  if (!dropdown) return;
-  const options = dropdown.querySelectorAll('.searchable-select-option');
-  options.forEach(opt => {
-    const text = opt.textContent.toLowerCase();
-    opt.style.display = text.includes(search) ? '' : 'none';
-  });
-  dropdown.style.display = 'block';
+  if (dropdown) dropdown.style.display = 'block';
 }
+
+var _compassFilterTriadCoacheesDebounced = _compassDebounce(compassFilterTriadCoachees, 120);
 
 function compassSelectTriadCoachee(ohrId, displayText) {
   const hidden = document.getElementById('compass-triad-coachee');

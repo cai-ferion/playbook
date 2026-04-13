@@ -1673,3 +1673,11 @@
 - [x] Remove Target HC column from billing targets editor
 - [x] Stylize the billing targets editor table
 - [x] Ensure billing targets editable by OHR 740045023, OHR 740044909, and Managers
+
+## Billing Targets — Manager Visibility Fix
+- [x] Fix Edit Targets button not visible to Managers in Billing Compliance (verified — already working correctly)
+
+## Admin Tools Cleanup & Compass Performance Fix
+- [x] Remove "Upload Productivity Hours" section from Admin Tools
+- [x] Remove "Billing Targets V2" section from Admin Tools
+- [x] Fix Compass form lag/latency when filling the coaching form
