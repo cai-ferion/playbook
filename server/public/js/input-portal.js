@@ -666,7 +666,7 @@ function renderInputTableServerSide() {
   var tbody = document.getElementById('input-table-body');
   if (!tbody) return;
   if (pageItems.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Adjust the filters above to load data.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No records"><div class="empty-title">No records found</div><div class="empty-subtitle">Adjust the filters above to load data</div></div></td></tr>';
   } else {
     tbody.innerHTML = pageItems.map(function(record, pageIdx) {
       var originalIndex = -1;
@@ -855,7 +855,7 @@ function renderInputTable() {
   var tbody = document.getElementById('input-table-body');
   if (!tbody) return;
   if (pageItems.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '" style="text-align:center;padding:40px;color:var(--fg-muted);">No records found. Adjust the filters above to load data.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + (TABLE_COLUMNS.length + 2) + '"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No records"><div class="empty-title">No records found</div><div class="empty-subtitle">Adjust the filters above to load data</div></div></td></tr>';
   } else {
     tbody.innerHTML = pageItems.map(function(item) { return renderTableRow(item); }).join('');
   }

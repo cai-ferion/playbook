@@ -94,7 +94,7 @@ function havenRenderTable() {
   const pageData = HAVEN.filtered.slice(start, start + HAVEN.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:32px;">No leave requests found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No requests"><div class="empty-title">No leave requests found</div><div class="empty-subtitle">Try adjusting the filters or date range</div></div></td></tr>';
     havenRenderPagination();
     return;
   }
@@ -153,7 +153,7 @@ function havenRenderReviewArea() {
     </div>`;
 
   if (pendingTL.length === 0) {
-    html += '<div class="review-area-empty">No leave requests pending TL approval.</div>';
+    html += '<div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No requests"><div class="empty-title">No leave requests pending TL approval</div></div>';
   } else {
     html += '<div class="review-cards-grid">';
     pendingTL.forEach(lv => {
@@ -205,7 +205,7 @@ function havenRenderFinalReviewArea() {
       <h4 class="review-section-title">Pending OM Approval (${pendingOM.length})</h4>`;
 
   if (pendingOM.length === 0) {
-    html += '<div class="review-area-empty">No leave requests pending OM approval.</div>';
+    html += '<div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No requests"><div class="empty-title">No leave requests pending OM approval</div></div>';
   } else {
     html += '<div class="review-cards-grid">';
     pendingOM.forEach(lv => {

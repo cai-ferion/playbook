@@ -1,0 +1,131 @@
+/* ===== Playbook Mascot Integration ===== */
+
+/* --- Login Page Mascot (Waving Fox) --- */
+.auth-mascot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.auth-mascot img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  animation: mascotBounce 2s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.2));
+}
+
+.auth-mascot .mascot-greeting {
+  font-size: 13px;
+  color: var(--fg-muted);
+  font-weight: 500;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+  opacity: 0;
+  animation: mascotFadeIn 0.6s ease-out 0.3s forwards;
+}
+
+@keyframes mascotBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes mascotFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Loading Overlay Mascot (Thinking Fox) --- */
+.loading-overlay .mascot-loader {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  animation: mascotThink 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 4px 16px rgba(99, 102, 241, 0.15));
+}
+
+.loading-overlay .loading-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  margin-top: 4px;
+}
+
+@keyframes mascotThink {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-3deg) scale(1.02); }
+  75% { transform: rotate(3deg) scale(1.02); }
+}
+
+/* --- Progress Bar Mascot (Thinking Fox) --- */
+.progress-container .mascot-loader {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  animation: mascotThink 2.5s ease-in-out infinite;
+  filter: drop-shadow(0 4px 16px rgba(99, 102, 241, 0.15));
+  margin-bottom: 4px;
+}
+
+/* --- Empty State Mascot (Shrug Fox) --- */
+.mascot-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 8px;
+}
+
+.mascot-empty-state img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.1));
+  animation: mascotShrug 3s ease-in-out infinite;
+}
+
+.mascot-empty-state .empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-top: 4px;
+}
+
+.mascot-empty-state .empty-subtitle {
+  font-size: 13px;
+  color: var(--fg-muted);
+  text-align: center;
+  max-width: 280px;
+}
+
+@keyframes mascotShrug {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-4px) rotate(-2deg); }
+  60% { transform: translateY(-4px) rotate(2deg); }
+}
+
+/* --- Compact Table Empty State --- */
+.compact-empty-mascot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px;
+  gap: 6px;
+}
+
+.compact-empty-mascot img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  opacity: 0.8;
+  filter: drop-shadow(0 2px 8px rgba(99, 102, 241, 0.1));
+}
+
+.compact-empty-mascot .empty-text {
+  font-size: 13px;
+  color: var(--fg-muted);
+  font-weight: 500;
+}

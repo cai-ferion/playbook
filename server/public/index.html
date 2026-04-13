@@ -11,12 +11,17 @@
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/sync-history.css?v=136">
   <link rel="stylesheet" href="css/compass-redesign.css?v=100">
+  <link rel="stylesheet" href="css/mascot.css?v=100">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <!-- ===== Auth Page ===== -->
   <div class="auth-page" id="auth-page">
     <div class="auth-card">
+      <div class="auth-mascot">
+        <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-waving_c9f2d28e.png" alt="Playbook Fox">
+        <span class="mascot-greeting">Hey there, ready to get to work?</span>
+      </div>
       <div class="auth-logo">
         <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/favicon_c4d47f68.png" alt="Logo">
         <h1>Playbook</h1>
@@ -371,7 +376,7 @@
       <!-- ===== View 2: Dashboard ===== -->
       <div class="view-container" id="view-dashboard">
         <div class="loading-overlay" id="dashboard-loading" style="display:none;">
-          <div class="spinner"></div>
+          <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
           <div class="loading-text">Loading Data...</div>
         </div>
 
@@ -477,7 +482,7 @@
           </div>
 
           <div class="loading-overlay" id="billing-compliance-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Data...</div>
           </div>
 
@@ -760,7 +765,7 @@
       <!-- ===== View 3: Risk Alerts ===== -->
       <div class="view-container view-hidden" id="view-alerts">
         <div class="loading-overlay" id="alerts-loading" style="display:none;">
-          <div class="spinner"></div>
+          <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
           <div class="loading-text">Loading Data...</div>
         </div>
 
@@ -787,7 +792,7 @@
         <div class="module-page">
 
           <div class="loading-overlay" id="perf-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Performance Data...</div>
           </div>
 
@@ -850,7 +855,7 @@
         <div class="module-page">
 
           <div class="loading-overlay" id="compass-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Coaching Logs...</div>
           </div>
 
@@ -932,7 +937,7 @@
         <div class="module-page">
           <div class="module-header" style="display:none;"></div>
           <div class="loading-overlay" id="compass-disputes-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Disputes...</div>
           </div>
           <div id="compass-kanban-board" class="kanban-board"></div>
@@ -999,7 +1004,7 @@
               <div class="omnibar-menu" id="sandbox-omnibar-menu" style="display:none;"></div>
             </div>
             <div class="loading-overlay" id="sandbox-loading" style="display:none;">
-              <div class="spinner"></div>
+              <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
               <div class="loading-text">Loading Insights...</div>
             </div>
             <div class="module-table-wrapper">
@@ -1031,7 +1036,7 @@
       <div class="view-container view-hidden" id="view-sandbox-review">
         <div class="module-page">
           <div class="loading-overlay" id="sandbox-review-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Review Queue...</div>
           </div>
           <div id="sandbox-kanban-board" class="kanban-board"></div>
@@ -1084,7 +1089,7 @@
               </div>
             </div>
             <div class="loading-overlay" id="haven-loading" style="display:none;">
-              <div class="spinner"></div>
+              <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
               <div class="loading-text">Loading Leave Requests...</div>
             </div>
             <div class="module-stats" id="haven-stats"></div>
@@ -1134,7 +1139,7 @@
           <div id="helm-sub-board">
             <!-- Full-page loading screen -->
             <div id="helm-board-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;">
-              <div class="spinner"></div>
+              <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
               <div class="loading-text" style="margin-top:12px;">Loading Task Board...</div>
             </div>
             <!-- Board content (hidden until loaded) -->
@@ -1235,7 +1240,7 @@
       <div class="view-container view-hidden" id="view-helm-analytics">
         <div class="module-page">
           <div class="loading-overlay" id="helm-analytics-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Analyzing task data...</div>
           </div>
           <div id="helm-analytics-content"></div>
@@ -1246,7 +1251,7 @@
       <div class="view-container view-hidden" id="view-productivity-hrs">
         <div class="module-page">
           <div class="loading-overlay" id="productivity-hrs-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Productivity Data...</div>
           </div>
           <!-- Omnibar -->
@@ -1327,7 +1332,7 @@
           </div>
           <!-- Loading -->
           <div class="loading-overlay" id="roster-loading" style="display:none;">
-            <div class="spinner"></div>
+            <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
             <div class="loading-text">Loading Roster...</div>
           </div>
           <!-- Table -->

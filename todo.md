@@ -1629,3 +1629,9 @@
   - [x] Added idx_log_date index on io_attendance for faster date-range queries
   - [x] Deferred 8 non-critical scripts (compass, sandbox, haven, helm, roster, horizon, performance)
   - Result: ~0.26s parallel vs ~0.98s sequential = ~73% faster API load time
+
+## Revisions — April 14 (Batch 5)
+- [x] Integrate thinking fox mascot into loading spinner (14 instances: 13 in index.html + 1 in app.js progress bar)
+- [x] Integrate waving fox mascot into login page (auth card hero image)
+- [x] Integrate shrug fox mascot into empty states (16 instances across 9 JS files)
+- [x] All mascot URLs migrated to webdev CDN lifecycle (--webdev flag)

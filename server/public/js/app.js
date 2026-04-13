@@ -501,6 +501,7 @@ function showProgressBar(message) {
     document.body.appendChild(container);
   }
   container.innerHTML = `
+    <img class="mascot-loader" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-thinking_38b535b1.png" alt="Loading...">
     <div class="progress-message">${escapeHtml(message || 'Loading data...')}</div>
     <div class="progress-bar-track">
       <div class="progress-bar-fill" id="progress-bar-fill" style="width:0%"></div>
@@ -1282,7 +1283,7 @@ function renderInputTable() {
   // Table body
   const tbody = document.getElementById('input-table-body');
   if (pageItems.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${TABLE_COLUMNS.length}" style="text-align:center;padding:40px;color:var(--text-secondary);">No records found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${TABLE_COLUMNS.length}"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No records"><div class="empty-title">No records found</div><div class="empty-subtitle">Adjust the filters above to load data</div></div></td></tr>`;
   } else {
     tbody.innerHTML = pageItems.map(item => {
       const record = item.record;
@@ -1868,7 +1869,7 @@ function renderFLMBreakdown(records) {
   const container = document.getElementById('flm-breakdown');
 
   if (breakdown.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No data available</div>';
+    container.innerHTML = '<div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No data"><div class="empty-title">No data available</div><div class="empty-subtitle">Try adjusting the date range or filters</div></div>';
     return;
   }
 
@@ -1974,7 +1975,7 @@ function renderAssetInventory(records) {
   // Sort shifts and roles
   const shifts = Object.keys(shiftData).sort();
   if (shifts.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No data available</div>';
+    container.innerHTML = '<div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No data"><div class="empty-title">No data available</div><div class="empty-subtitle">Try adjusting the date range or filters</div></div>';
     return;
   }
   // Role order: Agent first, then SME, then FLM, then others
@@ -2031,7 +2032,7 @@ function buildAssetInventoryHTML(records) {
     if (tag === 'P' || tag === 'LATE') shiftData[shift][role].present++;
   }
   const shifts = Object.keys(shiftData).sort();
-  if (shifts.length === 0) return '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No data available</div>';
+  if (shifts.length === 0) return '<div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No data"><div class="empty-title">No data available</div><div class="empty-subtitle">Try adjusting the date range or filters</div></div>';
   const roleOrder = ['Agent', 'Operational SME', 'Quality & Policy Expert', 'Team Lead', 'Trainer'];
   function sortRoles(roles) {
     return roles.sort((a, b) => {

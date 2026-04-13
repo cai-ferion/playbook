@@ -133,10 +133,10 @@ function renderCompactTable() {
   // Body
   if (pageItems.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5">'
-      + '<div class="compact-empty">'
-      + '<div class="compact-empty-icon">&#128203;</div>'
-      + '<div class="compact-empty-text">No records found</div>'
-      + '<div class="compact-empty-hint">Adjust the filters above to load data</div>'
+      + '<div class="compact-empty-mascot">'
+      + '<img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No records">'
+      + '<div class="empty-text">No records found</div>'
+      + '<div style="font-size:12px;color:var(--fg-muted);">Adjust the filters above to load data</div>'
       + '</div></td></tr>';
   } else {
     var html = '';

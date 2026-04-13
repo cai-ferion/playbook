@@ -411,7 +411,7 @@ function compassRenderTable(which) {
   const pageData = data.slice(start, start + COMPASS.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center;color:var(--text-secondary);padding:32px;">No coaching logs found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${totalCols}"><div class="mascot-empty-state"><img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-shrug_6c2a87cd.png" alt="No logs"><div class="empty-title">No coaching logs found</div><div class="empty-subtitle">Try adjusting the filters or date range</div></div></td></tr>`;
     compassRenderPagination(which);
     return;
   }
