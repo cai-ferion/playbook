@@ -540,6 +540,7 @@
     COMPASS.pageReceived = 1;
     compassRenderTable('given');
     compassRenderTable('received');
+    if (typeof compassRenderStats === 'function') compassRenderStats();
   }
 
   // ===== Outside click =====

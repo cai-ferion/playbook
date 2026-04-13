@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/sync-history.css?v=136">
+  <link rel="stylesheet" href="css/compass-redesign.css?v=100">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -854,10 +855,12 @@
           </div>
 
           <div id="compass-content" style="display:none;">
+          <!-- Stats Strip -->
+          <div class="compass-stats-strip" id="compass-stats-strip"></div>
           <!-- Compass Filter Bar (Input Portal style) with Add button as first item -->
           <div class="filter-bar" id="compass-filter-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-primary btn-sm" id="compass-new-btn" onclick="compassShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add
             </button>
             <div class="filter-bar-row" id="compass-filter-pills" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;">

@@ -1587,3 +1587,16 @@
 ## Revisions — April 13 (Batch 7)
 - [x] Fix CAP 1-3 flow: defer coaching log creation until NTE is submitted (COMPASS_PENDING_COACHING_RECORD pattern)
 - [x] Optimize Compass page performance: lean API query (5.1MB→1.4MB, 72% reduction), on-demand detail fetch for coaching_details
+
+## Revisions — April 13 (Batch 8)
+- [x] Complete visual overhaul of Coaching Profile page — modern, engaging, impressive design
+  - [x] Hero stats strip with gradient accents, icons, and hover lift effects
+  - [x] Glassmorphism filter bar with indigo Add button and pill badges
+  - [x] Elevated dual table panels with 7fr/3fr split and accent headers
+  - [x] Color-coded type badges (CAP 0, New Session, Follow Up, QA Feedback, etc.)
+  - [x] Compact color-coded session goal badges (inline, truncated)
+  - [x] Premium detail overlay with frosted backdrop, section dividers, and indigo accents
+  - [x] Redesigned form overlays (inputs, selects, RTE, CAP radio group)
+  - [x] Refined pagination, tabs, and subpage tabs
+  - [x] Entrance animations (fadeUp, slideIn, countUp)
+  - [x] Consistent indigo (#6366F1) accent color system throughout

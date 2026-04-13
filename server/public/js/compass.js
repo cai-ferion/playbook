@@ -337,13 +337,14 @@ const SESSION_GOAL_COLORS = {
 function compassGoalBadge(goalText) {
   const g = goalText.trim();
   const c = SESSION_GOAL_COLORS[g] || { bg: 'var(--bg-inset)', color: 'var(--fg-muted)', border: 'var(--border-default)' };
-  return `<span style="display:block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;line-height:1.4;margin:2px 0;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;width:fit-content;">${escapeHtml(g)}</span>`;
+  return `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:600;line-height:1.3;margin:1px 2px 1px 0;background:${c.bg};color:${c.color};border:1px solid ${c.border};white-space:nowrap;letter-spacing:0.1px;max-width:120px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(g)}</span>`;
 }
 
 // ===== Input Portal: Stats =====
 
 function compassRenderStats() {
-  const el = document.getElementById('compass-stats');
+  // Try new stats strip first, fall back to legacy element
+  const el = document.getElementById('compass-stats-strip') || document.getElementById('compass-stats');
   if (!el) return;
   const total = COMPASS.filtered.length;
   const pending = COMPASS.filtered.filter(l => l.status === 'Pending Acknowledgement').length;
@@ -351,21 +352,25 @@ function compassRenderStats() {
   const qaActive = COMPASS.filtered.filter(l => l.coaching_type === 'QA Feedback' && !['Acknowledged', 'Pending Acknowledgement'].includes(l.status)).length;
 
   el.innerHTML = `
-    <div class="module-stat-card">
-      <div class="module-stat-value">${total}</div>
-      <div class="module-stat-label">Total Logs</div>
+    <div class="compass-stat-card stat-total">
+      <div class="compass-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+      <div class="compass-stat-value">${total}</div>
+      <div class="compass-stat-label">Total Logs</div>
     </div>
-    <div class="module-stat-card stat-warning">
-      <div class="module-stat-value">${pending}</div>
-      <div class="module-stat-label">Pending Ack</div>
+    <div class="compass-stat-card stat-pending">
+      <div class="compass-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="compass-stat-value">${pending}</div>
+      <div class="compass-stat-label">Pending Ack</div>
     </div>
-    <div class="module-stat-card stat-success">
-      <div class="module-stat-value">${acked}</div>
-      <div class="module-stat-label">Acknowledged</div>
+    <div class="compass-stat-card stat-acked">
+      <div class="compass-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="compass-stat-value">${acked}</div>
+      <div class="compass-stat-label">Acknowledged</div>
     </div>
-    <div class="module-stat-card stat-info">
-      <div class="module-stat-value">${qaActive}</div>
-      <div class="module-stat-label">QA In Dispute</div>
+    <div class="compass-stat-card stat-dispute">
+      <div class="compass-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="compass-stat-value">${qaActive}</div>
+      <div class="compass-stat-label">QA In Dispute</div>
     </div>
   `;
 }
@@ -709,7 +714,7 @@ async function compassOpenDetail(coachingId) {
   const isAcknowledged = compassIsAcknowledged(log);
 
   // ===== SECTION 1: SESSION DETAILS =====
-  let html = '<div class="detail-section"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Session Details</h4>';
+  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
 
   html += `<div class="detail-row"><span class="detail-label">Coaching Type</span><span class="detail-value">${escapeHtml(log.coaching_type || '')}</span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
@@ -757,7 +762,7 @@ async function compassOpenDetail(coachingId) {
   // Close Session Details section, open Root Cause Analysis section for QA Feedback
   if (log.coaching_type === 'QA Feedback') {
     html += '</div>'; // close Session Details
-    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Root Cause Analysis</h4>';
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
     html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
     html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
     html += `<div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
@@ -787,7 +792,7 @@ async function compassOpenDetail(coachingId) {
     const hasDispute = log.dispute_comments || log.qa_comments || log.sme_qa_dispute_comments || log.trainer_comments || log.sme_trainer_comments || log.qtp_manager_comments;
     if (hasDispute) {
       html += '</div>'; // close current wrapper
-      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Dispute Trail</h4>';
+      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
       if (log.dispute_comments) html += `<div class="detail-row"><span class="detail-label">Dispute Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.dispute_comments)}</span></div>`;
       if (log.qa_comments) html += `<div class="detail-row"><span class="detail-label">QA Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.qa_comments)}</span></div>`;
       if (log.sme_qa_dispute_comments) html += `<div class="detail-row"><span class="detail-label">SME QA Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_qa_dispute_comments)}</span></div>`;
@@ -814,7 +819,7 @@ async function compassOpenDetail(coachingId) {
   const showAckSection = log.coaching_type !== 'QA Feedback' || ACK_ELIGIBLE_STATUSES.includes(log.status);
 
   if (showAckSection) {
-  html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Acknowledgement</h4>';
+  html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Acknowledgement</h4>';
 
   // Wrap ack details in a div that can be hidden when Acknowledge form is shown
   html += '<div id="compass-ack-details">';
@@ -1083,10 +1088,11 @@ function compassRenderRelatedLogsPage() {
 function compassRenderStars(rating) {
   const r = parseInt(rating) || 0;
   if (r === 0) return '<span style="color:var(--fg-subtle);">—</span>';
-  let stars = '';
+  let stars = '<span class="star-rating-display">';
   for (let i = 1; i <= 5; i++) {
-    stars += `<span style="color:${i <= r ? 'var(--warning)' : 'var(--fg-subtle)'};font-size:16px;">★</span>`;
+    stars += `<span style="color:${i <= r ? '#F59E0B' : '#E2E8F0'};font-size:16px;transition:color 0.15s ease;">★</span>`;
   }
+  stars += '</span>';
   return stars;
 }
 
@@ -2403,7 +2409,7 @@ async function disputesOpenDetail(coachingId) {
   const statusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
 
   // ===== SECTION 1: SESSION DETAILS =====
-  let html = '<div class="detail-section"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Session Details</h4>';
+  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
 
   html += `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="font-weight:600;color:${statusColor};">${escapeHtml(log.status || '—')}</span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
@@ -2426,7 +2432,7 @@ async function disputesOpenDetail(coachingId) {
 
   // ===== SECTION 2: ROOT CAUSE ANALYSIS (QA Feedback only) =====
   if (log.coaching_type === 'QA Feedback') {
-    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Root Cause Analysis</h4>';
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
     html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
     html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
     html += `<div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
@@ -2444,7 +2450,7 @@ async function disputesOpenDetail(coachingId) {
     ];
     const hasDispute = commentFields.some(c => c && c.trim());
     if (hasDispute) {
-      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Dispute Trail</h4>';
+      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
       html += disputesRenderTrailEntries(log);
       html += '</div>';
     }
@@ -3962,17 +3968,17 @@ function compassOpenNteDetail(nte) {
     </div>
 
     <div class="form-section">
-      <h4 class="form-section-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-bottom:8px;">Incident Description</h4>
+      <h4 class="form-section-title">Incident Description</h4>
       <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.incident_description || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
     </div>
 
     <div class="form-section">
-      <h4 class="form-section-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-bottom:8px;">Policy / Standard Violated</h4>
+      <h4 class="form-section-title">Policy / Standard Violated</h4>
       <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.policy_violated || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
     </div>
 
     <div class="form-section">
-      <h4 class="form-section-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-bottom:8px;">Expected Behavior / Corrective Action</h4>
+      <h4 class="form-section-title">Expected Behavior / Corrective Action</h4>
       <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.expected_behavior || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
     </div>
 
