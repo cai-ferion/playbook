@@ -128,6 +128,7 @@ export const ioCoaching = mysqlTable("io_coaching", {
   guidelines: text("guidelines"),
   coaching_details: text("coaching_details"),
   status: varchar("status", { length: 100 }),
+  cap_level: varchar("cap_level", { length: 20 }),
   dispute_comments: text("dispute_comments"),
   dispute_attachments: text("dispute_attachments"),
   qa_comments: text("qa_comments"),
@@ -193,6 +194,27 @@ export const ioCoachingZtp = mysqlTable("io_coaching_ztp", {
 
 export type IoCoachingZtp = typeof ioCoachingZtp.$inferSelect;
 export type InsertIoCoachingZtp = typeof ioCoachingZtp.$inferInsert;
+
+export const ioCoachingNte = mysqlTable("io_coaching_nte", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  coaching_id: varchar("coaching_id", { length: 36 }).notNull(),
+  employee_name: varchar("employee_name", { length: 255 }).notNull(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  cap_level: varchar("cap_level", { length: 20 }).notNull(),
+  date_of_incident: varchar("date_of_incident", { length: 64 }),
+  incident_description: text("incident_description"),
+  policy_violated: text("policy_violated"),
+  previous_warnings: text("previous_warnings"),
+  expected_behavior: text("expected_behavior"),
+  deadline_for_improvement: varchar("deadline_for_improvement", { length: 64 }),
+  issued_by: varchar("issued_by", { length: 255 }),
+  issued_by_ohr: varchar("issued_by_ohr", { length: 20 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoCoachingNte = typeof ioCoachingNte.$inferSelect;
+export type InsertIoCoachingNte = typeof ioCoachingNte.$inferInsert;
 
 export const ioNotifications = mysqlTable("io_notifications", {
   id: int("id").autoincrement().primaryKey(),

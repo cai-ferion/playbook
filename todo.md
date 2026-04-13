@@ -1558,3 +1558,14 @@
 - [x] Delete 5 experimental QA Feedback logs (CL-b7c94265, CL-57b90f69, CL-d49ae370, CL-9e5011b6, CL-e4063022)
 - [x] Rename "General Coaching" to "CAP 0 Coaching" everywhere (code + 246 DB records updated)
 - [x] Sync History: Wrap error/log text so it doesn't extend too far right (word-break, overflow-wrap, table-layout:fixed)
+
+## Revisions — April 13 (Batch 3)
+- [x] Fix empty filter dropdowns in Compass omnibar (root cause: window.COMPASS undefined for const-scoped variable)
+- [x] Reduce session goal choices to 8 in alphabetical order
+- [x] Add CAP radio group (No CAP, CAP 1, CAP 2, CAP 3) to CAP 0 Coaching and Follow Up Coaching forms
+- [x] Create io_coaching_nte table for NTE records linked to coaching logs
+- [x] Add cap_level column to io_coaching table
+- [x] Build NTE form page with all fields + auto-redirect on CAP 1-3
+- [x] Auto-populate previous warnings in NTE form from existing NTEs
+- [x] Add NTE view/edit from coaching log detail view (CAP badge + View NTE button)
+- [x] Server-side NTE CRUD routes (GET/POST/PATCH /api/io/coaching-nte)

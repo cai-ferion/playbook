@@ -10,6 +10,7 @@ import {
   ioCoaching,
   ioCoachingRca,
   ioCoachingZtp,
+  ioCoachingNte,
   ioNotifications,
   ioInsights,
   ioLeaves,
@@ -632,6 +633,86 @@ router.get("/coaching-ztp", async (req: Request, res: Response) => {
     res.json(rows);
   } catch (err: any) {
     console.error("[IO API] coaching-ztp GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// io_coaching_nte
+// ============================================================
+
+router.get("/coaching-nte", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { coaching_id, ohr_id } = req.query;
+
+    if (coaching_id) {
+      const rows = await db.select().from(ioCoachingNte)
+        .where(eq(ioCoachingNte.coaching_id, String(coaching_id)));
+      return res.json(rows);
+    }
+
+    if (ohr_id) {
+      const rows = await db.select().from(ioCoachingNte)
+        .where(eq(ioCoachingNte.ohr_id, String(ohr_id)))
+        .orderBy(desc(ioCoachingNte.created_at));
+      return res.json(rows);
+    }
+
+    const rows = await db.select().from(ioCoachingNte).orderBy(desc(ioCoachingNte.created_at)).limit(500);
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] coaching-nte GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/coaching-nte", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const id = 'NTE-' + Math.random().toString(36).substring(2, 10);
+    const now = new Date().toISOString();
+    const values = {
+      id,
+      coaching_id: req.body.coaching_id,
+      employee_name: req.body.employee_name,
+      ohr_id: req.body.ohr_id,
+      cap_level: req.body.cap_level,
+      date_of_incident: req.body.date_of_incident || null,
+      incident_description: req.body.incident_description || null,
+      policy_violated: req.body.policy_violated || null,
+      previous_warnings: req.body.previous_warnings || null,
+      expected_behavior: req.body.expected_behavior || null,
+      deadline_for_improvement: req.body.deadline_for_improvement || null,
+      issued_by: req.body.issued_by || null,
+      issued_by_ohr: req.body.issued_by_ohr || null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    await db.insert(ioCoachingNte).values(values);
+    res.json({ ok: true, id });
+  } catch (err: any) {
+    console.error("[IO API] coaching-nte POST error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch("/coaching-nte/:id", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const nteId = req.params.id;
+    const updates = { ...req.body, updated_at: new Date().toISOString() };
+    await db.update(ioCoachingNte).set(updates).where(eq(ioCoachingNte.id, nteId));
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] coaching-nte PATCH error:", err);
     res.status(500).json({ error: err.message });
   }
 });

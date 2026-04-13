@@ -310,15 +310,22 @@ function compassSwitchReceivedTab(tab) {
 
 // Session goal color map for badges
 const SESSION_GOAL_COLORS = {
+  // New canonical goals
+  'AES/Scorecard Discussion': { bg: '#7C3AED20', color: '#7C3AED', border: '#7C3AED40' },
+  'Attendance & Tardiness': { bg: '#F59E0B20', color: '#F59E0B', border: '#F59E0B40' },
+  'Compliance & Behavior': { bg: '#DC262620', color: '#DC2626', border: '#DC262640' },
+  'Escalation': { bg: '#F9731620', color: '#F97316', border: '#F9731640' },
+  'Internal Discussion': { bg: '#6366F120', color: '#6366F1', border: '#6366F140' },
+  'Performance & Metrics': { bg: '#2563EB20', color: '#2563EB', border: '#2563EB40' },
+  'Performance Improvement Plan': { bg: '#E1195620', color: '#E11956', border: '#E1195640' },
+  'Professional & Personal Development': { bg: '#10B98120', color: '#10B981', border: '#10B98140' },
+  // Legacy goals (still rendered for historical logs)
   'AHT Performance Findings': { bg: '#8B5CF620', color: '#8B5CF6', border: '#8B5CF640' },
   'Attendance & Productivity': { bg: '#F59E0B20', color: '#F59E0B', border: '#F59E0B40' },
   'Behavior': { bg: '#EF444420', color: '#EF4444', border: '#EF444440' },
   'Compliance': { bg: '#DC262620', color: '#DC2626', border: '#DC262640' },
-  'Escalation': { bg: '#F9731620', color: '#F97316', border: '#F9731640' },
-  'Internal Discussion': { bg: '#6366F120', color: '#6366F1', border: '#6366F140' },
   'Leave & Work Offset': { bg: '#14B8A620', color: '#14B8A6', border: '#14B8A640' },
   'PKT Result': { bg: '#0EA5E920', color: '#0EA5E9', border: '#0EA5E940' },
-  'Performance Improvement Plan': { bg: '#E1195620', color: '#E11956', border: '#E1195640' },
   'Professional & Personal Development Plan': { bg: '#10B98120', color: '#10B981', border: '#10B98140' },
   'Quality Error Findings': { bg: '#BE185D20', color: '#BE185D', border: '#BE185D40' },
   'Scorecard Discussion': { bg: '#7C3AED20', color: '#7C3AED', border: '#7C3AED40' },
@@ -718,6 +725,15 @@ async function compassOpenDetail(coachingId) {
 
   // Session Goal
   html += `<div class="detail-row"><span class="detail-label">Session Goal</span><span class="detail-value">${escapeHtml(log.session_goal || '—')}</span></div>`;
+
+  // CAP Level (if set)
+  if (log.cap_level) {
+    const capBg = log.cap_level === 'CAP 3' ? '#EF444420' : log.cap_level === 'CAP 2' ? '#F59E0B20' : '#3B82F620';
+    const capFg = log.cap_level === 'CAP 3' ? '#EF4444' : log.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6';
+    html += `<div class="detail-row"><span class="detail-label">CAP Level</span><span class="detail-value"><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;background:${capBg};color:${capFg};">${escapeHtml(log.cap_level)}</span>`;
+    html += ` <button class="btn btn-outline btn-xs" onclick="compassViewNte('${escapeAttr(log.coaching_id || log.id)}')" style="margin-left:8px;font-size:10px;padding:2px 8px;">View NTE</button>`;
+    html += `</span></div>`;
+  }
 
   // Coaching Details
   html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '—'}</span></div>`;
@@ -1252,22 +1268,39 @@ async function compassShowNewForm() {
             <span class="multi-select-arrow">▾</span>
           </div>
           <div class="multi-select-dropdown" id="compass-goal-dropdown">
-            <label class="multi-select-option" data-goal="Scorecard Discussion"><input type="checkbox" value="Scorecard Discussion" onchange="compassUpdateGoalSelection()"> Scorecard Discussion</label>
-            <label class="multi-select-option" data-goal="Attendance & Productivity"><input type="checkbox" value="Attendance & Productivity" onchange="compassUpdateGoalSelection()"> Attendance &amp; Productivity</label>
-            <label class="multi-select-option" data-goal="Leave & Work Offset"><input type="checkbox" value="Leave & Work Offset" onchange="compassUpdateGoalSelection()"> Leave &amp; Work Offset</label>
-            <label class="multi-select-option" data-goal="Quality Error Findings"><input type="checkbox" value="Quality Error Findings" onchange="compassUpdateGoalSelection()"> Quality Error Findings</label>
-            <label class="multi-select-option" data-goal="Specific Metric Performance"><input type="checkbox" value="Specific Metric Performance" onchange="compassUpdateGoalSelection()"> Specific Metric Performance</label>
+            <label class="multi-select-option" data-goal="AES/Scorecard Discussion"><input type="checkbox" value="AES/Scorecard Discussion" onchange="compassUpdateGoalSelection()"> AES/Scorecard Discussion</label>
+            <label class="multi-select-option" data-goal="Attendance & Tardiness"><input type="checkbox" value="Attendance & Tardiness" onchange="compassUpdateGoalSelection()"> Attendance &amp; Tardiness</label>
+            <label class="multi-select-option" data-goal="Compliance & Behavior"><input type="checkbox" value="Compliance & Behavior" onchange="compassUpdateGoalSelection()"> Compliance &amp; Behavior</label>
             <label class="multi-select-option" data-goal="Escalation"><input type="checkbox" value="Escalation" onchange="compassUpdateGoalSelection()"> Escalation</label>
-            <label class="multi-select-option" data-goal="Compliance"><input type="checkbox" value="Compliance" onchange="compassUpdateGoalSelection()"> Compliance</label>
-            <label class="multi-select-option" data-goal="Behavior"><input type="checkbox" value="Behavior" onchange="compassUpdateGoalSelection()"> Behavior</label>
             <label class="multi-select-option" data-goal="Internal Discussion"><input type="checkbox" value="Internal Discussion" onchange="compassUpdateGoalSelection()"> Internal Discussion</label>
-            <label class="multi-select-option" data-goal="Coaching Observation"><input type="checkbox" value="Coaching Observation" onchange="compassUpdateGoalSelection()"> Coaching Observation</label>
-            <label class="multi-select-option" data-goal="AHT Performance Findings"><input type="checkbox" value="AHT Performance Findings" onchange="compassUpdateGoalSelection()"> AHT Performance Findings</label>
-            <label class="multi-select-option" data-goal="PKT Result"><input type="checkbox" value="PKT Result" onchange="compassUpdateGoalSelection()"> PKT Result</label>
+            <label class="multi-select-option" data-goal="Performance & Metrics"><input type="checkbox" value="Performance & Metrics" onchange="compassUpdateGoalSelection()"> Performance &amp; Metrics</label>
             <label class="multi-select-option" data-goal="Performance Improvement Plan"><input type="checkbox" value="Performance Improvement Plan" onchange="compassUpdateGoalSelection()"> Performance Improvement Plan</label>
-            <label class="multi-select-option" data-goal="Professional & Personal Development Plan"><input type="checkbox" value="Professional & Personal Development Plan" onchange="compassUpdateGoalSelection()"> Professional &amp; Personal Development Plan</label>
-            <label class="multi-select-option" data-goal="tardiness"><input type="checkbox" value="tardiness" onchange="compassUpdateGoalSelection()"> Tardiness</label>
+            <label class="multi-select-option" data-goal="Professional & Personal Development"><input type="checkbox" value="Professional & Personal Development" onchange="compassUpdateGoalSelection()"> Professional &amp; Personal Development</label>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAP Level (visible for CAP 0 Coaching & Follow Up Session) -->
+    <div class="form-section" id="compass-cap-level-section" style="display:none;">
+      <div class="form-field">
+        <label class="form-label">Is this for a Corrective Action Plan (CAP)?</label>
+        <div class="cap-radio-group" id="compass-cap-radios" style="display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;">
+          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
+            <input type="radio" name="compass-cap-level" value="" checked onchange="compassOnCapLevelChange()"> <span>No CAP</span>
+          </label>
+          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
+            <input type="radio" name="compass-cap-level" value="CAP 1" onchange="compassOnCapLevelChange()"> <span>CAP 1</span>
+          </label>
+          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
+            <input type="radio" name="compass-cap-level" value="CAP 2" onchange="compassOnCapLevelChange()"> <span>CAP 2</span>
+          </label>
+          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
+            <input type="radio" name="compass-cap-level" value="CAP 3" onchange="compassOnCapLevelChange()"> <span>CAP 3</span>
+          </label>
+        </div>
+        <div id="compass-cap-notice" style="display:none; margin-top:8px; padding:8px 12px; background:#FEF3C720; border:1px solid #F59E0B40; border-radius:var(--radius); font-size:12px; color:#D97706;">
+          <strong>Note:</strong> After creating this coaching log, you will be redirected to fill out the Notice to Explain (NTE) form.
         </div>
       </div>
     </div>
@@ -1455,6 +1488,17 @@ function compassOnTypeChange() {
     if (triadCoacheeField) triadCoacheeField.style.display = '';
   } else {
     coacheeField.style.display = '';
+  }
+
+  // Show CAP level section for CAP 0 Coaching and Follow Up Session
+  const capSection = document.getElementById('compass-cap-level-section');
+  if (capSection) {
+    capSection.style.display = (type === 'CAP 0 Coaching' || type === 'Follow Up Session') ? '' : 'none';
+    // Reset CAP radios when type changes
+    const radios = document.querySelectorAll('input[name="compass-cap-level"]');
+    radios.forEach(r => r.checked = r.value === '');
+    const notice = document.getElementById('compass-cap-notice');
+    if (notice) notice.style.display = 'none';
   }
 
   ztpSection.style.display = type === 'ZTP Coaching' ? '' : 'none';
@@ -1702,6 +1746,9 @@ async function compassSubmitNew() {
   // For follow-ups, also pull coachee info from the parent log if employee not found
   const parentLog = (type === 'Follow-Up Session') ? COMPASS.selectedParentLog : null;
 
+  // Get CAP level if applicable
+  const capLevel = (type === 'CAP 0 Coaching' || type === 'Follow Up Session') ? compassGetSelectedCapLevel() : '';
+
   const record = {
     coaching_type: type,
     coach: coach ? coach.full_name : '',
@@ -1720,6 +1767,7 @@ async function compassSubmitNew() {
     session_goal: sessionGoal,
     coaching_details: document.getElementById('compass-new-details')?.innerHTML || '',
     status: type === 'QA Feedback' ? 'Pending SME Review' : 'Pending Acknowledgement',
+    cap_level: capLevel || null,
     coachee_list: coacheeList.length > 0 ? coacheeList : []
   };
 
@@ -1820,10 +1868,34 @@ async function compassSubmitNew() {
 
     compassCloseForm();
     await compassFetchLogs();
+
+    // Redirect to NTE form if CAP 1-3 was selected
+    if (capLevel && ['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel) && newId) {
+      compassOpenNteForm({
+        coaching_id: newId,
+        employee_name: coachee ? coachee.full_name : (parentLog ? parentLog.coachee : ''),
+        ohr_id: coacheeOhr,
+        cap_level: capLevel,
+        coach_name: coach ? coach.full_name : '',
+        coach_ohr: coach ? coach.ohr_id : ''
+      });
+    }
   } catch (e) {
     console.error('Failed to create coaching log:', e);
     showToast('Failed to create coaching log: ' + e.message, 'error');
   }
+}
+
+// ===== CAP Level Handling =====
+
+function compassOnCapLevelChange() {
+  const selected = document.querySelector('input[name="compass-cap-level"]:checked')?.value || '';
+  const notice = document.getElementById('compass-cap-notice');
+  if (notice) notice.style.display = selected ? '' : 'none';
+}
+
+function compassGetSelectedCapLevel() {
+  return document.querySelector('input[name="compass-cap-level"]:checked')?.value || '';
 }
 
 function compassCloseForm() {
@@ -3613,4 +3685,245 @@ async function disputesSubmitLV6RetainMarkdown() {
   } catch (e) {
     showToast('Failed to retain markdown: ' + e.message, 'error');
   }
+}
+
+
+// ===== Notice to Explain (NTE) Form =====
+
+function compassOpenNteForm(params) {
+  // params: { coaching_id, employee_name, ohr_id, cap_level, coach_name, coach_ohr }
+  const overlay = document.getElementById('compass-form-overlay');
+  const formTitle = document.getElementById('compass-form-title');
+  const formBody = document.getElementById('compass-form-body');
+  const formFooter = document.getElementById('compass-form-footer');
+
+  formTitle.textContent = `Notice to Explain — ${params.cap_level}`;
+
+  // Fetch previous warnings for this employee
+  const prevWarningsPromise = fetch(`${IO_API_BASE}/coaching-nte?ohr_id=${encodeURIComponent(params.ohr_id)}`)
+    .then(r => r.ok ? r.json() : [])
+    .catch(() => []);
+
+  prevWarningsPromise.then(existingNtes => {
+    const prevWarningsHtml = existingNtes.length > 0
+      ? existingNtes.map(n => `<div style="padding:8px 10px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; font-size:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="color:var(--fg);">${escapeHtml(n.cap_level)}</strong>
+            <span style="color:var(--fg-muted);">${n.created_at ? new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
+          </div>
+          <div style="color:var(--fg-muted); margin-top:4px;">${escapeHtml(n.incident_description || '').substring(0, 120)}${(n.incident_description || '').length > 120 ? '...' : ''}</div>
+        </div>`).join('')
+      : '<div style="color:var(--fg-muted); font-size:12px; font-style:italic;">No previous warnings on record.</div>';
+
+    formBody.innerHTML = `
+      <div class="form-section">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="form-field">
+            <label class="form-label">Employee Name</label>
+            <input type="text" class="form-input" id="nte-employee-name" value="${escapeAttr(params.employee_name)}" readonly style="background:var(--bg-inset); color:var(--fg-muted);">
+          </div>
+          <div class="form-field">
+            <label class="form-label">OHR ID</label>
+            <input type="text" class="form-input" id="nte-ohr-id" value="${escapeAttr(params.ohr_id)}" readonly style="background:var(--bg-inset); color:var(--fg-muted);">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+          <div class="form-field">
+            <label class="form-label">CAP Level</label>
+            <input type="text" class="form-input" id="nte-cap-level" value="${escapeAttr(params.cap_level)}" readonly style="background:var(--bg-inset); color:var(--fg-muted);">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Date of Incident <span class="required">*</span></label>
+            <input type="date" class="form-input" id="nte-date-of-incident" value="${new Date().toISOString().split('T')[0]}">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-field">
+          <label class="form-label">Incident Description <span class="required">*</span></label>
+          <div class="rte-container">
+            <div class="rte-toolbar">
+              <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-incident-desc')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+              <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-incident-desc')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" onclick="compassRteExec('insertUnorderedList', 'nte-incident-desc')" title="Bullet List"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <div class="rte-editor" id="nte-incident-desc" contenteditable="true" data-placeholder="Describe the incident in detail..."></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-field">
+          <label class="form-label">Policy / Standard Violated <span class="required">*</span></label>
+          <div class="rte-container">
+            <div class="rte-toolbar">
+              <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-policy-violated')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+              <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-policy-violated')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+            </div>
+            <div class="rte-editor" id="nte-policy-violated" contenteditable="true" data-placeholder="Specify the policy, standard, or rule that was violated..."></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-field">
+          <label class="form-label">Previous Warnings</label>
+          <div id="nte-previous-warnings" style="max-height:200px; overflow-y:auto;">
+            ${prevWarningsHtml}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-field">
+          <label class="form-label">Expected Behavior / Corrective Action <span class="required">*</span></label>
+          <div class="rte-container">
+            <div class="rte-toolbar">
+              <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-expected-behavior')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+              <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-expected-behavior')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" onclick="compassRteExec('insertUnorderedList', 'nte-expected-behavior')" title="Bullet List"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <div class="rte-editor" id="nte-expected-behavior" contenteditable="true" data-placeholder="Describe the expected behavior and corrective actions..."></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-field">
+          <label class="form-label">Deadline for Improvement</label>
+          <input type="date" class="form-input" id="nte-deadline" value="">
+        </div>
+      </div>
+
+      <input type="hidden" id="nte-coaching-id" value="${escapeAttr(params.coaching_id)}">
+      <input type="hidden" id="nte-issued-by" value="${escapeAttr(params.coach_name)}">
+      <input type="hidden" id="nte-issued-by-ohr" value="${escapeAttr(params.coach_ohr)}">
+    `;
+
+    formFooter.innerHTML = `
+      <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Skip for Now</button>
+      <button class="btn btn-primary btn-sm" onclick="compassSubmitNte()">Save NTE</button>
+    `;
+
+    overlay.style.display = '';
+  });
+}
+
+async function compassSubmitNte() {
+  const coachingId = document.getElementById('nte-coaching-id')?.value;
+  const employeeName = document.getElementById('nte-employee-name')?.value;
+  const ohrId = document.getElementById('nte-ohr-id')?.value;
+  const capLevel = document.getElementById('nte-cap-level')?.value;
+  const dateOfIncident = document.getElementById('nte-date-of-incident')?.value;
+  const incidentDesc = document.getElementById('nte-incident-desc')?.innerHTML?.trim() || '';
+  const policyViolated = document.getElementById('nte-policy-violated')?.innerHTML?.trim() || '';
+  const expectedBehavior = document.getElementById('nte-expected-behavior')?.innerHTML?.trim() || '';
+  const deadline = document.getElementById('nte-deadline')?.value || '';
+  const issuedBy = document.getElementById('nte-issued-by')?.value || '';
+  const issuedByOhr = document.getElementById('nte-issued-by-ohr')?.value || '';
+
+  // Validation
+  if (!dateOfIncident) { showToast('Please enter the date of incident', 'error'); return; }
+  if (!incidentDesc || incidentDesc === '<br>') { showToast('Please describe the incident', 'error'); return; }
+  if (!policyViolated || policyViolated === '<br>') { showToast('Please specify the policy violated', 'error'); return; }
+  if (!expectedBehavior || expectedBehavior === '<br>') { showToast('Please describe the expected behavior', 'error'); return; }
+
+  const nteRecord = {
+    coaching_id: coachingId,
+    employee_name: employeeName,
+    ohr_id: ohrId,
+    cap_level: capLevel,
+    date_of_incident: dateOfIncident,
+    incident_description: incidentDesc,
+    policy_violated: policyViolated,
+    expected_behavior: expectedBehavior,
+    deadline_for_improvement: deadline,
+    issued_by: issuedBy,
+    issued_by_ohr: issuedByOhr
+  };
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/coaching-nte`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nteRecord)
+    });
+    if (!resp.ok) throw new Error('Failed to save NTE');
+
+    showToast('Notice to Explain saved successfully', 'success');
+    compassCloseForm();
+  } catch (e) {
+    console.error('Failed to save NTE:', e);
+    showToast('Failed to save NTE: ' + e.message, 'error');
+  }
+}
+
+// Open NTE form from an existing coaching log detail view
+async function compassViewNte(coachingId) {
+  try {
+    const resp = await fetch(`${IO_API_BASE}/coaching-nte?coaching_id=${encodeURIComponent(coachingId)}`);
+    if (!resp.ok) throw new Error('Failed to fetch NTE');
+    const ntes = await resp.json();
+    if (!ntes || ntes.length === 0) {
+      showToast('No NTE found for this coaching log', 'info');
+      return;
+    }
+    const nte = ntes[0];
+    compassOpenNteDetail(nte);
+  } catch (e) {
+    showToast('Failed to load NTE: ' + e.message, 'error');
+  }
+}
+
+function compassOpenNteDetail(nte) {
+  const overlay = document.getElementById('compass-form-overlay');
+  const formTitle = document.getElementById('compass-form-title');
+  const formBody = document.getElementById('compass-form-body');
+  const formFooter = document.getElementById('compass-form-footer');
+
+  formTitle.textContent = `Notice to Explain — ${nte.cap_level}`;
+
+  const formatDate = (d) => {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+    catch { return d; }
+  };
+
+  formBody.innerHTML = `
+    <div class="form-section">
+      <div class="detail-row"><span class="detail-label">EMPLOYEE</span><span class="detail-value">${escapeHtml(nte.employee_name)} (${escapeHtml(nte.ohr_id)})</span></div>
+      <div class="detail-row"><span class="detail-label">CAP LEVEL</span><span class="detail-value"><span style="display:inline-block; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600; background:${nte.cap_level === 'CAP 3' ? '#EF444420' : nte.cap_level === 'CAP 2' ? '#F59E0B20' : '#3B82F620'}; color:${nte.cap_level === 'CAP 3' ? '#EF4444' : nte.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6'};">${escapeHtml(nte.cap_level)}</span></span></div>
+      <div class="detail-row"><span class="detail-label">DATE OF INCIDENT</span><span class="detail-value">${formatDate(nte.date_of_incident)}</span></div>
+    </div>
+
+    <div class="form-section">
+      <h4 class="form-section-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-bottom:8px;">Incident Description</h4>
+      <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.incident_description || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
+    </div>
+
+    <div class="form-section">
+      <h4 class="form-section-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-bottom:8px;">Policy / Standard Violated</h4>
+      <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.policy_violated || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
+    </div>
+
+    <div class="form-section">
+      <h4 class="form-section-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-bottom:8px;">Expected Behavior / Corrective Action</h4>
+      <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.expected_behavior || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
+    </div>
+
+    <div class="form-section">
+      <div class="detail-row"><span class="detail-label">DEADLINE</span><span class="detail-value">${formatDate(nte.deadline_for_improvement)}</span></div>
+      <div class="detail-row"><span class="detail-label">ISSUED BY</span><span class="detail-value">${escapeHtml(nte.issued_by || '')} ${nte.issued_by_ohr ? '(' + escapeHtml(nte.issued_by_ohr) + ')' : ''}</span></div>
+      <div class="detail-row"><span class="detail-label">CREATED</span><span class="detail-value">${formatDate(nte.created_at)}</span></div>
+    </div>
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Close</button>
+  `;
+
+  overlay.style.display = '';
 }

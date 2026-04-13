@@ -36,7 +36,7 @@
   // ===== Helpers =====
 
   function compassGetAllValues(field) {
-    if (!window.COMPASS || !COMPASS.logs) return [];
+    if (typeof COMPASS === 'undefined' || !COMPASS.logs) return [];
     const vals = new Set();
     COMPASS.logs.forEach(l => {
       if (field.isMultiValue) {
