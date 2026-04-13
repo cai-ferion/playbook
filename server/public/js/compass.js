@@ -3723,8 +3723,7 @@ async function compassOpenNteForm(params) {
     existingNtes = [];
   }
 
-  {
-    const prevWarningsHtml = existingNtes.length > 0
+  const prevWarningsHtml = existingNtes.length > 0
       ? existingNtes.map(n => `<div style="padding:8px 10px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; font-size:12px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <strong style="color:var(--fg);">${escapeHtml(n.cap_level)}</strong>

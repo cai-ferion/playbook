@@ -1580,3 +1580,6 @@
 ## Revisions — April 13 (Batch 5)
 - [x] Fix NTE form not showing after CAP 1-3 selection (root cause: overlay.style.display='' resolved to 'none' from inline default; fixed to 'flex' + converted to async/await)
 - [x] Change "Create" button text to "Next" when CAP 1-3 is selected (via compassOnCapLevelChange)
+
+## Revisions — April 13 (Batch 6)
+- [x] Fix blank Coaching Profile and Disputes Area pages (stray opening brace at line 3726 from .then() to async/await conversion)
