@@ -1616,3 +1616,16 @@
 ## Revisions — April 14 (Batch 2)
 - [x] Show Export CSV button for all non-agents (not just admin)
 - [x] Restrict PL tag dropdown to Managers + OHR 740045023 + OHR 740044909 only (6 occurrences across input-compact.js, input-portal.js)
+
+## Revisions — April 14 (Batch 3)
+- [x] Bulk-update 44 blank-tag attendance records per WFM schedule (16 updated, 28 already had tags)
+- [x] Verify alignment with Google Sheet after updates (226 rows synced, 12/12 spot-checks passed)
+
+## Revisions — April 14 (Batch 4)
+- [x] Diagnose and fix slow login/loading experience
+  - [x] Added /employees/slim endpoint (8 fields vs 41, 104KB vs 462KB — 77% smaller)
+  - [x] Parallelized employee + attendance fetch with Promise.all()
+  - [x] Eliminated redundant count query for single-day loads
+  - [x] Added idx_log_date index on io_attendance for faster date-range queries
+  - [x] Deferred 8 non-critical scripts (compass, sandbox, haven, helm, roster, horizon, performance)
+  - Result: ~0.26s parallel vs ~0.98s sequential = ~73% faster API load time

@@ -88,6 +88,28 @@ function generateCoachingId(): string {
 // ============================================================
 
 // GET /api/io/employees - list employees with optional filters
+// Slim employee lookup — returns only fields needed for attendance normalization
+router.get("/employees/slim", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const rows = await db.select({
+      ohr_id: ioEmployees.ohr_id,
+      full_name: ioEmployees.full_name,
+      supervisor_name: ioEmployees.supervisor_name,
+      actual_role: ioEmployees.actual_role,
+      planning_group: ioEmployees.planning_group,
+      complete_planning_group: ioEmployees.complete_planning_group,
+      shift_time: ioEmployees.shift_time,
+      srt_status: ioEmployees.srt_status,
+    }).from(ioEmployees).orderBy(asc(ioEmployees.ohr_id)).limit(3000);
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] employees/slim GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/employees", async (req: Request, res: Response) => {
   try {
     const db = await getDb();

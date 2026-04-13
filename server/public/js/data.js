@@ -515,7 +515,8 @@ const IO_API_BASE = '/api/io';
 let employeeLookup = {};
 
 async function loadEmployeeLookup() {
-  const resp = await fetch(`${IO_API_BASE}/employees?order=ohr_id&limit=3000`);
+  // Use slim endpoint — 8 fields instead of 41, ~60% smaller payload
+  const resp = await fetch(`${IO_API_BASE}/employees/slim`);
   const allEmployees = await resp.json();
   employeeLookup = {};
   for (const emp of allEmployees) {
@@ -523,6 +524,28 @@ async function loadEmployeeLookup() {
   }
   appState.allEmployeesLoaded = true;
   return allEmployees.length;
+}
+
+/**
+ * Direct fetch of attendance records without a preceding count query.
+ * Returns raw (un-normalized) records for parallel loading.
+ */
+async function fetchRecordsDirect(startDate, endDate) {
+  const allRecords = [];
+  let offset = 0;
+  const pageSize = 1000;
+  while (true) {
+    const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset), exclude_managers: 'true' });
+    if (startDate) params.set('log_date_gte', startDate);
+    if (endDate) params.set('log_date_lte', endDate);
+    const resp = await fetch(`${IO_API_BASE}/attendance?${params}`);
+    const data = await resp.json();
+    if (!Array.isArray(data) || data.length === 0) break;
+    allRecords.push(...data);
+    if (data.length < pageSize) break;
+    offset += pageSize;
+  }
+  return allRecords;
 }
 
 /**

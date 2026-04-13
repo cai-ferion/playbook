@@ -655,16 +655,20 @@ async function loadDataOptimized() {
   showLoading(true);
 
   try {
-    showProgressBar('Loading employees...');
-    await loadEmployeeLookup();
-
-    // Load only today's data for fast initial load
+    showProgressBar('Loading...');
     const today = getTodayStr();
-    updateProgressBar(0, 0, 'Loading Data...');
 
-    const records = await fetchRecordsForRange(today, today, (loaded, total) => {
-      updateProgressBar(loaded, total, 'Loading Data...');
-    });
+    // Parallel fetch: employees + today's attendance in one shot
+    // Skip the count query for single-day loads (< 500 records, progress bar unnecessary)
+    const [empCount, attendanceRaw] = await Promise.all([
+      loadEmployeeLookup(),
+      fetchRecordsDirect(today, today)
+    ]);
+
+    updateProgressBar(attendanceRaw.length, attendanceRaw.length, 'Processing...');
+
+    // Normalize after employee lookup is ready
+    const records = attendanceRaw.map(r => normalizeRecord(r));
 
     appState.records = records;
     appState.originalRecords = JSON.parse(JSON.stringify(records));
