@@ -1699,3 +1699,8 @@
 - [x] Build GET /api/public/data endpoint exposing io_employees and io_attendance
 - [x] Return JSON with items array: { id, title, category, description, url, updatedAt }
 - [x] Enable CORS from any origin, no authentication required
+- [x] Fix 401 Unauthorized on production /api/public/data endpoint (moved route to index.ts before auth middleware, added API key gating)
+- [x] Generate 64-char hex API key and store as PUBLIC_API_KEY env var
+- [x] Register /api/public/data route BEFORE auth middleware with X-API-Key check
+- [x] Add CORS headers (Access-Control-Allow-Origin: *, Access-Control-Allow-Headers: X-API-Key, Content-Type)
+- [x] Test on localhost (all 6 vitest tests pass, 430/430 total)
