@@ -39,8 +39,8 @@ describe('Batch 22 — Anchor Billing Table & Charts', () => {
 describe('Batch 22 — Compass Group Coaching', () => {
   const compass = readPublicJS('compass.js');
 
-  it('group coaching creates individual logs with coaching_type CAP 0 Coaching', () => {
-    expect(compass).toContain("coaching_type: 'CAP 0 Coaching'");
+  it('group coaching creates individual logs with coaching_type General Coaching', () => {
+    expect(compass).toContain("coaching_type: 'General Coaching'");
     // The group coaching block sets individual records
     const groupBlock = compass.indexOf("type === 'Group Coaching' && coacheeList.length > 0");
     expect(groupBlock).toBeGreaterThan(-1);

@@ -73,7 +73,7 @@ const COMPASS = {
   pageGiven: 1,
   pageReceived: 1,
 
-  COACHING_TYPES: ['CAP 0 Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+  COACHING_TYPES: ['General Coaching', 'CAP 0 Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
     'Pending SME Review',
@@ -1378,7 +1378,7 @@ async function compassShowNewForm() {
       </div>
     </div>
 
-    <!-- CAP Level (visible for CAP 0 Coaching & Follow Up Session) -->
+    <!-- CAP Level (visible for General Coaching, CAP 0 Coaching & Follow Up Session) -->
     <div class="form-section" id="compass-cap-level-section" style="display:none;">
       <div class="form-field">
         <label class="form-label">Is this for a Corrective Action Plan (CAP)?</label>
@@ -1514,14 +1514,14 @@ async function compassShowNewForm() {
 
   overlay.style.display = 'flex';
 
-  // Default to 'New Session' for non-QA roles
-  const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
-  if (!isQA) {
-    const typeSelect = document.getElementById('compass-new-type');
-    if (typeSelect) {
-      typeSelect.value = 'CAP 0 Coaching';
-      compassOnTypeChange();
-    }
+  // Default to 'General Coaching' for non-QA roles
+    const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
+    if (!isQA) {
+      const typeSelect = document.getElementById('compass-new-type');
+      if (typeSelect) {
+        typeSelect.value = 'General Coaching';
+        compassOnTypeChange();
+      }
   }
 }
 
@@ -1587,10 +1587,10 @@ function compassOnTypeChange() {
     coacheeField.style.display = '';
   }
 
-  // Show CAP level section for CAP 0 Coaching and Follow Up Session
+  // Show CAP level section for General Coaching, CAP 0 Coaching, and Follow Up Session
   const capSection = document.getElementById('compass-cap-level-section');
   if (capSection) {
-    capSection.style.display = (type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? '' : 'none';
+    capSection.style.display = (type === 'General Coaching' || type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? '' : 'none';
     // Reset CAP radios when type changes
     const radios = document.querySelectorAll('input[name="compass-cap-level"]');
     radios.forEach(r => r.checked = r.value === '');
@@ -1846,7 +1846,7 @@ async function compassSubmitNew() {
   const parentLog = (type === 'Follow-Up Session') ? COMPASS.selectedParentLog : null;
 
   // Get CAP level if applicable
-  const capLevel = (type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? compassGetSelectedCapLevel() : '';
+  const capLevel = (type === 'General Coaching' || type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? compassGetSelectedCapLevel() : '';
 
   const record = {
     coaching_type: type,
@@ -1904,7 +1904,7 @@ async function compassSubmitNew() {
     for (const item of coacheeList) {
       const emp = item.emp || COMPASS.employees.find(e => e.ohr_id === item.ohr);
       const individualRecord = {
-        coaching_type: 'CAP 0 Coaching',
+        coaching_type: 'General Coaching',
         coach: coach ? coach.full_name : '',
         coach_ohr: coach ? coach.ohr_id : '',
         coach_meta_email: coach ? (coach.meta_email || '') : '',
@@ -2381,7 +2381,7 @@ document.addEventListener('selectionchange', function() {
 
 // ===== Multi-Select Goal Helpers =====
 
-// Goals to hide for "CAP 0 Coaching" type
+// Goals to hide for "General Coaching" and "CAP 0 Coaching" types
 const NEW_SESSION_HIDDEN_GOALS = ['Coaching Observation', 'Quality Error Findings'];
 
 function compassFilterGoalOptions(type) {
@@ -2390,7 +2390,7 @@ function compassFilterGoalOptions(type) {
   const labels = dropdown.querySelectorAll('label.multi-select-option');
   labels.forEach(label => {
     const goalName = label.getAttribute('data-goal');
-    if (type === 'CAP 0 Coaching' && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
+    if ((type === 'General Coaching' || type === 'CAP 0 Coaching') && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
       label.style.display = 'none';
       // Also uncheck if hidden
       const cb = label.querySelector('input[type="checkbox"]');

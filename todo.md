@@ -1711,3 +1711,9 @@
 - [x] Remove PUBLIC_API_KEY from env.ts
 - [x] Remove public-api.test.ts
 - [x] Remove PUBLIC_API_KEY env var (set to empty)
+
+## Coaching Log Type Renaming
+- [x] Rename all existing "New Session" logs to "General Coaching" in DB (1,497 rows)
+- [x] Rename all existing "CAP 0 Coaching" logs to "General Coaching" in DB (248 rows)
+- [x] Retain "CAP 0 Coaching" as a category option for violation tracking
+- [x] Ensure "General Coaching" is available as a coaching type in the form (default for non-QA)

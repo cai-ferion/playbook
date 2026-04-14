@@ -65,22 +65,20 @@ describe('Batch 47 — Root Cause Analysis Alignment', () => {
   });
 });
 
-describe('Batch 47 — Rename General Coaching to CAP 0 Coaching', () => {
+describe('Batch 47 — Coaching Types: General Coaching + CAP 0 Coaching', () => {
   const compass = readPublicJS('compass.js');
-  const compassCoaching = readPublicJS('compass-coaching.js');
 
-  it('COACHING_TYPES uses CAP 0 Coaching instead of General Coaching', () => {
+  it('COACHING_TYPES includes both General Coaching and CAP 0 Coaching', () => {
+    expect(compass).toContain("'General Coaching'");
     expect(compass).toContain("'CAP 0 Coaching'");
-    expect(compass).not.toContain("'General Coaching'");
   });
 
-  it('group coaching creates individual logs with CAP 0 Coaching type', () => {
-    expect(compass).toContain("coaching_type: 'CAP 0 Coaching'");
+  it('group coaching creates individual logs with General Coaching type', () => {
+    expect(compass).toContain("coaching_type: 'General Coaching'");
   });
 
-  it('compass-coaching.js uses CAP 0 Coaching label', () => {
-    expect(compassCoaching).toContain('CAP 0 Coaching');
-    expect(compassCoaching).not.toContain('General Coaching');
+  it('default coaching type for non-QA is General Coaching', () => {
+    expect(compass).toContain("typeSelect.value = 'General Coaching'");
   });
 });
 
