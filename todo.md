@@ -1704,3 +1704,10 @@
 - [x] Register /api/public/data route BEFORE auth middleware with X-API-Key check
 - [x] Add CORS headers (Access-Control-Allow-Origin: *, Access-Control-Allow-Headers: X-API-Key, Content-Type)
 - [x] Test on localhost (all 6 vitest tests pass, 430/430 total)
+
+## Removal — Public API Endpoint & API Key
+- [x] Remove /api/public/data route from index.ts
+- [x] Remove /api/public/data route from io-routes.ts
+- [x] Remove PUBLIC_API_KEY from env.ts
+- [x] Remove public-api.test.ts
+- [x] Remove PUBLIC_API_KEY env var (set to empty)
