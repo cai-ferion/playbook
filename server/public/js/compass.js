@@ -115,12 +115,12 @@ const COMPASS = {
 
   // Kanban columns for QA Feedback dispute flow
   KANBAN_COLUMNS: [
-    { id: 'pending-sme', title: 'LV1 - PENDING SME REVIEW', statuses: ['Pending SME Review', ''] },
-    { id: 'sme-disputed', title: 'LV2 - PENDING QA DECISION', statuses: ['Markdown Disputed'] },
-    { id: 'qa-decision', title: 'LV3 - PENDING SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
-    { id: 'trainer-review', title: 'LV4 - PENDING TRAINER DECISION', statuses: ['QA Decision Rejected'] },
-    { id: 'sme-trainer', title: 'LV5 - PENDING SME-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
-    { id: 'qtp-review', title: 'LV6 - PENDING QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected'] }
+    { id: 'pending-sme', title: 'LV1 - SME REVIEW', statuses: ['Pending SME Review', ''] },
+    { id: 'sme-disputed', title: 'LV2 - QA DECISION', statuses: ['Markdown Disputed', 'Markdown Disputed - SME'] },
+    { id: 'qa-decision', title: 'LV3 - SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
+    { id: 'trainer-review', title: 'LV4 - TRAINER DECISION', statuses: ['QA Decision Rejected', 'QA Decision Rejected - SME'] },
+    { id: 'sme-trainer', title: 'LV5 - SME-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
+    { id: 'qtp-review', title: 'LV6 - QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected', 'Trainer Decision Rejected - SME'] }
   ]
 };
 
@@ -1285,7 +1285,8 @@ function compassGoBack() {
 // ===== New Coaching Log Form =====
 
 async function compassShowNewForm() {
-  await compassFetchEmployees();
+  // Employees already prefetched in initCompass — no await needed here
+  if (COMPASS.employees.length === 0) await compassFetchEmployees();
   COMPASS.editingId = null;
 
   const formTitle = document.getElementById('compass-form-title');
@@ -1426,6 +1427,55 @@ async function compassShowNewForm() {
             <button type="button" class="rte-btn" onclick="compassRteExec('outdent')" title="Decrease Indent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="4" x2="21" y2="4"/><line x1="11" y1="10" x2="21" y2="10"/><line x1="11" y1="16" x2="21" y2="16"/><line x1="3" y1="22" x2="21" y2="22"/><polyline points="7 10 3 13 7 16"/></svg></button>
           </div>
           <div class="rte-editor" id="compass-new-details" contenteditable="true" data-placeholder="Describe the coaching session..."></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAP 0 Violation Tracker Fields (hidden by default) -->
+    <div class="form-section" id="compass-violation-section" style="display:none;">
+      <h4 class="form-section-title" style="color:#DC2626;">⚠ Violation Tracker</h4>
+      <div class="form-field">
+        <label class="form-label">Incident Timestamp <span class="required">*</span></label>
+        <input type="datetime-local" class="form-input" id="compass-new-incident-ts" step="60">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Violation Type <span class="required">*</span></label>
+        <select class="form-select" id="compass-new-violation-cat" onchange="compassOnViolationCatChange()">
+          <option value="">— Select Violation Category —</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Specific Violation <span class="required">*</span></label>
+        <select class="form-select" id="compass-new-violation-type" onchange="compassOnViolationTypeChange()">
+          <option value="">— Select Violation —</option>
+        </select>
+      </div>
+      <div id="compass-violation-subtype-field" class="form-field" style="display:none;">
+        <label class="form-label">Subtype / Description</label>
+        <select class="form-select" id="compass-new-violation-subtype">
+          <option value="">— Select Subtype —</option>
+        </select>
+      </div>
+      <div id="compass-violation-penalty" style="display:none; margin-top:4px; padding:8px 12px; background:#FEF3C720; border:1px solid #F59E0B40; border-radius:var(--radius); font-size:12px; color:#D97706;"></div>
+    </div>
+
+    <!-- Support Joiner Fields for QA Feedback (hidden by default) -->
+    <div class="form-section" id="compass-support-joiner-section" style="display:none;">
+      <h4 class="form-section-title">Support Joiners</h4>
+      <div class="form-field">
+        <label class="form-label">Support Joiner 1 <span class="required">*</span></label>
+        <div class="searchable-select" id="compass-joiner1-wrapper">
+          <input type="hidden" id="compass-new-joiner1" value="">
+          <input type="text" class="form-input" id="compass-joiner1-search" placeholder="Search SME or Team Lead..." autocomplete="off" onclick="compassToggleJoinerDropdown(1, true)" oninput="_compassFilterJoiner1Debounced()">
+          <div class="searchable-select-dropdown" id="compass-joiner1-dropdown" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Support Joiner 2 <span class="required">*</span></label>
+        <div class="searchable-select" id="compass-joiner2-wrapper">
+          <input type="hidden" id="compass-new-joiner2" value="">
+          <input type="text" class="form-input" id="compass-joiner2-search" placeholder="Search SME or Team Lead..." autocomplete="off" onclick="compassToggleJoinerDropdown(2, true)" oninput="_compassFilterJoiner2Debounced()">
+          <div class="searchable-select-dropdown" id="compass-joiner2-dropdown" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -1587,15 +1637,32 @@ function compassOnTypeChange() {
     coacheeField.style.display = '';
   }
 
-  // Show CAP level section for General Coaching, CAP 0 Coaching, and Follow Up Session
+  // Show CAP level section for General Coaching and Follow Up Session (NOT CAP 0 — that's violation tracker)
   const capSection = document.getElementById('compass-cap-level-section');
   if (capSection) {
-    capSection.style.display = (type === 'General Coaching' || type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? '' : 'none';
+    capSection.style.display = (type === 'General Coaching' || type === 'Follow-Up Session') ? '' : 'none';
     // Reset CAP radios when type changes
     const radios = document.querySelectorAll('input[name="compass-cap-level"]');
     radios.forEach(r => r.checked = r.value === '');
     const notice = document.getElementById('compass-cap-notice');
     if (notice) notice.style.display = 'none';
+  }
+
+  // CAP 0 Coaching = Violation Tracker
+  const violationSection = document.getElementById('compass-violation-section');
+  if (violationSection) {
+    violationSection.style.display = type === 'CAP 0 Coaching' ? '' : 'none';
+    if (type === 'CAP 0 Coaching') {
+      compassInitViolationCatalog();
+      // Auto-set session goal to "Compliance & Behavior" and hide the section
+      if (sessionGoalSection) sessionGoalSection.style.display = 'none';
+    }
+  }
+
+  // Support Joiner fields for QA Feedback
+  const joinerSection = document.getElementById('compass-support-joiner-section');
+  if (joinerSection) {
+    joinerSection.style.display = type === 'QA Feedback' ? '' : 'none';
   }
 
   ztpSection.style.display = type === 'ZTP Coaching' ? '' : 'none';
@@ -1831,6 +1898,9 @@ async function compassSubmitNew() {
   } else if (type === 'ZTP Coaching') {
     // ZTP Coaching always uses "Compliance" as session goal
     sessionGoal = 'Compliance';
+  } else if (type === 'CAP 0 Coaching') {
+    // CAP 0 Coaching (Violation Tracker) auto-sets to "Compliance & Behavior"
+    sessionGoal = 'Compliance & Behavior';
   } else if (type !== 'Follow-Up Session') {
     sessionGoal = compassGetSelectedGoals();
     if (!sessionGoal) { showToast('Please select at least one session topic', 'error'); return; }
@@ -1845,8 +1915,8 @@ async function compassSubmitNew() {
   // For follow-ups, also pull coachee info from the parent log if employee not found
   const parentLog = (type === 'Follow-Up Session') ? COMPASS.selectedParentLog : null;
 
-  // Get CAP level if applicable
-  const capLevel = (type === 'General Coaching' || type === 'CAP 0 Coaching' || type === 'Follow-Up Session') ? compassGetSelectedCapLevel() : '';
+  // Get CAP level if applicable (not for CAP 0 Coaching — that's the violation tracker)
+  const capLevel = (type === 'General Coaching' || type === 'Follow-Up Session') ? compassGetSelectedCapLevel() : '';
 
   const record = {
     coaching_type: type,
@@ -1893,6 +1963,34 @@ async function compassSubmitNew() {
     record.level_4_deficiency = document.getElementById('compass-new-rca-l4')?.value || '';
     record.level_5_root_cause = document.getElementById('compass-new-rca-l5')?.value || '';
     record.guidelines = document.getElementById('compass-new-guidelines')?.textContent || '';
+
+    // Support Joiners (required for QA Feedback)
+    const joiner1Ohr = document.getElementById('compass-new-joiner1')?.value || '';
+    const joiner2Ohr = document.getElementById('compass-new-joiner2')?.value || '';
+    if (!joiner1Ohr) { showToast('Please select Support Joiner 1', 'error'); return; }
+    if (!joiner2Ohr) { showToast('Please select Support Joiner 2', 'error'); return; }
+    const joiner1Emp = COMPASS.employees.find(e => e.ohr_id === joiner1Ohr);
+    const joiner2Emp = COMPASS.employees.find(e => e.ohr_id === joiner2Ohr);
+    // Legacy io_coaching uses sme_joiner + sme_meta_email for joiner 1
+    record.sme_joiner = joiner1Emp ? joiner1Emp.full_name : joiner1Ohr;
+    record.sme_meta_email = joiner1Emp ? (joiner1Emp.meta_email || '') : '';
+    // Joiner 2 uses the new columns
+    record.sme_joiner_2 = joiner2Emp ? joiner2Emp.full_name : joiner2Ohr;
+    record.sme_joiner_2_email = joiner2Emp ? (joiner2Emp.meta_email || '') : '';
+  }
+
+  if (type === 'CAP 0 Coaching') {
+    // Violation Tracker fields
+    const incidentTs = document.getElementById('compass-new-incident-ts')?.value || '';
+    if (!incidentTs) { showToast('Please enter the incident timestamp', 'error'); return; }
+    record.incident_timestamp = new Date(incidentTs).toISOString();
+    record.violation_type = document.getElementById('compass-new-violation-cat')?.value || '';
+    if (!record.violation_type) { showToast('Please select a violation category', 'error'); return; }
+    const specificViolation = document.getElementById('compass-new-violation-type')?.value || '';
+    if (!specificViolation) { showToast('Please select a specific violation', 'error'); return; }
+    record.violation_subtype = specificViolation;
+    const subtypeVal = document.getElementById('compass-new-violation-subtype')?.value || '';
+    if (subtypeVal) record.violation_subtype += ' - ' + subtypeVal;
   }
 
   // Group Coaching: create one log per coachee
@@ -2562,50 +2660,66 @@ async function disputesOpenDetail(coachingId) {
   if (cu) {
     const role = cu.actual_role;
     const isAdmin = cu.ohr_id === '740045023';
+    // Angelo Nieva (QTP Manager) — override access to ALL dispute levels
+    const isQTPManager = cu.ohr_id === '740049863';
 
-    // LV1 - SME actions: Accept Markdown / Dispute Markdown
-    if (role === 'SME' || isAdmin) {
+    // Helper: check if current user is one of the support joiners for this log
+    const cuName = (cu.full_name || '').trim();
+    const isSupportJoiner = cuName && (
+      (log.sme_joiner || '').trim() === cuName ||
+      (log.sme_joiner_2 || '').trim() === cuName
+    );
+
+    // Helper: check if current user is the coach who filed this log
+    const isCoach = cu.ohr_id === log.coach_ohr;
+
+    // Helper: check if current user is a Trainer whose PG matches the coachee's PG
+    const isMatchingTrainer = role === 'Trainer' && cu.planning_group && log.coachee_pg &&
+      (cu.planning_group === 'MULTIPLE' || cu.planning_group === log.coachee_pg);
+
+    // LV1 - Support Joiner 1 & 2 only: Accept Markdown / Dispute Markdown
+    if (isSupportJoiner || isQTPManager || isAdmin) {
       if (log.status === 'Pending SME Review') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowAcceptMarkdown()">Accept Markdown</button>';
         footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowDisputeMarkdown()">Dispute Markdown</button>';
       }
     }
 
-    // LV2 - QA actions: Reverse Markdown / Retain Markdown
-    if (role === 'QA' || isAdmin) {
-      if (log.status === 'Markdown Disputed') {
+    // LV2 - Coach only: Reverse Markdown / Retain Markdown
+    if (isCoach || isQTPManager || isAdmin) {
+      if (log.status === 'Markdown Disputed' || log.status === 'Markdown Disputed - SME') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowReverseMarkdown()">Reverse Markdown</button>';
         footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowRetainMarkdown()">Retain Markdown</button>';
       }
     }
 
-    // LV3 - SME actions: Accept Decision / Reject Decision
-    if (role === 'SME' || isAdmin) {
+    // LV3 - Support Joiner 1 & 2 only: Accept Decision / Reject Decision
+    if (isSupportJoiner || isQTPManager || isAdmin) {
       if (log.status === 'Markdown Retained - QA') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowQADecisionAccepted()">Accept Decision</button>';
         footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowQADecisionRejected()">Reject Decision</button>';
       }
     }
 
-    // LV4 - Trainer actions: Reverse Markdown / Retain Markdown
-    if (role === 'Trainer' || isAdmin) {
-      if (log.status === 'QA Decision Rejected') {
+    // LV4 - Trainers whose PG matches coachee's PG: Reverse Markdown / Retain Markdown
+    if (isMatchingTrainer || isQTPManager || isAdmin) {
+      if (log.status === 'QA Decision Rejected' || log.status === 'QA Decision Rejected - SME') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV4ReverseMarkdown()">Reverse Markdown</button>';
         footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV4RetainMarkdown()">Retain Markdown</button>';
       }
     }
 
-    // LV5 - SME actions: Accept Decision / Reject Decision
-    if (role === 'SME' || isAdmin) {
+    // LV5 - Support Joiner 1 & 2 only: Accept Decision / Reject Decision
+    if (isSupportJoiner || isQTPManager || isAdmin) {
       if (log.status === 'Markdown Retained - Trainer') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV5AcceptDecision()">Accept Decision</button>';
         footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowLV5RejectDecision()">Reject Decision</button>';
       }
     }
 
-    // LV6 - QTP Manager actions: Reverse Markdown / Retain Markdown
-    if (role === 'Manager' || isAdmin) {
-      if (log.status === 'Trainer Decision Rejected') {
+    // LV6 - QTP Manager Angelo Nieva only: Reverse Markdown / Retain Markdown
+    if (isQTPManager || isAdmin) {
+      if (log.status === 'Trainer Decision Rejected' || log.status === 'Trainer Decision Rejected - SME') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowLV6ReverseMarkdown()">Reverse Markdown</button>';
         footerHtml += ' <button class="btn btn-warning btn-sm" onclick="disputesShowLV6RetainMarkdown()">Retain Markdown</button>';
       }
@@ -4090,3 +4204,167 @@ function compassOpenNteDetail(nte) {
 
   overlay.style.display = 'flex';
 }
+
+
+// ===== CAP 0 Violation Tracker Functions =====
+
+/**
+ * Initialize the violation category dropdown from HR_VIOLATIONS data.
+ * HR_VIOLATIONS is defined in compass-violations.js.
+ */
+function compassInitViolationCatalog() {
+  if (typeof HR_VIOLATIONS === 'undefined') {
+    console.error('HR_VIOLATIONS not loaded');
+    return;
+  }
+  const catSelect = document.getElementById('compass-new-violation-cat');
+  if (!catSelect) return;
+  catSelect.innerHTML = '<option value="">\u2014 Select Violation Category \u2014</option>' +
+    HR_VIOLATIONS.map(c => `<option value="${escapeAttr(c.category)}">${escapeHtml(c.category)}</option>`).join('');
+  // Reset downstream
+  const typeSelect = document.getElementById('compass-new-violation-type');
+  if (typeSelect) typeSelect.innerHTML = '<option value="">\u2014 Select Violation \u2014</option>';
+  const subtypeField = document.getElementById('compass-violation-subtype-field');
+  if (subtypeField) subtypeField.style.display = 'none';
+  const penaltyDiv = document.getElementById('compass-violation-penalty');
+  if (penaltyDiv) penaltyDiv.style.display = 'none';
+}
+
+function compassOnViolationCatChange() {
+  const catVal = document.getElementById('compass-new-violation-cat')?.value || '';
+  const typeSelect = document.getElementById('compass-new-violation-type');
+  if (!typeSelect) return;
+
+  const cat = (typeof HR_VIOLATIONS !== 'undefined') ? HR_VIOLATIONS.find(c => c.category === catVal) : null;
+  if (!cat) {
+    typeSelect.innerHTML = '<option value="">\u2014 Select Violation \u2014</option>';
+    const subtypeField = document.getElementById('compass-violation-subtype-field');
+    if (subtypeField) subtypeField.style.display = 'none';
+    const penaltyDiv = document.getElementById('compass-violation-penalty');
+    if (penaltyDiv) penaltyDiv.style.display = 'none';
+    return;
+  }
+
+  typeSelect.innerHTML = '<option value="">\u2014 Select Violation \u2014</option>' +
+    cat.violations.map(v => `<option value="${escapeAttr(v.type)}">${escapeHtml(v.type)}</option>`).join('');
+
+  // Reset downstream
+  const subtypeField = document.getElementById('compass-violation-subtype-field');
+  if (subtypeField) subtypeField.style.display = 'none';
+  const penaltyDiv = document.getElementById('compass-violation-penalty');
+  if (penaltyDiv) penaltyDiv.style.display = 'none';
+}
+
+function compassOnViolationTypeChange() {
+  const catVal = document.getElementById('compass-new-violation-cat')?.value || '';
+  const typeVal = document.getElementById('compass-new-violation-type')?.value || '';
+  const subtypeField = document.getElementById('compass-violation-subtype-field');
+  const subtypeSelect = document.getElementById('compass-new-violation-subtype');
+  const penaltyDiv = document.getElementById('compass-violation-penalty');
+
+  if (!catVal || !typeVal || typeof HR_VIOLATIONS === 'undefined') {
+    if (subtypeField) subtypeField.style.display = 'none';
+    if (penaltyDiv) penaltyDiv.style.display = 'none';
+    return;
+  }
+
+  const cat = HR_VIOLATIONS.find(c => c.category === catVal);
+  const violation = cat ? cat.violations.find(v => v.type === typeVal) : null;
+  if (!violation) return;
+
+  // Show subtypes if available
+  if (violation.subtypes && violation.subtypes.length > 0 && subtypeField && subtypeSelect) {
+    subtypeSelect.innerHTML = '<option value="">\u2014 Select Subtype \u2014</option>' +
+      violation.subtypes.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
+    subtypeField.style.display = '';
+  } else if (subtypeField) {
+    subtypeField.style.display = 'none';
+  }
+
+  // Show penalty info
+  if (penaltyDiv && violation.penalty) {
+    penaltyDiv.innerHTML = `<strong>Penalty:</strong> ${escapeHtml(violation.penalty)}`;
+    penaltyDiv.style.display = '';
+  } else if (penaltyDiv) {
+    penaltyDiv.style.display = 'none';
+  }
+}
+
+
+// ===== Support Joiner Dropdown Functions (QA Feedback) =====
+
+var _compassFilterJoiner1Debounced = _compassDebounce(function() { compassFilterJoinerDropdown(1); }, 120);
+var _compassFilterJoiner2Debounced = _compassDebounce(function() { compassFilterJoinerDropdown(2); }, 120);
+
+function compassGetJoinerEligible() {
+  // SMEs and Team Leads only
+  return COMPASS.employees.filter(e => {
+    const role = (e.actual_role || '').toLowerCase();
+    return role === 'operational sme' || role === 'team lead';
+  });
+}
+
+function compassToggleJoinerDropdown(num, show) {
+  const dropdown = document.getElementById(`compass-joiner${num}-dropdown`);
+  if (!dropdown) return;
+  dropdown.style.display = show ? 'block' : 'none';
+  if (show) compassFilterJoinerDropdown(num);
+}
+
+function compassFilterJoinerDropdown(num) {
+  const search = (document.getElementById(`compass-joiner${num}-search`)?.value || '').toLowerCase();
+  const dropdown = document.getElementById(`compass-joiner${num}-dropdown`);
+  if (!dropdown) return;
+
+  let eligible = compassGetJoinerEligible();
+
+  // Exclude the other joiner's selection
+  const otherNum = num === 1 ? 2 : 1;
+  const otherVal = document.getElementById(`compass-new-joiner${otherNum}`)?.value || '';
+  if (otherVal) {
+    eligible = eligible.filter(e => e.ohr_id !== otherVal);
+  }
+
+  // Apply search filter
+  let filtered = eligible;
+  if (search.length > 0) {
+    filtered = eligible.filter(e => {
+      const name = (e.full_name || '').toLowerCase();
+      const ohr = (e.ohr_id || '').toLowerCase();
+      const role = (e.actual_role || '').toLowerCase();
+      return name.includes(search) || ohr.includes(search) || role.includes(search);
+    });
+  }
+
+  // Limit to 50 results
+  const limited = filtered.slice(0, 50);
+
+  if (limited.length === 0) {
+    dropdown.innerHTML = '<div style="padding:8px 10px; font-size:12px; color:var(--fg-muted);">No matching SMEs or Team Leads found</div>';
+  } else {
+    dropdown.innerHTML = limited.map(e => {
+      const display = `${e.full_name || 'Unknown'} (${e.ohr_id || ''}) \u2014 ${e.actual_role || ''}`;
+      return `<div class="searchable-select-option" onclick="compassSelectJoiner(${num}, '${e.ohr_id}', '${escapeAttr(e.full_name || '')}')" style="padding:6px 10px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border);">${escapeHtml(display)}</div>`;
+    }).join('');
+  }
+
+  dropdown.style.display = 'block';
+}
+
+function compassSelectJoiner(num, ohrId, displayText) {
+  const hidden = document.getElementById(`compass-new-joiner${num}`);
+  const search = document.getElementById(`compass-joiner${num}-search`);
+  if (hidden) hidden.value = ohrId;
+  if (search) search.value = displayText;
+  compassToggleJoinerDropdown(num, false);
+}
+
+// Close joiner dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  for (const num of [1, 2]) {
+    const wrapper = document.getElementById(`compass-joiner${num}-wrapper`);
+    if (wrapper && !wrapper.contains(e.target)) {
+      compassToggleJoinerDropdown(num, false);
+    }
+  }
+});

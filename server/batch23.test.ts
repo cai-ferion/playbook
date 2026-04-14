@@ -37,26 +37,27 @@ describe('Batch 23 — Compass 6-Level Dispute Flow', () => {
     expect(compass).toContain("statuses: ['Pending SME Review', '']");
   });
 
-  it('LV2 kanban filters Markdown Disputed (not Markdown Disputed - SME)', () => {
-    expect(compass).toContain("statuses: ['Markdown Disputed']");
-    expect(compass).not.toContain("statuses: ['Markdown Disputed - SME']");
+  it('LV2 kanban filters Markdown Disputed (both variants)', () => {
+    expect(compass).toContain("'Markdown Disputed'");
+    expect(compass).toContain("'Markdown Disputed - SME'");
   });
 
   it('LV3 kanban filters Markdown Retained - QA', () => {
     expect(compass).toContain("statuses: ['Markdown Retained - QA']");
   });
 
-  it('LV4 kanban filters QA Decision Rejected', () => {
-    expect(compass).toContain("statuses: ['QA Decision Rejected']");
+  it('LV4 kanban filters QA Decision Rejected (both variants)', () => {
+    expect(compass).toContain("'QA Decision Rejected'");
+    expect(compass).toContain("'QA Decision Rejected - SME'");
   });
 
   it('LV5 kanban filters Markdown Retained - Trainer', () => {
     expect(compass).toContain("statuses: ['Markdown Retained - Trainer']");
   });
 
-  it('LV6 kanban filters Trainer Decision Rejected (not - SME suffix)', () => {
-    expect(compass).toContain("statuses: ['Trainer Decision Rejected']");
-    expect(compass).not.toContain("statuses: ['Trainer Decision Rejected - SME']");
+  it('LV6 kanban filters Trainer Decision Rejected (both variants)', () => {
+    expect(compass).toContain("'Trainer Decision Rejected'");
+    expect(compass).toContain("'Trainer Decision Rejected - SME'");
   });
 
   // LV1 actions

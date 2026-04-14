@@ -1717,3 +1717,22 @@
 - [x] Rename all existing "CAP 0 Coaching" logs to "General Coaching" in DB (248 rows)
 - [x] Retain "CAP 0 Coaching" as a category option for violation tracking
 - [x] Ensure "General Coaching" is available as a coaching type in the form (default for non-QA)
+
+## Coaching Profile — Major Revisions Batch
+- [x] Fix Add form latency in Coaching Profile
+- [x] CAP 0 Coaching → Violation Tracker: Agent field (choose 1)
+- [x] CAP 0 Coaching → Violation Tracker: Auto-set Session Goal to "Compliance & Behavior"
+- [x] CAP 0 Coaching → Violation Tracker: Incident Timestamp (date + time, no seconds)
+- [x] CAP 0 Coaching → Violation Tracker: Violation Type (cascading from HR Policy table)
+- [x] CAP 0 Coaching → Violation Tracker: Incident Details with rich text
+- [x] CAP 0 Coaching → Violation Tracker: Attachments (optional)
+- [x] QA Feedback: Add Support Joiner 1 (required, SMEs + TLs)
+- [x] QA Feedback: Add Support Joiner 2 (required, SMEs + TLs, excludes Joiner 1)
+- [x] Disputes Area: Rename sections to shorter, clearer names
+- [x] Disputes LV1: buttons visible to Support Joiner 1 & 2 only
+- [x] Disputes LV2: buttons visible to coach only
+- [x] Disputes LV3: buttons visible to Support Joiner 1 & 2 only
+- [x] Disputes LV4: buttons visible to trainers whose PG matches coachee's PG
+- [x] Disputes LV5: buttons visible to Support Joiner 1 & 2 only
+- [x] Disputes LV6: buttons visible to QTP Manager Angelo Nieva only
+- [x] Disputes ALL: Angelo Nieva has override access to all levels

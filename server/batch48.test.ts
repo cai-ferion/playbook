@@ -97,9 +97,9 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
       expect(compassJs).toContain('value="CAP 3"');
     });
 
-    it("CAP section shown only for CAP 0 Coaching and Follow-Up Session", () => {
+    it("CAP section shown only for General Coaching and Follow-Up Session", () => {
       expect(compassJs).toContain(
-        "type === 'CAP 0 Coaching' || type === 'Follow-Up Session'"
+        "type === 'General Coaching' || type === 'Follow-Up Session'"
       );
     });
 

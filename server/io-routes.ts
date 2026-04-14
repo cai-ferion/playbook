@@ -560,6 +560,10 @@ router.get("/coaching", async (req: Request, res: Response) => {
         cap_level: ioCoaching.cap_level,
         coachee_list: ioCoaching.coachee_list,
         job_id: ioCoaching.job_id,
+        sme_joiner: ioCoaching.sme_joiner,
+        sme_meta_email: ioCoaching.sme_meta_email,
+        sme_joiner_2: ioCoaching.sme_joiner_2,
+        sme_joiner_2_email: ioCoaching.sme_joiner_2_email,
         created_at: ioCoaching.created_at,
         updated_at: ioCoaching.updated_at,
       }).from(ioCoaching).orderBy(desc(ioCoaching.id)).limit(lim);
