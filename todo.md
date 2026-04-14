@@ -1736,3 +1736,14 @@
 - [x] Disputes LV5: buttons visible to Support Joiner 1 & 2 only
 - [x] Disputes LV6: buttons visible to QTP Manager Angelo Nieva only
 - [x] Disputes ALL: Angelo Nieva has override access to all levels
+
+## Role-Based Visibility & Maneuverability Audit
+- [x] Audit: Inventory all non-agent roles and their expected access rules
+- [x] Audit: Manager role — page visibility, buttons, actions
+- [x] Audit: Team Lead role — page visibility, buttons, actions
+- [x] Audit: Operational SME role — page visibility, buttons, actions
+- [x] Audit: Quality & Policy Expert (QA) role — page visibility, buttons, actions
+- [x] Audit: Trainer role — page visibility, buttons, actions
+- [x] Audit: Admin (OHR 740045023) — page visibility, buttons, actions
+- [x] Fix any discrepancies found during audit (SME missing Risk Intel + Billing - FIXED)
+- [x] Browser verification for each role (all 6 roles tested via browser login)
