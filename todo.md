@@ -1815,3 +1815,9 @@
 - [x] Populate attrition details (exit_date, exit_reason, offboarding_date, resignation_date, relieving_date) for all 86 entries
 - [x] Update Supabase mirror with new columns and data — 500/500 rows upserted
 - [x] Trigger DB→GSheet sync — 55 updated, 0 appended
+
+## Feature — Auto-sync io_employees to Supabase
+- [x] Create Supabase sync module (server/supabase-sync.ts) — fire-and-forget with 2x retry
+- [x] Hook sync into all 5 io_employees mutation paths (PATCH, POST, DELETE, 2x billing bulk sync)
+- [x] Add Supabase credentials as env secrets (SUPABASE_URL, SUPABASE_SERVICE_KEY)
+- [x] Test end-to-end sync on employee update — 460 tests pass (4 new Supabase tests)

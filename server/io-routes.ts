@@ -30,6 +30,7 @@ import {
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
 import crypto from "crypto";
+import { syncEmployeesToSupabase, deleteEmployeesFromSupabase } from "./supabase-sync.js";
 const router = Router();
 
 // Normalize long PG codes from Google Sheet / SRT to short codes used in DB
@@ -151,6 +152,9 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
     }
 
     await db.update(ioEmployees).set(updates).where(eq(ioEmployees.ohr_id, ohr_id));
+    // Fire-and-forget: mirror change to Supabase
+    const [updated] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
+    if (updated) syncEmployeesToSupabase([updated]).catch(() => {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] employees PATCH error:", err);
@@ -167,6 +171,8 @@ router.post("/employees", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.insert(ioEmployees).values(req.body);
+    // Fire-and-forget: mirror new employee to Supabase
+    syncEmployeesToSupabase([req.body]).catch(() => {});
 
     // --- Auto-generate attendance rows for new non-Manager, non-Inactive employees ---
     const emp = req.body;
@@ -242,6 +248,8 @@ router.delete("/employees/:ohr_id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.delete(ioEmployees).where(eq(ioEmployees.ohr_id, req.params.ohr_id));
+    // Fire-and-forget: mirror deletion to Supabase
+    deleteEmployeesFromSupabase([req.params.ohr_id]).catch(() => {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] employees DELETE error:", err);
@@ -2261,12 +2269,16 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
         );
         const syncInfo = Array.isArray(syncResult[0]) ? syncResult[0] : syncResult;
         synced = syncInfo.affectedRows || 0;
+        // Mirror updated employees to Supabase if any were changed
+        if (synced > 0) {
+          const allEmps = await db.select().from(ioEmployees);
+          syncEmployeesToSupabase(allEmps).catch(() => {});
+        }
       } catch (syncErr: any) {
         console.error("[IO API] srt-bill-upload employee sync error:", syncErr.message);
       }
     }
-
-    res.json({ success: true, totalAffected, total: rows.length, employeesSynced: synced });
+    res.json({ success: true, totalAffected, total: rows.length, employeesSynced: synced });;
   } catch (err: any) {
     console.error("[IO API] srt-bill-upload error:", err);
     res.status(500).json({ error: err.message });
@@ -3021,12 +3033,16 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
               WHERE ohr_id = ${ohrId}
                 AND (planning_group != ${latest.planning_group} OR actual_role != ${latest.role})`
         );
-        if ((syncResult[0]?.affectedRows ?? 0) > 0) employeesSynced++;
+         if ((syncResult[0]?.affectedRows ?? 0) > 0) employeesSynced++;
+      }
+      // Mirror updated employees to Supabase
+      if (employeesSynced > 0) {
+        const allEmps = await db.select().from(ioEmployees);
+        syncEmployeesToSupabase(allEmps).catch(() => {});
       }
     } catch (syncErr: any) {
       console.error("[BILLING SYNC] Employee sync error:", syncErr.message);
     }
-
     // 5. Also upsert into io_srt_bill for historical tracking
     let srtBillUpserted = 0;
     try {
