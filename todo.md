@@ -1747,3 +1747,10 @@
 - [x] Audit: Admin (OHR 740045023) — page visibility, buttons, actions
 - [x] Fix any discrepancies found during audit (SME missing Risk Intel + Billing - FIXED)
 - [x] Browser verification for each role (all 6 roles tested via browser login)
+
+## Roster Cross-Examination & Inactive Import
+- [x] Fetch ROSTER sheet from Google Sheets
+- [x] Fetch INACTIVE sheet from Google Sheets
+- [x] Export current io_employees from DB
+- [x] Cross-examine ROSTER vs io_employees — produce discrepancy report (1 discrepancy: Bernal role mismatch)
+- [x] Import INACTIVE employees into io_employees DB tagged as "Inactive" (84 unique imported, 3 dupes skipped)
