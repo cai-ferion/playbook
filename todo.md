@@ -1783,3 +1783,8 @@
 - [x] Replace any srt_status='Active' with 'Production'
 - [x] Fix Nimer srt_status: Nesting → Production
 - [x] Backfill missing Apr 30 attendance for Marcelo, Sy, Delen (1 row each)
+- [x] Set Gambito (740031642) employement_status=Inactive
+- [x] Set Amurao (740054050) employement_status=Inactive
+- [x] Set Almarquez (740049857) employement_status=Inactive
+- [x] List the 37 employees with empty Apr 14 tags for user
+- [x] Re-sync DB→GSheet after fixes — 0 updates, 0 appends (already in sync)
