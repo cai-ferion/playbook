@@ -1767,3 +1767,19 @@
 - [x] Sync Bernal's role update (Team Lead) back to the ROSTER Google Sheet (already correct in row 74, col K)
 - [x] Remove Bermejo from the INACTIVE Google Sheet (row 55 deleted, confirmed removed)
 - [x] Fix 99 inactive employees with NULL srt_status → set to 'Inactive' in DB
+
+## Roster Audit & May Attendance
+- [ ] Verify roster integrity — active/inactive counts, Manager exclusions, anomalies
+- [ ] Generate May 2026 attendance rows for all active non-Manager employees
+
+## Batch — Sync Fix & Data Integrity
+
+- [x] Fix sync cron: spawn /bin/sh ENOENT error (run #15) — rewrote from Python to native Node.js
+- [x] Fix sync auth: No GWS token available error (run #16) — added token file fallback
+- [x] Trigger manual DB→GSheet sync for this week — 461 updated, 11719 appended
+- [x] Fix 4 conflicting employees: set employement_status='Active' (Poblete, Marcelo, Delen, Sy)
+- [x] Fix Bermejo srt_status: Nesting → Production
+- [x] Fix Castro srt_status: clean comma-separated billing groups → Production + employement_status → Active + backfill Jan-Apr attendance
+- [x] Replace any srt_status='Active' with 'Production'
+- [x] Fix Nimer srt_status: Nesting → Production
+- [x] Backfill missing Apr 30 attendance for Marcelo, Sy, Delen (1 row each)
