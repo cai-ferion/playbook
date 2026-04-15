@@ -300,8 +300,28 @@ async function handleSignUp() {
   }
 }
 
-// Track failed login attempts per OHR
+// Track failed login attempts per OHR (synced with DB to prevent desync)
 const failedAttempts = {};
+
+// Persist lock to DB with retry — ensures admin locked list stays in sync
+async function persistLockToDb(ohr) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await fetch(
+        `${IO_API_BASE}/employees/${ohr}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_locked: true })
+        }
+      );
+      if (resp.ok) return true;
+    } catch (e) { /* retry */ }
+    // Brief pause before retry
+    await new Promise(r => setTimeout(r, 500));
+  }
+  return false;
+}
 
 async function handleLogin() {
   const ohr = document.getElementById('login-ohr').value.trim();
@@ -331,8 +351,10 @@ async function handleLogin() {
 
     const emp = empData[0];
 
-    // Check if account is locked in database
-    if (emp.is_locked === true || emp.is_locked === 'true') {
+    // Check if account is locked in database (authoritative source of truth)
+    if (emp.is_locked === true || emp.is_locked === 'true' || emp.is_locked === 1) {
+      // Sync local state with DB to prevent bypass via page refresh
+      failedAttempts[ohr] = 3;
       errorEl.innerHTML = 'Your account has been locked.<br>Please contact <strong>Arvin Bantasan</strong> for assistance.';
       return;
     }
@@ -348,17 +370,11 @@ async function handleLogin() {
       const remaining = 3 - failedAttempts[ohr];
 
       if (failedAttempts[ohr] >= 3) {
-        // Lock the account in the database
-        try {
-          await fetch(
-            `${IO_API_BASE}/employees/${ohr}`,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ is_locked: true })
-            }
-          );
-        } catch (e) { /* non-critical */ }
+        // Lock the account in the database with retry to prevent desync
+        const locked = await persistLockToDb(ohr);
+        if (!locked) {
+          console.error('[Login] Failed to persist lock to DB for', ohr);
+        }
         errorEl.innerHTML = 'Your account has been locked due to multiple failed login attempts.<br>Please contact <strong>Arvin Bantasan</strong> for assistance.';
       } else {
         errorEl.textContent = `Incorrect password. ${remaining} attempt(s) remaining.`;

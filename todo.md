@@ -1799,3 +1799,8 @@
 - [x] Backfill May 1-31 for Gambito (740031642) — only employee missing May rows (31 rows inserted)
 - [x] Verify backfill completeness — all 321 now have Jan-May coverage
 - [x] Trigger DB→GSheet sync — 31 appended (Gambito May rows)
+
+## Bug — Darryl Castillo locked out but not on Admin locked list
+- [x] Diagnose why Castillo is locked but not visible in Admin Tools locked list — client-side failedAttempts lock desynced from DB is_locked
+- [x] Fix root cause — added persistLockToDb() with 3x retry, added is_locked===1 check, sync local state from DB
+- [x] Unlocked Castillo (740051210) in DB
