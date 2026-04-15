@@ -2,7 +2,14 @@
  * Performance Dashboard — .xlsb Parser
  * Reads "UOT Raw" and "AHT Raw" sheets from .xlsb files and extracts KPI data.
  */
-import * as XLSX from "xlsx";
+// Lazy-loaded xlsx — 211ms import time, only needed when parsing uploaded files.
+let _xlsx: typeof import("xlsx") | null = null;
+async function getXLSX() {
+  if (!_xlsx) {
+    _xlsx = await import("xlsx");
+  }
+  return _xlsx;
+}
 
 // Planning group mapping
 const PLANNING_GROUP_MAP: Record<string, string> = {
@@ -102,10 +109,11 @@ function safeNum(v: any): number {
 /**
  * Parse the .xlsb buffer and return structured dashboard data.
  */
-export function parseMainMetrics(
+export async function parseMainMetrics(
   buffer: Buffer,
   rosterMap: Map<number, RosterEntry>
-): ParsedResult {
+): Promise<ParsedResult> {
+  const XLSX = await getXLSX();
   const wb = XLSX.read(buffer, { type: "buffer" });
 
   // --- Parse UOT Raw sheet ---

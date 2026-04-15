@@ -1788,3 +1788,8 @@
 - [x] Set Almarquez (740049857) employement_status=Inactive
 - [x] List the 37 employees with empty Apr 14 tags for user
 - [x] Re-sync DB→GSheet after fixes — 0 updates, 0 appends (already in sync)
+
+## Batch — Lambda Cold Start Optimization
+- [x] Profile server startup to identify slow imports/init
+- [x] Optimize heavy initialization (defer non-critical work) — lazy-loaded googleapis (-1.4s) and xlsx (-0.2s)
+- [x] Verify startup time improvement — startup 2.31s (down from ~3.7s), sync still works, 456 tests pass

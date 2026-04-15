@@ -10,8 +10,17 @@
  */
 
 import cron from "node-cron";
-import { google, sheets_v4 } from "googleapis";
 import fs from "fs";
+
+// Lazy-loaded googleapis — 200MB package, ~1.4s import time.
+// Only loaded when sync actually runs, not on server cold start.
+let _sheetsModule: typeof import("googleapis") | null = null;
+async function getGoogleapis() {
+  if (!_sheetsModule) {
+    _sheetsModule = await import("googleapis");
+  }
+  return _sheetsModule;
+}
 import { getDb } from "./db.js";
 import { ioSyncLog, ioAttendance } from "../drizzle/schema.js";
 import { gte } from "drizzle-orm";
@@ -89,12 +98,13 @@ function getGwsToken(): string | null {
   return null;
 }
 
-function getSheetsClient(): sheets_v4.Sheets | null {
+async function getSheetsClient() {
   const token = getGwsToken();
   if (!token) {
     console.warn("[SYNC] No GWS token available (env var or token file) — sync disabled");
     return null;
   }
+  const { google } = await getGoogleapis();
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: token });
   return google.sheets({ version: "v4", auth });
@@ -197,8 +207,8 @@ export async function runAttendanceSync(
   const stats: SyncStats = { rows_updated: 0, rows_appended: 0, total_db_rows: 0, total_sheet_rows: 0 };
 
   try {
-    // ── Auth check ──
-    const sheets = getSheetsClient();
+    // ── Auth check (lazy-loads googleapis on first call) ──
+    const sheets = await getSheetsClient();
     if (!sheets) {
       const msg = "Google Sheets API not available (no auth token)";
       log(`[SYNC] ${msg}`);

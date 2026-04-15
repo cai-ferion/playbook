@@ -195,7 +195,7 @@ async function processUpload(base64Data: string, fileName: string, syncId: numbe
     const rosterMap = await buildRosterLookup();
 
     // Parse the file
-    const parsed = parseMainMetrics(buffer, rosterMap);
+    const parsed = await parseMainMetrics(buffer, rosterMap);
 
     // Sync to database
     await syncDashboardData(parsed, syncId);
@@ -223,7 +223,7 @@ async function resyncFromS3(s3Url: string, syncId: number) {
     const buffer = Buffer.from(arrayBuffer);
 
     const rosterMap = await buildRosterLookup();
-    const parsed = parseMainMetrics(buffer, rosterMap);
+    const parsed = await parseMainMetrics(buffer, rosterMap);
     await syncDashboardData(parsed, syncId);
 
     await updateSyncRecord(syncId, {
