@@ -1754,3 +1754,10 @@
 - [x] Export current io_employees from DB
 - [x] Cross-examine ROSTER vs io_employees — produce discrepancy report (1 discrepancy: Bernal role mismatch)
 - [x] Import INACTIVE employees into io_employees DB tagged as "Inactive" (84 unique imported, 3 dupes skipped)
+
+## Post-Roster Fixes & Attendance Audit
+- [x] Update Bernal (740036814) actual_role from "Operational SME" to "Team Lead"
+- [x] Clean SRT Name column from newly imported inactive employees (80 rows cleaned)
+- [x] Audit all active employees against attendance records — found 45 employees with gaps
+- [x] Backfill missing attendance rows for all 45 active non-Manager employees (48,842 total rows, 0 gaps remaining)
+- [x] Confirmed Managers exempt from attendance (6 Managers, 0 attendance rows — committed to memory)
