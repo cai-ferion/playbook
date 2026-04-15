@@ -64,6 +64,12 @@ export const ioEmployees = mysqlTable("io_employees", {
   password: varchar("password", { length: 255 }),
   is_locked: boolean("is_locked").default(false),
   gchat_space_id: varchar("gchat_space_id", { length: 100 }),
+  // Attrition tracking columns
+  offboarding_date: varchar("offboarding_date", { length: 30 }),
+  resignation_date: varchar("resignation_date", { length: 30 }),
+  relieving_date: varchar("relieving_date", { length: 30 }),
+  exit_date: varchar("exit_date", { length: 30 }),
+  exit_reason: varchar("exit_reason", { length: 255 }),
 });
 
 export type IoEmployee = typeof ioEmployees.$inferSelect;

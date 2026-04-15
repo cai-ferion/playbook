@@ -1804,3 +1804,14 @@
 - [x] Diagnose why Castillo is locked but not visible in Admin Tools locked list — client-side failedAttempts lock desynced from DB is_locked
 - [x] Fix root cause — added persistLockToDb() with 3x retry, added is_locked===1 check, sync local state from DB
 - [x] Unlocked Castillo (740051210) in DB
+
+## Batch — Attrition Data Incorporation
+- [x] Add attrition columns to io_employees schema (offboarding_date, resignation_date, relieving_date, exit_date, exit_reason)
+- [x] Apply migration to DB
+- [x] Insert 13 missing employees from attrition sheet (2025 exits)
+- [x] Update srt_status to Exit for 50 Inactive employees
+- [x] Update srt_status to Exit + employement_status to Inactive for 11 Active employees (Delen, Marcelo, Sy, Castro, Gonzales, etc.)
+- [x] Mark Hernandez and Maraña as Inactive (notice period, not Exit yet)
+- [x] Populate attrition details (exit_date, exit_reason, offboarding_date, resignation_date, relieving_date) for all 86 entries
+- [x] Update Supabase mirror with new columns and data — 500/500 rows upserted
+- [x] Trigger DB→GSheet sync — 55 updated, 0 appended

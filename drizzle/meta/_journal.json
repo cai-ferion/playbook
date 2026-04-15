@@ -92,6 +92,13 @@
       "when": 1776019468015,
       "tag": "0012_easy_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1776295019434,
+      "tag": "0013_complete_masque",
+      "breakpoints": true
     }
   ]
 }
