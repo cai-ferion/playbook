@@ -1793,3 +1793,9 @@
 - [x] Profile server startup to identify slow imports/init
 - [x] Optimize heavy initialization (defer non-critical work) — lazy-loaded googleapis (-1.4s) and xlsx (-0.2s)
 - [x] Verify startup time improvement — startup 2.31s (down from ~3.7s), sync still works, 456 tests pass
+
+## Batch — WFM Attendance Backfill (All 321 employees through Apr 30)
+- [x] Re-analyze WFM file and cross-reference all 321 employees against DB — all 321 have full Apr 1-30
+- [x] Backfill May 1-31 for Gambito (740031642) — only employee missing May rows (31 rows inserted)
+- [x] Verify backfill completeness — all 321 now have Jan-May coverage
+- [x] Trigger DB→GSheet sync — 31 appended (Gambito May rows)
