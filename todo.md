@@ -1761,3 +1761,9 @@
 - [x] Audit all active employees against attendance records — found 45 employees with gaps
 - [x] Backfill missing attendance rows for all 45 active non-Manager employees (48,842 total rows, 0 gaps remaining)
 - [x] Confirmed Managers exempt from attendance (6 Managers, 0 attendance rows — committed to memory)
+
+## Auto-Attendance & Sheet Sync
+- [x] Auto-generate attendance rows when a new employee is added to io_employees (trigger in POST /employees, tested: 16 rows Apr 15→30)
+- [x] Sync Bernal's role update (Team Lead) back to the ROSTER Google Sheet (already correct in row 74, col K)
+- [x] Remove Bermejo from the INACTIVE Google Sheet (row 55 deleted, confirmed removed)
+- [x] Fix 99 inactive employees with NULL srt_status → set to 'Inactive' in DB

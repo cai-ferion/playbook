@@ -159,12 +159,75 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/employees - create a new employee
+// Auto-generates attendance rows for the remainder of the current month
+// through end of month when the employee is non-Manager and non-Inactive.
 router.post("/employees", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.insert(ioEmployees).values(req.body);
+
+    // --- Auto-generate attendance rows for new non-Manager, non-Inactive employees ---
+    const emp = req.body;
+    const role = emp.actual_role || '';
+    const status = emp.srt_status || '';
+    const EXEMPT_ROLES = ['Manager'];
+    const INACTIVE_STATUSES = ['Inactive', 'Exit'];
+
+    if (!EXEMPT_ROLES.includes(role) && !INACTIVE_STATUSES.includes(status) && emp.ohr_id) {
+      try {
+        // Determine date range: today through end of current month
+        const now = new Date();
+        const todayStr = now.toISOString().slice(0, 10);
+        const year = now.getFullYear();
+        const month = now.getMonth(); // 0-indexed
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const endStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        // Check which dates already exist for this employee
+        const existing = await db.select({ log_date: ioAttendance.log_date })
+          .from(ioAttendance)
+          .where(and(
+            eq(ioAttendance.ohr_id, emp.ohr_id),
+            gte(ioAttendance.log_date, todayStr),
+            lte(ioAttendance.log_date, endStr)
+          ));
+        const existingDates = new Set(existing.map(r => r.log_date));
+
+        // Build rows for missing dates
+        const rows: any[] = [];
+        for (let d = new Date(todayStr + 'T00:00:00Z'); d.toISOString().slice(0, 10) <= endStr; d.setUTCDate(d.getUTCDate() + 1)) {
+          const dateStr = d.toISOString().slice(0, 10);
+          if (existingDates.has(dateStr)) continue;
+          rows.push({
+            id: crypto.randomBytes(8).toString('hex'),
+            ohr_id: emp.ohr_id,
+            log_date: dateStr,
+            created_at: now.toISOString(),
+            snap_full_name: emp.full_name || '',
+            snap_supervisor: emp.supervisor_name || emp.sup_name || '',
+            snap_planning_group: emp.planning_group || '',
+            snap_shift_time: emp.shift_time || '',
+            snap_actual_role: role,
+            snap_billing_name: emp.billing_name || '',
+            snap_status: status,
+          });
+        }
+
+        if (rows.length > 0) {
+          // Batch insert in chunks of 50 to avoid query size limits
+          for (let i = 0; i < rows.length; i += 50) {
+            await db.insert(ioAttendance).values(rows.slice(i, i + 50));
+          }
+          console.log(`[IO API] Auto-generated ${rows.length} attendance rows for new employee ${emp.ohr_id} (${todayStr} → ${endStr})`);
+        }
+      } catch (attErr: any) {
+        // Non-fatal: employee was created, attendance generation failed
+        console.error(`[IO API] Auto-attendance generation failed for ${emp.ohr_id}:`, attErr.message);
+      }
+    }
+
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] employees POST error:", err);
