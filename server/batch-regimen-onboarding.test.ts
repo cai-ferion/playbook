@@ -11,14 +11,17 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
   // ===== Compass Visibility =====
   describe("Compass Visibility", () => {
     it("should restrict Compass nav to admin OHR only", () => {
-      expect(appJs).toContain("// Compass \u2014 visible ONLY to admin OHR");
+      // Now RBAC-driven via applyNavPermissions
+      expect(appJs).toContain("applyNavPermissions");
+      expect(appJs).toContain("vis('nav-group-compass', 'nav.compass')");
     });
   });
 
   // ===== Regimen Nav Visibility =====
   describe("Regimen Nav Visibility", () => {
     it("should show Regimen to all non-Agent roles", () => {
-      expect(appJs).toContain("// Regimen (Roster) \u2014 visible to all non-Agent roles");
+      // Now RBAC-driven via applyNavPermissions
+      expect(appJs).toContain("vis('nav-regimen', 'nav.regimen')");
     });
   });
 
@@ -150,8 +153,8 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("ROSTER.canEdit");
     });
 
-    it("should check EDITOR_OHRS for edit permission", () => {
-      expect(rosterJs).toContain("ROSTER.EDITOR_OHRS.includes(ohr)");
+    it("should check DB permission for edit access", () => {
+      expect(rosterJs).toContain("regimen.edit_employee");
     });
   });
 
@@ -263,7 +266,7 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
     });
 
     it("should show onboarding tab only for admin OHR", () => {
-      expect(rosterJs).toContain("currentUser.ohr_id === ROSTER.ADMIN_OHR");
+      expect(rosterJs).toContain("regimen.onboarding_tab");
     });
 
     it("should have ONBOARDING_REQUIRED_FIELDS array", () => {

@@ -33,7 +33,8 @@ function getActiveTab() {
 // ── Init ───────────────────────────────────────────────────────────────────
 
 async function initSyncHistory() {
-  if (!currentUser || currentUser.ohr_id !== '740045023') return;
+  // Permission-driven: anchor.sync_history controls page access
+  if (!currentUser || !(currentUser.permissions && currentUser.permissions['anchor.sync_history'])) return;
   renderSyncShell();
   await loadTabData();
 }

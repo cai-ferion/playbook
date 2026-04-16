@@ -99,6 +99,13 @@
       "when": 1776295019434,
       "tag": "0013_complete_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1776354887543,
+      "tag": "0014_clever_speed",
+      "breakpoints": true
     }
   ]
 }

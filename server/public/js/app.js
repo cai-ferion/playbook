@@ -539,64 +539,20 @@ async function handleLogin() {
     document.getElementById('auth-page').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
 
-    const ADMIN_OHR = '740045023';
-
-    // Show Admin Tools nav only for admin OHR
-    const adminNav = document.getElementById('nav-admin');
-    if (adminNav) adminNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
-
-    // Show Sync History nav only for admin OHR
-    const syncHistoryNav = document.getElementById('nav-sync-history');
-    if (syncHistoryNav) syncHistoryNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
-
-    // Hide entire Anchor group from Agents
-    const anchorGroupEl = document.getElementById('nav-group-anchor');
-    if (anchorGroupEl) {
-      if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
-        anchorGroupEl.style.display = 'none';
-      } else {
-        anchorGroupEl.style.display = '';
-      }
+    // ── RBAC: Fetch permissions from DB and apply nav visibility ──
+    try {
+      const permRes = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
+      const permData = await permRes.json();
+      currentUser.permissions = permData.permissions || {};
+    } catch (permErr) {
+      console.warn('[RBAC] Failed to fetch permissions, using empty:', permErr);
+      currentUser.permissions = {};
     }
+    // Store updated user with permissions
+    sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
-    // Show Risk Intelligence nav for all non-Agents
-    const alertsNav = document.getElementById('nav-alerts');
-    if (alertsNav) alertsNav.style.display = (currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
-
-    // Show Billing Compliance nav for all non-Agents
-    const billingNav = document.getElementById('nav-billing');
-    if (billingNav) billingNav.style.display = (currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
-
-    // Compass — visible ONLY to admin OHR
-    const compassNav = document.getElementById('nav-group-compass');
-    if (compassNav) {
-      compassNav.style.display = currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
-    }
-
-    // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
-    ['nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
-    });
-
-    // Helm — visible to all (agents see Task Board only)
-    const helmNav = document.getElementById('nav-group-helm');
-    if (helmNav) helmNav.style.display = '';
-
-    // Helm Analytics — admin only
-    const helmAnalyticsNav = document.getElementById('nav-helm-analytics');
-    if (helmAnalyticsNav) helmAnalyticsNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
-
-    // Regimen (Roster) — visible to all non-Agent roles
-    const regimenNav = document.getElementById('nav-regimen');
-    if (regimenNav) {
-      const isAgent = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR;
-      regimenNav.style.display = isAgent ? 'none' : '';
-    }
-
-    // Dashboard — hidden from Agents
-    const dashboardNav = document.getElementById('nav-dashboard');
-    if (dashboardNav) dashboardNav.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) ? 'none' : '';
+    // Apply DB-driven nav visibility
+    applyNavPermissions(currentUser);
 
     initMultiSelects();
     initDashboardMultiSelects();
@@ -610,8 +566,8 @@ async function handleLogin() {
     // Default sidebar to Alerts (notifications) for all users
     if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
     if (typeof initNotifications === 'function') initNotifications();
-    // Route to Helm Task Board for Agents, Risk Intelligence for others
-    if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR) {
+    // Route to Helm Task Board for Agents with no anchor access, Risk Intelligence for others
+    if (!currentUser.permissions['nav.anchor']) {
       switchView('helm-board');
     } else {
       switchView('alerts');
@@ -696,64 +652,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentUser = JSON.parse(stored);
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
-      const ADMIN_OHR2 = '740045023';
-
-      // Show Admin Tools nav only for admin OHR
-      const adminNav2 = document.getElementById('nav-admin');
-      if (adminNav2) adminNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
-
-      // Show Sync History nav only for admin OHR
-      const syncHistoryNav2 = document.getElementById('nav-sync-history');
-      if (syncHistoryNav2) syncHistoryNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
-
-      // Hide entire Anchor group from Agents
-      const anchorGroupEl2 = document.getElementById('nav-group-anchor');
-      if (anchorGroupEl2) {
-        if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
-          anchorGroupEl2.style.display = 'none';
-        } else {
-          anchorGroupEl2.style.display = '';
-        }
+      // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
+      try {
+        const permRes2 = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
+        const permData2 = await permRes2.json();
+        currentUser.permissions = permData2.permissions || {};
+      } catch (permErr2) {
+        console.warn('[RBAC] Failed to refresh permissions on restore:', permErr2);
+        // Fall back to stored permissions if any
+        if (!currentUser.permissions) currentUser.permissions = {};
       }
+      sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
-      // Show Risk Intelligence nav for all non-Agents
-      const alertsNav2 = document.getElementById('nav-alerts');
-      if (alertsNav2) alertsNav2.style.display = (currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
-
-      // Show Billing Compliance nav for all non-Agents
-      const billingNav2 = document.getElementById('nav-billing');
-      if (billingNav2) billingNav2.style.display = (currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
-
-      // Compass — visible ONLY to admin OHR
-      const compassNav2 = document.getElementById('nav-group-compass');
-      if (compassNav2) {
-        compassNav2.style.display = currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
-      }
-
-      // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
-      ['nav-group-sandbox', 'nav-group-haven', 'nav-group-horizon'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
-      });
-
-      // Helm — visible to all (agents see Task Board only)
-      const helmNav2 = document.getElementById('nav-group-helm');
-      if (helmNav2) helmNav2.style.display = '';
-
-      // Helm Analytics — admin only
-      const helmAnalyticsNav2 = document.getElementById('nav-helm-analytics');
-      if (helmAnalyticsNav2) helmAnalyticsNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
-
-      // Regimen (Roster) — visible to all non-Agent roles
-      const regimenNav2 = document.getElementById('nav-regimen');
-      if (regimenNav2) {
-        const isAgent2 = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2;
-        regimenNav2.style.display = isAgent2 ? 'none' : '';
-      }
-
-      // Dashboard — hidden from Agents
-      const dashboardNav2 = document.getElementById('nav-dashboard');
-      if (dashboardNav2) dashboardNav2.style.display = (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) ? 'none' : '';
+      // Apply DB-driven nav visibility
+      applyNavPermissions(currentUser);
 
       initMultiSelects();
       initDashboardMultiSelects();
@@ -765,10 +677,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const helmGroup2 = document.getElementById('nav-group-helm');
       if (helmGroup2) helmGroup2.classList.add('expanded');
       // Default sidebar to Alerts (notifications) for all users
-if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
-       if (typeof initNotifications === 'function') initNotifications();
-       // Route to Helm Task Board for Agents, Risk Intelligence for others
-       if (currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2) {
+      if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+      if (typeof initNotifications === 'function') initNotifications();
+      // Route based on permissions
+      if (!currentUser.permissions['nav.anchor']) {
         switchView('helm-board');
       } else {
         switchView('alerts');
@@ -983,6 +895,46 @@ function updateRefreshDisplay() {
   if (metaEl2) metaEl2.textContent = text;
 }
 
+// ===== RBAC: Apply Nav Permissions =====
+
+function applyNavPermissions(user) {
+  const p = user.permissions || {};
+
+  // Helper: show/hide element by permission key
+  function vis(elId, permKey) {
+    const el = document.getElementById(elId);
+    if (el) el.style.display = p[permKey] ? '' : 'none';
+  }
+
+  // Nav groups
+  vis('nav-group-anchor', 'nav.anchor');
+  vis('nav-group-compass', 'nav.compass');
+  vis('nav-group-haven', 'nav.haven');
+  vis('nav-group-sandbox', 'nav.sandbox');
+  vis('nav-group-horizon', 'nav.horizon');
+  vis('nav-admin', 'nav.admin');
+
+  // Helm — always show group if nav.helm, but analytics sub-item gated separately
+  vis('nav-group-helm', 'nav.helm');
+  vis('nav-helm-analytics', 'helm.analytics');
+
+  // Regimen
+  vis('nav-regimen', 'nav.regimen');
+
+  // Anchor sub-sections
+  vis('nav-dashboard', 'anchor.dashboard');
+  vis('nav-alerts', 'anchor.risk_intelligence');
+  vis('nav-billing', 'anchor.billing_compliance');
+  vis('nav-sync-history', 'anchor.sync_history');
+  // Input portal nav is the default anchor view, gated by nav.anchor itself
+
+  // Regimen tabs (Onboarding & Permissions visible only if granted)
+  const onboardingTab = document.getElementById('regimen-tab-onboarding');
+  if (onboardingTab) onboardingTab.style.display = p['regimen.onboarding_tab'] ? '' : 'none';
+  const permissionsTab = document.getElementById('regimen-tab-permissions');
+  if (permissionsTab) permissionsTab.style.display = p['regimen.permissions_tab'] ? '' : 'none';
+}
+
 // ===== View Switching =====
 
 async function switchView(view) {
@@ -1044,10 +996,10 @@ async function switchView(view) {
   var viewTitleEl = document.getElementById('view-title');
   if (viewTitleEl) viewTitleEl.textContent = titles[view] || view;
 
-  // Show Export CSV button on Input Portal for all non-agents
+  // Show Export CSV button on Input Portal — permission-driven
   const exportBtn = document.getElementById('export-csv-btn');
-  const isNonAgent = currentUser && currentUser.actual_role !== 'Operational SME' && currentUser.actual_role !== 'Agent';
-  if (exportBtn) exportBtn.style.display = (view === 'input' && (isNonAgent || (currentUser && currentUser.ohr_id === '740045023'))) ? '' : 'none';
+  const canDownloadCsv = currentUser && currentUser.permissions && currentUser.permissions['anchor.download_csv'];
+  if (exportBtn) exportBtn.style.display = (view === 'input' && canDownloadCsv) ? '' : 'none';
 
   // Show "Last refreshed" only on Input Portal
   const headerMeta = document.getElementById('header-meta');
@@ -1199,7 +1151,7 @@ function updateAlertNavBadge() {
   // Apply same role-based filtering as renderAlerts
   const role = currentUser ? currentUser.actual_role : '';
   const userOhr = currentUser ? currentUser.ohr_id : '';
-  const isAdmin = userOhr === '740045023';
+  const isAdmin = currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance'];
 
   function filterByRole(alerts) {
     if (!currentUser) return alerts;
@@ -1484,13 +1436,13 @@ function renderInputTable() {
             const otLockDate = '2026-04-11';
             const isOtMechanismAgent = currentUser && currentUser.actual_role === 'Agent'
               && OT_MECH_PGS_1.includes(currentUser.actualPlanningGroup || currentUser.planning_group || '')
-              && currentUser.ohr_id !== '740045023';
+                && !(currentUser.permissions && currentUser.permissions['anchor.edit_attendance']);
             const isOtFieldLocked = isOtMechanismAgent && record.date >= otLockDate;
             if (isOtFieldLocked) {
               return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
             }
             // OT editable even on locked row (within current week)
-            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
+            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="—"></td>`;>`;
           }
           // Outside current week and row is locked: show as readonly
           return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;
@@ -1528,7 +1480,7 @@ function renderInputTable() {
           const otLockDate = '2026-04-11';
           const isOtMechanismAgent = currentUser && currentUser.actual_role === 'Agent'
             && OT_MECH_PGS_2.includes(currentUser.actualPlanningGroup || currentUser.planning_group || '')
-            && currentUser.ohr_id !== '740045023';
+            && !(currentUser.permissions && currentUser.permissions['anchor.edit_attendance']);
           const isOtFieldLocked = isOtMechanismAgent && record.date >= otLockDate;
           if (isOtFieldLocked) {
             return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
@@ -1601,8 +1553,8 @@ function renderInputPagination(currentPage, totalPages) {
  * - Exempt: OHR 740045023 and actual_role = 'Manager'
  */
 function isRowLocked(record) {
-  // Exempt admin OHR 740045023 and Managers — never locked
-  if (currentUser && (currentUser.ohr_id === '740045023' || currentUser.actual_role === 'Manager')) {
+  // Exempt users with edit_attendance permission and Managers — never locked
+  if (currentUser && (currentUser.actual_role === 'Manager' || (currentUser.permissions && currentUser.permissions['anchor.edit_attendance']))) {
     return false;
   }
 
@@ -2524,7 +2476,7 @@ function renderAlerts() {
   // Role-based filtering: Team Lead sees only their agents, Manager sees their planning group
   const role = typeof currentUser !== 'undefined' ? currentUser?.actual_role : '';
   const userOhr = typeof currentUser !== 'undefined' ? currentUser?.ohr_id : '';
-  const isAdmin = userOhr === '740045023';
+  const isAdmin = currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance'];
 
   function filterAlertsByRole(alerts) {
     if (isAdmin || role === 'Trainer') return alerts; // Admin and Trainer see all

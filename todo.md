@@ -1883,3 +1883,43 @@
 ### Bug Fix — Regimen Exit Details
 - [x] Fix exit/attrition columns displaying in Regimen table for admin OHR 740045023 (all 42 columns including attrition group)
 - [x] Port Anchor/Compass pill-based filter system to Regimen (with Select All/Deselect All, debounced auto-apply, search within dropdowns, sort buttons)
+
+## Batch — RBAC Permission System
+
+### Database & Schema
+- [x] Create io_permissions table (ohr_id, permission_key, granted BOOLEAN, updated_by, updated_at)
+- [x] Define all 21 permission keys covering nav visibility, sub-section visibility, and action controls
+- [x] Seed default permissions based on current hardcoded role-based rules (all employees seeded)
+
+### Permission Keys — Nav & Sub-section Visibility
+- [x] Map all current hardcoded nav/sub-section visibility rules to permission keys
+- [x] Define role-based defaults matching current behavior
+
+### Permission Keys — Action Controls
+- [x] anchor.edit_attendance (Can edit attendance records)
+- [x] anchor.download_csv (Can download CSV in Input Portal)
+- [x] anchor.sync_history (Can click Sync History in Attendance)
+- [x] anchor.sync_roster (Can click Sync Roster)
+
+### Server API
+- [x] GET /api/io/permissions/:ohr_id — fetch permissions for an OHR
+- [x] GET /api/io/permissions — fetch all permissions (admin only)
+- [x] PUT /api/io/permissions/:ohr_id — update permissions for an OHR (admin only)
+- [x] GET /api/io/my-permissions — fetch current user's permissions (merged defaults + DB overrides)
+
+### Permissions Tab UI (Regimen, admin-only)
+- [x] Add "Permissions" tab in Regimen (visible only to OHR 740045023)
+- [x] Table of all employees with current access summary (granted count / total)
+- [x] Detail panel with grouped permission toggles per OHR
+- [x] Permission groups for quick toggling (6 groups)
+- [x] Search/filter employees in permissions view
+
+### Replace Hardcoded Rules
+- [x] Replace all nav visibility checks in app.js with applyNavPermissions() function
+- [x] Replace action checks with permission checks (CSV, sync, edit attendance, OT lock)
+- [x] Load user permissions on login and cache in sessionStorage
+- [x] Fallback to role-based defaults if no permission row exists (server-side merge)
+- [x] Server-side sync endpoint checks (sync-roster, sync-attendance) now DB-driven
+
+### Audit Trail
+- [x] Log every permission change to io_audit_log (record_type='permission')

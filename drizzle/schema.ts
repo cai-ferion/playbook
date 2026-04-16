@@ -695,3 +695,20 @@ export const compassViolationCatalog = mysqlTable("compass_violation_catalog", {
 });
 export type CompassViolationCatalog = typeof compassViolationCatalog.$inferSelect;
 export type InsertCompassViolationCatalog = typeof compassViolationCatalog.$inferInsert;
+
+
+// ============================================================
+// RBAC Permission System
+// ============================================================
+
+export const ioPermissions = mysqlTable("io_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  permission_key: varchar("permission_key", { length: 100 }).notNull(),
+  granted: boolean("granted").notNull().default(false),
+  updated_by: varchar("updated_by", { length: 20 }),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow(),
+});
+
+export type IoPermission = typeof ioPermissions.$inferSelect;
+export type InsertIoPermission = typeof ioPermissions.$inferInsert;

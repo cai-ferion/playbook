@@ -109,11 +109,23 @@ async function startServer() {
     res.json({ __dirname, cwd: process.cwd(), publicDir, candidates: results });
   });
 
-  // Admin-only manual roster sync trigger
+  // Permission-driven manual roster sync trigger
   app.post("/api/io/sync-roster", async (req, res) => {
     const actorOhr = req.headers["x-actor-ohr"] as string;
-    if (actorOhr !== "740045023") {
-      return res.status(403).json({ error: "Admin only" });
+    if (!actorOhr) return res.status(403).json({ error: "Forbidden" });
+    // Check DB permission: anchor.sync_roster
+    try {
+      const { getDb } = await import("../db.js");
+      const { ioPermissions } = await import("../../drizzle/schema.js");
+      const { eq, and } = await import("drizzle-orm");
+      const db = await getDb();
+      if (db) {
+        const [perm] = await db.select().from(ioPermissions).where(and(eq(ioPermissions.ohr_id, actorOhr), eq(ioPermissions.permission_key, 'anchor.sync_roster')));
+        if (!perm || !perm.granted) return res.status(403).json({ error: "Permission denied" });
+      }
+    } catch (permErr: any) {
+      console.error('[SYNC] Permission check error:', permErr.message);
+      return res.status(403).json({ error: "Permission check failed" });
     }
     try {
       const result = await runRosterSync("manual");
@@ -123,11 +135,23 @@ async function startServer() {
     }
   });
 
-  // Admin-only manual attendance sync trigger
+  // Permission-driven manual attendance sync trigger
   app.post("/api/io/sync-attendance", async (req, res) => {
     const actorOhr = req.headers["x-actor-ohr"] as string;
-    if (actorOhr !== "740045023") {
-      return res.status(403).json({ error: "Admin only" });
+    if (!actorOhr) return res.status(403).json({ error: "Forbidden" });
+    // Check DB permission: anchor.sync_history (controls sync page + manual triggers)
+    try {
+      const { getDb } = await import("../db.js");
+      const { ioPermissions } = await import("../../drizzle/schema.js");
+      const { eq, and } = await import("drizzle-orm");
+      const db = await getDb();
+      if (db) {
+        const [perm] = await db.select().from(ioPermissions).where(and(eq(ioPermissions.ohr_id, actorOhr), eq(ioPermissions.permission_key, 'anchor.sync_history')));
+        if (!perm || !perm.granted) return res.status(403).json({ error: "Permission denied" });
+      }
+    } catch (permErr: any) {
+      console.error('[SYNC] Permission check error:', permErr.message);
+      return res.status(403).json({ error: "Permission check failed" });
     }
     try {
       const result = await runAttendanceSync("manual");

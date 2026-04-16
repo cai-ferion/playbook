@@ -158,16 +158,14 @@ function rosterDeterminePermissions() {
     return;
   }
 
-  const ohr = currentUser.ohr_id;
+  const p = currentUser.permissions || {};
   const role = currentUser.actual_role;
 
-  // Editability: only these 3 OHRs
-  ROSTER.canEdit = ROSTER.EDITOR_OHRS.includes(ohr);
+  // Editability: DB-driven via regimen.edit_employee permission
+  ROSTER.canEdit = !!p['regimen.edit_employee'];
 
-  // Visibility tier:
-  //   - Managers & OHR 740045023: full
-  //   - Everyone else who can see Regimen: limited
-  if (role === 'Manager' || ohr === ROSTER.ADMIN_OHR) {
+  // Visibility tier: Managers or users with onboarding/permissions tab access get full
+  if (role === 'Manager' || p['regimen.onboarding_tab'] || p['regimen.permissions_tab']) {
     ROSTER.visibilityTier = 'full';
   } else {
     ROSTER.visibilityTier = 'limited';
@@ -199,10 +197,18 @@ async function rosterFetchEmployees() {
   const addBtn = document.getElementById('roster-add-btn');
   if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
 
-  // Show/hide onboarding tab — admin only
+  // Show/hide onboarding tab — permission-driven
   const onboardingTab = document.getElementById('regimen-tab-onboarding');
   if (onboardingTab) {
-    onboardingTab.style.display = (currentUser && currentUser.ohr_id === ROSTER.ADMIN_OHR) ? '' : 'none';
+    const p = currentUser ? (currentUser.permissions || {}) : {};
+    onboardingTab.style.display = p['regimen.onboarding_tab'] ? '' : 'none';
+  }
+
+  // Show/hide permissions tab — permission-driven
+  const permissionsTab = document.getElementById('regimen-tab-permissions');
+  if (permissionsTab) {
+    const p2 = currentUser ? (currentUser.permissions || {}) : {};
+    permissionsTab.style.display = p2['regimen.permissions_tab'] ? '' : 'none';
   }
 
   rosterRenderFilterBar();
@@ -1067,23 +1073,34 @@ window.rosterExportCSV = function () {
 // ===== Tab Switching =====
 
 window.rosterSwitchTab = function (tab) {
-  const rosterPanel = document.getElementById('regimen-panel-roster');
-  const onboardingPanel = document.getElementById('regimen-panel-onboarding');
-  const rosterTab = document.getElementById('regimen-tab-roster');
-  const onboardingTab = document.getElementById('regimen-tab-onboarding');
+  const panels = ['roster', 'onboarding', 'permissions'];
+  const tabs = ['roster', 'onboarding', 'permissions'];
 
-  if (tab === 'roster') {
-    if (rosterPanel) rosterPanel.style.display = '';
-    if (onboardingPanel) onboardingPanel.style.display = 'none';
-    if (rosterTab) { rosterTab.style.borderBottomColor = 'var(--primary)'; rosterTab.style.color = 'var(--primary)'; rosterTab.classList.add('active'); }
-    if (onboardingTab) { onboardingTab.style.borderBottomColor = 'transparent'; onboardingTab.style.color = 'var(--fg-muted)'; onboardingTab.classList.remove('active'); }
-  } else if (tab === 'onboarding') {
-    if (rosterPanel) rosterPanel.style.display = 'none';
-    if (onboardingPanel) onboardingPanel.style.display = '';
-    if (onboardingTab) { onboardingTab.style.borderBottomColor = 'var(--primary)'; onboardingTab.style.color = 'var(--primary)'; onboardingTab.classList.add('active'); }
-    if (rosterTab) { rosterTab.style.borderBottomColor = 'transparent'; rosterTab.style.color = 'var(--fg-muted)'; rosterTab.classList.remove('active'); }
-    onboardingRenderDashboard();
+  // Hide all panels, deactivate all tabs
+  panels.forEach(p => {
+    const panel = document.getElementById('regimen-panel-' + p);
+    if (panel) panel.style.display = 'none';
+    const tabBtn = document.getElementById('regimen-tab-' + p);
+    if (tabBtn) {
+      tabBtn.style.borderBottomColor = 'transparent';
+      tabBtn.style.color = 'var(--fg-muted)';
+      tabBtn.classList.remove('active');
+    }
+  });
+
+  // Show active panel and tab
+  const activePanel = document.getElementById('regimen-panel-' + tab);
+  if (activePanel) activePanel.style.display = '';
+  const activeTab = document.getElementById('regimen-tab-' + tab);
+  if (activeTab) {
+    activeTab.style.borderBottomColor = 'var(--primary)';
+    activeTab.style.color = 'var(--primary)';
+    activeTab.classList.add('active');
   }
+
+  // Initialize tab-specific content
+  if (tab === 'onboarding') onboardingRenderDashboard();
+  if (tab === 'permissions' && typeof initPermissions === 'function') initPermissions();
 };
 
 // ===== Onboarding Completion Dashboard =====

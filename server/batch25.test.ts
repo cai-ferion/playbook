@@ -26,23 +26,18 @@ describe("Batch 25 — Fixes & Enhancements", () => {
     });
   });
 
-  // 2. Helm Analytics visibility
+  // 2. Helm Analytics visibility (now RBAC-driven)
   describe("Helm Analytics Visibility", () => {
-    it("hides Helm Analytics for non-admin in first visibility block", () => {
+    it("controls Helm Analytics via RBAC applyNavPermissions", () => {
       const appJs = readPublicJS("app.js");
       expect(appJs).toContain("nav-helm-analytics");
-      // Both blocks should check admin OHR
-      const matches = appJs.match(/helmAnalyticsNav.*style\.display.*ADMIN_OHR/g);
-      expect(matches).not.toBeNull();
-      expect(matches!.length).toBeGreaterThanOrEqual(1);
+      expect(appJs).toContain("vis('nav-helm-analytics', 'helm.analytics')");
     });
 
-    it("hides Helm Analytics for non-admin in second visibility block", () => {
+    it("fetches permissions on session restore for RBAC", () => {
       const appJs = readPublicJS("app.js");
-      expect(appJs).toContain("helmAnalyticsNav2");
-      const matches = appJs.match(/helmAnalyticsNav2.*style\.display.*ADMIN_OHR2/g);
-      expect(matches).not.toBeNull();
-      expect(matches!.length).toBeGreaterThanOrEqual(1);
+      expect(appJs).toContain("applyNavPermissions");
+      expect(appJs).toContain("my-permissions");
     });
   });
 
