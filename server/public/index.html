@@ -1342,33 +1342,27 @@
 
       <div class="view-container view-hidden" id="view-regimen">
         <div class="module-page">
-          <!-- Roster Omnibar -->
-          <div class="omnibar" id="roster-omnibar">
-           <div class="omnibar-top" style="flex-wrap:nowrap;justify-content:flex-start;">
-               <button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;flex-shrink:0;">
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                 Add Employee
-               </button>
-               <div class="omnibar-actions" style="flex-shrink:0;">
-                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation(); rosterOmnibarOpenMenu('filter')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                  Add Filter
-                </button>
-                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation(); rosterOmnibarOpenMenu('sort')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-                  Add Sort
-                </button>
-                <button class="btn btn-ghost btn-sm" onclick="rosterOmnibarClearAll()" title="Clear all filters and sorts">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Clear
-                </button>
-              </div>
-              <div class="omnibar-meta" style="flex-shrink:0;">
-                <span id="roster-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Records: 0</span>
-               </div>
-               <div class="omnibar-chips" id="roster-omnibar-chips" style="flex:1;min-width:0;"></div>
-             </div>
-             <div class="omnibar-menu" id="roster-omnibar-menu" style="display:none;"></div>
+          <!-- Regimen Tab Bar -->
+          <div class="regimen-tabs" id="regimen-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;">
+            <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Roster</button>
+            <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Onboarding</button>
+          </div>
+          <!-- Roster Tab Content -->
+          <div id="regimen-panel-roster">
+          <!-- Pill-based Filter Bar -->
+          <div class="filter-bar" id="roster-filter-bar" style="margin-top:8px;">
+            <div class="filter-bar-row" id="roster-filter-pills"></div>
+          </div>
+          <!-- Action buttons row -->
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+            <button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Employee
+            </button>
+            <button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </button>
           </div>
           <!-- Loading -->
           <div class="loading-overlay" id="roster-loading" style="display:none;">
@@ -1394,6 +1388,26 @@
               </div>
               <div class="module-form-body" id="roster-form-body"></div>
               <div class="module-form-footer" id="roster-form-footer"></div>
+            </div>
+          </div>
+          </div><!-- /regimen-panel-roster -->
+          <!-- Onboarding Tab Content -->
+          <div id="regimen-panel-onboarding" style="display:none;">
+            <div style="padding:16px 0;">
+              <!-- Summary cards -->
+              <div id="onboarding-summary" style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;"></div>
+              <!-- Search -->
+              <div style="margin-bottom:12px;">
+                <input type="text" class="form-input form-input-sm" id="onboarding-search" placeholder="Search by name or OHR..." oninput="onboardingRenderTable()" style="max-width:320px;">
+              </div>
+              <!-- Table -->
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="onboarding-table">
+                  <thead id="onboarding-table-head"></thead>
+                  <tbody id="onboarding-table-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="onboarding-pagination"></div>
             </div>
           </div>
         </div>

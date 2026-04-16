@@ -1864,3 +1864,22 @@
 - [x] Field validation (DOB 16+ check, email regex, PH mobile format, required vs optional)
 - [x] In-app notification to 740045023 and 740044909 on form completion
 - [x] Non-prefilled OHR gets generic error message (same for not found, inactive, already has account)
+
+## Batch — Onboarding Dashboard + Regimen Export
+
+### Onboarding Completion Dashboard
+- [x] Add "Onboarding" tab/view in Regimen page (visible only to OHR 740045023)
+- [x] Show table of all employees with no password (pending onboarding) vs. completed
+- [x] Missing-field indicators: highlight which required fields are still empty per agent
+- [x] Summary stats: total pending, total completed, completion rate, no account count
+- [x] Filter/search within the onboarding view
+
+### Regimen CSV Export
+- [x] Add CSV export button to Regimen page (visible to all who can see Regimen)
+- [x] Export respects current filters (exports filtered view, not full dataset)
+- [x] Export respects role-based column visibility (limited vs full columns)
+- [x] Filename includes date stamp
+
+### Bug Fix — Regimen Exit Details
+- [x] Fix exit/attrition columns displaying in Regimen table for admin OHR 740045023 (all 42 columns including attrition group)
+- [x] Port Anchor/Compass pill-based filter system to Regimen (with Select All/Deselect All, debounced auto-apply, search within dropdowns, sort buttons)

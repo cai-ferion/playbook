@@ -6,6 +6,7 @@
  *   - Managers & OHR 740045023: ALL columns visible
  *   - Editable by OHR 740045023, 740044909, 703212987 only
  * Audit trail: all edits logged to io_audit_log
+ * Filter system: pill-based (same as Anchor/Compass)
  */
 
 const ROSTER = {
@@ -49,8 +50,8 @@ const ROSTER = {
     { key: 'workday_id', label: 'Workday ID', group: 'System IDs' },
     { key: 'meta_email', label: 'Meta Email', group: 'System IDs' },
     // Assets
-    { key: 'macbook_asset_id', label: 'MacBook Asset', group: 'Assets' },
-    { key: 'chromebook_asset_id', label: 'Chromebook Asset', group: 'Assets' },
+    { key: 'macbook_asset_id', label: 'MacBook Asset', group: 'Asset & Logistics' },
+    { key: 'chromebook_asset_id', label: 'Chromebook Asset', group: 'Asset & Logistics' },
   ],
 
   // ALL columns for Managers & admin
@@ -125,41 +126,30 @@ const ROSTER = {
   ]
 };
 
-// ===== Omnibar State =====
-
-const rosterOmniState = {
-  filters: [],
-  sorts: [],
-  menuMode: null,
-  menuStep: null,
-  menuField: null,
-};
+// ===== Pill-based Filter State (same pattern as Anchor/Compass) =====
 
 const ROSTER_FILTER_FIELDS = [
   { key: 'employement_status', label: 'Status', type: 'multi', recordKey: 'employement_status' },
   { key: 'actual_role', label: 'Role', type: 'multi', recordKey: 'actual_role' },
-  { key: 'planning_group', label: 'Planning Group', type: 'multi', recordKey: 'planning_group' },
-  { key: 'supervisor_name', label: 'Supervisor', type: 'multi', recordKey: 'supervisor_name', searchable: true },
+  { key: 'planning_group', label: 'Planning Group', type: 'multi', recordKey: 'planning_group', searchable: true, sortable: true },
+  { key: 'supervisor_name', label: 'Supervisor', type: 'multi', recordKey: 'supervisor_name', searchable: true, sortable: true },
   { key: 'shift_time', label: 'Shift Time', type: 'multi', recordKey: 'shift_time' },
-  { key: 'platform', label: 'Platform', type: 'multi', recordKey: 'platform' },
   { key: 'srt_status', label: 'SRT Status', type: 'multi', recordKey: 'srt_status' },
+  { key: 'platform', label: 'Platform', type: 'multi', recordKey: 'platform' },
   { key: 'city', label: 'City', type: 'multi', recordKey: 'city', searchable: true },
-  { key: 'province', label: 'Province', type: 'multi', recordKey: 'province', searchable: true },
-  { key: 'search', label: 'Search (Name/OHR/Email)', type: 'text' },
+  { key: 'search', label: 'Search', type: 'text' },
 ];
 
-const ROSTER_SORT_FIELDS = [
-  { key: 'full_name', label: 'Full Name', recordKey: 'full_name' },
-  { key: 'ohr_id', label: 'OHR ID', recordKey: 'ohr_id' },
-  { key: 'actual_role', label: 'Role', recordKey: 'actual_role' },
-  { key: 'planning_group', label: 'Planning Group', recordKey: 'planning_group' },
-  { key: 'hire_date', label: 'Hire Date', recordKey: 'hire_date' },
-  { key: 'employement_status', label: 'Status', recordKey: 'employement_status' },
-];
+const rosterFilterState = {
+  filters: {},  // key → { key, label, type, values/value, recordKey }
+  sort: null,   // { key, direction } or null
+  openPill: null,
+};
 
 let _rosterOutsideListener = null;
+let _rosterApplyDebounce = null;
 
-// ===== Permission Helpers =====
+// ===== Permissions =====
 
 function rosterDeterminePermissions() {
   if (!currentUser) {
@@ -209,285 +199,364 @@ async function rosterFetchEmployees() {
   const addBtn = document.getElementById('roster-add-btn');
   if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
 
+  // Show/hide onboarding tab — admin only
+  const onboardingTab = document.getElementById('regimen-tab-onboarding');
+  if (onboardingTab) {
+    onboardingTab.style.display = (currentUser && currentUser.ohr_id === ROSTER.ADMIN_OHR) ? '' : 'none';
+  }
+
+  rosterRenderFilterBar();
   rosterApplyFilters();
 }
 
-// ===== Omnibar Functions =====
+// ===== Pill-based Filter Bar (ported from Anchor/Compass) =====
 
-function rosterOmnibarOpenMenu(mode) {
-  rosterOmniState.menuMode = mode;
-  rosterOmniState.menuStep = 'pick_field';
-  rosterOmniState.menuField = null;
-  rosterRenderOmniMenu();
-  if (!_rosterOutsideListener) {
-    setTimeout(() => {
-      _rosterOutsideListener = (e) => {
-        const omnibar = document.getElementById('roster-omnibar');
-        const menu = document.getElementById('roster-omnibar-menu');
-        if (!omnibar || !menu) return;
-        if (omnibar.contains(e.target)) return;
-        rosterOmnibarCloseMenu();
-      };
-      document.addEventListener('mousedown', _rosterOutsideListener);
-    }, 10);
+function rosterGetAllValues(field) {
+  return [...new Set(ROSTER.employees.map(r => r[field.recordKey]).filter(Boolean))].sort();
+}
+
+function rosterGetFilterSummary(field) {
+  const f = rosterFilterState.filters[field.key];
+  if (!f) return 'All';
+  if (field.type === 'text') return f.value || 'All';
+  const allValues = rosterGetAllValues(field);
+  if (!f.values || f.values.length === 0) return 'None';
+  if (f.values.length === allValues.length) return 'All';
+  if (f.values.length === 1) return f.values[0];
+  return f.values.length + ' selected';
+}
+
+function rosterIsFiltered(field) {
+  const f = rosterFilterState.filters[field.key];
+  if (!f) return false;
+  if (field.type === 'text') return !!f.value;
+  const allValues = rosterGetAllValues(field);
+  return f.values && f.values.length > 0 && f.values.length < allValues.length;
+}
+
+function rosterRenderFilterBar() {
+  const container = document.getElementById('roster-filter-pills');
+  if (!container) return;
+  let html = '';
+  for (const field of ROSTER_FILTER_FIELDS) {
+    // Hide platform/city for limited tier users
+    if (ROSTER.visibilityTier === 'limited' && ['platform', 'city'].includes(field.key)) continue;
+    const summary = rosterGetFilterSummary(field);
+    const isActive = rosterIsFiltered(field);
+    const hasSort = rosterFilterState.sort && rosterFilterState.sort.key === field.key;
+    const isOpen = rosterFilterState.openPill === field.key;
+
+    let pillClass = 'filter-pill';
+    if (isActive) pillClass += ' active';
+    if (hasSort) pillClass += ' has-sort';
+    if (isOpen) pillClass += ' open';
+    const sortIcon = hasSort ? (rosterFilterState.sort.direction === 'asc' ? ' ▲' : ' ▼') : '';
+    html += '<div class="' + pillClass + '" id="roster-pill-' + field.key + '" onclick="event.stopPropagation(); rosterTogglePill(\'' + field.key + '\')">'
+      + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span>'
+      + '<span class="filter-pill-value">' + escapeHtml(summary) + sortIcon + '</span>'
+      + '<span class="filter-pill-icon">▾</span>'
+      + '<div class="filter-dropdown' + (isOpen ? ' open' : '') + '" id="roster-dd-' + field.key + '" onclick="event.stopPropagation();"></div>'
+      + '</div>';
+  }
+  // Clear Filters button
+  html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Reset all filters">'
+    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+    + ' Clear Filters'
+    + '</button>';
+  // Record count
+  var curEl = document.getElementById('roster-record-count');
+  var curText = curEl ? curEl.textContent : 'Records: 0';
+  html += '<span class="filter-bar-meta" id="roster-record-count">' + curText + '</span>';
+  container.innerHTML = html;
+}
+
+// ===== Toggle pill dropdown =====
+
+window.rosterTogglePill = function (key) {
+  if (rosterFilterState.openPill === key) {
+    rosterClosePill();
+    return;
+  }
+  rosterFilterState.openPill = key;
+  rosterRenderFilterBar();
+  rosterRenderDropdown(key);
+  _attachRosterOutsideClick();
+};
+
+function rosterClosePill() {
+  rosterFilterState.openPill = null;
+  rosterRenderFilterBar();
+  _detachRosterOutsideClick();
+}
+
+// ===== Render dropdown content =====
+
+function rosterRenderDropdown(key) {
+  const field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  if (!field) return;
+  const dd = document.getElementById('roster-dd-' + key);
+  if (!dd) return;
+  dd.classList.add('open');
+
+  if (field.type === 'text') {
+    rosterRenderTextDropdown(dd, field);
+    return;
+  }
+  rosterRenderMultiDropdown(dd, field);
+}
+
+function rosterRenderTextDropdown(dd, field) {
+  var f = rosterFilterState.filters[field.key];
+  var curVal = f ? f.value : '';
+  dd.innerHTML = '<div class="filter-dropdown-header">'
+    + '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>'
+    + '</div>'
+    + '<div style="padding:8px 12px;">'
+    + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Type to search name/OHR/email..." value="' + escapeAttr(curVal) + '" style="width:100%;">'
+    + '</div>';
+  setTimeout(function() {
+    var inp = document.getElementById('roster-search-input');
+    if (inp) {
+      inp.focus();
+      inp.addEventListener('input', function() {
+        var val = inp.value.trim();
+        if (val) {
+          rosterFilterState.filters[field.key] = { key: field.key, label: field.label, type: 'text', value: val };
+        } else {
+          delete rosterFilterState.filters[field.key];
+        }
+        // Update pill text
+        var pill = document.getElementById('roster-pill-' + field.key);
+        if (pill) {
+          var valSpan = pill.querySelector('.filter-pill-value');
+          if (valSpan) valSpan.textContent = val || 'All';
+          if (val) pill.classList.add('active'); else pill.classList.remove('active');
+        }
+        rosterDebouncedApply();
+      });
+    }
+  }, 30);
+}
+
+function rosterRenderMultiDropdown(dd, field) {
+  var values = rosterGetAllValues(field);
+  var f = rosterFilterState.filters[field.key];
+  var selectedSet = new Set(f ? f.values : values); // default: all selected
+  var searchable = field.searchable || values.length > 15;
+
+  var html = '<div class="filter-dropdown-header">';
+  html += '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>';
+  // Sort buttons (if sortable)
+  if (field.sortable) {
+    var isAsc = rosterFilterState.sort && rosterFilterState.sort.key === field.key && rosterFilterState.sort.direction === 'asc';
+    var isDesc = rosterFilterState.sort && rosterFilterState.sort.key === field.key && rosterFilterState.sort.direction === 'desc';
+    html += '<div class="filter-dropdown-sort">'
+      + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'asc\')" title="Sort A→Z">A↑</button>'
+      + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'desc\')" title="Sort Z→A">Z↓</button>'
+      + '</div>';
+  }
+  html += '</div>';
+  if (searchable) {
+    html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" id="roster-dd-search-' + field.key + '" placeholder="Search..." oninput="rosterFilterDropdownSearch(\'' + field.key + '\')"></div>';
+  }
+  // Select All / Deselect All
+  html += '<div class="filter-dropdown-actions">'
+    + '<button class="filter-action-link" onclick="event.stopPropagation(); rosterSelectAll(\'' + field.key + '\')">Select All</button>'
+    + '<button class="filter-action-link" onclick="event.stopPropagation(); rosterDeselectAll(\'' + field.key + '\')" style="color:#DC2626;">Deselect All</button>'
+    + '</div>';
+  html += '<div class="filter-dropdown-list" id="roster-dd-list-' + field.key + '">';
+  for (var i = 0; i < values.length; i++) {
+    var v = values[i];
+    var checked = selectedSet.has(v) ? 'checked' : '';
+    html += '<label class="filter-dropdown-item"><input type="checkbox" value="' + escapeAttr(v) + '" ' + checked + ' onchange="rosterOnCheckboxChange(\'' + field.key + '\')"><span>' + escapeHtml(v) + '</span></label>';
+  }
+  html += '</div>';
+  dd.innerHTML = html;
+  if (searchable) {
+    setTimeout(function() {
+      var si = document.getElementById('roster-dd-search-' + field.key);
+      if (si) si.focus();
+    }, 50);
   }
 }
 
-function rosterOmnibarCloseMenu() {
-  rosterOmniState.menuMode = null;
-  rosterOmniState.menuStep = null;
-  rosterOmniState.menuField = null;
-  const menu = document.getElementById('roster-omnibar-menu');
-  if (menu) menu.style.display = 'none';
+// ===== Checkbox / sort handlers =====
+
+window.rosterOnCheckboxChange = function (key) {
+  var field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  if (!field) return;
+  var listEl = document.getElementById('roster-dd-list-' + key);
+  if (!listEl) return;
+  var checked = [];
+  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { checked.push(cb.value); });
+  var allValues = rosterGetAllValues(field);
+  if (checked.length === allValues.length) {
+    delete rosterFilterState.filters[key];
+  } else {
+    rosterFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey };
+  }
+  // Update pill summary without closing dropdown
+  var pill = document.getElementById('roster-pill-' + key);
+  if (pill) {
+    var valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) {
+      var sortIcon = (rosterFilterState.sort && rosterFilterState.sort.key === key)
+        ? (rosterFilterState.sort.direction === 'asc' ? ' ▲' : ' ▼') : '';
+      valSpan.textContent = rosterGetFilterSummary(field) + sortIcon;
+    }
+    if (rosterIsFiltered(field)) pill.classList.add('active'); else pill.classList.remove('active');
+  }
+  rosterDebouncedApply();
+};
+
+window.rosterSetSort = function (key, direction) {
+  var curSort = rosterFilterState.sort;
+  if (curSort && curSort.key === key && curSort.direction === direction) {
+    rosterFilterState.sort = null;
+  } else {
+    rosterFilterState.sort = { key: key, direction: direction };
+  }
+  var wasOpen = rosterFilterState.openPill;
+  rosterRenderFilterBar();
+  if (wasOpen) {
+    rosterFilterState.openPill = wasOpen;
+    rosterRenderFilterBar();
+    rosterRenderDropdown(wasOpen);
+  }
+  rosterDebouncedApply();
+};
+
+window.rosterSelectAll = function (key) {
+  var listEl = document.getElementById('roster-dd-list-' + key);
+  if (!listEl) return;
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true;
+  });
+  delete rosterFilterState.filters[key];
+  var field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  if (field) {
+    var pill = document.getElementById('roster-pill-' + key);
+    if (pill) {
+      var valSpan = pill.querySelector('.filter-pill-value');
+      if (valSpan) valSpan.textContent = 'All';
+      pill.classList.remove('active');
+    }
+  }
+  rosterDebouncedApply();
+};
+
+window.rosterDeselectAll = function (key) {
+  var listEl = document.getElementById('roster-dd-list-' + key);
+  if (!listEl) return;
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false;
+  });
+  var stillChecked = [];
+  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { stillChecked.push(cb.value); });
+  var field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
+  rosterFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: stillChecked, recordKey: field.recordKey };
+  var pill = document.getElementById('roster-pill-' + key);
+  if (pill) {
+    var valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = stillChecked.length === 0 ? 'None' : stillChecked.length + ' selected';
+    pill.classList.add('active');
+  }
+  rosterDebouncedApply();
+};
+
+window.rosterFilterDropdownSearch = function (key) {
+  var searchEl = document.getElementById('roster-dd-search-' + key);
+  var listEl = document.getElementById('roster-dd-list-' + key);
+  if (!searchEl || !listEl) return;
+  var q = searchEl.value.toLowerCase();
+  listEl.querySelectorAll('.filter-dropdown-item').forEach(function(item) {
+    var text = item.textContent.toLowerCase();
+    item.style.display = text.includes(q) ? '' : 'none';
+  });
+};
+
+// ===== Clear all =====
+
+window.rosterClearAllFilters = function () {
+  rosterClosePill();
+  rosterFilterState.filters = {};
+  rosterFilterState.sort = null;
+  rosterRenderFilterBar();
+  rosterApplyNow();
+};
+
+// ===== Apply (instant, debounced) =====
+
+function rosterDebouncedApply() {
+  clearTimeout(_rosterApplyDebounce);
+  _rosterApplyDebounce = setTimeout(rosterApplyNow, 200);
+}
+
+function rosterApplyNow() {
+  rosterApplyFilters();
+}
+
+// ===== Outside click =====
+
+function _attachRosterOutsideClick() {
+  if (_rosterOutsideListener) return;
+  setTimeout(function() {
+    _rosterOutsideListener = function(e) {
+      var bar = document.getElementById('roster-filter-bar');
+      if (bar && bar.contains(e.target)) return;
+      rosterClosePill();
+    };
+    document.addEventListener('mousedown', _rosterOutsideListener);
+  }, 10);
+}
+
+function _detachRosterOutsideClick() {
   if (_rosterOutsideListener) {
     document.removeEventListener('mousedown', _rosterOutsideListener);
     _rosterOutsideListener = null;
   }
 }
 
-function rosterRenderOmniMenu() {
-  const menu = document.getElementById('roster-omnibar-menu');
-  if (!menu) return;
-  menu.style.display = 'block';
-
-  if (rosterOmniState.menuMode === 'filter' && rosterOmniState.menuStep === 'pick_field') {
-    const activeKeys = new Set(rosterOmniState.filters.map(f => f.key));
-    const available = ROSTER_FILTER_FIELDS.filter(f => !activeKeys.has(f.key));
-    if (available.length === 0) {
-      menu.innerHTML = '<div class="omnibar-menu-empty">All filters are active</div>';
-      return;
-    }
-    menu.innerHTML = '<div class="omnibar-menu-title">Select a filter</div>' +
-      available.map(f =>
-        `<button class="omnibar-menu-item" onclick="event.stopPropagation(); rosterOmnibarSelectField('${f.key}')">${escapeHtml(f.label)}</button>`
-      ).join('');
-
-  } else if (rosterOmniState.menuMode === 'filter' && rosterOmniState.menuStep === 'pick_values') {
-    rosterRenderValuePicker();
-
-  } else if (rosterOmniState.menuMode === 'sort' && rosterOmniState.menuStep === 'pick_field') {
-    const activeKeys = new Set(rosterOmniState.sorts.map(s => s.key));
-    const available = ROSTER_SORT_FIELDS.filter(f => !activeKeys.has(f.key));
-    if (available.length === 0) {
-      menu.innerHTML = '<div class="omnibar-menu-empty">All sort fields are active</div>';
-      return;
-    }
-    menu.innerHTML = '<div class="omnibar-menu-title">Sort by</div>' +
-      available.map(f =>
-        `<button class="omnibar-menu-item" onclick="event.stopPropagation(); rosterOmnibarAddSort('${f.key}', 'asc')">${escapeHtml(f.label)} &#9650; Ascending</button>` +
-        `<button class="omnibar-menu-item" onclick="event.stopPropagation(); rosterOmnibarAddSort('${f.key}', 'desc')">${escapeHtml(f.label)} &#9660; Descending</button>`
-      ).join('');
-  }
-}
-
-function rosterRenderValuePicker() {
-  const menu = document.getElementById('roster-omnibar-menu');
-  const field = rosterOmniState.menuField;
-  if (!field || !menu) return;
-
-  if (field.type === 'text') {
-    menu.innerHTML = `
-      <div class="omnibar-menu-title">${escapeHtml(field.label)}</div>
-      <div style="padding:8px 12px;">
-        <input type="text" class="form-input form-input-sm" id="roster-omni-text-input" placeholder="Type to search..." style="width:100%;">
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); rosterOmnibarAddTextFilter()" style="margin-top:8px;">Add</button>
-      </div>`;
-    setTimeout(() => { const inp = document.getElementById('roster-omni-text-input'); if (inp) inp.focus(); }, 50);
-    return;
-  }
-
-  // Multi-select: gather unique values from employees
-  const values = [...new Set(ROSTER.employees.map(r => r[field.recordKey]).filter(Boolean))].sort();
-  const searchable = field.searchable || values.length > 15;
-
-  let html = `<div class="omnibar-menu-title">${escapeHtml(field.label)}</div>`;
-  if (searchable) {
-    html += `<div class="omnibar-search-wrap"><input type="text" class="form-input form-input-sm omnibar-search" id="roster-omni-value-search" placeholder="Search..." oninput="rosterOmnibarFilterValueList()"></div>`;
-  }
-  html += '<div class="omnibar-value-list" id="roster-omni-value-list">';
-  for (const v of values) {
-    html += `<label class="omnibar-value-item"><input type="checkbox" value="${escapeAttr(v)}"><span>${escapeHtml(v)}</span></label>`;
-  }
-  html += '</div>';
-  html += `<div class="omnibar-menu-footer" style="text-align:left;"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); rosterOmnibarAddMultiFilter()">Add Filter</button></div>`;
-  menu.innerHTML = html;
-
-  if (searchable) {
-    setTimeout(() => { const si = document.getElementById('roster-omni-value-search'); if (si) si.focus(); }, 50);
-  }
-}
-
-window.rosterOmnibarSelectField = function (key) {
-  const field = ROSTER_FILTER_FIELDS.find(f => f.key === key);
-  if (!field) return;
-  rosterOmniState.menuField = field;
-  rosterOmniState.menuStep = 'pick_values';
-  rosterRenderOmniMenu();
-};
-
-window.rosterOmnibarAddTextFilter = function () {
-  const field = rosterOmniState.menuField;
-  if (!field) return;
-  const val = (document.getElementById('roster-omni-text-input')?.value || '').trim();
-  if (!val) { showToast('Please enter a search term', 'info'); return; }
-  rosterOmniState.filters = rosterOmniState.filters.filter(f => f.key !== field.key);
-  rosterOmniState.filters.push({ key: field.key, label: field.label, type: 'text', value: val });
-  rosterOmnibarCloseMenu();
-  rosterRenderOmniChips();
-};
-
-window.rosterOmnibarAddMultiFilter = function () {
-  const field = rosterOmniState.menuField;
-  if (!field) return;
-  const checked = [...document.querySelectorAll('#roster-omni-value-list input[type="checkbox"]:checked')].map(cb => cb.value);
-  if (checked.length === 0) { showToast('Select at least one value', 'info'); return; }
-  rosterOmniState.filters = rosterOmniState.filters.filter(f => f.key !== field.key);
-  rosterOmniState.filters.push({ key: field.key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey });
-  rosterOmnibarCloseMenu();
-  rosterRenderOmniChips();
-};
-
-window.rosterOmnibarAddSort = function (key, direction) {
-  const field = ROSTER_SORT_FIELDS.find(f => f.key === key);
-  if (!field) return;
-  rosterOmniState.sorts = rosterOmniState.sorts.filter(s => s.key !== key);
-  rosterOmniState.sorts.push({ key, label: field.label, direction, recordKey: field.recordKey });
-  rosterOmnibarCloseMenu();
-  rosterRenderOmniChips();
-};
-
-window.rosterOmnibarFilterValueList = function () {
-  const search = (document.getElementById('roster-omni-value-search')?.value || '').toLowerCase();
-  const items = document.querySelectorAll('#roster-omni-value-list .omnibar-value-item');
-  items.forEach(item => {
-    const text = item.textContent.toLowerCase();
-    item.style.display = text.includes(search) ? '' : 'none';
-  });
-};
-
-window.rosterOmnibarRemoveFilter = function (key) {
-  rosterOmniState.filters = rosterOmniState.filters.filter(f => f.key !== key);
-  rosterRenderOmniChips();
-};
-
-window.rosterOmnibarEditSort = function (key) {
-  const sort = rosterOmniState.sorts.find(s => s.key === key);
-  if (!sort) return;
-  sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
-  sort.label = sort.label.replace(/ [\u25B2\u25BC]$/, '');
-  rosterRenderOmniChips();
-};
-
-window.rosterOmnibarRemoveSort = function (key) {
-  rosterOmniState.sorts = rosterOmniState.sorts.filter(s => s.key !== key);
-  rosterRenderOmniChips();
-};
-
-window.rosterOmnibarEditFilter = function (key) {
-  const field = ROSTER_FILTER_FIELDS.find(f => f.key === key);
-  if (!field) return;
-  rosterOmniState.menuMode = 'filter';
-  rosterOmniState.menuStep = 'pick_values';
-  rosterOmniState.menuField = field;
-  rosterRenderOmniMenu();
-  if (!_rosterOutsideListener) {
-    setTimeout(() => {
-      _rosterOutsideListener = (e) => {
-        const omnibar = document.getElementById('roster-omnibar');
-        const menu = document.getElementById('roster-omnibar-menu');
-        if (!omnibar || !menu) return;
-        if (omnibar.contains(e.target)) return;
-        rosterOmnibarCloseMenu();
-      };
-      document.addEventListener('mousedown', _rosterOutsideListener);
-    }, 10);
-  }
-  setTimeout(() => {
-    const existing = rosterOmniState.filters.find(f => f.key === key);
-    if (!existing) return;
-    if (field.type === 'text') {
-      const inp = document.getElementById('roster-omni-text-input');
-      if (inp) inp.value = existing.value || '';
-    } else if (field.type === 'multi') {
-      const checkboxes = document.querySelectorAll('#roster-omni-value-list input[type="checkbox"]');
-      checkboxes.forEach(cb => {
-        if (existing.values && existing.values.includes(cb.value)) cb.checked = true;
-      });
-    }
-  }, 60);
-};
-
-function rosterRenderOmniChips() {
-  const container = document.getElementById('roster-omnibar-chips');
-  if (!container) return;
-  let html = '';
-  for (const f of rosterOmniState.filters) {
-    let chipLabel = '';
-    if (f.type === 'text') {
-      chipLabel = `${f.label}: "${f.value}"`;
-    } else {
-      chipLabel = f.values.length <= 2 ? `${f.label}: ${f.values.join(', ')}` : `${f.label}: ${f.values.length} selected`;
-    }
-    html += `<span class="omnibar-chip omnibar-chip-filter">
-      <span class="chip-icon">&#9881;</span>
-      <span class="chip-text chip-text-editable" onclick="rosterOmnibarEditFilter('${f.key}')" title="Click to edit">${escapeHtml(chipLabel)}</span>
-      <button class="chip-remove" onclick="rosterOmnibarRemoveFilter('${f.key}')" title="Remove">&times;</button>
-    </span>`;
-  }
-  for (const s of rosterOmniState.sorts) {
-    const arrow = s.direction === 'asc' ? '\u25B2' : '\u25BC';
-    html += `<span class="omnibar-chip omnibar-chip-sort">
-      <span class="chip-icon">${arrow}</span>
-      <span class="chip-text chip-text-editable" onclick="rosterOmnibarEditSort('${s.key}')" title="Click to toggle direction">${escapeHtml(s.label)}</span>
-      <button class="chip-remove" onclick="rosterOmnibarRemoveSort('${s.key}')" title="Remove">&times;</button>
-    </span>`;
-  }
-  container.innerHTML = html;
-}
-
-function rosterOmnibarApply() {
-  rosterApplyFilters();
-}
-
-function rosterOmnibarClearAll() {
-  rosterOmniState.filters = [];
-  rosterOmniState.sorts = [];
-  rosterOmnibarCloseMenu();
-  rosterRenderOmniChips();
-  rosterApplyFilters();
-}
-
-// Expose globals
-window.rosterOmnibarOpenMenu = rosterOmnibarOpenMenu;
-window.rosterOmnibarCloseMenu = rosterOmnibarCloseMenu;
-window.rosterOmnibarApply = rosterOmnibarApply;
-window.rosterOmnibarClearAll = rosterOmnibarClearAll;
-
-// ===== Filters (now driven by omnibar) =====
+// ===== Apply Filters (pill-based) =====
 
 function rosterApplyFilters() {
   let data = [...ROSTER.employees];
 
-  for (const f of rosterOmniState.filters) {
+  // Apply each filter
+  var keys = Object.keys(rosterFilterState.filters);
+  for (var ki = 0; ki < keys.length; ki++) {
+    var f = rosterFilterState.filters[keys[ki]];
     if (f.type === 'text') {
-      const q = f.value.toLowerCase();
-      data = data.filter(e =>
-        (e.full_name || '').toLowerCase().includes(q) ||
-        (e.ohr_id || '').toLowerCase().includes(q) ||
-        (e.meta_email || '').toLowerCase().includes(q)
-      );
+      var q = (f.value || '').toLowerCase();
+      if (q) {
+        data = data.filter(e =>
+          (e.full_name || '').toLowerCase().includes(q) ||
+          (e.ohr_id || '').toLowerCase().includes(q) ||
+          (e.meta_email || '').toLowerCase().includes(q)
+        );
+      }
     } else if (f.type === 'multi') {
-      data = data.filter(e => f.values.includes(e[f.recordKey]));
+      if (!f.values || f.values.length === 0) {
+        data = [];
+        break;
+      }
+      var rk = f.recordKey;
+      var vs = f.values;
+      data = data.filter(function(e) { return vs.includes(e[rk]); });
     }
   }
 
-  // Apply sorts
-  for (const s of rosterOmniState.sorts) {
-    data.sort((a, b) => {
-      const va = (a[s.recordKey] || '').toString().toLowerCase();
-      const vb = (b[s.recordKey] || '').toString().toLowerCase();
-      const cmp = va.localeCompare(vb);
-      return s.direction === 'asc' ? cmp : -cmp;
+  // Apply sort
+  if (rosterFilterState.sort) {
+    var sk = rosterFilterState.sort.key;
+    var dir = rosterFilterState.sort.direction;
+    var sortField = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === sk; });
+    var sortKey = sortField ? (sortField.recordKey || sk) : sk;
+    data.sort(function(a, b) {
+      var va = (a[sortKey] || '').toString().toLowerCase();
+      var vb = (b[sortKey] || '').toString().toLowerCase();
+      var cmp = va.localeCompare(vb);
+      return dir === 'asc' ? cmp : -cmp;
     });
   }
 
@@ -502,6 +571,11 @@ function rosterApplyFilters() {
 
 // Keep old functions as no-ops for backward compat
 function rosterPopulateFilters() {}
+function rosterOmnibarOpenMenu() {}
+function rosterOmnibarCloseMenu() {}
+function rosterOmnibarClearAll() { rosterClearAllFilters(); }
+function rosterRenderOmniChips() {}
+function rosterRenderOmniMenu() {}
 
 // ===== Table Rendering (role-based columns) =====
 
@@ -574,11 +648,11 @@ function rosterEditEmployee(ohrId) {
   const formFooter = document.getElementById('roster-form-footer');
   const overlay = document.getElementById('roster-form-overlay');
 
-  formTitle.textContent = `Edit Employee \u2014 ${emp.full_name}`;
+  formTitle.textContent = `Edit: ${emp.full_name || ohrId}`;
 
   const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
   const statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated'];
-  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training'];
+  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training', 'Attrition backfill Training'];
 
   formBody.innerHTML = `
     <div class="form-section">
@@ -701,44 +775,40 @@ function rosterShowAddForm() {
 
   formFooter.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="rosterSaveNew()">Add Employee</button>
+    <button class="btn btn-primary btn-sm" onclick="rosterSaveNew()">Create Employee</button>
   `;
 
   overlay.style.display = 'flex';
 }
 
 async function rosterSaveNew() {
-  const record = {};
+  const data = {};
   ROSTER.ALL_COLUMNS.forEach(col => {
     const el = document.getElementById(`roster-add-${col.key}`);
-    if (el) record[col.key] = el.value;
+    if (el) data[col.key] = el.value || null;
   });
 
-  if (!record.ohr_id) { showToast('OHR ID is required', 'error'); return; }
-  if (!record.full_name) { showToast('Full Name is required', 'error'); return; }
+  if (!data.ohr_id) { showToast('OHR ID is required', 'error'); return; }
+  if (!data.full_name) { showToast('Full Name is required', 'error'); return; }
+  if (!data.actual_role) { showToast('Role is required', 'error'); return; }
 
   try {
-    const url = `${IO_API_BASE}/employees`;
-    const resp = await fetch(url, {
+    const resp = await fetch(`${IO_API_BASE}/employees`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...record,
-        _actor_ohr: currentUser ? currentUser.ohr_id : null,
-        _actor_name: currentUser ? currentUser.full_name : null,
-      })
+      body: JSON.stringify(data)
     });
     if (!resp.ok) {
-      const err = await resp.json();
-      throw new Error(err.message || 'Failed to add employee');
+      const errBody = await resp.json().catch(() => ({}));
+      throw new Error(errBody.error || 'Failed to create employee');
     }
 
-    showToast('Employee added successfully', 'success');
+    showToast('Employee created successfully', 'success');
     rosterCloseForm();
     await rosterFetchEmployees();
   } catch (e) {
-    console.error('Failed to add employee:', e);
-    showToast('Failed to add: ' + e.message, 'error');
+    console.error('Failed to create employee:', e);
+    showToast('Failed to create: ' + e.message, 'error');
   }
 }
 
@@ -746,7 +816,6 @@ async function rosterSaveNew() {
 
 async function rosterDeleteEmployee(ohrId) {
   if (!ROSTER.canEdit) { showToast('You do not have permission to delete employees', 'error'); return; }
-
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!confirm(`Are you sure you want to delete ${emp ? emp.full_name : ohrId}? This action cannot be undone.`)) return;
 
@@ -813,7 +882,7 @@ function rosterOpenDetail(ohrId) {
 
   const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
   const statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated'];
-  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training'];
+  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training', 'Attrition backfill Training'];
 
   function renderField(col) {
     const val = col.key === 'srt_id' ? formatSrtId(emp[col.key]) : emp[col.key];
@@ -949,6 +1018,220 @@ async function rosterViewAuditTrail(ohrId) {
   } catch (e) {
     body.innerHTML = `<div style="color:var(--danger);padding:16px;">Failed to load audit trail: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+// ===== CSV Export =====
+
+window.rosterExportCSV = function () {
+  const cols = ROSTER.getVisibleColumns();
+  const data = ROSTER.filtered;
+
+  if (data.length === 0) {
+    showToast('No records to export', 'info');
+    return;
+  }
+
+  // Build CSV
+  const escCSV = (v) => {
+    if (v == null) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+
+  let csv = cols.map(c => escCSV(c.label)).join(',') + '\n';
+  data.forEach(emp => {
+    csv += cols.map(c => {
+      let val = emp[c.key];
+      if (c.key === 'srt_id') val = formatSrtId(val);
+      return escCSV(val);
+    }).join(',') + '\n';
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const filename = `regimen-roster-${today}.csv`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  showToast(`Exported ${data.length} records to ${filename}`, 'success');
+};
+
+// ===== Tab Switching =====
+
+window.rosterSwitchTab = function (tab) {
+  const rosterPanel = document.getElementById('regimen-panel-roster');
+  const onboardingPanel = document.getElementById('regimen-panel-onboarding');
+  const rosterTab = document.getElementById('regimen-tab-roster');
+  const onboardingTab = document.getElementById('regimen-tab-onboarding');
+
+  if (tab === 'roster') {
+    if (rosterPanel) rosterPanel.style.display = '';
+    if (onboardingPanel) onboardingPanel.style.display = 'none';
+    if (rosterTab) { rosterTab.style.borderBottomColor = 'var(--primary)'; rosterTab.style.color = 'var(--primary)'; rosterTab.classList.add('active'); }
+    if (onboardingTab) { onboardingTab.style.borderBottomColor = 'transparent'; onboardingTab.style.color = 'var(--fg-muted)'; onboardingTab.classList.remove('active'); }
+  } else if (tab === 'onboarding') {
+    if (rosterPanel) rosterPanel.style.display = 'none';
+    if (onboardingPanel) onboardingPanel.style.display = '';
+    if (onboardingTab) { onboardingTab.style.borderBottomColor = 'var(--primary)'; onboardingTab.style.color = 'var(--primary)'; onboardingTab.classList.add('active'); }
+    if (rosterTab) { rosterTab.style.borderBottomColor = 'transparent'; rosterTab.style.color = 'var(--fg-muted)'; rosterTab.classList.remove('active'); }
+    onboardingRenderDashboard();
+  }
+};
+
+// ===== Onboarding Completion Dashboard =====
+
+const ONBOARDING_REQUIRED_FIELDS = [
+  'last_name', 'given_name', 'hire_date', 'dob', 'personal_email',
+  'contact_number', 'primary_address', 'barangay', 'city', 'province',
+  'chromebook_asset_id', 'badge_id', 'badge_serial',
+  'locker_floor', 'locker_number'
+];
+
+const ONBOARDING_FIELD_LABELS = {
+  last_name: 'Last Name', given_name: 'Given Name', hire_date: 'Hire Date',
+  dob: 'DOB', personal_email: 'Personal Email', contact_number: 'Contact Number',
+  primary_address: 'Primary Address', barangay: 'Barangay', city: 'City',
+  province: 'Province', chromebook_asset_id: 'Chromebook Asset',
+  badge_id: 'Badge ID', badge_serial: 'Badge Serial',
+  locker_floor: 'Locker Floor', locker_number: 'Locker Number'
+};
+
+let _onboardingPage = 1;
+const _onboardingPageSize = 25;
+
+function onboardingGetData() {
+  // All employees that are Active (potential onboarding candidates)
+  // "Completed" = has password AND all required fields filled
+  // "Pending" = no password OR missing required fields
+  return ROSTER.employees.map(emp => {
+    const hasPassword = !!emp.password;
+    const missingFields = ONBOARDING_REQUIRED_FIELDS.filter(f => !emp[f] || String(emp[f]).trim() === '');
+    const isComplete = hasPassword && missingFields.length === 0;
+    return { ...emp, hasPassword, missingFields, isComplete };
+  });
+}
+
+function onboardingRenderDashboard() {
+  const allData = onboardingGetData();
+  const completed = allData.filter(e => e.isComplete);
+  const pending = allData.filter(e => !e.isComplete);
+  const noPassword = allData.filter(e => !e.hasPassword);
+  const rate = allData.length > 0 ? ((completed.length / allData.length) * 100).toFixed(1) : '0.0';
+
+  // Summary cards
+  const summaryEl = document.getElementById('onboarding-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:24px;font-weight:700;color:var(--primary);">${allData.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Total Employees</div>
+      </div>
+      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:24px;font-weight:700;color:#22C55E;">${completed.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Completed</div>
+      </div>
+      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:24px;font-weight:700;color:#F59E0B;">${pending.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Pending</div>
+      </div>
+      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:24px;font-weight:700;color:#EF4444;">${noPassword.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">No Account</div>
+      </div>
+      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:24px;font-weight:700;color:var(--primary);">${rate}%</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Completion Rate</div>
+      </div>
+    `;
+  }
+
+  onboardingRenderTable();
+}
+
+window.onboardingRenderTable = function () {
+  const thead = document.getElementById('onboarding-table-head');
+  const tbody = document.getElementById('onboarding-table-body');
+  if (!thead || !tbody) return;
+
+  let allData = onboardingGetData();
+
+  // Search filter
+  const searchEl = document.getElementById('onboarding-search');
+  const q = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  if (q) {
+    allData = allData.filter(e =>
+      (e.full_name || '').toLowerCase().includes(q) ||
+      (e.ohr_id || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort: pending first, then by name
+  allData.sort((a, b) => {
+    if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
+
+  thead.innerHTML = `<tr>
+    <th style="white-space:nowrap;">OHR ID</th>
+    <th style="white-space:nowrap;">Full Name</th>
+    <th style="white-space:nowrap;">Status</th>
+    <th style="white-space:nowrap;">Account</th>
+    <th style="white-space:nowrap;">Onboarding Status</th>
+    <th style="white-space:nowrap;">Missing Fields</th>
+  </tr>`;
+
+  const start = (_onboardingPage - 1) * _onboardingPageSize;
+  const pageData = allData.slice(start, start + _onboardingPageSize);
+
+  if (pageData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-muted);">No employees found</td></tr>';
+    onboardingRenderPagination(allData.length);
+    return;
+  }
+
+  tbody.innerHTML = pageData.map(emp => {
+    const statusColor = emp.isComplete ? '#22C55E' : '#F59E0B';
+    const statusLabel = emp.isComplete ? 'Complete' : 'Pending';
+    const accountColor = emp.hasPassword ? '#22C55E' : '#EF4444';
+    const accountLabel = emp.hasPassword ? 'Active' : 'No Account';
+    const missingHtml = emp.missingFields.length > 0
+      ? emp.missingFields.map(f => `<span style="background:#EF444415;color:#EF4444;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">${escapeHtml(ONBOARDING_FIELD_LABELS[f] || f)}</span>`).join('')
+      : '<span style="color:#22C55E;font-size:12px;">All fields complete</span>';
+
+    return `<tr>
+      <td style="white-space:nowrap;font-weight:600;">${escapeHtml(emp.ohr_id || '')}</td>
+      <td style="white-space:nowrap;">${escapeHtml(emp.full_name || '')}</td>
+      <td><span class="module-status-badge" style="background:${emp.employement_status === 'Active' ? '#22C55E' : '#EF4444'}20;color:${emp.employement_status === 'Active' ? '#22C55E' : '#EF4444'};border:1px solid ${emp.employement_status === 'Active' ? '#22C55E' : '#EF4444'}40;">${escapeHtml(emp.employement_status || '')}</span></td>
+      <td><span class="module-status-badge" style="background:${accountColor}20;color:${accountColor};border:1px solid ${accountColor}40;">${accountLabel}</span></td>
+      <td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${statusLabel}</span></td>
+      <td style="max-width:400px;">${missingHtml}</td>
+    </tr>`;
+  }).join('');
+
+  onboardingRenderPagination(allData.length);
+};
+
+function onboardingRenderPagination(total) {
+  const el = document.getElementById('onboarding-pagination');
+  if (!el) return;
+  const totalPages = Math.ceil(total / _onboardingPageSize) || 1;
+  const start = (_onboardingPage - 1) * _onboardingPageSize + 1;
+  const end = Math.min(_onboardingPage * _onboardingPageSize, total);
+
+  el.innerHTML = `
+    <span class="module-page-info">${total > 0 ? `${start}-${end} of ${total}` : '0 records'}</span>
+    <button class="btn btn-ghost btn-xs" ${_onboardingPage <= 1 ? 'disabled' : ''} onclick="_onboardingPage--;onboardingRenderTable();">&laquo; Prev</button>
+    <span class="module-page-num">Page ${_onboardingPage} of ${totalPages}</span>
+    <button class="btn btn-ghost btn-xs" ${_onboardingPage >= totalPages ? 'disabled' : ''} onclick="_onboardingPage++;onboardingRenderTable();">Next &raquo;</button>
+  `;
 }
 
 // ===== Init =====
