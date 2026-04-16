@@ -1442,7 +1442,7 @@ function renderInputTable() {
               return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
             }
             // OT editable even on locked row (within current week)
-            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="—"></td>`;>`;
+            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="—"></td>`;
           }
           // Outside current week and row is locked: show as readonly
           return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;

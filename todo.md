@@ -1923,3 +1923,7 @@
 
 ### Audit Trail
 - [x] Log every permission change to io_audit_log (record_type='permission')
+
+## Bug Fix — Auth Buttons Broken
+- [x] Fix Sign Up button not working on auth page (syntax error in app.js line 1445 — stray `>` from RBAC edit)
+- [x] Fix Login button not working on auth page (same root cause)
