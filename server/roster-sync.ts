@@ -5,8 +5,8 @@
  * ROSTER sheet (header + data rows) in one batchUpdate call.
  * Runs daily at 2:00 AM PHT via cron, or on-demand via manual trigger.
  *
- * Sheet-only columns (Access Level, InChat, InDistro x3) are preserved by
- * reading existing values first and merging them back in.
+ * Sheet-only columns: Access Level (Col C) — preserved by reading existing
+ * values first and merging them back in.
  *
  * Logs each sync run to io_sync_log for the Sync History page.
  */
@@ -29,7 +29,7 @@ async function getGoogleapis() {
 const SPREADSHEET_ID = "1ah5GY1zoGBy6T2IUCSPWPsUzYRyPUb3WCkEfVgskfRQ";
 const SHEET_NAME = "ROSTER";
 
-// ROSTER sheet header (43 columns A-AQ)
+// ROSTER sheet header (44 columns A-AR) — InChat/InDistro removed
 const SHEET_HEADERS = [
   "OHR", "Full Name", "Access Level", "Last Name", "Given Name", "Middle Name", "Suffix",
   "Billing Name", "SRT Name", "Employment Status", "Actual Role", "Actual Supervisor",
@@ -38,14 +38,12 @@ const SHEET_HEADERS = [
   "Hire Date", "Regularization Date", "DOB", "Personal Email", "Contact No.", "Primary Address",
   "Barangay", "City", "Province", "Locker Floor", "Locker No.", "Meta Onboarding Date",
   "Live Date", "Badge ID No.", "Badge Serial No.", "Platform",
-  "InChat [FYI - IO]", "InDistro [GP MNL IO Agents]", "InDistro [GP MNL S-ABF Agents]",
-  "InDistro [GP MNL CS-ABF Agents]",
   "Offboarding Date", "Resignation Date", "Relieving Date", "Exit Date", "Exit Reason",
 ];
 
 // Indices of sheet-only columns (0-based) that we must preserve from existing sheet
-// Col C (2) = Access Level, Col AN-AQ (39-42) = InChat, InDistro x3
-const SHEET_ONLY_INDICES = [2, 39, 40, 41, 42];
+// Col C (2) = Access Level
+const SHEET_ONLY_INDICES = [2];
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 async function getSheetsClient() {
@@ -105,15 +103,11 @@ function dbRowToSheetRow(emp: any): (string | number)[] {
     emp.badge_id || "",                   // AK: Badge ID No.
     emp.badge_serial || "",               // AL: Badge Serial No.
     emp.platform || "",                   // AM: Platform
-    "",                                   // AN: InChat (sheet-only)
-    "",                                   // AO: InDistro IO Agents (sheet-only)
-    "",                                   // AP: InDistro S-ABF (sheet-only)
-    "",                                   // AQ: InDistro CS-ABF (sheet-only)
-    emp.offboarding_date || "",            // AR: Offboarding Date
-    emp.resignation_date || "",            // AS: Resignation Date
-    emp.relieving_date || "",              // AT: Relieving Date
-    emp.exit_date || "",                   // AU: Exit Date
-    emp.exit_reason || "",                 // AV: Exit Reason
+    emp.offboarding_date || "",           // AN: Offboarding Date
+    emp.resignation_date || "",           // AO: Resignation Date
+    emp.relieving_date || "",             // AP: Relieving Date
+    emp.exit_date || "",                  // AQ: Exit Date
+    emp.exit_reason || "",                // AR: Exit Reason
   ];
 }
 
@@ -138,10 +132,10 @@ export async function runRosterSync(trigger: "cron" | "manual" = "cron") {
     const employees = await db.select().from(ioEmployees).orderBy(asc(ioEmployees.full_name));
     console.log(`[ROSTER SYNC] ${employees.length} employees from DB`);
 
-    // 2. Read existing sheet data to preserve sheet-only columns
+    // 2. Read existing sheet data to preserve sheet-only columns (Access Level)
     const existingResp = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:AV1000`,
+      range: `${SHEET_NAME}!A1:AR1000`,
     });
     const existingRows = existingResp.data.values || [];
     // Build a map of OHR → existing sheet-only values
@@ -178,7 +172,7 @@ export async function runRosterSync(trigger: "cron" | "manual" = "cron") {
     // 5. Clear the sheet and write all data in one go
     await sheets.spreadsheets.values.clear({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:AV`,
+      range: `${SHEET_NAME}!A1:AR`,
     });
 
     // Write in batches of 200 rows to avoid payload limits

@@ -1,8 +1,11 @@
 /**
- * Roster Management — io_employees Table Editor
- * Admin-only (OHR 740045023) editable table for managing employee records.
- * Other users can view but not edit.
- * Now uses an omnibar for filtering/sorting and shows ALL database columns.
+ * Regimen — Employee Roster Viewer/Editor
+ * Role-based visibility and editability:
+ *   - Agents: Cannot see Regimen at all (nav hidden)
+ *   - SMEs, QAs, Team Leads (except 740045023), Trainers: Limited columns (read-only)
+ *   - Managers & OHR 740045023: ALL columns visible
+ *   - Editable by OHR 740045023, 740044909, 703212987 only
+ * Audit trail: all edits logged to io_audit_log
  */
 
 const ROSTER = {
@@ -11,61 +14,114 @@ const ROSTER = {
   page: 1,
   pageSize: 30,
   editingId: null,
-  isAdmin: false,
+  canEdit: false,
+  visibilityTier: 'full', // 'limited' or 'full'
 
-  // All columns from io_employees schema
-  ALL_COLUMNS: [
-    { key: 'ohr_id', label: 'OHR ID', editable: true },
-    { key: 'full_name', label: 'Full Name', editable: true },
-    { key: 'last_name', label: 'Last Name', editable: true },
-    { key: 'given_name', label: 'Given Name', editable: true },
-    { key: 'middle_name', label: 'Middle Name', editable: true },
-    { key: 'suffix', label: 'Suffix', editable: true },
-    { key: 'billing_name', label: 'Billing Name', editable: true },
-    { key: 'srt_name', label: 'SRT Name', editable: true },
-    { key: 'employement_status', label: 'Status', editable: true },
-    { key: 'actual_role', label: 'Role', editable: true },
-    { key: 'supervisor_name', label: 'Supervisor', editable: true },
-    { key: 'supervisor_email', label: 'Supervisor Email', editable: true },
-    { key: 'shift_time', label: 'Shift Time', editable: true },
-    { key: 'work_off', label: 'Work Off', editable: true },
-    { key: 'planning_group', label: 'Planning Group', editable: true },
-    { key: 'complete_planning_group', label: 'Related PG', editable: true },
-    { key: 'srt_status', label: 'SRT Status', editable: true },
-    { key: 'srt_id', label: 'SRT ID', editable: true },
-    { key: 'workday_id', label: 'Workday ID', editable: true },
-    { key: 'meta_email', label: 'Meta Email', editable: true },
-    { key: 'macbook_asset_id', label: 'MacBook Asset', editable: true },
-    { key: 'chromebook_asset_id', label: 'Chromebook Asset', editable: true },
-    { key: 'hire_date', label: 'Hire Date', editable: true },
-    { key: 'regular_date', label: 'Regular Date', editable: true },
-    { key: 'dob', label: 'DOB', editable: true },
-    { key: 'personal_email', label: 'Personal Email', editable: true },
-    { key: 'contact_number', label: 'Contact Number', editable: true },
-    { key: 'primary_address', label: 'Primary Address', editable: true },
-    { key: 'barangay', label: 'Barangay', editable: true },
-    { key: 'city', label: 'City', editable: true },
-    { key: 'province', label: 'Province', editable: true },
-    { key: 'locker_floor', label: 'Locker Floor', editable: true },
-    { key: 'locker_number', label: 'Locker Number', editable: true },
-    { key: 'meta_onboarding_date', label: 'Meta Onboarding', editable: true },
-    { key: 'live_date', label: 'Live Date', editable: true },
-    { key: 'badge_id', label: 'Badge ID', editable: true },
-    { key: 'badge_serial', label: 'Badge Serial', editable: true },
-    { key: 'platform', label: 'Platform', editable: true },
+  // OHRs with edit permission
+  EDITOR_OHRS: ['740045023', '740044909', '703212987'],
+  ADMIN_OHR: '740045023',
+
+  // --- Column Definitions (grouped: Identity → Role & Assignment → System IDs → Dates → Attrition) ---
+
+  // Columns visible to SMEs, QAs, Team Leads (non-admin), Trainers
+  LIMITED_COLUMNS: [
+    // Identity
+    { key: 'ohr_id', label: 'OHR ID', group: 'Identity' },
+    { key: 'full_name', label: 'Full Name', group: 'Identity' },
+    { key: 'last_name', label: 'Last Name', group: 'Identity' },
+    { key: 'given_name', label: 'Given Name', group: 'Identity' },
+    { key: 'middle_name', label: 'Middle Name', group: 'Identity' },
+    { key: 'suffix', label: 'Suffix', group: 'Identity' },
+    { key: 'billing_name', label: 'Billing Name', group: 'Identity' },
+    { key: 'srt_name', label: 'SRT Name', group: 'Identity' },
+    // Role & Assignment
+    { key: 'employement_status', label: 'Status', group: 'Role & Assignment' },
+    { key: 'actual_role', label: 'Role', group: 'Role & Assignment' },
+    { key: 'supervisor_name', label: 'Supervisor', group: 'Role & Assignment' },
+    { key: 'supervisor_email', label: 'Supervisor Email', group: 'Role & Assignment' },
+    { key: 'shift_time', label: 'Shift Time', group: 'Role & Assignment' },
+    { key: 'work_off', label: 'Work Off', group: 'Role & Assignment' },
+    { key: 'planning_group', label: 'Planning Group', group: 'Role & Assignment' },
+    { key: 'complete_planning_group', label: 'Related PG', group: 'Role & Assignment' },
+    { key: 'srt_status', label: 'SRT Status', group: 'Role & Assignment' },
+    // System IDs
+    { key: 'srt_id', label: 'SRT ID', group: 'System IDs' },
+    { key: 'workday_id', label: 'Workday ID', group: 'System IDs' },
+    { key: 'meta_email', label: 'Meta Email', group: 'System IDs' },
+    // Assets
+    { key: 'macbook_asset_id', label: 'MacBook Asset', group: 'Assets' },
+    { key: 'chromebook_asset_id', label: 'Chromebook Asset', group: 'Assets' },
   ],
 
-  // Keep old COLUMNS reference for edit/add forms
-  COLUMNS: [
-    { key: 'ohr_id', label: 'OHR ID', editable: true },
-    { key: 'full_name', label: 'Full Name', editable: true },
-    { key: 'actual_role', label: 'Role', editable: true },
-    { key: 'planning_group', label: 'Planning Group', editable: true },
-    { key: 'complete_planning_group', label: 'Related PG', editable: true },
-    { key: 'supervisor_name', label: 'Supervisor', editable: true },
-    { key: 'meta_email', label: 'Meta Email', editable: true },
-    { key: 'employement_status', label: 'Status', editable: true },
-    { key: 'srt_status', label: 'SRT Status', editable: true }
+  // ALL columns for Managers & admin
+  ALL_COLUMNS: [
+    // Identity
+    { key: 'ohr_id', label: 'OHR ID', group: 'Identity' },
+    { key: 'full_name', label: 'Full Name', group: 'Identity' },
+    { key: 'last_name', label: 'Last Name', group: 'Identity' },
+    { key: 'given_name', label: 'Given Name', group: 'Identity' },
+    { key: 'middle_name', label: 'Middle Name', group: 'Identity' },
+    { key: 'suffix', label: 'Suffix', group: 'Identity' },
+    { key: 'billing_name', label: 'Billing Name', group: 'Identity' },
+    { key: 'srt_name', label: 'SRT Name', group: 'Identity' },
+    { key: 'dob', label: 'DOB', group: 'Identity' },
+    { key: 'personal_email', label: 'Personal Email', group: 'Identity' },
+    { key: 'contact_number', label: 'Contact Number', group: 'Identity' },
+    { key: 'primary_address', label: 'Primary Address', group: 'Identity' },
+    { key: 'barangay', label: 'Barangay', group: 'Identity' },
+    { key: 'city', label: 'City', group: 'Identity' },
+    { key: 'province', label: 'Province', group: 'Identity' },
+    // Role & Assignment
+    { key: 'employement_status', label: 'Status', group: 'Role & Assignment' },
+    { key: 'actual_role', label: 'Role', group: 'Role & Assignment' },
+    { key: 'supervisor_name', label: 'Supervisor', group: 'Role & Assignment' },
+    { key: 'supervisor_email', label: 'Supervisor Email', group: 'Role & Assignment' },
+    { key: 'shift_time', label: 'Shift Time', group: 'Role & Assignment' },
+    { key: 'work_off', label: 'Work Off', group: 'Role & Assignment' },
+    { key: 'planning_group', label: 'Planning Group', group: 'Role & Assignment' },
+    { key: 'complete_planning_group', label: 'Related PG', group: 'Role & Assignment' },
+    { key: 'srt_status', label: 'SRT Status', group: 'Role & Assignment' },
+    { key: 'platform', label: 'Platform', group: 'Role & Assignment' },
+    // System IDs
+    { key: 'srt_id', label: 'SRT ID', group: 'System IDs' },
+    { key: 'workday_id', label: 'Workday ID', group: 'System IDs' },
+    { key: 'meta_email', label: 'Meta Email', group: 'System IDs' },
+    { key: 'macbook_asset_id', label: 'MacBook Asset', group: 'System IDs' },
+    { key: 'chromebook_asset_id', label: 'Chromebook Asset', group: 'System IDs' },
+    { key: 'badge_id', label: 'Badge ID', group: 'System IDs' },
+    { key: 'badge_serial', label: 'Badge Serial', group: 'System IDs' },
+    // Asset & Logistics
+    { key: 'locker_floor', label: 'Locker Floor', group: 'Asset & Logistics' },
+    { key: 'locker_number', label: 'Locker Number', group: 'Asset & Logistics' },
+    // Dates
+    { key: 'hire_date', label: 'Hire Date', group: 'Dates' },
+    { key: 'regular_date', label: 'Regular Date', group: 'Dates' },
+    { key: 'meta_onboarding_date', label: 'Meta Onboarding Date', group: 'Dates' },
+    { key: 'live_date', label: 'Go Live Date', group: 'Dates' },
+    // Attrition
+    { key: 'offboarding_date', label: 'Offboarding Date', group: 'Attrition' },
+    { key: 'resignation_date', label: 'Resignation Date', group: 'Attrition' },
+    { key: 'relieving_date', label: 'Relieving Date', group: 'Attrition' },
+    { key: 'exit_date', label: 'Exit Date', group: 'Attrition' },
+    { key: 'exit_reason', label: 'Exit Reason', group: 'Attrition' },
+  ],
+
+  /** Returns the active column set based on user's visibility tier */
+  getVisibleColumns() {
+    return this.visibilityTier === 'full' ? this.ALL_COLUMNS : this.LIMITED_COLUMNS;
+  },
+
+  /** Columns for the edit/add forms (always full set — only editors see forms) */
+  FORM_COLUMNS: [
+    { key: 'ohr_id', label: 'OHR ID' },
+    { key: 'full_name', label: 'Full Name' },
+    { key: 'actual_role', label: 'Role' },
+    { key: 'planning_group', label: 'Planning Group' },
+    { key: 'complete_planning_group', label: 'Related PG' },
+    { key: 'supervisor_name', label: 'Supervisor' },
+    { key: 'meta_email', label: 'Meta Email' },
+    { key: 'employement_status', label: 'Status' },
+    { key: 'srt_status', label: 'SRT Status' },
   ]
 };
 
@@ -103,6 +159,31 @@ const ROSTER_SORT_FIELDS = [
 
 let _rosterOutsideListener = null;
 
+// ===== Permission Helpers =====
+
+function rosterDeterminePermissions() {
+  if (!currentUser) {
+    ROSTER.canEdit = false;
+    ROSTER.visibilityTier = 'limited';
+    return;
+  }
+
+  const ohr = currentUser.ohr_id;
+  const role = currentUser.actual_role;
+
+  // Editability: only these 3 OHRs
+  ROSTER.canEdit = ROSTER.EDITOR_OHRS.includes(ohr);
+
+  // Visibility tier:
+  //   - Managers & OHR 740045023: full
+  //   - Everyone else who can see Regimen: limited
+  if (role === 'Manager' || ohr === ROSTER.ADMIN_OHR) {
+    ROSTER.visibilityTier = 'full';
+  } else {
+    ROSTER.visibilityTier = 'limited';
+  }
+}
+
 // ===== Data Fetching =====
 
 async function rosterFetchEmployees() {
@@ -121,12 +202,12 @@ async function rosterFetchEmployees() {
 
   if (loading) loading.style.display = 'none';
 
-  // Check admin
-  ROSTER.isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  // Determine permissions based on current user
+  rosterDeterminePermissions();
 
-  // Show/hide add button — admin only
+  // Show/hide add button — editors only
   const addBtn = document.getElementById('roster-add-btn');
-  if (addBtn) addBtn.style.display = ROSTER.isAdmin ? '' : 'none';
+  if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
 
   rosterApplyFilters();
 }
@@ -422,14 +503,14 @@ function rosterApplyFilters() {
 // Keep old functions as no-ops for backward compat
 function rosterPopulateFilters() {}
 
-// ===== Table Rendering (ALL columns) =====
+// ===== Table Rendering (role-based columns) =====
 
 function rosterRenderTable() {
   const thead = document.getElementById('roster-table-head');
   const tbody = document.getElementById('roster-table-body');
   if (!thead || !tbody) return;
 
-  const cols = ROSTER.ALL_COLUMNS;
+  const cols = ROSTER.getVisibleColumns();
 
   thead.innerHTML = `<tr>
     ${cols.map(c => `<th style="white-space:nowrap;">${escapeHtml(c.label)}</th>`).join('')}
@@ -453,9 +534,10 @@ function rosterRenderTable() {
         if (c.key === 'employement_status') {
           return `<td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(emp[c.key] || '')}</span></td>`;
         }
-        return `<td style="white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${escapeAttr(emp[c.key] || '')}">${escapeHtml(emp[c.key] != null ? String(emp[c.key]) : '')}</td>`;
+        let val = emp[c.key];
+        if (c.key === 'srt_id') val = formatSrtId(val);
+        return `<td style="white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${escapeAttr(val != null ? String(val) : '')}">${escapeHtml(val != null ? String(val) : '')}</td>`;
       }).join('')}
-
     </tr>`;
   }).join('');
 
@@ -481,7 +563,7 @@ function rosterRenderPagination() {
 // ===== Edit Employee =====
 
 function rosterEditEmployee(ohrId) {
-  if (!ROSTER.isAdmin) { showToast('Only admin can edit employees', 'error'); return; }
+  if (!ROSTER.canEdit) { showToast('You do not have permission to edit employees', 'error'); return; }
 
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
@@ -492,10 +574,11 @@ function rosterEditEmployee(ohrId) {
   const formFooter = document.getElementById('roster-form-footer');
   const overlay = document.getElementById('roster-form-overlay');
 
-  formTitle.textContent = `Edit Employee — ${emp.full_name}`;
+  formTitle.textContent = `Edit Employee \u2014 ${emp.full_name}`;
 
   const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
   const statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated'];
+  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training'];
 
   formBody.innerHTML = `
     <div class="form-section">
@@ -513,6 +596,14 @@ function rosterEditEmployee(ohrId) {
             <label class="form-label">${col.label}</label>
             <select class="form-select" id="roster-edit-${col.key}">
               ${statusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>`;
+        }
+        if (col.key === 'srt_status') {
+          return `<div class="form-field">
+            <label class="form-label">${col.label}</label>
+            <select class="form-select" id="roster-edit-${col.key}">
+              ${srtStatusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
           </div>`;
         }
@@ -537,10 +628,8 @@ async function rosterSaveEdit() {
 
   const updates = {};
   ROSTER.ALL_COLUMNS.forEach(col => {
-    if (col.editable) {
-      const el = document.getElementById(`roster-edit-${col.key}`);
-      if (el) updates[col.key] = el.value;
-    }
+    const el = document.getElementById(`roster-edit-${col.key}`);
+    if (el) updates[col.key] = el.value;
   });
 
   try {
@@ -548,7 +637,11 @@ async function rosterSaveEdit() {
     const resp = await fetch(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify({
+        ...updates,
+        _actor_ohr: currentUser ? currentUser.ohr_id : null,
+        _actor_name: currentUser ? currentUser.full_name : null,
+      })
     });
     if (!resp.ok) throw new Error('Failed to update employee');
 
@@ -564,7 +657,7 @@ async function rosterSaveEdit() {
 // ===== Add Employee =====
 
 function rosterShowAddForm() {
-  if (!ROSTER.isAdmin) { showToast('Only admin can add employees', 'error'); return; }
+  if (!ROSTER.canEdit) { showToast('You do not have permission to add employees', 'error'); return; }
   ROSTER.editingId = null;
 
   const formTitle = document.getElementById('roster-form-title');
@@ -629,7 +722,11 @@ async function rosterSaveNew() {
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(record)
+      body: JSON.stringify({
+        ...record,
+        _actor_ohr: currentUser ? currentUser.ohr_id : null,
+        _actor_name: currentUser ? currentUser.full_name : null,
+      })
     });
     if (!resp.ok) {
       const err = await resp.json();
@@ -648,7 +745,7 @@ async function rosterSaveNew() {
 // ===== Delete Employee =====
 
 async function rosterDeleteEmployee(ohrId) {
-  if (!ROSTER.isAdmin) { showToast('Only admin can delete employees', 'error'); return; }
+  if (!ROSTER.canEdit) { showToast('You do not have permission to delete employees', 'error'); return; }
 
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!confirm(`Are you sure you want to delete ${emp ? emp.full_name : ohrId}? This action cannot be undone.`)) return;
@@ -656,7 +753,12 @@ async function rosterDeleteEmployee(ohrId) {
   try {
     const url = `${IO_API_BASE}/employees/${encodeURIComponent(ohrId)}`;
     const resp = await fetch(url, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        _actor_ohr: currentUser ? currentUser.ohr_id : null,
+        _actor_name: currentUser ? currentUser.full_name : null,
+      })
     });
     if (!resp.ok) throw new Error('Failed to delete employee');
 
@@ -694,93 +796,80 @@ function rosterOpenDetail(ohrId) {
   const formFooter = document.getElementById('roster-form-footer');
   const overlay = document.getElementById('roster-form-overlay');
 
-  // Remove card title (leave empty)
   formTitle.innerHTML = '';
 
   const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const canEditDetail = ROSTER.canEdit;
 
-  // Group fields into sections per requirements
-  const personalFields = [
-    { label: 'OHR ID', key: 'ohr_id', value: emp.ohr_id },
-    { label: 'Full Name', key: 'full_name', value: emp.full_name },
-    { label: 'Last Name', key: 'last_name', value: emp.last_name },
-    { label: 'Given Name', key: 'given_name', value: emp.given_name },
-    { label: 'Middle Name', key: 'middle_name', value: emp.middle_name },
-    { label: 'Suffix', key: 'suffix', value: emp.suffix },
-    { label: 'Date of Birth', key: 'dob', value: emp.dob },
-    { label: 'Personal Email', key: 'personal_email', value: emp.personal_email },
-    { label: 'Contact Number', key: 'contact_number', value: emp.contact_number },
-    { label: 'Primary Address', key: 'primary_address', value: emp.primary_address },
-    { label: 'Barangay', key: 'barangay', value: emp.barangay },
-    { label: 'City', key: 'city', value: emp.city },
-    { label: 'Province', key: 'province', value: emp.province },
-  ];
+  // Use the columns appropriate for this user's visibility tier
+  const visibleCols = ROSTER.getVisibleColumns();
 
-  const workFields = [
-    { label: 'Status', key: 'employement_status', value: emp.employement_status, badge: true, color: statusColor },
-    { label: 'Role', key: 'actual_role', value: emp.actual_role },
-    { label: 'Meta Email', key: 'meta_email', value: emp.meta_email },
-    { label: 'Workday ID', key: 'workday_id', value: emp.workday_id },
-    { label: 'Planning Group', key: 'planning_group', value: emp.planning_group },
-    { label: 'Related PG', key: 'complete_planning_group', value: emp.complete_planning_group },
-    { label: 'Supervisor', key: 'supervisor_name', value: emp.supervisor_name },
-    { label: 'Supervisor Email', key: 'supervisor_email', value: emp.supervisor_email },
-    { label: 'Shift Time', key: 'shift_time', value: emp.shift_time },
-    { label: 'Work Off', key: 'work_off', value: emp.work_off },
-    { label: 'Billing Name', key: 'billing_name', value: emp.billing_name },
-    { label: 'SRT Name', key: 'srt_name', value: emp.srt_name },
-    { label: 'SRT Status', key: 'srt_status', value: emp.srt_status },
-    { label: 'SRT ID', key: 'srt_id', value: formatSrtId(emp.srt_id) },
-    { label: 'Platform', key: 'platform', value: emp.platform },
-  ];
+  // Group columns by their group property
+  const groups = {};
+  visibleCols.forEach(c => {
+    if (!groups[c.group]) groups[c.group] = [];
+    groups[c.group].push(c);
+  });
 
-  const assetFields = [
-    { label: 'MacBook Asset', key: 'macbook_asset_id', value: emp.macbook_asset_id },
-    { label: 'Chromebook Asset', key: 'chromebook_asset_id', value: emp.chromebook_asset_id },
-    { label: 'Badge ID', key: 'badge_id', value: emp.badge_id },
-    { label: 'Badge Serial', key: 'badge_serial', value: emp.badge_serial },
-    { label: 'Locker Floor', key: 'locker_floor', value: emp.locker_floor },
-    { label: 'Locker Number', key: 'locker_number', value: emp.locker_number },
-  ];
+  const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
+  const statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated'];
+  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training'];
 
-  const dateFields = [
-    { label: 'Hire Date', key: 'hire_date', value: emp.hire_date },
-    { label: 'Regular Date', key: 'regular_date', value: emp.regular_date },
-    { label: 'Meta Onboarding Date', key: 'meta_onboarding_date', value: emp.meta_onboarding_date },
-    { label: 'Go Live Date', key: 'live_date', value: emp.live_date },
-  ];
+  function renderField(col) {
+    const val = col.key === 'srt_id' ? formatSrtId(emp[col.key]) : emp[col.key];
+    const displayVal = (val !== null && val !== undefined && val !== '') ? String(val) : '\u2014';
 
-  function renderField(f) {
-    const displayVal = (f.value !== null && f.value !== undefined && f.value !== '') ? String(f.value) : '\u2014';
-    if (f.badge) {
-      return `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value"><span class="module-status-badge" style="background:${f.color}20;color:${f.color};border:1px solid ${f.color}40;">${escapeHtml(displayVal)}</span></span></div>`;
+    if (col.key === 'employement_status') {
+      if (canEditDetail) {
+        return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">
+          <select class="form-select form-select-sm roster-edit-field" data-key="${col.key}" style="font-size:13px;padding:2px 6px;max-width:280px;">
+            ${statusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </span></div>`;
+      }
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value"><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(displayVal)}</span></span></div>`;
     }
-    if (isAdmin) {
-      return `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value"><input type="text" class="form-input form-input-sm roster-edit-field" data-key="${escapeAttr(f.key)}" value="${escapeAttr(displayVal === '\u2014' ? '' : displayVal)}" style="font-size:13px;padding:2px 6px;width:100%;max-width:280px;"></span></div>`;
-    }
-    return `<div class="detail-row"><span class="detail-label">${escapeHtml(f.label)}</span><span class="detail-value">${escapeHtml(displayVal)}</span></div>`;
-  }
 
-  function renderSection(title, fields) {
-    let html = `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">${escapeHtml(title)}</h4>`;
-    fields.forEach(f => html += renderField(f));
-    return html;
+    if (col.key === 'actual_role' && canEditDetail) {
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">
+        <select class="form-select form-select-sm roster-edit-field" data-key="${col.key}" style="font-size:13px;padding:2px 6px;max-width:280px;">
+          ${roleOptions.map(r => `<option value="${r}" ${emp[col.key] === r ? 'selected' : ''}>${r}</option>`).join('')}
+        </select>
+      </span></div>`;
+    }
+
+    if (col.key === 'srt_status' && canEditDetail) {
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">
+        <select class="form-select form-select-sm roster-edit-field" data-key="${col.key}" style="font-size:13px;padding:2px 6px;max-width:280px;">
+          ${srtStatusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </span></div>`;
+    }
+
+    if (canEditDetail) {
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value"><input type="text" class="form-input form-input-sm roster-edit-field" data-key="${escapeAttr(col.key)}" value="${escapeAttr(displayVal === '\u2014' ? '' : displayVal)}" style="font-size:13px;padding:2px 6px;width:100%;max-width:280px;"></span></div>`;
+    }
+
+    return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">${escapeHtml(displayVal)}</span></div>`;
   }
 
   let html = '<div class="detail-section">';
-  html += renderSection('Personal Details', personalFields);
-  html += renderSection('Work Information', workFields);
-  html += renderSection('Asset & Logistics', assetFields);
-  html += renderSection('Dates', dateFields);
+  for (const [groupName, cols] of Object.entries(groups)) {
+    html += `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">${escapeHtml(groupName)}</h4>`;
+    cols.forEach(c => html += renderField(c));
+  }
   html += '</div>';
 
   formBody.innerHTML = html;
 
   // Footer
   let footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
-  if (isAdmin) {
+  if (canEditDetail) {
     footerHtml += ` <button class="btn btn-primary btn-sm" onclick="rosterSaveDetailEdits('${escapeAttr(emp.ohr_id)}')">Save Changes</button>`;
+    footerHtml += ` <button class="btn btn-ghost btn-sm" onclick="rosterViewAuditTrail('${escapeAttr(emp.ohr_id)}')" title="View edit history" style="margin-left:auto;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Audit Trail
+    </button>`;
   }
   formFooter.innerHTML = footerHtml;
 
@@ -792,7 +881,7 @@ async function rosterSaveDetailEdits(ohrId) {
   const updates = {};
   inputs.forEach(inp => {
     const key = inp.dataset.key;
-    const val = inp.value.trim();
+    const val = (inp.tagName === 'SELECT') ? inp.value : inp.value.trim();
     updates[key] = val || null;
   });
 
@@ -800,7 +889,11 @@ async function rosterSaveDetailEdits(ohrId) {
     const resp = await fetch(`${IO_API_BASE}/employees/${ohrId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify({
+        ...updates,
+        _actor_ohr: currentUser ? currentUser.ohr_id : null,
+        _actor_name: currentUser ? currentUser.full_name : null,
+      })
     });
     if (!resp.ok) throw new Error('Failed to save');
     showToast('Employee details updated successfully', 'success');
@@ -809,6 +902,52 @@ async function rosterSaveDetailEdits(ohrId) {
   } catch (e) {
     console.error('Failed to save employee details:', e);
     showToast('Failed to save changes', 'error');
+  }
+}
+
+// ===== Audit Trail Viewer =====
+
+async function rosterViewAuditTrail(ohrId) {
+  const modal = document.getElementById('audit-modal');
+  const body = document.getElementById('audit-modal-body');
+  if (!modal || !body) return;
+
+  body.innerHTML = '<div class="audit-loading">Loading audit trail...</div>';
+  modal.style.display = 'flex';
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/audit-log?record_type=io_employees&record_id=${encodeURIComponent(ohrId)}&limit=100`);
+    if (!resp.ok) throw new Error('Failed to fetch audit trail');
+    const logs = await resp.json();
+
+    if (!logs || logs.length === 0) {
+      body.innerHTML = '<div class="audit-empty" style="text-align:center;padding:32px;color:var(--fg-muted);">No edit history found for this employee.</div>';
+      return;
+    }
+
+    let html = '<div class="audit-timeline">';
+    logs.forEach(log => {
+      const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Unknown time';
+      const actor = log.actor_name || log.actor_ohr || 'System';
+      html += `<div class="audit-entry" style="padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;font-size:13px;">${escapeHtml(log.field_name || log.action || 'Update')}</span>
+          <span style="font-size:11px;color:var(--fg-muted);">${escapeHtml(ts)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">
+          by ${escapeHtml(actor)}
+        </div>
+        ${log.old_value || log.new_value ? `<div style="font-size:12px;margin-top:6px;">
+          ${log.old_value ? `<span style="background:#EF444420;color:#EF4444;padding:1px 6px;border-radius:4px;text-decoration:line-through;">${escapeHtml(String(log.old_value))}</span>` : ''}
+          ${log.old_value && log.new_value ? ' &rarr; ' : ''}
+          ${log.new_value ? `<span style="background:#22C55E20;color:#22C55E;padding:1px 6px;border-radius:4px;">${escapeHtml(String(log.new_value))}</span>` : ''}
+        </div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = `<div style="color:var(--danger);padding:16px;">Failed to load audit trail: ${escapeHtml(e.message)}</div>`;
   }
 }
 

@@ -1833,3 +1833,34 @@
 - [x] Add "Sync Roster" manual trigger button to the roster tab
 - [x] Add "Sync Attendance" manual trigger button to the attendance tab
 - [x] Add attrition columns (exit_date, exit_reason, offboarding_date, resignation_date, relieving_date) to ROSTER sheet headers and sync module — verified in sheet (AR-AV)
+
+## Batch — Comprehensive Revisions (Roster Sheet, Compass, Regimen, Onboarding)
+
+### ROSTER Sheet Cleanup
+- [x] Remove InChat/InDistro columns (AN-AQ) from ROSTER sheet headers
+- [x] Remove sheet-only column preservation logic from roster-sync.ts (only Access Level preserved now)
+- [x] Remove columns from actual Google Sheet (will be cleared on next sync)
+
+### Compass Visibility
+- [x] Hide entire Compass nav from everyone except 740045023
+
+### Regimen — Column Updates
+- [x] Add all new io_employees columns to Regimen (including attrition fields: offboarding_date, resignation_date, relieving_date, exit_date, exit_reason)
+- [x] Group columns logically: Identity → Role & Assignment → System IDs → Dates → Attrition → Asset & Logistics
+
+### Regimen — Visibility Rules
+- [x] Agents: Cannot see Regimen page at all (nav hidden for Agent role)
+- [x] SMEs, QAs, Team Leads (except 740045023), Trainers: Limited column set (22 columns)
+- [x] Managers & 740045023: Can see all columns (full tier)
+
+### Regimen — Editability Rules
+- [x] Only 740045023, 740044909, 703212987 can edit any field on any employee
+- [x] All edits logged to io_audit_log with who/what/when (field-level diff)
+
+### New Agent Onboarding Signup Flow
+- [x] Prefilled OHR in io_employees triggers onboarding form on signup
+- [x] Agent creates own password during signup (password set in step 1, profile in step 2)
+- [x] Onboarding form collects: Last Name, Given Name, Middle Name, Suffix, Chromebook Asset, Hire Date, DOB, Personal Email, Contact Number, Primary Address, Barangay, City, Province, Locker Floor, Locker Number, Badge ID, Badge Serial
+- [x] Field validation (DOB 16+ check, email regex, PH mobile format, required vs optional)
+- [x] In-app notification to 740045023 and 740044909 on form completion
+- [x] Non-prefilled OHR gets generic error message (same for not found, inactive, already has account)

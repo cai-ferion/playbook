@@ -79,6 +79,84 @@
           <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
         </div>
       </div>
+      <!-- Onboarding Form (shown after OHR validation during signup) -->
+      <div class="auth-form" id="auth-form-onboarding" style="display:none;">
+        <h3 style="text-align:center;margin-bottom:16px;font-size:16px;font-weight:600;">Complete Your Profile</h3>
+        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Fill in your details to complete onboarding.</p>
+        <div style="max-height:400px;overflow-y:auto;padding-right:4px;">
+          <div class="auth-field">
+            <label>Last Name <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-last-name" placeholder="Last Name" required>
+          </div>
+          <div class="auth-field">
+            <label>Given Name <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-given-name" placeholder="Given Name" required>
+          </div>
+          <div class="auth-field">
+            <label>Middle Name</label>
+            <input type="text" class="form-input" id="onboard-middle-name" placeholder="Middle Name (optional)">
+          </div>
+          <div class="auth-field">
+            <label>Suffix</label>
+            <input type="text" class="form-input" id="onboard-suffix" placeholder="e.g. Jr., III (optional)">
+          </div>
+          <div class="auth-field">
+            <label>Chromebook Asset ID <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-chromebook" placeholder="Chromebook Asset ID">
+          </div>
+          <div class="auth-field">
+            <label>Hire Date <span style="color:var(--danger);">*</span></label>
+            <input type="date" class="form-input" id="onboard-hire-date">
+          </div>
+          <div class="auth-field">
+            <label>Date of Birth <span style="color:var(--danger);">*</span></label>
+            <input type="date" class="form-input" id="onboard-dob">
+          </div>
+          <div class="auth-field">
+            <label>Personal Email <span style="color:var(--danger);">*</span></label>
+            <input type="email" class="form-input" id="onboard-personal-email" placeholder="your@email.com">
+          </div>
+          <div class="auth-field">
+            <label>Contact Number <span style="color:var(--danger);">*</span></label>
+            <input type="tel" class="form-input" id="onboard-contact" placeholder="09XXXXXXXXX">
+          </div>
+          <div class="auth-field">
+            <label>Primary Address <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-address" placeholder="Street, Bldg, etc.">
+          </div>
+          <div class="auth-field">
+            <label>Barangay <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-barangay" placeholder="Barangay">
+          </div>
+          <div class="auth-field">
+            <label>City <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-city" placeholder="City">
+          </div>
+          <div class="auth-field">
+            <label>Province <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-province" placeholder="Province">
+          </div>
+          <div class="auth-field">
+            <label>Locker Floor</label>
+            <input type="text" class="form-input" id="onboard-locker-floor" placeholder="Floor number">
+          </div>
+          <div class="auth-field">
+            <label>Locker Number</label>
+            <input type="text" class="form-input" id="onboard-locker-number" placeholder="Locker number">
+          </div>
+          <div class="auth-field">
+            <label>Badge ID <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-badge-id" placeholder="Badge ID">
+          </div>
+          <div class="auth-field">
+            <label>Badge Serial <span style="color:var(--danger);">*</span></label>
+            <input type="text" class="form-input" id="onboard-badge-serial" placeholder="Badge Serial">
+          </div>
+        </div>
+        <div class="auth-error" id="onboard-error"></div>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="handleOnboardingSubmit()" style="margin-top:12px;">Submit &amp; Create Account</button>
+        <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Cancel</button>
+      </div>
     </div>
   </div>
 

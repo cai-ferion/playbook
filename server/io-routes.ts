@@ -146,12 +146,53 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     const { ohr_id } = req.params;
-    const updates = req.body;
+    const rawBody = { ...req.body };
+
+    // Extract audit metadata (not persisted to io_employees)
+    const actorOhr = rawBody._actor_ohr || null;
+    const actorName = rawBody._actor_name || null;
+    delete rawBody._actor_ohr;
+    delete rawBody._actor_name;
+
+    const updates = rawBody;
     if (!updates || Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No fields to update" });
     }
 
+    // Fetch current state for audit diff
+    const [before] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
+
     await db.update(ioEmployees).set(updates).where(eq(ioEmployees.ohr_id, ohr_id));
+
+    // Audit logging: log each changed field
+    if (before && actorOhr) {
+      const now = new Date().toISOString();
+      const auditEntries: any[] = [];
+      for (const [key, newVal] of Object.entries(updates)) {
+        const oldVal = (before as any)[key];
+        const oldStr = oldVal != null ? String(oldVal) : '';
+        const newStr = newVal != null ? String(newVal) : '';
+        if (oldStr !== newStr) {
+          auditEntries.push({
+            record_type: 'io_employees',
+            record_id: ohr_id,
+            action: 'UPDATE',
+            field_name: key,
+            old_value: oldStr || null,
+            new_value: newStr || null,
+            actor_ohr: actorOhr,
+            actor_name: actorName,
+            timestamp: now,
+          });
+        }
+      }
+      if (auditEntries.length > 0) {
+        db.insert(ioAuditLog).values(auditEntries).catch((e: any) =>
+          console.error('[IO API] audit log insert error:', e)
+        );
+      }
+    }
+
     // Fire-and-forget: mirror change to Supabase
     const [updated] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
     if (updated) syncEmployeesToSupabase([updated]).catch(() => {});

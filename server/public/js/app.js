@@ -198,10 +198,13 @@ function showAuthForm(type) {
   document.getElementById('auth-buttons').style.display = 'none';
   document.getElementById('auth-form-signup').style.display = type === 'signup' ? 'block' : 'none';
   document.getElementById('auth-form-login').style.display = type === 'login' ? 'block' : 'none';
+  document.getElementById('auth-form-onboarding').style.display = type === 'onboarding' ? 'block' : 'none';
   document.getElementById('signup-error').textContent = '';
   document.getElementById('login-error').textContent = '';
-  document.getElementById('signup-ohr').value = '';
-  document.getElementById('signup-password').value = '';
+  if (type !== 'onboarding') {
+    document.getElementById('signup-ohr').value = '';
+    document.getElementById('signup-password').value = '';
+  }
   document.getElementById('login-ohr').value = '';
   document.getElementById('login-password').value = '';
 }
@@ -210,6 +213,9 @@ function showAuthButtons() {
   document.getElementById('auth-buttons').style.display = 'flex';
   document.getElementById('auth-form-signup').style.display = 'none';
   document.getElementById('auth-form-login').style.display = 'none';
+  document.getElementById('auth-form-onboarding').style.display = 'none';
+  window._onboardOhr = null;
+  window._onboardPw = null;
 }
 
 function unmaskPassword(inputId) {
@@ -243,6 +249,10 @@ function updatePasswordRules(pw) {
   return rules.length && rules.capital && rules.alphanum && rules.special;
 }
 
+// Temporary storage for onboarding flow
+window._onboardOhr = null;
+window._onboardPw = null;
+
 async function handleSignUp() {
   const ohr = document.getElementById('signup-ohr').value.trim();
   const pw = document.getElementById('signup-password').value;
@@ -266,35 +276,158 @@ async function handleSignUp() {
 
     const emp = empData[0];
     if (emp.employement_status !== 'Active') {
-      errorEl.textContent = 'Access denied. Only active employees can create an account.';
+      errorEl.textContent = 'OHR ID not found. Please check your ID.';
       return;
     }
 
     if (emp.password) {
-      errorEl.textContent = 'OHR already has an account.';
+      errorEl.textContent = 'OHR ID not found. Please check your ID.';
       return;
     }
 
+    // OHR is valid and has no password — route to onboarding form
+    window._onboardOhr = ohr;
+    window._onboardPw = pw;
+    showAuthForm('onboarding');
+
+  } catch (err) {
+    errorEl.textContent = 'Network error. Please try again.';
+  }
+}
+
+// Onboarding form validation and submission
+async function handleOnboardingSubmit() {
+  const errorEl = document.getElementById('onboard-error');
+  errorEl.textContent = '';
+  errorEl.style.color = '';
+
+  const ohr = window._onboardOhr;
+  const pw = window._onboardPw;
+  if (!ohr || !pw) { errorEl.textContent = 'Session expired. Please start over.'; return; }
+
+  // Collect fields
+  const lastName = document.getElementById('onboard-last-name').value.trim();
+  const givenName = document.getElementById('onboard-given-name').value.trim();
+  const middleName = document.getElementById('onboard-middle-name').value.trim();
+  const suffix = document.getElementById('onboard-suffix').value.trim();
+  const chromebook = document.getElementById('onboard-chromebook').value.trim();
+  const hireDate = document.getElementById('onboard-hire-date').value;
+  const dob = document.getElementById('onboard-dob').value;
+  const personalEmail = document.getElementById('onboard-personal-email').value.trim();
+  const contact = document.getElementById('onboard-contact').value.trim();
+  const address = document.getElementById('onboard-address').value.trim();
+  const barangay = document.getElementById('onboard-barangay').value.trim();
+  const city = document.getElementById('onboard-city').value.trim();
+  const province = document.getElementById('onboard-province').value.trim();
+  const lockerFloor = document.getElementById('onboard-locker-floor').value.trim();
+  const lockerNumber = document.getElementById('onboard-locker-number').value.trim();
+  const badgeId = document.getElementById('onboard-badge-id').value.trim();
+  const badgeSerial = document.getElementById('onboard-badge-serial').value.trim();
+
+  // Required field validation
+  if (!lastName) { errorEl.textContent = 'Last Name is required.'; return; }
+  if (!givenName) { errorEl.textContent = 'Given Name is required.'; return; }
+  if (!chromebook) { errorEl.textContent = 'Chromebook Asset ID is required.'; return; }
+  if (!hireDate) { errorEl.textContent = 'Hire Date is required.'; return; }
+  if (!dob) { errorEl.textContent = 'Date of Birth is required.'; return; }
+  if (!personalEmail) { errorEl.textContent = 'Personal Email is required.'; return; }
+  if (!contact) { errorEl.textContent = 'Contact Number is required.'; return; }
+  if (!address) { errorEl.textContent = 'Primary Address is required.'; return; }
+  if (!barangay) { errorEl.textContent = 'Barangay is required.'; return; }
+  if (!city) { errorEl.textContent = 'City is required.'; return; }
+  if (!province) { errorEl.textContent = 'Province is required.'; return; }
+  if (!badgeId) { errorEl.textContent = 'Badge ID is required.'; return; }
+  if (!badgeSerial) { errorEl.textContent = 'Badge Serial is required.'; return; }
+
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(personalEmail)) { errorEl.textContent = 'Please enter a valid email address.'; return; }
+
+  // Phone format validation (PH mobile: 09XXXXXXXXX or +639XXXXXXXXX)
+  const phoneClean = contact.replace(/[\s\-()]/g, '');
+  if (!/^(09\d{9}|\+639\d{9})$/.test(phoneClean)) {
+    errorEl.textContent = 'Please enter a valid PH mobile number (09XXXXXXXXX).';
+    return;
+  }
+
+  // DOB sanity check (must be 16+ years ago)
+  const dobDate = new Date(dob);
+  const minAge = new Date();
+  minAge.setFullYear(minAge.getFullYear() - 16);
+  if (dobDate > minAge) { errorEl.textContent = 'Date of Birth seems invalid (must be at least 16 years old).'; return; }
+
+  // Build full name
+  let fullName = `${lastName}, ${givenName}`;
+  if (middleName) fullName += ` ${middleName.charAt(0)}.`;
+  if (suffix) fullName += ` ${suffix}`;
+
+  try {
     const updateResp = await fetch(
       `${IO_API_BASE}/employees/${ohr}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pw })
+        body: JSON.stringify({
+          password: pw,
+          last_name: lastName,
+          given_name: givenName,
+          middle_name: middleName || null,
+          suffix: suffix || null,
+          full_name: fullName,
+          chromebook_asset_id: chromebook,
+          hire_date: hireDate,
+          dob: dob,
+          personal_email: personalEmail,
+          contact_number: contact,
+          primary_address: address,
+          barangay: barangay,
+          city: city,
+          province: province,
+          locker_floor: lockerFloor || null,
+          locker_number: lockerNumber || null,
+          badge_id: badgeId,
+          badge_serial: badgeSerial,
+          _actor_ohr: ohr,
+          _actor_name: fullName,
+        })
       }
     );
 
-    if (updateResp.ok) {
-      errorEl.style.color = 'var(--success)';
-      errorEl.textContent = 'Account created! You can now login.';
-      setTimeout(() => {
-        errorEl.style.color = '';
-        showAuthForm('login');
-        document.getElementById('login-ohr').value = ohr;
-      }, 1500);
-    } else {
+    if (!updateResp.ok) {
       errorEl.textContent = 'Failed to create account. Please try again.';
+      return;
     }
+
+    // Send in-app notification to admin (740045023) and assistant (740044909)
+    const notifTargets = ['740045023', '740044909'];
+    for (const targetOhr of notifTargets) {
+      fetch(`${IO_API_BASE}/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'onboarding',
+          title: 'New Agent Onboarding',
+          message: `${fullName} (OHR: ${ohr}) has completed their onboarding form and created an account. Please review and fill in remaining fields.`,
+          actor_ohr: ohr,
+          actor_name: fullName,
+          target_ohr: targetOhr,
+          target_role: 'admin',
+          metadata: JSON.stringify({ ohr_id: ohr, full_name: fullName }),
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+      }).catch(() => {});
+    }
+
+    errorEl.style.color = 'var(--success)';
+    errorEl.textContent = 'Account created! You can now login.';
+    window._onboardOhr = null;
+    window._onboardPw = null;
+    setTimeout(() => {
+      errorEl.style.color = '';
+      showAuthForm('login');
+      document.getElementById('login-ohr').value = ohr;
+    }, 2000);
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
   }
@@ -434,11 +567,10 @@ async function handleLogin() {
     const billingNav = document.getElementById('nav-billing');
     if (billingNav) billingNav.style.display = (currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
 
-    // Compass — visible to all roles except Agents (role-based coaching visibility)
+    // Compass — visible ONLY to admin OHR
     const compassNav = document.getElementById('nav-group-compass');
     if (compassNav) {
-      const isAgentNonAdmin = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR;
-      compassNav.style.display = isAgentNonAdmin ? 'none' : '';
+      compassNav.style.display = currentUser.ohr_id === ADMIN_OHR ? '' : 'none';
     }
 
     // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
@@ -455,9 +587,12 @@ async function handleLogin() {
     const helmAnalyticsNav = document.getElementById('nav-helm-analytics');
     if (helmAnalyticsNav) helmAnalyticsNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
 
-    // Regimen (Roster) — admin only
+    // Regimen (Roster) — visible to all non-Agent roles
     const regimenNav = document.getElementById('nav-regimen');
-    if (regimenNav) regimenNav.style.display = (currentUser.ohr_id === ADMIN_OHR) ? '' : 'none';
+    if (regimenNav) {
+      const isAgent = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR;
+      regimenNav.style.display = isAgent ? 'none' : '';
+    }
 
     // Dashboard — hidden from Agents
     const dashboardNav = document.getElementById('nav-dashboard');
@@ -589,11 +724,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const billingNav2 = document.getElementById('nav-billing');
       if (billingNav2) billingNav2.style.display = (currentUser.actual_role !== 'Agent') || currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
 
-      // Compass — visible to all roles except Agents (role-based coaching visibility)
+      // Compass — visible ONLY to admin OHR
       const compassNav2 = document.getElementById('nav-group-compass');
       if (compassNav2) {
-        const isAgentNonAdmin2 = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2;
-        compassNav2.style.display = isAgentNonAdmin2 ? 'none' : '';
+        compassNav2.style.display = currentUser.ohr_id === ADMIN_OHR2 ? '' : 'none';
       }
 
       // Sandbox, Haven, Horizon — visible ONLY to admin OHR (under development)
@@ -610,9 +744,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const helmAnalyticsNav2 = document.getElementById('nav-helm-analytics');
       if (helmAnalyticsNav2) helmAnalyticsNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
 
-      // Regimen — admin only
+      // Regimen (Roster) — visible to all non-Agent roles
       const regimenNav2 = document.getElementById('nav-regimen');
-      if (regimenNav2) regimenNav2.style.display = (currentUser.ohr_id === ADMIN_OHR2) ? '' : 'none';
+      if (regimenNav2) {
+        const isAgent2 = currentUser.actual_role === 'Agent' && currentUser.ohr_id !== ADMIN_OHR2;
+        regimenNav2.style.display = isAgent2 ? 'none' : '';
+      }
 
       // Dashboard — hidden from Agents
       const dashboardNav2 = document.getElementById('nav-dashboard');
