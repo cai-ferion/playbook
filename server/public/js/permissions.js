@@ -24,7 +24,6 @@ const PERM_GROUPS = [
       { key: 'anchor.dashboard', label: 'Dashboard' },
       { key: 'anchor.billing_compliance', label: 'Billing Compliance' },
       { key: 'anchor.risk_intelligence', label: 'Risk Intelligence' },
-      { key: 'anchor.sync_history', label: 'Sync History' },
     ],
   },
   {

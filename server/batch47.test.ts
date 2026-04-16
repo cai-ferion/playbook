@@ -82,26 +82,14 @@ describe('Batch 47 — Coaching Types: General Coaching + CAP 0 Coaching', () =>
   });
 });
 
-describe('Batch 47 — Sync History Text Wrapping', () => {
-  const css = readPublicCSS('sync-history.css');
-
-  it('sh-detail-error has word-break and overflow-wrap for long error messages', () => {
-    const errorBlock = css.match(/\.sh-detail-error\s*\{[^}]*\}/);
-    expect(errorBlock).not.toBeNull();
-    expect(errorBlock![0]).toContain('word-break');
-    expect(errorBlock![0]).toContain('overflow-wrap');
+// Sync History UI removed — sync logs now written to Google Sheet SYNC_LOG tab
+describe('Batch 47 — Sync History removed (logs moved to Google Sheet)', () => {
+  const html = readHTML();
+  it('sync-history nav item is removed from the UI', () => {
+    expect(html).not.toContain('id="nav-sync-history"');
   });
-
-  it('sh-detail-content has overflow-x hidden to prevent horizontal scroll', () => {
-    const contentBlock = css.match(/\.sh-detail-content\s*\{[^}]*\}/);
-    expect(contentBlock).not.toBeNull();
-    expect(contentBlock![0]).toContain('overflow-x');
-  });
-
-  it('sh-table uses table-layout fixed', () => {
-    const tableBlock = css.match(/\.sh-table\s*\{[^}]*\}/);
-    expect(tableBlock).not.toBeNull();
-    expect(tableBlock![0]).toContain('table-layout: fixed');
+  it('sync-history view container is removed from the UI', () => {
+    expect(html).not.toContain('id="sync-history-view"');
   });
 });
 

@@ -1987,3 +1987,9 @@
 - [x] Implement multi-source token resolution: process.env → shell env → rclone config → token file → webdev secret
 - [x] Apply same fix to both gsheets-sync.ts (attendance) and roster-sync.ts (roster)
 - [x] Verified: sync runs successfully (347 rows updated, 21849 DB rows, 21875 sheet rows)
+
+## Batch — Sync Overhaul & CSV Export Fix
+- [x] Remove sync history UI components (attendance + roster sync history pages)
+- [x] Create SYNC_LOG tab in Google Sheet (who triggered, timestamp, details)
+- [x] Delete January-February attendance rows from ATTEND_26 Google Sheet (22,791 rows removed)
+- [x] Fix CSV export in Input Portal — server-side export with all omnibar filters

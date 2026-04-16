@@ -1045,7 +1045,6 @@ function applyNavPermissions(user) {
   vis('nav-dashboard', 'anchor.dashboard');
   vis('nav-alerts', 'anchor.risk_intelligence');
   vis('nav-billing', 'anchor.billing_compliance');
-  vis('nav-sync-history', 'anchor.sync_history');
   // Input portal nav is the default anchor view, gated by nav.anchor itself
 
   // Regimen tabs (Onboarding & Permissions visible only if granted)
@@ -1060,7 +1059,7 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'sync-history', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -1072,7 +1071,7 @@ async function switchView(view) {
   });
 
   // Auto-expand collapsible group if a child view is selected
-  const anchorViews = ['input', 'dashboard', 'billing', 'alerts', 'sync-history'];
+  const anchorViews = ['input', 'dashboard', 'billing', 'alerts'];
   if (anchorViews.includes(view)) {
     const anchorGroup = document.getElementById('nav-group-anchor');
     if (anchorGroup) anchorGroup.classList.add('expanded');
@@ -1105,7 +1104,7 @@ async function switchView(view) {
 
   const titles = {
     input: 'Input Portal', dashboard: 'Command Dashboard', alerts: 'Risk Intelligence',
-    admin: 'Admin Tools', billing: 'Billing Compliance', 'sync-history': 'Sync History',
+    admin: 'Admin Tools', billing: 'Billing Compliance',
     'compass-input': 'Coaching Profile', 'compass-disputes': 'Disputes Area',
     'sandbox-input': 'Input Portal', 'sandbox-review': 'Review Area', 'sandbox-analytics': 'Analytics',
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
@@ -1138,7 +1137,6 @@ async function switchView(view) {
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
   if (view === 'productivity-hrs') { if (typeof initProductivityHrs === 'function') initProductivityHrs(); }
-  if (view === 'sync-history') { if (typeof initSyncHistory === 'function') initSyncHistory(); }
 }
 
 /**
@@ -2728,51 +2726,66 @@ async function handleExportCSV() {
   showExportProgress('Exporting CSV...');
 
   try {
-    // Get filtered records based on current filters
-    const filteredItems = getFilteredInputRecords();
-    const totalRecords = filteredItems.length;
+    updateExportProgress(10, 'Fetching all filtered records from server...');
 
-    if (totalRecords === 0) {
-      hideExportProgress();
-      btn.classList.remove('exporting');
-      showToast('No records to export', 'info');
-      return;
-    }
+    // Build the same filter params that the omnibar uses for server-side pagination
+    const params = new URLSearchParams({ exclude_managers: 'true' });
 
-    updateExportProgress(10, `Processing ${formatNumber(totalRecords)} records...`);
+    // Date range from omnibar
+    if (typeof omnibarState !== 'undefined' && omnibarState.filters) {
+      var dateFilter = omnibarState.filters['date_range'];
+      var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+      params.set('log_date_gte', dateFilter ? dateFilter.startDate : today);
+      params.set('log_date_lte', dateFilter ? dateFilter.endDate : today);
 
-    // Build CSV header from TABLE_COLUMNS
-    const headers = TABLE_COLUMNS.map(col => col.label);
-    let csvContent = headers.map(h => '"' + h.replace(/"/g, '""') + '"').join(',') + '\n';
-
-    // Build CSV rows in chunks for progress feedback
-    const chunkSize = 500;
-    for (let i = 0; i < totalRecords; i += chunkSize) {
-      const chunk = filteredItems.slice(i, i + chunkSize);
-      for (const item of chunk) {
-        const record = item.record;
-        const row = TABLE_COLUMNS.map(col => {
-          let val = record[col.key] || '';
-          if (col.key === 'date') val = formatDateDisplay(val);
-          return '"' + String(val).replace(/"/g, '""') + '"';
-        });
-        csvContent += row.join(',') + '\n';
+      // Multi-value filters
+      var keys = Object.keys(omnibarState.filters);
+      var keyMap = {
+        tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
+        actualPlanningGroup: 'planning_group_in',
+        status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
+      };
+      for (var ki = 0; ki < keys.length; ki++) {
+        var f = omnibarState.filters[keys[ki]];
+        if (f.type === 'multi' && f.values && f.values.length > 0) {
+          var paramKey = keyMap[f.key];
+          if (paramKey) params.set(paramKey, f.values.join('|'));
+        }
+        if (f.type === 'toggle' && f.key === 'blanks') {
+          params.set('blanks_only', 'true');
+        }
       }
-      const pct = Math.min(90, 10 + Math.round((i + chunk.length) / totalRecords * 80));
-      updateExportProgress(pct, `${formatNumber(Math.min(i + chunkSize, totalRecords))} / ${formatNumber(totalRecords)} records`);
-      // Yield to UI thread
-      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Sort params
+      if (omnibarState.sort) {
+        params.set('sort_by', omnibarState.sort.recordKey);
+        params.set('sort_dir', omnibarState.sort.direction);
+      }
+    } else {
+      // Fallback: use legacy filter elements
+      var startEl = document.getElementById('input-filter-start-date');
+      var endEl = document.getElementById('input-filter-end-date');
+      if (startEl && startEl.value) params.set('log_date_gte', startEl.value);
+      if (endEl && endEl.value) params.set('log_date_lte', endEl.value);
     }
 
-    updateExportProgress(95, 'Generating file...');
+    updateExportProgress(30, 'Downloading CSV from server...');
 
-    // Create and download the CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    // Fetch the CSV directly from the server-side export endpoint
+    const resp = await fetch(`${IO_API_BASE}/attendance/export?${params}`);
+    if (!resp.ok) throw new Error('Server export failed: ' + resp.statusText);
+
+    updateExportProgress(80, 'Preparing download...');
+
+    const csvBlob = await resp.blob();
+    const totalRecords = csvBlob.size > 100 ? '(all filtered)' : '0';
+
+    // Trigger download
+    const url = URL.createObjectURL(csvBlob);
     const link = document.createElement('a');
-    const today = getTodayStr();
+    var todayStr = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
     link.href = url;
-    link.download = `playbook_export_${today}.csv`;
+    link.download = `playbook_export_${todayStr}.csv`;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
@@ -2782,7 +2795,7 @@ async function handleExportCSV() {
     updateExportProgress(100, 'Complete!');
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    showToast(`Exported ${formatNumber(totalRecords)} records to CSV`, 'success');
+    showToast('Exported all filtered records to CSV', 'success');
   } catch (err) {
     showToast('Export failed: ' + err.message, 'error');
   } finally {

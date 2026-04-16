@@ -217,7 +217,44 @@ interface SyncStats {
   total_sheet_rows: number;
 }
 
-// ── Write sync log entry to DB ───────────────────────────────────────────────
+// ── Write sync log entry to Google Sheet tab ────────────────────────────────
+const SYNC_LOG_SHEET = "SYNC_LOG";
+
+async function ensureSyncLogSheet(sheets: any) {
+  try {
+    // Check if SYNC_LOG tab exists
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      fields: "sheets.properties.title",
+    });
+    const titles = (meta.data.sheets || []).map((s: any) => s.properties.title);
+    if (!titles.includes(SYNC_LOG_SHEET)) {
+      // Create the tab with headers
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+          requests: [{ addSheet: { properties: { title: SYNC_LOG_SHEET } } }],
+        },
+      });
+      // Write header row
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SYNC_LOG_SHEET}!A1:L1`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[
+            "#", "Sync Type", "Triggered By", "Status",
+            "Started At (PHT)", "Completed At (PHT)", "Duration",
+            "Rows Updated", "Rows Appended", "DB Rows", "Sheet Rows", "Error",
+          ]],
+        },
+      });
+      console.log("[SYNC-LOG] Created SYNC_LOG sheet tab with headers");
+    }
+  } catch (e: any) {
+    console.error(`[SYNC-LOG] Failed to ensure SYNC_LOG sheet: ${e.message}`);
+  }
+}
 
 async function writeSyncLog(entry: {
   sync_type: string;
@@ -234,17 +271,72 @@ async function writeSyncLog(entry: {
   output_log: string;
 }) {
   try {
-    const db = await getDb();
-    if (!db) {
-      console.warn("[SYNC-LOG] Cannot write log — database not available");
+    const sheets = await getSheetsClient();
+    if (!sheets) {
+      console.warn("[SYNC-LOG] Cannot write log — no Sheets client available");
+      // Fallback: write to DB if available
+      try {
+        const db = await getDb();
+        if (db) await db.insert(ioSyncLog).values(entry);
+      } catch { /* ignore */ }
       return;
     }
-    await db.insert(ioSyncLog).values(entry);
+    await ensureSyncLogSheet(sheets);
+
+    // Get current row count to determine next row number
+    let nextRow = 2;
+    try {
+      const existing = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SYNC_LOG_SHEET}!A:A`,
+      });
+      nextRow = (existing.data.values?.length || 1) + 1;
+    } catch { /* default to row 2 */ }
+
+    // Format timestamps to PHT (UTC+8)
+    const fmtPHT = (iso: string) => {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString("en-PH", { timeZone: "Asia/Manila", year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+      } catch { return iso; }
+    };
+    const durationStr = entry.duration_ms >= 1000
+      ? `${(entry.duration_ms / 1000).toFixed(1)}s`
+      : `${entry.duration_ms}ms`;
+
+    const row = [
+      nextRow - 1, // Row number (#)
+      entry.sync_type,
+      entry.trigger,
+      entry.status,
+      fmtPHT(entry.started_at),
+      fmtPHT(entry.completed_at),
+      durationStr,
+      entry.rows_updated,
+      entry.rows_appended,
+      entry.total_db_rows,
+      entry.total_sheet_rows,
+      entry.error_message || "",
+    ];
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SYNC_LOG_SHEET}!A:L`,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [row] },
+    });
+
     console.log(
-      `[SYNC-LOG] Logged: ${entry.trigger} → ${entry.status} (${entry.duration_ms}ms, ${entry.rows_updated} updated, ${entry.rows_appended} appended)`
+      `[SYNC-LOG] Logged to Google Sheet: ${entry.trigger} → ${entry.status} (${durationStr}, ${entry.rows_updated} updated, ${entry.rows_appended} appended)`
     );
   } catch (e: any) {
-    console.error(`[SYNC-LOG] Failed to write log: ${e.message}`);
+    console.error(`[SYNC-LOG] Failed to write log to Google Sheet: ${e.message}`);
+    // Fallback: write to DB
+    try {
+      const db = await getDb();
+      if (db) await db.insert(ioSyncLog).values(entry);
+    } catch { /* ignore */ }
   }
 }
 

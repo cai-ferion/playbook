@@ -1391,32 +1391,74 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
-
-    const { startDate, endDate, format } = req.query;
+    const {
+      startDate, endDate, format,
+      log_date_gte, log_date_lte,
+      tag_in, agent_in, flm_in, planning_group_in,
+      status_in, shift_time_in, role_in, blanks_only,
+      sort_by, sort_dir, exclude_managers,
+    } = req.query;
     const conditions: any[] = [];
-
-    if (startDate) conditions.push(gte(ioAttendance.log_date, String(startDate)));
-    if (endDate) conditions.push(lte(ioAttendance.log_date, String(endDate)));
-
+    // Exclude managers if requested
+    if (exclude_managers === 'true') {
+      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (SELECT ohr_id FROM io_employees WHERE actual_role = 'Manager')`);
+    }
+    // Date range (support both legacy and new param names)
+    const gteDate = startDate || log_date_gte;
+    const lteDate = endDate || log_date_lte;
+    if (gteDate) conditions.push(gte(ioAttendance.log_date, String(gteDate)));
+    if (lteDate) conditions.push(lte(ioAttendance.log_date, String(lteDate)));
+    // Multi-value filters (pipe-delimited)
+    if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
+    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
+    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
+    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
+    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
+    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (blanks_only === "true") {
+      conditions.push(or(
+        sql`${ioAttendance.tag} IS NULL`,
+        eq(ioAttendance.tag, ""),
+        eq(ioAttendance.tag, "\u2014")
+      ));
+    }
     const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    // Fetch all matching rows (no limit for export)
+    // Dynamic sort
+    const sortColMap: Record<string, any> = {
+      date: ioAttendance.log_date, log_date: ioAttendance.log_date,
+      agent: ioAttendance.snap_full_name, flm: ioAttendance.snap_supervisor,
+      tag: ioAttendance.tag,
+      actualPlanningGroup: ioAttendance.snap_planning_group,
+      shiftTime: ioAttendance.snap_shift_time, role: ioAttendance.snap_actual_role,
+      status: ioAttendance.snap_status,
+    };
+    const col = sortColMap[String(sort_by || 'log_date')] || ioAttendance.log_date;
+    const dirFn = String(sort_dir || 'asc').toLowerCase() === 'desc' ? desc : asc;
+    // Fetch ALL matching rows (no limit)
     let query = db.select().from(ioAttendance);
     if (where) query = query.where(where) as any;
-    const rows = await (query as any).orderBy(asc(ioAttendance.log_date), asc(ioAttendance.ohr_id));
-
+    const rows = await (query as any).orderBy(dirFn(col), asc(ioAttendance.ohr_id));
     if (format === "json") {
-      return res.json(rows);
+      return res.json({ rows, total: rows.length });
     }
-
-    // Default: CSV format
-    const columns = [
-      "id", "ohr_id", "log_date", "tag", "upl_reason",
-      "remarks", "ot_hours", "created_at", "snap_full_name", "snap_supervisor",
-      "snap_planning_group", "snap_shift_time", "snap_actual_role",
-      "snap_billing_name", "snap_status", "is_locked", "locked_at"
+    // CSV with user-friendly column headers
+    const csvColumns = [
+      { key: "log_date", label: "Date" },
+      { key: "ohr_id", label: "OHR" },
+      { key: "snap_full_name", label: "Agent" },
+      { key: "snap_supervisor", label: "FLM" },
+      { key: "snap_actual_role", label: "Role" },
+      { key: "snap_planning_group", label: "Planning Group" },
+      { key: "snap_shift_time", label: "Shift" },
+      { key: "snap_status", label: "Status" },
+      { key: "tag", label: "Tag" },
+      { key: "upl_reason", label: "UPL Reason" },
+      { key: "remarks", label: "Remarks" },
+      { key: "ot_hours", label: "OT Hours" },
+      { key: "snap_billing_name", label: "Billing" },
+      { key: "is_locked", label: "Locked" },
     ];
-
     const escapeCsv = (val: any): string => {
       if (val === null || val === undefined) return "";
       const str = String(val);
@@ -1425,14 +1467,13 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
       }
       return str;
     };
-
-    let csv = columns.join(",") + "\n";
+    let csv = csvColumns.map(c => escapeCsv(c.label)).join(",") + "\n";
     for (const row of rows) {
-      csv += columns.map(col => escapeCsv((row as any)[col])).join(",") + "\n";
+      csv += csvColumns.map(c => escapeCsv((row as any)[c.key])).join(",") + "\n";
     }
-
+    const today = new Date().toISOString().slice(0, 10);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", 'attachment; filename="attendance_export.csv"');
+    res.setHeader("Content-Disposition", `attachment; filename="playbook_export_${today}.csv"`);
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.send(csv);
   } catch (err: any) {
@@ -3185,7 +3226,7 @@ const ALL_PERMISSION_KEYS = [
   'nav.anchor', 'nav.compass', 'nav.haven', 'nav.sandbox', 'nav.horizon',
   'nav.helm', 'nav.regimen', 'nav.admin',
   'anchor.input_portal', 'anchor.dashboard', 'anchor.billing_compliance',
-  'anchor.risk_intelligence', 'anchor.sync_history',
+  'anchor.risk_intelligence',
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
   'helm.analytics',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.edit_employee', 'regimen.export_csv',
