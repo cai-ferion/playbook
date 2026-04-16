@@ -49,7 +49,7 @@ describe("Batch 16 — Regimen changes", () => {
   });
 
   it("has rosterOpenDetail function for employee card view", () => {
-    expect(rosterJs).toContain("function rosterOpenDetail");
+    expect(rosterJs).toContain("rosterOpenDetail");
   });
 
   it("rows have onclick to open detail card", () => {

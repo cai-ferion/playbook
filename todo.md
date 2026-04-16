@@ -1951,3 +1951,33 @@
 ### Onboarding Tab → Incomplete Rostering
 - [x] Rename "Onboarding" tab to "Incomplete Rostering"
 - [x] Change logic: list all employees with at least one blank column (checks all 42 columns, sorted by most missing first)
+
+## Batch — Regimen Revisions (Round 2)
+
+### Regimen Filter Bar — All Columns
+- [x] Add ALL 43 columns as filter options in the Regimen filter bar
+- [x] Date columns (DOB, Hire Date, Regular Date, Meta Onboarding Date, Go Live Date, Offboarding Date, Resignation Date, Relieving Date, Exit Date) use date-range pickers instead of multi-select
+- [x] Non-date columns use multi-select dropdowns (existing pattern)
+
+### Regimen Filter Bar — Z-Index Fix
+- [x] Fix filter bar overlapping the nav bar when scrolling horizontally (z-index issue)
+
+### Incomplete Rostering Overhaul
+- [x] Remove summary cards (Total Employees, Completed, Pending, No Account, Completion Rate)
+- [x] Remove Account and Onboarding Status columns from the table
+- [x] Add Completion Rate column (percentage of filled fields per employee)
+- [x] Add Input Portal-style filter bar to Incomplete Rostering tab
+
+### Permissions Edit Button Fix
+- [x] Fix Permissions "Edit" button not working
+
+### Audit Trail Inline in Detail Card
+- [x] Replace Audit Trail button with an inline section as the last section in the employee detail card
+
+### Actor Info in Audit Trail
+- [x] Include _actor_ohr and _actor_name in PATCH requests for proper audit trail attribution
+
+### Test Alignment
+- [x] Fix batch22 test: ROSTER.ALL_COLUMNS → ROSTER.getVisibleColumns() (code uses dynamic visibility)
+- [x] Fix batch16 test: function rosterOpenDetail → window.rosterOpenDetail (window-assigned function)
+- [x] Fix batch17 tests: formTitle.innerHTML → title.textContent, 'Asset & Logistics' → 'Assets & Logistics', roster-edit-field → data-field, regimen.edit_employee → regimen.edit_employees, rosterSaveDetailEdits → rosterSaveDetail

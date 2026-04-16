@@ -56,8 +56,8 @@ describe("Batch 17 — Revisions", () => {
   describe("Regimen Detail Card", () => {
     const rosterJs = fs.readFileSync(path.join(__dirname, "../server/public/js/roster.js"), "utf-8");
 
-    it("should have empty card title", () => {
-      expect(rosterJs).toContain("formTitle.innerHTML = ''");
+    it("should set detail card title with employee name", () => {
+      expect(rosterJs).toContain("title.textContent");
     });
 
     it("should have 'Related PG' instead of 'Complete PG'", () => {
@@ -70,8 +70,8 @@ describe("Batch 17 — Revisions", () => {
       expect(rosterJs).toContain("'Go Live Date'");
     });
 
-    it("should have 'Asset & Logistics' section", () => {
-      expect(rosterJs).toContain("'Asset & Logistics'");
+    it("should have 'Assets & Logistics' section", () => {
+      expect(rosterJs).toContain("'Assets & Logistics'");
     });
 
     it("should have 'Meta Onboarding Date' in Dates section", () => {
@@ -83,12 +83,12 @@ describe("Batch 17 — Revisions", () => {
     });
 
     it("should have editable fields (permission-driven via RBAC)", () => {
-      expect(rosterJs).toContain("roster-edit-field");
-      expect(rosterJs).toContain("regimen.edit_employee");
+      expect(rosterJs).toContain("data-field");
+      expect(rosterJs).toContain("regimen.edit_employees");
     });
 
-    it("should have rosterSaveDetailEdits function", () => {
-      expect(rosterJs).toContain("function rosterSaveDetailEdits");
+    it("should have rosterSaveDetail function", () => {
+      expect(rosterJs).toContain("rosterSaveDetail");
     });
   });
 

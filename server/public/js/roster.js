@@ -1,612 +1,524 @@
-/* ===== Regimen – Roster Management (Pill-based Filter, RBAC, Audit Trail) ===== */
+/* ============================================================
+   ROSTER.JS — Regimen module (Roster tab, Incomplete Rostering tab)
+   Pill-based filter bar with ALL 43 columns, date-range for date fields,
+   inline audit trail in detail card, CSV export, Incomplete Rostering
+   ============================================================ */
+
+'use strict';
+
+// ===== Utility =====
+function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escapeAttr(s) { return escapeHtml(s); }
+function formatSrtId(v) { if (v == null || v === '') return ''; return String(v).replace(/^0+/, '') || '0'; }
 
 // ===== Column Definitions =====
+const ALL_COLUMNS = [
+  { key: 'ohr_id', label: 'OHR ID', group: 'identity' },
+  { key: 'full_name', label: 'Full Name', group: 'identity' },
+  { key: 'last_name', label: 'Last Name', group: 'identity' },
+  { key: 'given_name', label: 'Given Name', group: 'identity' },
+  { key: 'middle_name', label: 'Middle Name', group: 'identity' },
+  { key: 'suffix', label: 'Suffix', group: 'identity' },
+  { key: 'billing_name', label: 'Billing Name', group: 'identity' },
+  { key: 'srt_name', label: 'SRT Name', group: 'identity' },
+  { key: 'dob', label: 'DOB', group: 'identity' },
+  { key: 'personal_email', label: 'Personal Email', group: 'identity' },
+  { key: 'contact_number', label: 'Contact Number', group: 'identity' },
+  { key: 'primary_address', label: 'Primary Address', group: 'identity' },
+  { key: 'barangay', label: 'Barangay', group: 'identity' },
+  { key: 'city', label: 'City', group: 'identity' },
+  { key: 'province', label: 'Province', group: 'identity' },
+  { key: 'employement_status', label: 'Status', group: 'role' },
+  { key: 'actual_role', label: 'Role', group: 'role' },
+  { key: 'supervisor', label: 'Supervisor', group: 'role' },
+  { key: 'supervisor_email', label: 'Supervisor Email', group: 'role' },
+  { key: 'shift_time', label: 'Shift Time', group: 'role' },
+  { key: 'work_off', label: 'Work Off', group: 'role' },
+  { key: 'planning_group', label: 'Planning Group', group: 'role' },
+  { key: 'related_planning_group', label: 'Related PG', group: 'role' },
+  { key: 'srt_status', label: 'SRT Status', group: 'role' },
+  { key: 'platform', label: 'Platform', group: 'role' },
+  { key: 'srt_id', label: 'SRT ID', group: 'system' },
+  { key: 'workday_id', label: 'Workday ID', group: 'system' },
+  { key: 'meta_email', label: 'Meta Email', group: 'system' },
+  { key: 'macbook_asset', label: 'MacBook Asset', group: 'asset' },
+  { key: 'chromebook_asset', label: 'Chromebook Asset', group: 'asset' },
+  { key: 'badge_id', label: 'Badge ID', group: 'asset' },
+  { key: 'badge_serial', label: 'Badge Serial', group: 'asset' },
+  { key: 'locker_floor', label: 'Locker Floor', group: 'asset' },
+  { key: 'locker_number', label: 'Locker Number', group: 'asset' },
+  { key: 'hire_date', label: 'Hire Date', group: 'dates', isDate: true },
+  { key: 'regular_date', label: 'Regular Date', group: 'dates', isDate: true },
+  { key: 'meta_onboarding_date', label: 'Meta Onboarding Date', group: 'dates', isDate: true },
+  { key: 'go_live_date', label: 'Go Live Date', group: 'dates', isDate: true },
+  { key: 'offboarding_date', label: 'Offboarding Date', group: 'attrition', isDate: true },
+  { key: 'resignation_date', label: 'Resignation Date', group: 'attrition', isDate: true },
+  { key: 'relieving_date', label: 'Relieving Date', group: 'attrition', isDate: true },
+  { key: 'exit_date', label: 'Exit Date', group: 'attrition', isDate: true },
+  { key: 'exit_reason', label: 'Exit Reason', group: 'attrition' }
+];
 
+// Limited columns for non-admin tiers
+const LIMITED_COLUMNS = [
+  'ohr_id','full_name','last_name','given_name','middle_name','suffix',
+  'employement_status','actual_role','supervisor','shift_time','work_off',
+  'planning_group','related_planning_group','srt_status','platform',
+  'srt_id','workday_id','meta_email','hire_date','regular_date',
+  'meta_onboarding_date','go_live_date'
+];
+
+// Date columns for date-range filter type
+const DATE_COLUMNS = ALL_COLUMNS.filter(c => c.isDate).map(c => c.key);
+
+// ===== State =====
 const ROSTER = {
   employees: [],
   filtered: [],
   page: 1,
-  pageSize: 50,
+  pageSize: 25,
+  tier: 'limited', // 'full' or 'limited'
   canEdit: false,
-  visibilityTier: 'limited', // 'limited' or 'full'
-  editingId: null,
-
-  LIMITED_COLUMNS: [
-    { key: 'ohr_id', label: 'OHR ID', group: 'Identity' },
-    { key: 'full_name', label: 'Full Name', group: 'Identity' },
-    { key: 'last_name', label: 'Last Name', group: 'Identity' },
-    { key: 'given_name', label: 'Given Name', group: 'Identity' },
-    { key: 'middle_name', label: 'Middle Name', group: 'Identity' },
-    { key: 'suffix', label: 'Suffix', group: 'Identity' },
-    { key: 'employement_status', label: 'Status', group: 'Identity' },
-    { key: 'actual_role', label: 'Role', group: 'Role & Assignment' },
-    { key: 'supervisor_name', label: 'Supervisor', group: 'Role & Assignment' },
-    { key: 'shift_time', label: 'Shift Time', group: 'Role & Assignment' },
-    { key: 'work_off', label: 'Work Off', group: 'Role & Assignment' },
-    { key: 'planning_group', label: 'Planning Group', group: 'Role & Assignment' },
-    { key: 'complete_planning_group', label: 'Related PG', group: 'Role & Assignment' },
-    { key: 'srt_status', label: 'SRT Status', group: 'Role & Assignment' },
-    { key: 'platform', label: 'Platform', group: 'Role & Assignment' },
-    { key: 'srt_id', label: 'SRT ID', group: 'System IDs' },
-    { key: 'workday_id', label: 'Workday ID', group: 'System IDs' },
-    { key: 'meta_email', label: 'Meta Email', group: 'System IDs' },
-    { key: 'hire_date', label: 'Hire Date', group: 'Dates' },
-    { key: 'regular_date', label: 'Regular Date', group: 'Dates' },
-    { key: 'meta_onboarding_date', label: 'Meta Onboarding Date', group: 'Dates' },
-    { key: 'live_date', label: 'Go Live Date', group: 'Dates' },
-  ],
-
-  ALL_COLUMNS: [
-    // Identity
-    { key: 'ohr_id', label: 'OHR ID', group: 'Identity' },
-    { key: 'full_name', label: 'Full Name', group: 'Identity' },
-    { key: 'last_name', label: 'Last Name', group: 'Identity' },
-    { key: 'given_name', label: 'Given Name', group: 'Identity' },
-    { key: 'middle_name', label: 'Middle Name', group: 'Identity' },
-    { key: 'suffix', label: 'Suffix', group: 'Identity' },
-    { key: 'employement_status', label: 'Status', group: 'Identity' },
-    // Personal Info
-    { key: 'dob', label: 'Date of Birth', group: 'Personal Info' },
-    { key: 'personal_email', label: 'Personal Email', group: 'Personal Info' },
-    { key: 'contact_number', label: 'Contact Number', group: 'Personal Info' },
-    { key: 'primary_address', label: 'Primary Address', group: 'Personal Info' },
-    { key: 'barangay', label: 'Barangay', group: 'Personal Info' },
-    { key: 'city', label: 'City', group: 'Personal Info' },
-    { key: 'province', label: 'Province', group: 'Personal Info' },
-    // Role & Assignment
-    { key: 'actual_role', label: 'Role', group: 'Role & Assignment' },
-    { key: 'supervisor_name', label: 'Supervisor', group: 'Role & Assignment' },
-    { key: 'shift_time', label: 'Shift Time', group: 'Role & Assignment' },
-    { key: 'work_off', label: 'Work Off', group: 'Role & Assignment' },
-    { key: 'planning_group', label: 'Planning Group', group: 'Role & Assignment' },
-    { key: 'complete_planning_group', label: 'Related PG', group: 'Role & Assignment' },
-    { key: 'srt_status', label: 'SRT Status', group: 'Role & Assignment' },
-    { key: 'platform', label: 'Platform', group: 'Role & Assignment' },
-    // System IDs
-    { key: 'srt_id', label: 'SRT ID', group: 'System IDs' },
-    { key: 'workday_id', label: 'Workday ID', group: 'System IDs' },
-    { key: 'meta_email', label: 'Meta Email', group: 'System IDs' },
-    { key: 'macbook_asset_id', label: 'MacBook Asset', group: 'System IDs' },
-    { key: 'chromebook_asset_id', label: 'Chromebook Asset', group: 'System IDs' },
-    { key: 'badge_id', label: 'Badge ID', group: 'System IDs' },
-    { key: 'badge_serial', label: 'Badge Serial', group: 'System IDs' },
-    // Asset & Logistics
-    { key: 'locker_floor', label: 'Locker Floor', group: 'Asset & Logistics' },
-    { key: 'locker_number', label: 'Locker Number', group: 'Asset & Logistics' },
-    // Dates
-    { key: 'hire_date', label: 'Hire Date', group: 'Dates' },
-    { key: 'regular_date', label: 'Regular Date', group: 'Dates' },
-    { key: 'meta_onboarding_date', label: 'Meta Onboarding Date', group: 'Dates' },
-    { key: 'live_date', label: 'Go Live Date', group: 'Dates' },
-    // Attrition
-    { key: 'offboarding_date', label: 'Offboarding Date', group: 'Attrition' },
-    { key: 'resignation_date', label: 'Resignation Date', group: 'Attrition' },
-    { key: 'relieving_date', label: 'Relieving Date', group: 'Attrition' },
-    { key: 'exit_date', label: 'Exit Date', group: 'Attrition' },
-    { key: 'exit_reason', label: 'Exit Reason', group: 'Attrition' },
-  ],
-
+  sortKey: null,
+  sortDir: 'asc',
+  filters: {},       // key -> { values: [...] } for multi, { startDate, endDate } for date_range
+  searchQuery: '',
+  ALL_COLUMNS: ALL_COLUMNS,
   getVisibleColumns() {
-    return this.visibilityTier === 'full' ? this.ALL_COLUMNS : this.LIMITED_COLUMNS;
-  },
-
-  FORM_COLUMNS: [
-    { key: 'ohr_id', label: 'OHR ID' },
-    { key: 'full_name', label: 'Full Name' },
-    { key: 'actual_role', label: 'Role' },
-    { key: 'planning_group', label: 'Planning Group' },
-    { key: 'complete_planning_group', label: 'Related PG' },
-    { key: 'supervisor_name', label: 'Supervisor' },
-    { key: 'meta_email', label: 'Meta Email' },
-    { key: 'employement_status', label: 'Status' },
-    { key: 'srt_status', label: 'SRT Status' },
-  ]
+    if (this.tier === 'full') return ALL_COLUMNS;
+    return ALL_COLUMNS.filter(c => LIMITED_COLUMNS.includes(c.key));
+  }
 };
 
-// ===== Pill-based Filter State =====
-// Expanded to cover all filterable columns
-
-const ROSTER_FILTER_FIELDS = [
-  // Primary filters (always visible)
-  { key: 'employement_status', label: 'Status', type: 'multi', recordKey: 'employement_status' },
-  { key: 'actual_role', label: 'Role', type: 'multi', recordKey: 'actual_role' },
-  { key: 'planning_group', label: 'Planning Group', type: 'multi', recordKey: 'planning_group', searchable: true, sortable: true },
-  { key: 'supervisor_name', label: 'Supervisor', type: 'multi', recordKey: 'supervisor_name', searchable: true, sortable: true },
-  { key: 'shift_time', label: 'Shift Time', type: 'multi', recordKey: 'shift_time' },
-  { key: 'srt_status', label: 'SRT Status', type: 'multi', recordKey: 'srt_status' },
-  { key: 'platform', label: 'Platform', type: 'multi', recordKey: 'platform' },
-  { key: 'work_off', label: 'Work Off', type: 'multi', recordKey: 'work_off' },
-  { key: 'city', label: 'City', type: 'multi', recordKey: 'city', searchable: true },
-  { key: 'province', label: 'Province', type: 'multi', recordKey: 'province', searchable: true },
-  { key: 'barangay', label: 'Barangay', type: 'multi', recordKey: 'barangay', searchable: true },
-  { key: 'complete_planning_group', label: 'Related PG', type: 'multi', recordKey: 'complete_planning_group', searchable: true },
-  { key: 'exit_reason', label: 'Exit Reason', type: 'multi', recordKey: 'exit_reason' },
-  { key: 'locker_floor', label: 'Locker Floor', type: 'multi', recordKey: 'locker_floor' },
-  { key: 'search', label: 'Search', type: 'text' },
-];
-
-const rosterFilterState = {
-  filters: {},
-  sort: null,
-  openPill: null,
-};
-
-let _rosterOutsideListener = null;
-let _rosterApplyDebounce = null;
-
-// ===== Permissions =====
-
-function rosterDeterminePermissions() {
-  if (!currentUser) {
-    ROSTER.canEdit = false;
-    ROSTER.visibilityTier = 'limited';
-    return;
-  }
-
-  const p = currentUser.permissions || {};
-  const role = currentUser.actual_role;
-
-  // Editability: DB-driven via regimen.edit_employee permission
-  ROSTER.canEdit = !!p['regimen.edit_employee'];
-
-  // Visibility tier: Managers or users with onboarding/permissions tab access get full
-  if (role === 'Manager' || p['regimen.onboarding_tab'] || p['regimen.permissions_tab']) {
-    ROSTER.visibilityTier = 'full';
-  } else {
-    ROSTER.visibilityTier = 'limited';
-  }
+// ===== Filter Definitions =====
+// Build filter fields from ALL_COLUMNS: multi-select for text, date_range for dates, search for text search
+function buildFilterFields() {
+  const fields = [];
+  const visibleCols = ROSTER.getVisibleColumns();
+  visibleCols.forEach(col => {
+    if (col.key === 'ohr_id' || col.key === 'full_name') return; // handled by search
+    if (col.isDate) {
+      fields.push({ key: col.key, label: col.label, type: 'date_range' });
+    } else {
+      fields.push({ key: col.key, label: col.label, type: 'multi' });
+    }
+  });
+  fields.push({ key: '_search', label: 'Search', type: 'search' });
+  return fields;
 }
-
-// ===== Data Fetching =====
-
-async function rosterFetchEmployees() {
-  const loading = document.getElementById('roster-loading');
-  if (loading) loading.style.display = 'flex';
-
-  try {
-    const url = `${IO_API_BASE}/employees?limit=3000`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('Failed to fetch roster');
-    ROSTER.employees = await resp.json();
-  } catch (e) {
-    console.error('Roster fetch error:', e);
-    ROSTER.employees = [];
-  }
-
-  if (loading) loading.style.display = 'none';
-
-  rosterDeterminePermissions();
-
-  // Show/hide add button — editors only
-  const addBtn = document.getElementById('roster-add-btn');
-  if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
-
-  // Show/hide onboarding tab — permission-driven
-  const onboardingTab = document.getElementById('regimen-tab-onboarding');
-  if (onboardingTab) {
-    const p = currentUser ? (currentUser.permissions || {}) : {};
-    onboardingTab.style.display = p['regimen.onboarding_tab'] ? '' : 'none';
-  }
-
-  // Show/hide permissions tab — permission-driven
-  const permissionsTab = document.getElementById('regimen-tab-permissions');
-  if (permissionsTab) {
-    const p2 = currentUser ? (currentUser.permissions || {}) : {};
-    permissionsTab.style.display = p2['regimen.permissions_tab'] ? '' : 'none';
-  }
-
-  rosterRenderFilterBar();
-  rosterApplyFilters();
-}
-
-// ===== Pill-based Filter Bar =====
 
 function rosterGetAllValues(field) {
-  return [...new Set(ROSTER.employees.map(r => r[field.recordKey]).filter(Boolean))].sort();
+  const vals = new Set();
+  ROSTER.employees.forEach(emp => {
+    const v = emp[field.key];
+    if (v != null && String(v).trim() !== '') vals.add(String(v).trim());
+  });
+  return Array.from(vals).sort((a, b) => a.localeCompare(b));
 }
 
 function rosterGetFilterSummary(field) {
-  const f = rosterFilterState.filters[field.key];
-  if (!f) return 'All';
-  if (field.type === 'text') return f.value || 'All';
+  const f = ROSTER.filters[field.key];
+  if (field.type === 'search') {
+    return ROSTER.searchQuery || 'All';
+  }
+  if (field.type === 'date_range') {
+    if (!f) return 'All';
+    const fmt = typeof formatDateDisplay === 'function' ? formatDateDisplay : function(d) { return d; };
+    return fmt(f.startDate) + ' – ' + fmt(f.endDate);
+  }
+  if (!f || !f.values) return 'All';
   const allValues = rosterGetAllValues(field);
-  if (!f.values || f.values.length === 0) return 'None';
+  if (f.values.length === 0) return 'None';
   if (f.values.length === allValues.length) return 'All';
   if (f.values.length === 1) return f.values[0];
   return f.values.length + ' selected';
 }
 
 function rosterIsFiltered(field) {
-  const f = rosterFilterState.filters[field.key];
+  if (field.type === 'search') return ROSTER.searchQuery.length > 0;
+  const f = ROSTER.filters[field.key];
   if (!f) return false;
-  if (field.type === 'text') return !!f.value;
+  if (field.type === 'date_range') return true;
   const allValues = rosterGetAllValues(field);
-  return f.values && f.values.length > 0 && f.values.length < allValues.length;
+  return f.values && f.values.length < allValues.length;
 }
 
-function rosterGetVisibleFilterFields() {
-  // For limited tier, hide personal-info and attrition-related filters
-  if (ROSTER.visibilityTier === 'limited') {
-    const limitedHide = ['province', 'barangay', 'exit_reason', 'locker_floor'];
-    return ROSTER_FILTER_FIELDS.filter(f => !limitedHide.includes(f.key));
-  }
-  return ROSTER_FILTER_FIELDS;
+// ===== Filter Bar Rendering =====
+let _rosterFilterFields = [];
+let _rosterDebounceTimer = null;
+
+function rosterDebouncedApply() {
+  clearTimeout(_rosterDebounceTimer);
+  _rosterDebounceTimer = setTimeout(() => {
+    rosterApplyFilters();
+    rosterRenderTable();
+  }, 300);
 }
 
 function rosterRenderFilterBar() {
+  _rosterFilterFields = buildFilterFields();
   const container = document.getElementById('roster-filter-pills');
   if (!container) return;
 
-  const visibleFields = rosterGetVisibleFilterFields();
   let html = '';
-  for (const field of visibleFields) {
+  _rosterFilterFields.forEach(field => {
     const summary = rosterGetFilterSummary(field);
     const isActive = rosterIsFiltered(field);
-    const hasSort = rosterFilterState.sort && rosterFilterState.sort.key === field.key;
-    const isOpen = rosterFilterState.openPill === field.key;
 
-    let pillClass = 'filter-pill';
-    if (isActive) pillClass += ' active';
-    if (hasSort) pillClass += ' has-sort';
-    if (isOpen) pillClass += ' open';
-    const sortIcon = hasSort ? (rosterFilterState.sort.direction === 'asc' ? ' ▲' : ' ▼') : '';
-    html += '<div class="' + pillClass + '" id="roster-pill-' + field.key + '" onclick="event.stopPropagation(); rosterTogglePill(\'' + field.key + '\')">'
-      + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span>'
-      + '<span class="filter-pill-value">' + escapeHtml(summary) + sortIcon + '</span>'
+    if (field.type === 'search') {
+      html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
+        + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
+        + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
+        + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
+        + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
+        + '</div>';
+      return;
+    }
+
+    html += '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="roster-pill-' + field.key + '" onclick="rosterToggleDropdown(\'' + field.key + '\')">'
+      + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span> '
+      + '<span class="filter-pill-value">' + escapeHtml(summary) + '</span>'
       + '<span class="filter-pill-icon">▾</span>'
-      + '<div class="filter-dropdown' + (isOpen ? ' open' : '') + '" id="roster-dd-' + field.key + '" onclick="event.stopPropagation();"></div>'
+      + '<div class="filter-dropdown" id="roster-dd-' + field.key + '"></div>'
       + '</div>';
-  }
-  // Clear Filters button
-  html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Reset all filters">'
-    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-    + ' Clear'
-    + '</button>';
+  });
+
+  // Clear filters button
+  html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters">✕ Clear</button>';
+
   // Record count
-  var curEl = document.getElementById('roster-record-count');
-  var curText = curEl ? curEl.textContent : 'Records: 0';
-  html += '<span class="filter-bar-meta" id="roster-record-count">' + curText + '</span>';
+  html += '<span class="filter-bar-meta" id="roster-filter-count"></span>';
+
   container.innerHTML = html;
 }
 
-// ===== Toggle pill dropdown =====
-
-window.rosterTogglePill = function (key) {
-  if (rosterFilterState.openPill === key) {
-    rosterClosePill();
-    return;
-  }
-  rosterFilterState.openPill = key;
-  rosterRenderFilterBar();
-  rosterRenderDropdown(key);
-  _attachRosterOutsideClick();
-};
-
-function rosterClosePill() {
-  rosterFilterState.openPill = null;
-  rosterRenderFilterBar();
-  _detachRosterOutsideClick();
-}
-
-// ===== Render dropdown content =====
-
-function rosterRenderDropdown(key) {
-  const field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
-  if (!field) return;
+function rosterToggleDropdown(key) {
   const dd = document.getElementById('roster-dd-' + key);
-  if (!dd) return;
-  dd.classList.add('open');
+  const pill = document.getElementById('roster-pill-' + key);
+  if (!dd || !pill) return;
 
-  if (field.type === 'text') {
-    rosterRenderTextDropdown(dd, field);
-    return;
+  const wasOpen = dd.classList.contains('open');
+
+  // Close all dropdowns first
+  document.querySelectorAll('#roster-filter-pills .filter-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    d.parentElement.classList.remove('open');
+  });
+
+  if (wasOpen) return;
+
+  dd.classList.add('open');
+  pill.classList.add('open');
+
+  const field = _rosterFilterFields.find(f => f.key === key);
+  if (!field) return;
+
+  if (field.type === 'date_range') {
+    rosterRenderDateDropdown(dd, field);
+  } else {
+    rosterRenderMultiDropdown(dd, field);
   }
-  rosterRenderMultiDropdown(dd, field);
+
+  // Prevent closing when clicking inside dropdown
+  dd.onclick = function(e) { e.stopPropagation(); };
 }
 
-function rosterRenderTextDropdown(dd, field) {
-  var f = rosterFilterState.filters[field.key];
-  var curVal = f ? f.value : '';
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.filter-pill')) {
+    document.querySelectorAll('#roster-filter-pills .filter-dropdown.open').forEach(d => {
+      d.classList.remove('open');
+      d.parentElement.classList.remove('open');
+    });
+    // Also close IR dropdowns
+    document.querySelectorAll('#ir-filter-pills .filter-dropdown.open').forEach(d => {
+      d.classList.remove('open');
+      d.parentElement.classList.remove('open');
+    });
+  }
+});
+
+function rosterRenderDateDropdown(dd, field) {
+  const f = ROSTER.filters[field.key];
+  const startVal = f ? f.startDate : '';
+  const endVal = f ? f.endDate : '';
+
+  const curSort = ROSTER.sortKey === field.key;
+  const isAsc = curSort && ROSTER.sortDir === 'asc';
+  const isDesc = curSort && ROSTER.sortDir === 'desc';
+
   dd.innerHTML = '<div class="filter-dropdown-header">'
     + '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>'
+    + '<div class="filter-dropdown-sort">'
+    + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'asc\')" title="Oldest first">Old↑</button>'
+    + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'desc\')" title="Newest first">New↓</button>'
     + '</div>'
-    + '<div style="padding:8px 12px;">'
-    + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Type to search name/OHR/email..." value="' + escapeAttr(curVal) + '" style="width:100%;">'
-    + '</div>';
+    + '</div>'
+    + '<div class="filter-date-row">'
+    + '<div class="filter-group"><label>Start</label>'
+    + '<input type="date" class="form-input form-input-sm" id="roster-date-start-' + field.key + '" value="' + startVal + '">'
+    + '</div>'
+    + '<div class="filter-group"><label>End</label>'
+    + '<input type="date" class="form-input form-input-sm" id="roster-date-end-' + field.key + '" value="' + endVal + '">'
+    + '</div>'
+    + '</div>'
+    + '<div style="padding:4px 12px 8px;"><button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();rosterClearDateFilter(\'' + field.key + '\')">Clear Date</button></div>';
+
   setTimeout(function() {
-    var inp = document.getElementById('roster-search-input');
-    if (inp) {
-      inp.focus();
-      inp.addEventListener('input', function() {
-        var val = inp.value.trim();
-        if (val) {
-          rosterFilterState.filters[field.key] = { key: field.key, label: field.label, type: 'text', value: val };
-        } else {
-          delete rosterFilterState.filters[field.key];
-        }
-        var pill = document.getElementById('roster-pill-' + field.key);
-        if (pill) {
-          var valSpan = pill.querySelector('.filter-pill-value');
-          if (valSpan) valSpan.textContent = val || 'All';
-          if (val) pill.classList.add('active'); else pill.classList.remove('active');
-        }
-        rosterDebouncedApply();
-      });
-    }
+    const startEl = document.getElementById('roster-date-start-' + field.key);
+    const endEl = document.getElementById('roster-date-end-' + field.key);
+    if (startEl) startEl.addEventListener('change', function() { rosterOnDateChange(field.key); });
+    if (endEl) endEl.addEventListener('change', function() { rosterOnDateChange(field.key); });
   }, 30);
 }
 
-function rosterRenderMultiDropdown(dd, field) {
-  var values = rosterGetAllValues(field);
-  var f = rosterFilterState.filters[field.key];
-  var selectedSet = new Set(f ? f.values : values);
-  var searchable = field.searchable || values.length > 15;
-
-  var html = '<div class="filter-dropdown-header">';
-  html += '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>';
-  if (field.sortable) {
-    var isAsc = rosterFilterState.sort && rosterFilterState.sort.key === field.key && rosterFilterState.sort.direction === 'asc';
-    var isDesc = rosterFilterState.sort && rosterFilterState.sort.key === field.key && rosterFilterState.sort.direction === 'desc';
-    html += '<div class="filter-dropdown-sort">'
-      + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'asc\')" title="Sort A→Z">A↑</button>'
-      + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'desc\')" title="Sort Z→A">Z↓</button>'
-      + '</div>';
-  }
-  html += '</div>';
-  if (searchable) {
-    html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" id="roster-dd-search-' + field.key + '" placeholder="Search..." oninput="rosterFilterDropdownSearch(\'' + field.key + '\')"></div>';
-  }
-  html += '<div class="filter-dropdown-actions">'
-    + '<button class="filter-action-link" onclick="event.stopPropagation(); rosterSelectAll(\'' + field.key + '\')">Select All</button>'
-    + '<button class="filter-action-link" onclick="event.stopPropagation(); rosterDeselectAll(\'' + field.key + '\')" style="color:#DC2626;">Deselect All</button>'
-    + '</div>';
-  html += '<div class="filter-dropdown-list" id="roster-dd-list-' + field.key + '">';
-  for (var i = 0; i < values.length; i++) {
-    var v = values[i];
-    var checked = selectedSet.has(v) ? 'checked' : '';
-    html += '<label class="filter-dropdown-item"><input type="checkbox" value="' + escapeAttr(v) + '" ' + checked + ' onchange="rosterOnCheckboxChange(\'' + field.key + '\')"><span>' + escapeHtml(v) + '</span></label>';
-  }
-  html += '</div>';
-  dd.innerHTML = html;
-  if (searchable) {
-    setTimeout(function() {
-      var si = document.getElementById('roster-dd-search-' + field.key);
-      if (si) si.focus();
-    }, 50);
-  }
-}
-
-// ===== Checkbox / sort handlers =====
-
-window.rosterOnCheckboxChange = function (key) {
-  var field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
-  if (!field) return;
-  var listEl = document.getElementById('roster-dd-list-' + key);
-  if (!listEl) return;
-  var checked = [];
-  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { checked.push(cb.value); });
-  var allValues = rosterGetAllValues(field);
-  if (checked.length === allValues.length) {
-    delete rosterFilterState.filters[key];
-  } else {
-    rosterFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey };
-  }
-  var pill = document.getElementById('roster-pill-' + key);
+window.rosterClearDateFilter = function(key) {
+  delete ROSTER.filters[key];
+  const pill = document.getElementById('roster-pill-' + key);
   if (pill) {
-    var valSpan = pill.querySelector('.filter-pill-value');
-    if (valSpan) {
-      var sortIcon = (rosterFilterState.sort && rosterFilterState.sort.key === key)
-        ? (rosterFilterState.sort.direction === 'asc' ? ' ▲' : ' ▼') : '';
-      valSpan.textContent = rosterGetFilterSummary(field) + sortIcon;
-    }
-    if (rosterIsFiltered(field)) pill.classList.add('active'); else pill.classList.remove('active');
+    const valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = 'All';
+    pill.classList.remove('active');
   }
   rosterDebouncedApply();
 };
 
-window.rosterSetSort = function (key, direction) {
-  var curSort = rosterFilterState.sort;
-  if (curSort && curSort.key === key && curSort.direction === direction) {
-    rosterFilterState.sort = null;
-  } else {
-    rosterFilterState.sort = { key: key, direction: direction };
-  }
-  var wasOpen = rosterFilterState.openPill;
-  rosterRenderFilterBar();
-  if (wasOpen) {
-    rosterFilterState.openPill = wasOpen;
-    rosterRenderFilterBar();
-    rosterRenderDropdown(wasOpen);
-  }
-  rosterDebouncedApply();
-};
-
-window.rosterSelectAll = function (key) {
-  var listEl = document.getElementById('roster-dd-list-' + key);
-  if (!listEl) return;
-  listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
-    if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true;
-  });
-  delete rosterFilterState.filters[key];
-  var field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
-  if (field) {
-    var pill = document.getElementById('roster-pill-' + key);
-    if (pill) {
-      var valSpan = pill.querySelector('.filter-pill-value');
-      if (valSpan) valSpan.textContent = 'All';
-      pill.classList.remove('active');
-    }
-  }
-  rosterDebouncedApply();
-};
-
-window.rosterDeselectAll = function (key) {
-  var listEl = document.getElementById('roster-dd-list-' + key);
-  if (!listEl) return;
-  listEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
-    if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false;
-  });
-  var stillChecked = [];
-  listEl.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) { stillChecked.push(cb.value); });
-  var field = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === key; });
-  rosterFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: stillChecked, recordKey: field.recordKey };
-  var pill = document.getElementById('roster-pill-' + key);
-  if (pill) {
-    var valSpan = pill.querySelector('.filter-pill-value');
-    if (valSpan) valSpan.textContent = stillChecked.length === 0 ? 'None' : stillChecked.length + ' selected';
+function rosterOnDateChange(key) {
+  const start = (document.getElementById('roster-date-start-' + key) || {}).value || '';
+  const end = (document.getElementById('roster-date-end-' + key) || {}).value || '';
+  if (!start && !end) { delete ROSTER.filters[key]; rosterDebouncedApply(); return; }
+  if (start && end && start > end) { showToast('Start date cannot be after end date', 'info'); return; }
+  ROSTER.filters[key] = { startDate: start || '', endDate: end || '' };
+  // Update pill
+  const field = _rosterFilterFields.find(f => f.key === key);
+  const pill = document.getElementById('roster-pill-' + key);
+  if (pill && field) {
+    const valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = rosterGetFilterSummary(field);
     pill.classList.add('active');
   }
   rosterDebouncedApply();
-};
+}
 
-window.rosterFilterDropdownSearch = function (key) {
-  var searchEl = document.getElementById('roster-dd-search-' + key);
-  var listEl = document.getElementById('roster-dd-list-' + key);
-  if (!searchEl || !listEl) return;
-  var q = searchEl.value.toLowerCase();
-  listEl.querySelectorAll('.filter-dropdown-item').forEach(function(item) {
-    var text = item.textContent.toLowerCase();
-    item.style.display = text.includes(q) ? '' : 'none';
+function rosterRenderMultiDropdown(dd, field) {
+  const values = rosterGetAllValues(field);
+  const f = ROSTER.filters[field.key];
+  const selected = f ? f.values : values.slice(); // default: all selected
+
+  const curSort = ROSTER.sortKey === field.key;
+  const isAsc = curSort && ROSTER.sortDir === 'asc';
+  const isDesc = curSort && ROSTER.sortDir === 'desc';
+
+  let html = '<div class="filter-dropdown-header">'
+    + '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>'
+    + '<div class="filter-dropdown-sort">'
+    + '<button class="filter-sort-btn ' + (isAsc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'asc\')" title="A→Z">A↑</button>'
+    + '<button class="filter-sort-btn ' + (isDesc ? 'active-sort' : '') + '" onclick="event.stopPropagation(); rosterSetSort(\'' + field.key + '\', \'desc\')" title="Z→A">Z↓</button>'
+    + '</div></div>';
+
+  html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" placeholder="Search..." oninput="rosterFilterDropdownSearch(this,\'' + field.key + '\')"></div>';
+
+  html += '<div class="filter-dropdown-actions">'
+    + '<button class="filter-action-link" onclick="event.stopPropagation();rosterSelectAll(\'' + field.key + '\')">Select All</button>'
+    + '<button class="filter-action-link" onclick="event.stopPropagation();rosterDeselectAll(\'' + field.key + '\')">Deselect All</button>'
+    + '</div>';
+
+  html += '<div class="filter-dropdown-list" id="roster-dd-list-' + field.key + '">';
+  values.forEach(v => {
+    const checked = selected.includes(v) ? 'checked' : '';
+    html += '<label class="filter-dropdown-item" data-value="' + escapeAttr(v.toLowerCase()) + '">'
+      + '<input type="checkbox" ' + checked + ' onchange="rosterOnCheckChange(\'' + field.key + '\')">'
+      + '<span>' + escapeHtml(v) + '</span></label>';
+  });
+  html += '</div>';
+
+  dd.innerHTML = html;
+}
+
+window.rosterFilterDropdownSearch = function(input, key) {
+  const q = input.value.toLowerCase();
+  const list = document.getElementById('roster-dd-list-' + key);
+  if (!list) return;
+  list.querySelectorAll('.filter-dropdown-item').forEach(item => {
+    const val = item.getAttribute('data-value') || '';
+    item.style.display = val.includes(q) ? '' : 'none';
   });
 };
 
-// ===== Clear all =====
-
-window.rosterClearAllFilters = function () {
-  rosterClosePill();
-  rosterFilterState.filters = {};
-  rosterFilterState.sort = null;
-  rosterRenderFilterBar();
-  rosterApplyNow();
+window.rosterSelectAll = function(key) {
+  const list = document.getElementById('roster-dd-list-' + key);
+  if (!list) return;
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true; });
+  rosterOnCheckChange(key);
 };
 
-// ===== Apply (instant, debounced) =====
+window.rosterDeselectAll = function(key) {
+  const list = document.getElementById('roster-dd-list-' + key);
+  if (!list) return;
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false; });
+  rosterOnCheckChange(key);
+};
 
-function rosterDebouncedApply() {
-  clearTimeout(_rosterApplyDebounce);
-  _rosterApplyDebounce = setTimeout(rosterApplyNow, 200);
-}
-
-function rosterApplyNow() {
-  rosterApplyFilters();
-}
-
-// ===== Outside click =====
-
-function _attachRosterOutsideClick() {
-  if (_rosterOutsideListener) return;
-  setTimeout(function() {
-    _rosterOutsideListener = function(e) {
-      var bar = document.getElementById('roster-filter-bar');
-      if (bar && bar.contains(e.target)) return;
-      rosterClosePill();
-    };
-    document.addEventListener('mousedown', _rosterOutsideListener);
-  }, 10);
-}
-
-function _detachRosterOutsideClick() {
-  if (_rosterOutsideListener) {
-    document.removeEventListener('mousedown', _rosterOutsideListener);
-    _rosterOutsideListener = null;
-  }
-}
-
-// ===== Apply Filters =====
-
-function rosterApplyFilters() {
-  let data = [...ROSTER.employees];
-
-  var keys = Object.keys(rosterFilterState.filters);
-  for (var ki = 0; ki < keys.length; ki++) {
-    var f = rosterFilterState.filters[keys[ki]];
-    if (f.type === 'text') {
-      var q = (f.value || '').toLowerCase();
-      if (q) {
-        data = data.filter(e =>
-          (e.full_name || '').toLowerCase().includes(q) ||
-          (e.ohr_id || '').toLowerCase().includes(q) ||
-          (e.meta_email || '').toLowerCase().includes(q)
-        );
-      }
-    } else if (f.type === 'multi') {
-      if (!f.values || f.values.length === 0) {
-        data = [];
-        break;
-      }
-      var rk = f.recordKey;
-      var vs = f.values;
-      data = data.filter(function(e) { return vs.includes(e[rk]); });
+window.rosterOnCheckChange = function(key) {
+  const list = document.getElementById('roster-dd-list-' + key);
+  if (!list) return;
+  const selected = [];
+  list.querySelectorAll('.filter-dropdown-item').forEach(item => {
+    const cb = item.querySelector('input[type="checkbox"]');
+    if (cb && cb.checked) {
+      selected.push(item.querySelector('span').textContent);
     }
+  });
+  const allValues = rosterGetAllValues({ key });
+  if (selected.length === allValues.length) {
+    delete ROSTER.filters[key]; // all = no filter
+  } else {
+    ROSTER.filters[key] = { values: selected };
+  }
+  // Update pill
+  const field = _rosterFilterFields.find(f => f.key === key);
+  const pill = document.getElementById('roster-pill-' + key);
+  if (pill && field) {
+    const valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = rosterGetFilterSummary(field);
+    pill.classList.toggle('active', rosterIsFiltered(field));
+  }
+  rosterDebouncedApply();
+};
+
+window.rosterSetSort = function(key, dir) {
+  if (ROSTER.sortKey === key && ROSTER.sortDir === dir) {
+    ROSTER.sortKey = null;
+    ROSTER.sortDir = 'asc';
+  } else {
+    ROSTER.sortKey = key;
+    ROSTER.sortDir = dir;
+  }
+  rosterApplyFilters();
+  rosterRenderTable();
+  // Re-render the dropdown to update sort button state
+  const dd = document.getElementById('roster-dd-' + key);
+  const field = _rosterFilterFields.find(f => f.key === key);
+  if (dd && field && dd.classList.contains('open')) {
+    if (field.type === 'date_range') rosterRenderDateDropdown(dd, field);
+    else rosterRenderMultiDropdown(dd, field);
+  }
+  // Update all pill sort indicators
+  _rosterFilterFields.forEach(f => {
+    const p = document.getElementById('roster-pill-' + f.key);
+    if (p) p.classList.toggle('has-sort', ROSTER.sortKey === f.key);
+  });
+};
+
+window.rosterClearAllFilters = function() {
+  ROSTER.filters = {};
+  ROSTER.searchQuery = '';
+  ROSTER.sortKey = null;
+  ROSTER.sortDir = 'asc';
+  const searchInput = document.getElementById('roster-search-input');
+  if (searchInput) searchInput.value = '';
+  rosterRenderFilterBar();
+  rosterApplyFilters();
+  rosterRenderTable();
+};
+
+// ===== Filter Application =====
+function rosterApplyFilters() {
+  let data = ROSTER.employees.slice();
+
+  // Text search
+  if (ROSTER.searchQuery) {
+    const q = ROSTER.searchQuery.toLowerCase();
+    data = data.filter(emp =>
+      (emp.ohr_id || '').toLowerCase().includes(q) ||
+      (emp.full_name || '').toLowerCase().includes(q) ||
+      (emp.last_name || '').toLowerCase().includes(q) ||
+      (emp.given_name || '').toLowerCase().includes(q)
+    );
   }
 
-  // Apply sort
-  if (rosterFilterState.sort) {
-    var sk = rosterFilterState.sort.key;
-    var dir = rosterFilterState.sort.direction;
-    var sortField = ROSTER_FILTER_FIELDS.find(function(f) { return f.key === sk; });
-    var sortKey = sortField ? (sortField.recordKey || sk) : sk;
-    data.sort(function(a, b) {
-      var va = (a[sortKey] || '').toString().toLowerCase();
-      var vb = (b[sortKey] || '').toString().toLowerCase();
-      var cmp = va.localeCompare(vb);
-      return dir === 'asc' ? cmp : -cmp;
+  // Apply each filter
+  Object.keys(ROSTER.filters).forEach(key => {
+    const f = ROSTER.filters[key];
+    if (!f) return;
+
+    if (f.startDate !== undefined || f.endDate !== undefined) {
+      // Date range filter
+      data = data.filter(emp => {
+        const val = emp[key];
+        if (!val) return false;
+        const d = String(val).slice(0, 10);
+        if (f.startDate && d < f.startDate) return false;
+        if (f.endDate && d > f.endDate) return false;
+        return true;
+      });
+    } else if (f.values) {
+      // Multi-select filter
+      data = data.filter(emp => {
+        const val = emp[key];
+        if (val == null || String(val).trim() === '') return f.values.includes('');
+        return f.values.includes(String(val).trim());
+      });
+    }
+  });
+
+  // Sort
+  if (ROSTER.sortKey) {
+    const sk = ROSTER.sortKey;
+    const dir = ROSTER.sortDir === 'desc' ? -1 : 1;
+    data.sort((a, b) => {
+      const va = a[sk] || '';
+      const vb = b[sk] || '';
+      return String(va).localeCompare(String(vb)) * dir;
     });
   }
 
   ROSTER.filtered = data;
   ROSTER.page = 1;
 
-  const countEl = document.getElementById('roster-record-count');
-  if (countEl) countEl.textContent = `Records: ${data.length}`;
-
-  rosterRenderTable();
+  // Update count
+  const countEl = document.getElementById('roster-filter-count');
+  if (countEl) countEl.textContent = data.length + ' of ' + ROSTER.employees.length;
 }
 
-// Backward compat stubs
-function rosterPopulateFilters() {}
-function rosterOmnibarOpenMenu() {}
-function rosterOmnibarCloseMenu() {}
-function rosterOmnibarClearAll() { rosterClearAllFilters(); }
-function rosterRenderOmniChips() {}
-function rosterRenderOmniMenu() {}
-
 // ===== Table Rendering =====
-
 function rosterRenderTable() {
   const thead = document.getElementById('roster-table-head');
   const tbody = document.getElementById('roster-table-body');
   if (!thead || !tbody) return;
 
   const cols = ROSTER.getVisibleColumns();
+  const data = ROSTER.filtered;
 
-  thead.innerHTML = `<tr>
-    ${cols.map(c => `<th style="white-space:nowrap;">${escapeHtml(c.label)}</th>`).join('')}
-  </tr>`;
+  // Header
+  thead.innerHTML = '<tr>' + cols.map(c =>
+    '<th style="white-space:nowrap;cursor:pointer;" onclick="rosterSetSort(\'' + c.key + '\', ROSTER.sortKey===\'' + c.key + '\'&&ROSTER.sortDir===\'asc\'?\'desc\':\'asc\')">'
+    + escapeHtml(c.label)
+    + (ROSTER.sortKey === c.key ? (ROSTER.sortDir === 'asc' ? ' ↑' : ' ↓') : '')
+    + '</th>'
+  ).join('') + '</tr>';
 
+  // Paginate
   const start = (ROSTER.page - 1) * ROSTER.pageSize;
-  const pageData = ROSTER.filtered.slice(start, start + ROSTER.pageSize);
+  const pageData = data.slice(start, start + ROSTER.pageSize);
 
   if (pageData.length === 0) {
-    const colSpan = cols.length;
-    tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No employees found</div><div class="empty-subtitle">Try adjusting the search or filters</div></div></td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="' + cols.length + '" style="text-align:center;padding:32px;color:var(--fg-muted);">No employees match the current filters.</td></tr>';
     rosterRenderPagination();
     return;
   }
 
   tbody.innerHTML = pageData.map(emp => {
     const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
-
-    return `<tr class="module-row" onclick="rosterOpenDetail('${escapeAttr(emp.ohr_id)}')" style="cursor:pointer;">
-      ${cols.map(c => {
-        if (c.key === 'employement_status') {
-          return `<td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(emp[c.key] || '')}</span></td>`;
-        }
+    return '<tr class="module-row" onclick="rosterOpenDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
+      + cols.map(c => {
         let val = emp[c.key];
         if (c.key === 'srt_id') val = formatSrtId(val);
-        return `<td style="white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${escapeAttr(val != null ? String(val) : '')}">${escapeHtml(val != null ? String(val) : '')}</td>`;
-      }).join('')}
-    </tr>`;
+        if (c.key === 'employement_status') {
+          return '<td><span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(val || '') + '</span></td>';
+        }
+        return '<td style="white-space:nowrap;">' + escapeHtml(val != null ? val : '') + '</td>';
+      }).join('')
+      + '</tr>';
   }).join('');
 
   rosterRenderPagination();
@@ -620,459 +532,266 @@ function rosterRenderPagination() {
   const start = (ROSTER.page - 1) * ROSTER.pageSize + 1;
   const end = Math.min(ROSTER.page * ROSTER.pageSize, total);
 
-  el.innerHTML = `
-    <span class="module-page-info">${total > 0 ? `${start}-${end} of ${total}` : '0 records'}</span>
-    <button class="btn btn-ghost btn-xs" ${ROSTER.page <= 1 ? 'disabled' : ''} onclick="ROSTER.page--;rosterRenderTable();">&laquo; Prev</button>
-    <span class="module-page-num">Page ${ROSTER.page} of ${totalPages}</span>
-    <button class="btn btn-ghost btn-xs" ${ROSTER.page >= totalPages ? 'disabled' : ''} onclick="ROSTER.page++;rosterRenderTable();">Next &raquo;</button>
-  `;
+  el.innerHTML = '<span class="module-page-info">' + (total > 0 ? start + '-' + end + ' of ' + total : '0 records') + '</span>'
+    + '<button class="btn btn-ghost btn-xs" ' + (ROSTER.page <= 1 ? 'disabled' : '') + ' onclick="ROSTER.page--;rosterRenderTable();">« Prev</button>'
+    + '<span class="module-page-num">Page ' + ROSTER.page + ' of ' + totalPages + '</span>'
+    + '<button class="btn btn-ghost btn-xs" ' + (ROSTER.page >= totalPages ? 'disabled' : '') + ' onclick="ROSTER.page++;rosterRenderTable();">Next »</button>';
 }
 
-// ===== Edit Employee =====
-
-function rosterEditEmployee(ohrId) {
-  if (!ROSTER.canEdit) { showToast('You do not have permission to edit employees', 'error'); return; }
-
-  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
-  if (!emp) return;
-  ROSTER.editingId = ohrId;
-
-  const formTitle = document.getElementById('roster-form-title');
-  const formBody = document.getElementById('roster-form-body');
-  const formFooter = document.getElementById('roster-form-footer');
-  const overlay = document.getElementById('roster-form-overlay');
-
-  formTitle.textContent = `Edit: ${emp.full_name || ohrId}`;
-
-  const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
-  const statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated'];
-  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training', 'Attrition backfill Training'];
-
-  formBody.innerHTML = `
-    <div class="form-section">
-      ${ROSTER.ALL_COLUMNS.map(col => {
-        if (col.key === 'actual_role') {
-          return `<div class="form-field">
-            <label class="form-label">${col.label}</label>
-            <select class="form-select" id="roster-edit-${col.key}">
-              ${roleOptions.map(r => `<option value="${r}" ${emp[col.key] === r ? 'selected' : ''}>${r}</option>`).join('')}
-            </select>
-          </div>`;
-        }
-        if (col.key === 'employement_status') {
-          return `<div class="form-field">
-            <label class="form-label">${col.label}</label>
-            <select class="form-select" id="roster-edit-${col.key}">
-              ${statusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>`;
-        }
-        if (col.key === 'srt_status') {
-          return `<div class="form-field">
-            <label class="form-label">${col.label}</label>
-            <select class="form-select" id="roster-edit-${col.key}">
-              ${srtStatusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
-            </select>
-          </div>`;
-        }
-        return `<div class="form-field">
-          <label class="form-label">${col.label}</label>
-          <input type="text" class="form-input" id="roster-edit-${col.key}" value="${escapeAttr(emp[col.key] != null ? String(emp[col.key]) : '')}">
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-
-  formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="rosterSaveEdit()">Save Changes</button>
-  `;
-
-  overlay.style.display = 'flex';
-}
-
-async function rosterSaveEdit() {
-  if (!ROSTER.editingId) return;
-
-  const updates = {};
-  ROSTER.ALL_COLUMNS.forEach(col => {
-    const el = document.getElementById(`roster-edit-${col.key}`);
-    if (el) updates[col.key] = el.value;
-  });
-
-  try {
-    const url = `${IO_API_BASE}/employees/${encodeURIComponent(ROSTER.editingId)}`;
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...updates,
-        _actor_ohr: currentUser ? currentUser.ohr_id : null,
-        _actor_name: currentUser ? currentUser.full_name : null,
-      })
-    });
-    if (!resp.ok) throw new Error('Failed to update employee');
-
-    showToast('Employee updated successfully', 'success');
-    rosterCloseForm();
-    await rosterFetchEmployees();
-  } catch (e) {
-    console.error('Failed to update employee:', e);
-    showToast('Failed to update: ' + e.message, 'error');
-  }
-}
-
-// ===== Add Employee =====
-
-function rosterShowAddForm() {
-  if (!ROSTER.canEdit) { showToast('You do not have permission to add employees', 'error'); return; }
-  ROSTER.editingId = null;
-
-  const formTitle = document.getElementById('roster-form-title');
-  const formBody = document.getElementById('roster-form-body');
-  const formFooter = document.getElementById('roster-form-footer');
-  const overlay = document.getElementById('roster-form-overlay');
-
-  formTitle.textContent = 'Add New Employee';
-
-  const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
-
-  formBody.innerHTML = `
-    <div class="form-section">
-      ${ROSTER.ALL_COLUMNS.map(col => {
-        if (col.key === 'actual_role') {
-          return `<div class="form-field">
-            <label class="form-label">${col.label} <span class="required">*</span></label>
-            <select class="form-select" id="roster-add-${col.key}">
-              <option value="">— Select —</option>
-              ${roleOptions.map(r => `<option value="${r}">${r}</option>`).join('')}
-            </select>
-          </div>`;
-        }
-        if (col.key === 'employement_status') {
-          return `<div class="form-field">
-            <label class="form-label">${col.label}</label>
-            <select class="form-select" id="roster-add-${col.key}">
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>`;
-        }
-        const required = ['ohr_id', 'full_name'].includes(col.key);
-        return `<div class="form-field">
-          <label class="form-label">${col.label}${required ? ' <span class="required">*</span>' : ''}</label>
-          <input type="text" class="form-input" id="roster-add-${col.key}" placeholder="${col.label}">
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-
-  formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="rosterSaveNew()">Create Employee</button>
-  `;
-
-  overlay.style.display = 'flex';
-}
-
-async function rosterSaveNew() {
-  const data = {};
-  ROSTER.ALL_COLUMNS.forEach(col => {
-    const el = document.getElementById(`roster-add-${col.key}`);
-    if (el) data[col.key] = el.value || null;
-  });
-
-  if (!data.ohr_id) { showToast('OHR ID is required', 'error'); return; }
-  if (!data.full_name) { showToast('Full Name is required', 'error'); return; }
-  if (!data.actual_role) { showToast('Role is required', 'error'); return; }
-
-  try {
-    const resp = await fetch(`${IO_API_BASE}/employees`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!resp.ok) {
-      const errBody = await resp.json().catch(() => ({}));
-      throw new Error(errBody.error || 'Failed to create employee');
-    }
-
-    showToast('Employee created successfully', 'success');
-    rosterCloseForm();
-    await rosterFetchEmployees();
-  } catch (e) {
-    console.error('Failed to create employee:', e);
-    showToast('Failed to create: ' + e.message, 'error');
-  }
-}
-
-// ===== Delete Employee =====
-
-async function rosterDeleteEmployee(ohrId) {
-  if (!ROSTER.canEdit) { showToast('You do not have permission to delete employees', 'error'); return; }
-  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
-  if (!confirm(`Are you sure you want to delete ${emp ? emp.full_name : ohrId}? This action cannot be undone.`)) return;
-
-  try {
-    const url = `${IO_API_BASE}/employees/${encodeURIComponent(ohrId)}`;
-    const resp = await fetch(url, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        _actor_ohr: currentUser ? currentUser.ohr_id : null,
-        _actor_name: currentUser ? currentUser.full_name : null,
-      })
-    });
-    if (!resp.ok) throw new Error('Failed to delete employee');
-
-    showToast('Employee deleted', 'success');
-    await rosterFetchEmployees();
-  } catch (e) {
-    console.error('Failed to delete employee:', e);
-    showToast('Failed to delete: ' + e.message, 'error');
-  }
-}
-
-function rosterCloseForm() {
-  const overlay = document.getElementById('roster-form-overlay');
-  if (overlay) overlay.style.display = 'none';
-  ROSTER.editingId = null;
-}
-
-// ===== Employee Detail Card (with inline Audit Trail) =====
-
-function formatSrtId(val) {
-  if (!val) return '';
-  const s = String(val);
-  if (/e\+/i.test(s)) {
-    try { return BigInt(Math.round(Number(s))).toString(); } catch(e) { return s; }
-  }
-  return s;
-}
-
-function rosterOpenDetail(ohrId) {
+// ===== Detail Panel with Inline Audit Trail =====
+window.rosterOpenDetail = function(ohrId) {
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
 
-  const formTitle = document.getElementById('roster-form-title');
-  const formBody = document.getElementById('roster-form-body');
-  const formFooter = document.getElementById('roster-form-footer');
   const overlay = document.getElementById('roster-form-overlay');
+  const title = document.getElementById('roster-form-title');
+  const body = document.getElementById('roster-form-body');
+  const footer = document.getElementById('roster-form-footer');
+  if (!overlay || !body) return;
 
-  formTitle.innerHTML = '';
+  title.textContent = (emp.full_name || emp.ohr_id) + ' — Details';
 
-  const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
-  const canEditDetail = ROSTER.canEdit;
-
-  const visibleCols = ROSTER.getVisibleColumns();
+  const cols = ROSTER.getVisibleColumns();
 
   // Group columns
-  const groups = {};
-  visibleCols.forEach(c => {
-    if (!groups[c.group]) groups[c.group] = [];
-    groups[c.group].push(c);
-  });
+  const groups = [
+    { label: 'Identity', keys: cols.filter(c => c.group === 'identity') },
+    { label: 'Role & Assignment', keys: cols.filter(c => c.group === 'role') },
+    { label: 'System IDs', keys: cols.filter(c => c.group === 'system') },
+    { label: 'Assets & Logistics', keys: cols.filter(c => c.group === 'asset') },
+    { label: 'Dates', keys: cols.filter(c => c.group === 'dates') },
+    { label: 'Attrition', keys: cols.filter(c => c.group === 'attrition') }
+  ];
 
-  const roleOptions = ['Agent', 'QA', 'SME', 'Team Lead', 'Trainer', 'Manager'];
-  const statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated'];
-  const srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training', 'Attrition backfill Training'];
+  let html = '';
 
-  function renderField(col) {
-    const val = col.key === 'srt_id' ? formatSrtId(emp[col.key]) : emp[col.key];
-    const displayVal = (val !== null && val !== undefined && val !== '') ? String(val) : '\u2014';
-
-    if (col.key === 'employement_status') {
-      if (canEditDetail) {
-        return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">
-          <select class="form-select form-select-sm roster-edit-field" data-key="${col.key}" style="font-size:13px;padding:2px 6px;max-width:280px;">
-            ${statusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
-        </span></div>`;
-      }
-      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value"><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(displayVal)}</span></span></div>`;
-    }
-
-    if (col.key === 'actual_role' && canEditDetail) {
-      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">
-        <select class="form-select form-select-sm roster-edit-field" data-key="${col.key}" style="font-size:13px;padding:2px 6px;max-width:280px;">
-          ${roleOptions.map(r => `<option value="${r}" ${emp[col.key] === r ? 'selected' : ''}>${r}</option>`).join('')}
-        </select>
-      </span></div>`;
-    }
-
-    if (col.key === 'srt_status' && canEditDetail) {
-      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">
-        <select class="form-select form-select-sm roster-edit-field" data-key="${col.key}" style="font-size:13px;padding:2px 6px;max-width:280px;">
-          ${srtStatusOptions.map(s => `<option value="${s}" ${emp[col.key] === s ? 'selected' : ''}>${s}</option>`).join('')}
-        </select>
-      </span></div>`;
-    }
-
-    if (canEditDetail) {
-      return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value"><input type="text" class="form-input form-input-sm roster-edit-field" data-key="${escapeAttr(col.key)}" value="${escapeAttr(displayVal === '\u2014' ? '' : displayVal)}" style="font-size:13px;padding:2px 6px;width:100%;max-width:280px;"></span></div>`;
-    }
-
-    return `<div class="detail-row"><span class="detail-label">${escapeHtml(col.label)}</span><span class="detail-value">${escapeHtml(displayVal)}</span></div>`;
+  if (ROSTER.canEdit) {
+    // Editable form
+    groups.forEach(g => {
+      if (g.keys.length === 0) return;
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:4px;">' + g.label + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
+      g.keys.forEach(c => {
+        const val = emp[c.key] != null ? emp[c.key] : '';
+        const isReadOnly = c.key === 'ohr_id' || c.key === 'full_name';
+        html += '<div>'
+          + '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">' + escapeHtml(c.label) + '</label>'
+          + '<input type="text" class="form-input form-input-sm" data-field="' + c.key + '" value="' + escapeAttr(val) + '"'
+          + (isReadOnly ? ' readonly style="opacity:0.6;"' : '')
+          + '></div>';
+      });
+      html += '</div></div>';
+    });
+  } else {
+    // Read-only view
+    groups.forEach(g => {
+      if (g.keys.length === 0) return;
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:4px;">' + g.label + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">';
+      g.keys.forEach(c => {
+        let val = emp[c.key];
+        if (c.key === 'srt_id') val = formatSrtId(val);
+        html += '<div style="display:flex;gap:8px;padding:4px 0;">'
+          + '<span style="font-size:11px;font-weight:600;color:var(--fg-muted);min-width:120px;">' + escapeHtml(c.label) + '</span>'
+          + '<span style="font-size:12px;color:var(--fg);">' + escapeHtml(val != null ? val : '—') + '</span>'
+          + '</div>';
+      });
+      html += '</div></div>';
+    });
   }
 
-  let html = '<div class="detail-section">';
-  for (const [groupName, cols] of Object.entries(groups)) {
-    html += `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">${escapeHtml(groupName)}</h4>`;
-    cols.forEach(c => html += renderField(c));
-  }
-
-  // Inline Audit Trail section (always at the bottom)
-  html += `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">Audit Trail</h4>`;
-  html += `<div id="detail-audit-trail" style="min-height:60px;">
-    <div style="text-align:center;padding:16px;color:var(--fg-muted);font-size:12px;">Loading audit trail...</div>
-  </div>`;
-
+  // ===== Inline Audit Trail Section =====
+  html += '<div style="margin-top:16px;border-top:2px solid var(--border);padding-top:16px;">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Audit Trail</div>';
+  html += '<div id="roster-detail-audit-body" style="font-size:12px;color:var(--fg-muted);">Loading audit trail...</div>';
   html += '</div>';
 
-  formBody.innerHTML = html;
+  body.innerHTML = html;
 
   // Footer
-  let footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
-  if (canEditDetail) {
-    footerHtml += ` <button class="btn btn-primary btn-sm" onclick="rosterSaveDetailEdits('${escapeAttr(emp.ohr_id)}')">Save Changes</button>`;
+  if (ROSTER.canEdit) {
+    footer.innerHTML = '<button class="btn btn-primary btn-sm" onclick="rosterSaveDetail(\'' + escapeAttr(ohrId) + '\')">Save Changes</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Cancel</button>';
+  } else {
+    footer.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Close</button>';
   }
-  formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
 
   // Load audit trail inline
   rosterLoadInlineAuditTrail(ohrId);
-}
+};
 
 async function rosterLoadInlineAuditTrail(ohrId) {
-  const container = document.getElementById('detail-audit-trail');
-  if (!container) return;
+  const body = document.getElementById('roster-detail-audit-body');
+  if (!body) return;
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/audit-log?record_type=io_employees&record_id=${encodeURIComponent(ohrId)}&limit=50`);
-    if (!resp.ok) throw new Error('Failed to fetch audit trail');
+    const token = sessionStorage.getItem('playbook_token');
+    const resp = await fetch('/api/io/audit-log?record_type=employee&record_id=' + encodeURIComponent(ohrId), {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) throw new Error('Failed to load');
     const logs = await resp.json();
 
     if (!logs || logs.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--fg-muted);font-size:12px;">No edit history found for this employee.</div>';
+      body.innerHTML = '<div style="color:var(--fg-muted);padding:8px 0;">No changes recorded for this employee.</div>';
       return;
     }
 
-    let html = '';
+    let html = '<div style="max-height:300px;overflow-y:auto;">';
     logs.forEach(log => {
-      const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Unknown time';
-      const actor = log.actor_name || log.actor_ohr || 'System';
-      html += `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:600;font-size:12px;">${escapeHtml(log.field_name || log.action || 'Update')}</span>
-          <span style="font-size:11px;color:var(--fg-muted);">${escapeHtml(ts)}</span>
-        </div>
-        <div style="font-size:11px;color:var(--fg-muted);margin-top:2px;">by ${escapeHtml(actor)}</div>
-        ${log.old_value || log.new_value ? `<div style="font-size:11px;margin-top:4px;">
-          ${log.old_value ? `<span style="background:#EF444420;color:#EF4444;padding:1px 4px;border-radius:3px;text-decoration:line-through;">${escapeHtml(String(log.old_value))}</span>` : ''}
-          ${log.old_value && log.new_value ? ' → ' : ''}
-          ${log.new_value ? `<span style="background:#22C55E20;color:#22C55E;padding:1px 4px;border-radius:3px;">${escapeHtml(String(log.new_value))}</span>` : ''}
-        </div>` : ''}
-      </div>`;
-    });
-    container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = `<div style="color:var(--danger);padding:8px;font-size:12px;">Failed to load audit trail: ${escapeHtml(e.message)}</div>`;
-  }
-}
+      const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : '';
+      let changes = '';
+      try {
+        const diff = typeof log.changes === 'string' ? JSON.parse(log.changes) : log.changes;
+        if (diff && typeof diff === 'object') {
+          changes = Object.entries(diff).map(([k, v]) => {
+            const colDef = ALL_COLUMNS.find(c => c.key === k);
+            const label = colDef ? colDef.label : k;
+            if (v && typeof v === 'object' && 'from' in v && 'to' in v) {
+              return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: '
+                + '<span style="color:#EF4444;text-decoration:line-through;">' + escapeHtml(v.from || '(empty)') + '</span>'
+                + ' → <span style="color:#22C55E;">' + escapeHtml(v.to || '(empty)') + '</span>';
+            }
+            return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: ' + escapeHtml(JSON.stringify(v));
+          }).join('<br>');
+        }
+      } catch (e) {
+        changes = escapeHtml(String(log.changes || ''));
+      }
 
-async function rosterSaveDetailEdits(ohrId) {
-  const inputs = document.querySelectorAll('.roster-edit-field');
-  const updates = {};
-  inputs.forEach(inp => {
-    const key = inp.dataset.key;
-    const val = (inp.tagName === 'SELECT') ? inp.value : inp.value.trim();
-    updates[key] = val || null;
-  });
-
-  try {
-    const resp = await fetch(`${IO_API_BASE}/employees/${ohrId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...updates,
-        _actor_ohr: currentUser ? currentUser.ohr_id : null,
-        _actor_name: currentUser ? currentUser.full_name : null,
-      })
-    });
-    if (!resp.ok) throw new Error('Failed to save');
-    showToast('Employee details updated successfully', 'success');
-    rosterCloseForm();
-    await rosterFetchEmployees();
-  } catch (e) {
-    console.error('Failed to save employee details:', e);
-    showToast('Failed to save changes', 'error');
-  }
-}
-
-// ===== Audit Trail Viewer (modal — kept for backward compat) =====
-
-async function rosterViewAuditTrail(ohrId) {
-  const modal = document.getElementById('audit-modal');
-  const body = document.getElementById('audit-modal-body');
-  if (!modal || !body) return;
-
-  body.innerHTML = '<div class="audit-loading">Loading audit trail...</div>';
-  modal.style.display = 'flex';
-
-  try {
-    const resp = await fetch(`${IO_API_BASE}/audit-log?record_type=io_employees&record_id=${encodeURIComponent(ohrId)}&limit=100`);
-    if (!resp.ok) throw new Error('Failed to fetch audit trail');
-    const logs = await resp.json();
-
-    if (!logs || logs.length === 0) {
-      body.innerHTML = '<div class="audit-empty" style="text-align:center;padding:32px;color:var(--fg-muted);">No edit history found for this employee.</div>';
-      return;
-    }
-
-    let html = '<div class="audit-timeline">';
-    logs.forEach(log => {
-      const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Unknown time';
-      const actor = log.actor_name || log.actor_ohr || 'System';
-      html += `<div class="audit-entry" style="padding:10px 0;border-bottom:1px solid var(--border);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:600;font-size:13px;">${escapeHtml(log.field_name || log.action || 'Update')}</span>
-          <span style="font-size:11px;color:var(--fg-muted);">${escapeHtml(ts)}</span>
-        </div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">
-          by ${escapeHtml(actor)}
-        </div>
-        ${log.old_value || log.new_value ? `<div style="font-size:12px;margin-top:6px;">
-          ${log.old_value ? `<span style="background:#EF444420;color:#EF4444;padding:1px 6px;border-radius:4px;text-decoration:line-through;">${escapeHtml(String(log.old_value))}</span>` : ''}
-          ${log.old_value && log.new_value ? ' &rarr; ' : ''}
-          ${log.new_value ? `<span style="background:#22C55E20;color:#22C55E;padding:1px 6px;border-radius:4px;">${escapeHtml(String(log.new_value))}</span>` : ''}
-        </div>` : ''}
-      </div>`;
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border-muted);">'
+        + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+        + '<span style="font-weight:600;color:var(--fg);">' + escapeHtml(log.changed_by || 'System') + '</span>'
+        + '<span style="color:var(--fg-muted);font-size:11px;">' + escapeHtml(ts) + '</span>'
+        + '</div>'
+        + '<div>' + changes + '</div>'
+        + '</div>';
     });
     html += '</div>';
     body.innerHTML = html;
   } catch (e) {
-    body.innerHTML = `<div style="color:var(--danger);padding:16px;">Failed to load audit trail: ${escapeHtml(e.message)}</div>`;
+    body.innerHTML = '<div style="color:var(--danger);padding:8px 0;">Failed to load audit trail: ' + escapeHtml(e.message) + '</div>';
   }
 }
 
-// ===== CSV Export =====
+window.rosterCloseForm = function() {
+  const overlay = document.getElementById('roster-form-overlay');
+  if (overlay) overlay.style.display = 'none';
+};
 
-window.rosterExportCSV = function () {
+window.rosterSaveDetail = async function(ohrId) {
+  const body = document.getElementById('roster-form-body');
+  if (!body) return;
+
+  const inputs = body.querySelectorAll('input[data-field]');
+  const updates = {};
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+
+  inputs.forEach(input => {
+    const field = input.getAttribute('data-field');
+    if (field === 'ohr_id' || field === 'full_name') return;
+    const newVal = input.value.trim();
+    const oldVal = emp[field] != null ? String(emp[field]).trim() : '';
+    if (newVal !== oldVal) updates[field] = newVal;
+  });
+
+  if (Object.keys(updates).length === 0) {
+    showToast('No changes to save', 'info');
+    return;
+  }
+
+  try {
+    const token = sessionStorage.getItem('playbook_token');
+    // Include actor info for audit trail
+    updates._actor_ohr = sessionStorage.getItem('playbook_ohr') || '';
+    updates._actor_name = sessionStorage.getItem('playbook_name') || '';
+    const resp = await fetch('/api/io/employees/' + encodeURIComponent(ohrId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Save failed');
+    showToast('Employee updated successfully', 'success');
+    rosterCloseForm();
+    await rosterFetchEmployees();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+};
+
+// ===== Add Employee Form =====
+window.rosterShowAddForm = function() {
+  const overlay = document.getElementById('roster-form-overlay');
+  const title = document.getElementById('roster-form-title');
+  const body = document.getElementById('roster-form-body');
+  const footer = document.getElementById('roster-form-footer');
+  if (!overlay || !body) return;
+
+  title.textContent = 'Add New Employee';
+
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
+  html += '<div><label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">OHR ID *</label>'
+    + '<input type="text" class="form-input form-input-sm" id="add-emp-ohr" placeholder="e.g. 740012345"></div>';
+  html += '<div><label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">Status</label>'
+    + '<select class="form-input form-input-sm" id="add-emp-status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select></div>';
+  html += '<div><label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">Role</label>'
+    + '<select class="form-input form-input-sm" id="add-emp-role">'
+    + '<option value="Agent">Agent</option><option value="Operational SME">Operational SME</option>'
+    + '<option value="Quality Analyst">Quality Analyst</option><option value="Trainer">Trainer</option>'
+    + '<option value="Team Lead">Team Lead</option><option value="Manager">Manager</option></select></div>';
+  html += '<div><label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">Planning Group</label>'
+    + '<input type="text" class="form-input form-input-sm" id="add-emp-pg" placeholder="Planning group"></div>';
+  html += '</div>';
+
+  body.innerHTML = html;
+  footer.innerHTML = '<button class="btn btn-primary btn-sm" onclick="rosterSaveNewEmployee()">Add Employee</button>'
+    + '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Cancel</button>';
+
+  overlay.style.display = 'flex';
+};
+
+window.rosterSaveNewEmployee = async function() {
+  const ohr = (document.getElementById('add-emp-ohr') || {}).value || '';
+  const status = (document.getElementById('add-emp-status') || {}).value || 'Active';
+  const role = (document.getElementById('add-emp-role') || {}).value || 'Agent';
+  const pg = (document.getElementById('add-emp-pg') || {}).value || '';
+
+  if (!ohr.trim()) { showToast('OHR ID is required', 'error'); return; }
+
+  try {
+    const token = sessionStorage.getItem('playbook_token');
+    const resp = await fetch('/api/io/employees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ ohr_id: ohr.trim(), employement_status: status, actual_role: role, planning_group: pg })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to add employee');
+    }
+    showToast('Employee added successfully', 'success');
+    rosterCloseForm();
+    await rosterFetchEmployees();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+};
+
+// ===== CSV Export =====
+window.rosterExportCSV = function() {
   const cols = ROSTER.getVisibleColumns();
   const data = ROSTER.filtered;
 
-  if (data.length === 0) {
-    showToast('No records to export', 'info');
-    return;
-  }
+  if (data.length === 0) { showToast('No records to export', 'info'); return; }
 
   const escCSV = (v) => {
     if (v == null) return '';
     const s = String(v);
-    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-      return '"' + s.replace(/"/g, '""') + '"';
-    }
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g, '""') + '"';
     return s;
   };
 
@@ -1086,24 +805,19 @@ window.rosterExportCSV = function () {
   });
 
   const today = new Date().toISOString().slice(0, 10);
-  const filename = `regimen-roster-${today}.csv`;
-
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = 'regimen-roster-' + today + '.csv';
   link.click();
   URL.revokeObjectURL(url);
-
-  showToast(`Exported ${data.length} records to ${filename}`, 'success');
+  showToast('Exported ' + data.length + ' records', 'success');
 };
 
 // ===== Tab Switching =====
-
-window.rosterSwitchTab = function (tab) {
+window.rosterSwitchTab = function(tab) {
   const panels = ['roster', 'onboarding', 'permissions'];
-  const tabs = ['roster', 'onboarding', 'permissions'];
 
   panels.forEach(p => {
     const panel = document.getElementById('regimen-panel-' + p);
@@ -1129,80 +843,239 @@ window.rosterSwitchTab = function (tab) {
   if (tab === 'permissions' && typeof initPermissions === 'function') initPermissions();
 };
 
-// ===== Incomplete Rostering (replaces Onboarding) =====
-// Shows ALL employees who have at least one column blank
+// ===== Incomplete Rostering =====
+// Shows ALL employees who have at least one column blank, with completion rate
 
-const INCOMPLETE_ROSTERING_COLUMNS = ROSTER.ALL_COLUMNS.map(c => c.key);
+const IR_DISPLAY_COLUMNS = ALL_COLUMNS.map(c => c.key);
+const IR_LABELS = {};
+ALL_COLUMNS.forEach(c => { IR_LABELS[c.key] = c.label; });
 
-const INCOMPLETE_ROSTERING_LABELS = {};
-ROSTER.ALL_COLUMNS.forEach(c => { INCOMPLETE_ROSTERING_LABELS[c.key] = c.label; });
+let _irPage = 1;
+const _irPageSize = 25;
 
-let _incompleteRosteringPage = 1;
-const _incompleteRosteringPageSize = 25;
+// IR filter state
+const IR_STATE = {
+  filters: {},
+  searchQuery: '',
+  sortKey: null,
+  sortDir: 'asc'
+};
+
+function irGetAllValues(field) {
+  const vals = new Set();
+  ROSTER.employees.forEach(emp => {
+    const v = emp[field.key];
+    if (v != null && String(v).trim() !== '') vals.add(String(v).trim());
+  });
+  return Array.from(vals).sort((a, b) => a.localeCompare(b));
+}
+
+// Build IR filter fields — same multi-select approach as Roster but simpler set
+const IR_FILTER_FIELDS = [
+  { key: 'employement_status', label: 'Status', type: 'multi' },
+  { key: 'actual_role', label: 'Role', type: 'multi' },
+  { key: 'planning_group', label: 'Planning Group', type: 'multi' },
+  { key: 'supervisor', label: 'Supervisor', type: 'multi' },
+  { key: '_ir_search', label: 'Search', type: 'search' }
+];
+
+function irGetFilterSummary(field) {
+  if (field.type === 'search') return IR_STATE.searchQuery || 'All';
+  const f = IR_STATE.filters[field.key];
+  if (!f || !f.values) return 'All';
+  const allValues = irGetAllValues(field);
+  if (f.values.length === 0) return 'None';
+  if (f.values.length === allValues.length) return 'All';
+  if (f.values.length === 1) return f.values[0];
+  return f.values.length + ' selected';
+}
+
+function irIsFiltered(field) {
+  if (field.type === 'search') return IR_STATE.searchQuery.length > 0;
+  const f = IR_STATE.filters[field.key];
+  if (!f) return false;
+  const allValues = irGetAllValues(field);
+  return f.values && f.values.length < allValues.length;
+}
+
+let _irDebounceTimer = null;
+function irDebouncedApply() {
+  clearTimeout(_irDebounceTimer);
+  _irDebounceTimer = setTimeout(() => { incompleteRosteringRenderDashboard(); }, 300);
+}
+
+function irRenderFilterBar() {
+  const container = document.getElementById('ir-filter-pills');
+  if (!container) return;
+
+  let html = '';
+  IR_FILTER_FIELDS.forEach(field => {
+    if (field.type === 'search') {
+      html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
+        + '<input type="text" class="form-input form-input-sm" id="ir-search-input" placeholder="Search OHR / Name..." '
+        + 'value="' + escapeAttr(IR_STATE.searchQuery) + '" '
+        + 'oninput="IR_STATE.searchQuery=this.value;irDebouncedApply();" '
+        + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
+        + '</div>';
+      return;
+    }
+
+    const summary = irGetFilterSummary(field);
+    const isActive = irIsFiltered(field);
+    html += '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="ir-pill-' + field.key + '" onclick="irToggleDropdown(\'' + field.key + '\')">'
+      + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span> '
+      + '<span class="filter-pill-value">' + escapeHtml(summary) + '</span>'
+      + '<span class="filter-pill-icon">▾</span>'
+      + '<div class="filter-dropdown" id="ir-dd-' + field.key + '"></div>'
+      + '</div>';
+  });
+
+  html += '<button class="filter-bar-clear" onclick="irClearAllFilters()" title="Clear all filters">✕ Clear</button>';
+  container.innerHTML = html;
+}
+
+window.irToggleDropdown = function(key) {
+  const dd = document.getElementById('ir-dd-' + key);
+  const pill = document.getElementById('ir-pill-' + key);
+  if (!dd || !pill) return;
+
+  const wasOpen = dd.classList.contains('open');
+  document.querySelectorAll('#ir-filter-pills .filter-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    d.parentElement.classList.remove('open');
+  });
+  if (wasOpen) return;
+
+  dd.classList.add('open');
+  pill.classList.add('open');
+
+  const field = IR_FILTER_FIELDS.find(f => f.key === key);
+  if (!field) return;
+
+  // Render multi dropdown
+  const values = irGetAllValues(field);
+  const f = IR_STATE.filters[field.key];
+  const selected = f ? f.values : values.slice();
+
+  let ddHtml = '<div class="filter-dropdown-header"><span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span></div>';
+  ddHtml += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" placeholder="Search..." oninput="irFilterDropdownSearch(this,\'' + field.key + '\')"></div>';
+  ddHtml += '<div class="filter-dropdown-actions">'
+    + '<button class="filter-action-link" onclick="event.stopPropagation();irSelectAll(\'' + field.key + '\')">Select All</button>'
+    + '<button class="filter-action-link" onclick="event.stopPropagation();irDeselectAll(\'' + field.key + '\')">Deselect All</button>'
+    + '</div>';
+  ddHtml += '<div class="filter-dropdown-list" id="ir-dd-list-' + field.key + '">';
+  values.forEach(v => {
+    const checked = selected.includes(v) ? 'checked' : '';
+    ddHtml += '<label class="filter-dropdown-item" data-value="' + escapeAttr(v.toLowerCase()) + '">'
+      + '<input type="checkbox" ' + checked + ' onchange="irOnCheckChange(\'' + field.key + '\')">'
+      + '<span>' + escapeHtml(v) + '</span></label>';
+  });
+  ddHtml += '</div>';
+  dd.innerHTML = ddHtml;
+  dd.onclick = function(e) { e.stopPropagation(); };
+};
+
+window.irFilterDropdownSearch = function(input, key) {
+  const q = input.value.toLowerCase();
+  const list = document.getElementById('ir-dd-list-' + key);
+  if (!list) return;
+  list.querySelectorAll('.filter-dropdown-item').forEach(item => {
+    item.style.display = (item.getAttribute('data-value') || '').includes(q) ? '' : 'none';
+  });
+};
+
+window.irSelectAll = function(key) {
+  const list = document.getElementById('ir-dd-list-' + key);
+  if (!list) return;
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = true; });
+  irOnCheckChange(key);
+};
+
+window.irDeselectAll = function(key) {
+  const list = document.getElementById('ir-dd-list-' + key);
+  if (!list) return;
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.closest('.filter-dropdown-item').style.display !== 'none') cb.checked = false; });
+  irOnCheckChange(key);
+};
+
+window.irOnCheckChange = function(key) {
+  const list = document.getElementById('ir-dd-list-' + key);
+  if (!list) return;
+  const selected = [];
+  list.querySelectorAll('.filter-dropdown-item').forEach(item => {
+    const cb = item.querySelector('input[type="checkbox"]');
+    if (cb && cb.checked) selected.push(item.querySelector('span').textContent);
+  });
+  const allValues = irGetAllValues({ key });
+  if (selected.length === allValues.length) {
+    delete IR_STATE.filters[key];
+  } else {
+    IR_STATE.filters[key] = { values: selected };
+  }
+  const field = IR_FILTER_FIELDS.find(f => f.key === key);
+  const pill = document.getElementById('ir-pill-' + key);
+  if (pill && field) {
+    const valSpan = pill.querySelector('.filter-pill-value');
+    if (valSpan) valSpan.textContent = irGetFilterSummary(field);
+    pill.classList.toggle('active', irIsFiltered(field));
+  }
+  irDebouncedApply();
+};
+
+window.irClearAllFilters = function() {
+  IR_STATE.filters = {};
+  IR_STATE.searchQuery = '';
+  const searchInput = document.getElementById('ir-search-input');
+  if (searchInput) searchInput.value = '';
+  irRenderFilterBar();
+  incompleteRosteringRenderDashboard();
+};
 
 function incompleteRosteringGetData() {
-  return ROSTER.employees.map(emp => {
-    const missingFields = INCOMPLETE_ROSTERING_COLUMNS.filter(f => {
+  let data = ROSTER.employees.map(emp => {
+    const missingFields = IR_DISPLAY_COLUMNS.filter(f => {
       const val = emp[f];
       return val === null || val === undefined || String(val).trim() === '';
     });
-    const isComplete = missingFields.length === 0;
-    return { ...emp, missingFields, isComplete };
+    const totalFields = IR_DISPLAY_COLUMNS.length;
+    const filledFields = totalFields - missingFields.length;
+    const completionRate = totalFields > 0 ? ((filledFields / totalFields) * 100).toFixed(1) : '100.0';
+    return { ...emp, missingFields, isComplete: missingFields.length === 0, completionRate };
   });
+
+  // Apply IR filters
+  if (IR_STATE.searchQuery) {
+    const q = IR_STATE.searchQuery.toLowerCase();
+    data = data.filter(e =>
+      (e.ohr_id || '').toLowerCase().includes(q) ||
+      (e.full_name || '').toLowerCase().includes(q)
+    );
+  }
+  Object.keys(IR_STATE.filters).forEach(key => {
+    const f = IR_STATE.filters[key];
+    if (f && f.values) {
+      data = data.filter(emp => {
+        const val = emp[key];
+        if (val == null || String(val).trim() === '') return f.values.includes('');
+        return f.values.includes(String(val).trim());
+      });
+    }
+  });
+
+  return data;
 }
 
 function incompleteRosteringRenderDashboard() {
-  const allData = incompleteRosteringGetData();
-  const complete = allData.filter(e => e.isComplete);
-  const incomplete = allData.filter(e => !e.isComplete);
-  const activeIncomplete = incomplete.filter(e => e.employement_status === 'Active');
-  const rate = allData.length > 0 ? ((complete.length / allData.length) * 100).toFixed(1) : '0.0';
-
-  const summaryEl = document.getElementById('onboarding-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = `
-      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:var(--primary);">${allData.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Total Employees</div>
-      </div>
-      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:#22C55E;">${complete.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Fully Rostered</div>
-      </div>
-      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:#F59E0B;">${incomplete.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Incomplete</div>
-      </div>
-      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:#EF4444;">${activeIncomplete.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Active & Incomplete</div>
-      </div>
-      <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:var(--primary);">${rate}%</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Completion Rate</div>
-      </div>
-    `;
-  }
-
+  irRenderFilterBar();
   incompleteRosteringRenderTable();
 }
 
-window.incompleteRosteringRenderTable = function () {
+window.incompleteRosteringRenderTable = function() {
   const thead = document.getElementById('onboarding-table-head');
   const tbody = document.getElementById('onboarding-table-body');
   if (!thead || !tbody) return;
 
   let allData = incompleteRosteringGetData();
-
-  // Search filter
-  const searchEl = document.getElementById('onboarding-search');
-  const q = (searchEl ? searchEl.value : '').toLowerCase().trim();
-  if (q) {
-    allData = allData.filter(e =>
-      (e.full_name || '').toLowerCase().includes(q) ||
-      (e.ohr_id || '').toLowerCase().includes(q)
-    );
-  }
 
   // Only show incomplete employees
   allData = allData.filter(e => !e.isComplete);
@@ -1213,63 +1086,109 @@ window.incompleteRosteringRenderTable = function () {
     return (a.full_name || '').localeCompare(b.full_name || '');
   });
 
-  thead.innerHTML = `<tr>
-    <th style="white-space:nowrap;">OHR ID</th>
-    <th style="white-space:nowrap;">Full Name</th>
-    <th style="white-space:nowrap;">Status</th>
-    <th style="white-space:nowrap;">Role</th>
-    <th style="white-space:nowrap;">Missing Count</th>
-    <th style="white-space:nowrap;">Missing Fields</th>
-  </tr>`;
+  thead.innerHTML = '<tr>'
+    + '<th style="white-space:nowrap;">OHR ID</th>'
+    + '<th style="white-space:nowrap;">Full Name</th>'
+    + '<th style="white-space:nowrap;">Status</th>'
+    + '<th style="white-space:nowrap;">Role</th>'
+    + '<th style="white-space:nowrap;">Completion Rate</th>'
+    + '<th style="white-space:nowrap;">Missing Count</th>'
+    + '<th style="white-space:nowrap;">Missing Fields</th>'
+    + '</tr>';
 
-  const start = (_incompleteRosteringPage - 1) * _incompleteRosteringPageSize;
-  const pageData = allData.slice(start, start + _incompleteRosteringPageSize);
+  const start = (_irPage - 1) * _irPageSize;
+  const pageData = allData.slice(start, start + _irPageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-muted);">All employees are fully rostered!</td></tr>';
-    incompleteRosteringRenderPagination(allData.length);
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--fg-muted);">All employees are fully rostered!</td></tr>';
+    irRenderPagination(allData.length);
     return;
   }
 
   tbody.innerHTML = pageData.map(emp => {
     const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+    const rate = parseFloat(emp.completionRate);
+    const rateColor = rate >= 90 ? '#22C55E' : rate >= 70 ? '#F59E0B' : '#EF4444';
     const missingHtml = emp.missingFields.map(f =>
-      `<span style="background:#EF444415;color:#EF4444;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">${escapeHtml(INCOMPLETE_ROSTERING_LABELS[f] || f)}</span>`
+      '<span style="background:#EF444415;color:#EF4444;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">' + escapeHtml(IR_LABELS[f] || f) + '</span>'
     ).join('');
 
-    return `<tr class="module-row" onclick="rosterOpenDetail('${escapeAttr(emp.ohr_id)}')" style="cursor:pointer;">
-      <td style="white-space:nowrap;font-weight:600;">${escapeHtml(emp.ohr_id || '')}</td>
-      <td style="white-space:nowrap;">${escapeHtml(emp.full_name || '')}</td>
-      <td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(emp.employement_status || '')}</span></td>
-      <td style="white-space:nowrap;">${escapeHtml(emp.actual_role || '')}</td>
-      <td style="text-align:center;font-weight:600;color:#EF4444;">${emp.missingFields.length}</td>
-      <td style="max-width:500px;">${missingHtml}</td>
-    </tr>`;
+    return '<tr class="module-row" onclick="rosterOpenDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
+      + '<td style="white-space:nowrap;font-weight:600;">' + escapeHtml(emp.ohr_id || '') + '</td>'
+      + '<td style="white-space:nowrap;">' + escapeHtml(emp.full_name || '') + '</td>'
+      + '<td><span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(emp.employement_status || '') + '</span></td>'
+      + '<td style="white-space:nowrap;">' + escapeHtml(emp.actual_role || '') + '</td>'
+      + '<td style="text-align:center;font-weight:600;color:' + rateColor + ';">' + emp.completionRate + '%</td>'
+      + '<td style="text-align:center;font-weight:600;color:#EF4444;">' + emp.missingFields.length + '</td>'
+      + '<td style="max-width:500px;">' + missingHtml + '</td>'
+      + '</tr>';
   }).join('');
 
-  incompleteRosteringRenderPagination(allData.length);
+  irRenderPagination(allData.length);
 };
 
-function incompleteRosteringRenderPagination(total) {
+function irRenderPagination(total) {
   const el = document.getElementById('onboarding-pagination');
   if (!el) return;
-  const totalPages = Math.ceil(total / _incompleteRosteringPageSize) || 1;
-  const start = (_incompleteRosteringPage - 1) * _incompleteRosteringPageSize + 1;
-  const end = Math.min(_incompleteRosteringPage * _incompleteRosteringPageSize, total);
+  const totalPages = Math.ceil(total / _irPageSize) || 1;
+  const start = (_irPage - 1) * _irPageSize + 1;
+  const end = Math.min(_irPage * _irPageSize, total);
 
-  el.innerHTML = `
-    <span class="module-page-info">${total > 0 ? `${start}-${end} of ${total}` : '0 records'}</span>
-    <button class="btn btn-ghost btn-xs" ${_incompleteRosteringPage <= 1 ? 'disabled' : ''} onclick="_incompleteRosteringPage--;incompleteRosteringRenderTable();">&laquo; Prev</button>
-    <span class="module-page-num">Page ${_incompleteRosteringPage} of ${totalPages}</span>
-    <button class="btn btn-ghost btn-xs" ${_incompleteRosteringPage >= totalPages ? 'disabled' : ''} onclick="_incompleteRosteringPage++;incompleteRosteringRenderTable();">Next &raquo;</button>
-  `;
+  el.innerHTML = '<span class="module-page-info">' + (total > 0 ? start + '-' + end + ' of ' + total : '0 records') + '</span>'
+    + '<button class="btn btn-ghost btn-xs" ' + (_irPage <= 1 ? 'disabled' : '') + ' onclick="_irPage--;incompleteRosteringRenderTable();">« Prev</button>'
+    + '<span class="module-page-num">Page ' + _irPage + ' of ' + totalPages + '</span>'
+    + '<button class="btn btn-ghost btn-xs" ' + (_irPage >= totalPages ? 'disabled' : '') + ' onclick="_irPage++;incompleteRosteringRenderTable();">Next »</button>';
 }
 
-// Keep old function name for backward compat
+// Backward compat
 function onboardingRenderDashboard() { incompleteRosteringRenderDashboard(); }
 window.onboardingRenderTable = function() { incompleteRosteringRenderTable(); };
 
-// ===== Init =====
+// ===== Fetch & Init =====
+async function rosterFetchEmployees() {
+  const loading = document.getElementById('roster-loading');
+  if (loading) loading.style.display = '';
+
+  try {
+    const token = sessionStorage.getItem('playbook_token');
+    const resp = await fetch('/api/io/employees', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) throw new Error('Failed to fetch employees');
+    ROSTER.employees = await resp.json();
+  } catch (e) {
+    showToast('Error loading roster: ' + e.message, 'error');
+    ROSTER.employees = [];
+  }
+
+  if (loading) loading.style.display = 'none';
+
+  // Determine permissions from cached permissions
+  const permsRaw = sessionStorage.getItem('playbook_permissions');
+  let perms = {};
+  try { perms = permsRaw ? JSON.parse(permsRaw) : {}; } catch(e) {}
+
+  // Tier: full if regimen.full_columns is granted
+  ROSTER.tier = perms['regimen.full_columns'] ? 'full' : 'limited';
+
+  // Can edit: regimen.edit_employees
+  ROSTER.canEdit = !!perms['regimen.edit_employees'];
+
+  // Show/hide add button
+  const addBtn = document.getElementById('roster-add-btn');
+  if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
+
+  // Show/hide tabs
+  const onboardingTab = document.getElementById('regimen-tab-onboarding');
+  if (onboardingTab) onboardingTab.style.display = perms['regimen.onboarding_tab'] ? '' : 'none';
+  const permTab = document.getElementById('regimen-tab-permissions');
+  if (permTab) permTab.style.display = perms['regimen.permissions_tab'] ? '' : 'none';
+
+  // Render
+  rosterRenderFilterBar();
+  rosterApplyFilters();
+  rosterRenderTable();
+}
 
 async function initRoster() {
   await rosterFetchEmployees();

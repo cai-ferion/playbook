@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
-describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", () => {
+describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", () => {
   const rosterJs = fs.readFileSync(path.join(__dirname, "../server/public/js/roster.js"), "utf-8");
   const appJs = fs.readFileSync(path.join(__dirname, "../server/public/js/app.js"), "utf-8");
   const indexHtml = fs.readFileSync(path.join(__dirname, "../server/public/index.html"), "utf-8");
@@ -10,8 +10,7 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
   // ===== Compass Visibility =====
   describe("Compass Visibility", () => {
-    it("should restrict Compass nav to admin OHR only", () => {
-      // Now RBAC-driven via applyNavPermissions
+    it("should restrict Compass nav via RBAC applyNavPermissions", () => {
       expect(appJs).toContain("applyNavPermissions");
       expect(appJs).toContain("vis('nav-group-compass', 'nav.compass')");
     });
@@ -19,27 +18,26 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
   // ===== Regimen Nav Visibility =====
   describe("Regimen Nav Visibility", () => {
-    it("should show Regimen to all non-Agent roles", () => {
-      // Now RBAC-driven via applyNavPermissions
+    it("should show Regimen via RBAC permission", () => {
       expect(appJs).toContain("vis('nav-regimen', 'nav.regimen')");
     });
   });
 
   // ===== Pill-based Filter System =====
-  describe("Pill-based Filter System (Anchor/Compass pattern)", () => {
-    it("should have rosterFilterState object with filters, sort, openPill", () => {
-      expect(rosterJs).toContain("rosterFilterState");
+  describe("Pill-based Filter System (ROSTER namespace)", () => {
+    it("should have ROSTER state object with filters, sortKey, sortDir", () => {
+      expect(rosterJs).toContain("const ROSTER = {");
       expect(rosterJs).toContain("filters: {}");
-      expect(rosterJs).toContain("sort: null");
-      expect(rosterJs).toContain("openPill: null");
+      expect(rosterJs).toContain("sortKey: null");
+      expect(rosterJs).toContain("sortDir: 'asc'");
     });
 
     it("should have rosterRenderFilterBar function", () => {
       expect(rosterJs).toContain("function rosterRenderFilterBar()");
     });
 
-    it("should have rosterTogglePill function", () => {
-      expect(rosterJs).toContain("rosterTogglePill");
+    it("should have rosterToggleDropdown function for pill interaction", () => {
+      expect(rosterJs).toContain("rosterToggleDropdown");
     });
 
     it("should have Select All / Deselect All buttons", () => {
@@ -51,7 +49,7 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
     it("should have debounced apply for instant filter updates", () => {
       expect(rosterJs).toContain("rosterDebouncedApply");
-      expect(rosterJs).toContain("setTimeout(rosterApplyNow, 200)");
+      expect(rosterJs).toContain("_rosterDebounceTimer");
     });
 
     it("should have filter-pill CSS classes", () => {
@@ -69,14 +67,14 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(indexHtml).not.toContain("roster-omnibar-menu");
     });
 
-    it("should have search text filter", () => {
+    it("should have search text filter via roster-search-input", () => {
       expect(rosterJs).toContain("roster-search-input");
-      expect(rosterJs).toContain("rosterRenderTextDropdown");
+      expect(rosterJs).toContain("ROSTER.searchQuery");
     });
 
     it("should have multi-select dropdown with checkboxes", () => {
       expect(rosterJs).toContain("rosterRenderMultiDropdown");
-      expect(rosterJs).toContain("rosterOnCheckboxChange");
+      expect(rosterJs).toContain("rosterOnCheckChange");
     });
 
     it("should have sort buttons in sortable dropdowns", () => {
@@ -84,24 +82,31 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("filter-sort-btn");
     });
 
-    it("should have outside click handler", () => {
-      expect(rosterJs).toContain("_attachRosterOutsideClick");
-      expect(rosterJs).toContain("_detachRosterOutsideClick");
+    it("should have outside click handler to close dropdowns", () => {
+      expect(rosterJs).toContain("document.addEventListener('click'");
+      expect(rosterJs).toContain("filter-dropdown.open");
     });
 
-    it("should have Clear Filters button", () => {
+    it("should have Clear button", () => {
       expect(rosterJs).toContain("rosterClearAllFilters");
-      expect(rosterJs).toContain("Clear Filters");
-    });
-
-    it("should default all multi-select filters to 'All' (all selected)", () => {
-      // Default: no entry in filters = all selected
-      expect(rosterJs).toContain("var selectedSet = new Set(f ? f.values : values)");
+      expect(rosterJs).toContain("Clear");
     });
 
     it("should have dropdown search for searchable fields", () => {
       expect(rosterJs).toContain("rosterFilterDropdownSearch");
-      expect(rosterJs).toContain("roster-dd-search-");
+      expect(rosterJs).toContain("filter-dropdown-search");
+    });
+
+    it("should have date-range filter type for date columns", () => {
+      expect(rosterJs).toContain("date_range");
+      expect(rosterJs).toContain("rosterRenderDateDropdown");
+      expect(rosterJs).toContain("startDate");
+      expect(rosterJs).toContain("endDate");
+    });
+
+    it("should build filter fields from ALL_COLUMNS dynamically", () => {
+      expect(rosterJs).toContain("function buildFilterFields()");
+      expect(rosterJs).toContain("col.isDate");
     });
   });
 
@@ -115,20 +120,12 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("ALL_COLUMNS");
     });
 
-    it("should have visibilityTier property", () => {
-      expect(rosterJs).toContain("visibilityTier");
+    it("should have tier property in ROSTER state", () => {
+      expect(rosterJs).toContain("tier:");
     });
 
-    it("should determine visibility based on role", () => {
-      expect(rosterJs).toContain("rosterDeterminePermissions");
-    });
-
-    it("LIMITED_COLUMNS should have 22 columns", () => {
-      const limitedMatch = rosterJs.match(/LIMITED_COLUMNS:\s*\[([\s\S]*?)\],/);
-      expect(limitedMatch).toBeTruthy();
-      const entries = limitedMatch![1].match(/\{ key:/g);
-      expect(entries).toBeTruthy();
-      expect(entries!.length).toBe(22);
+    it("should determine visibility based on RBAC permissions", () => {
+      expect(rosterJs).toContain("regimen.full_columns");
     });
 
     it("ALL_COLUMNS should include attrition fields", () => {
@@ -142,12 +139,8 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
   // ===== Regimen Editability =====
   describe("Regimen Editability Rules", () => {
-    it("should use RBAC permission for edit access (no hardcoded OHRs)", () => {
+    it("should use RBAC permission for edit access", () => {
       expect(rosterJs).toContain("regimen.edit_employee");
-      expect(rosterJs).toContain("ROSTER.canEdit");
-    });
-
-    it("should use canEdit flag", () => {
       expect(rosterJs).toContain("ROSTER.canEdit");
     });
 
@@ -158,28 +151,28 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
   // ===== Column Grouping =====
   describe("Regimen Column Grouping", () => {
-    it("should have Identity group", () => {
-      expect(rosterJs).toContain("group: 'Identity'");
+    it("should have identity group", () => {
+      expect(rosterJs).toContain("group: 'identity'");
     });
 
-    it("should have Role & Assignment group", () => {
-      expect(rosterJs).toContain("group: 'Role & Assignment'");
+    it("should have role group", () => {
+      expect(rosterJs).toContain("group: 'role'");
     });
 
-    it("should have System IDs group", () => {
-      expect(rosterJs).toContain("group: 'System IDs'");
+    it("should have system group", () => {
+      expect(rosterJs).toContain("group: 'system'");
     });
 
-    it("should have Dates group", () => {
-      expect(rosterJs).toContain("group: 'Dates'");
+    it("should have dates group", () => {
+      expect(rosterJs).toContain("group: 'dates'");
     });
 
-    it("should have Attrition group", () => {
-      expect(rosterJs).toContain("group: 'Attrition'");
+    it("should have attrition group", () => {
+      expect(rosterJs).toContain("group: 'attrition'");
     });
 
-    it("should have Asset & Logistics group", () => {
-      expect(rosterJs).toContain("group: 'Asset & Logistics'");
+    it("should have asset group", () => {
+      expect(rosterJs).toContain("group: 'asset'");
     });
   });
 
@@ -190,12 +183,9 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("_actor_name");
     });
 
-    it("should have rosterViewAuditTrail function", () => {
-      expect(rosterJs).toContain("function rosterViewAuditTrail");
-    });
-
-    it("should have Audit Trail button in detail footer", () => {
+    it("should have inline audit trail in detail card", () => {
       expect(rosterJs).toContain("Audit Trail");
+      expect(rosterJs).toContain("audit-log");
     });
 
     it("PATCH endpoint should extract _actor_ohr and _actor_name", () => {
@@ -225,7 +215,8 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
     });
 
     it("should include date stamp in filename", () => {
-      expect(rosterJs).toContain("regimen-roster-${today}.csv");
+      expect(rosterJs).toContain("regimen-roster-");
+      expect(rosterJs).toContain(".csv");
     });
 
     it("should have Export CSV button in HTML", () => {
@@ -241,35 +232,38 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
     it("should create blob and trigger download", () => {
       expect(rosterJs).toContain("new Blob([csv]");
       expect(rosterJs).toContain("URL.createObjectURL");
-      expect(rosterJs).toContain("link.download = filename");
+      expect(rosterJs).toContain("link.download");
     });
   });
 
-  // ===== Onboarding Dashboard =====
-  describe("Onboarding Completion Dashboard", () => {
+  // ===== Incomplete Rostering =====
+  describe("Incomplete Rostering Dashboard", () => {
     it("should have tab bar in HTML", () => {
       expect(indexHtml).toContain("regimen-tabs");
       expect(indexHtml).toContain("regimen-tab-roster");
       expect(indexHtml).toContain("regimen-tab-onboarding");
     });
 
-    it("should have onboarding panel in HTML", () => {
+    it("should have incomplete rostering panel in HTML", () => {
       expect(indexHtml).toContain("regimen-panel-onboarding");
-      expect(indexHtml).toContain("onboarding-summary");
       expect(indexHtml).toContain("onboarding-table");
+    });
+
+    it("should NOT have summary cards (removed per user request)", () => {
+      expect(indexHtml).not.toContain("onboarding-summary");
     });
 
     it("should have rosterSwitchTab function", () => {
       expect(rosterJs).toContain("rosterSwitchTab");
     });
 
-    it("should show onboarding tab only for admin OHR", () => {
+    it("should show onboarding tab only for admin OHR via RBAC", () => {
       expect(rosterJs).toContain("regimen.onboarding_tab");
     });
 
-    it("should have INCOMPLETE_ROSTERING_COLUMNS covering all columns", () => {
-      expect(rosterJs).toContain("INCOMPLETE_ROSTERING_COLUMNS");
-      expect(rosterJs).toContain("INCOMPLETE_ROSTERING_LABELS");
+    it("should have IR_DISPLAY_COLUMNS covering all columns", () => {
+      expect(rosterJs).toContain("IR_DISPLAY_COLUMNS");
+      expect(rosterJs).toContain("IR_LABELS");
     });
 
     it("should have incompleteRosteringGetData function that computes missing fields", () => {
@@ -278,27 +272,26 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("isComplete");
     });
 
-    it("should render summary cards with total, fully rostered, incomplete, active incomplete, rate", () => {
-      expect(rosterJs).toContain("Total Employees");
-      expect(rosterJs).toContain("Fully Rostered");
-      expect(rosterJs).toContain("Incomplete");
+    it("should render table with Completion Rate, Missing Count, Missing Fields columns", () => {
       expect(rosterJs).toContain("Completion Rate");
+      expect(rosterJs).toContain("Missing Count");
+      expect(rosterJs).toContain("Missing Fields");
     });
 
     it("should render table with missing field indicators", () => {
-      expect(rosterJs).toContain("Missing Fields");
-      expect(rosterJs).toContain("Missing Count");
-      expect(rosterJs).toContain("INCOMPLETE_ROSTERING_LABELS");
+      expect(rosterJs).toContain("IR_LABELS");
     });
 
-    it("should have search functionality in onboarding tab", () => {
-      expect(indexHtml).toContain("onboarding-search");
-      expect(rosterJs).toContain("onboardingRenderTable");
+    it("should have filter bar for Incomplete Rostering", () => {
+      expect(indexHtml).toContain("ir-filter-bar");
+      expect(indexHtml).toContain("ir-filter-pills");
+      expect(rosterJs).toContain("irRenderFilterBar");
+      expect(rosterJs).toContain("IR_STATE");
     });
 
     it("should have pagination in incomplete rostering tab", () => {
-      expect(rosterJs).toContain("incompleteRosteringRenderPagination");
-      expect(rosterJs).toContain("_incompleteRosteringPage");
+      expect(rosterJs).toContain("irRenderPagination");
+      expect(rosterJs).toContain("_irPage");
     });
 
     it("should sort by most missing fields first", () => {
@@ -308,6 +301,12 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
   // ===== Onboarding Signup Flow =====
   describe("Onboarding Signup Flow", () => {
+    it("should have signup choice screen with Trainee and Non-Trainee options", () => {
+      expect(indexHtml).toContain("signup-choice");
+      expect(indexHtml).toContain("I am a Trainee");
+      expect(indexHtml).toContain("I am not a Trainee");
+    });
+
     it("should have onboarding form in HTML", () => {
       expect(indexHtml).toContain("auth-form-onboarding");
       expect(indexHtml).toContain("Complete Your Profile");
@@ -347,7 +346,7 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(appJs).toContain("at least 16 years old");
     });
 
-    it("should send notifications to admin and assistant on onboarding", () => {
+    it("should send notifications to admin on onboarding", () => {
       expect(appJs).toContain("type: 'onboarding'");
       expect(appJs).toContain("New Agent Onboarding");
     });

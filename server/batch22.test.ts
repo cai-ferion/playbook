@@ -130,9 +130,9 @@ describe('Batch 22 — Regimen Roster Fix', () => {
     expect(roster).not.toContain("type: 'roster_delete'");
   });
 
-  it('rosterRenderTable function exists and renders ALL_COLUMNS', () => {
+  it('rosterRenderTable function exists and renders visible columns', () => {
     expect(roster).toContain('function rosterRenderTable()');
-    expect(roster).toContain('ROSTER.ALL_COLUMNS');
+    expect(roster).toContain('ROSTER.getVisibleColumns()');
   });
 });
 

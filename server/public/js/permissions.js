@@ -233,15 +233,13 @@ function permOpenDetail(ohrId) {
     `).join('')}
   `;
 
-  // Show panel
-  document.getElementById('perm-detail-overlay').style.display = 'block';
-  document.getElementById('perm-detail-panel').style.display = 'block';
+  // Show panel (module-form-overlay pattern)
+  document.getElementById('perm-detail-overlay').style.display = 'flex';
   permUpdateSaveBtn();
 }
 
 function permCloseDetail() {
   document.getElementById('perm-detail-overlay').style.display = 'none';
-  document.getElementById('perm-detail-panel').style.display = 'none';
   permState.detailOhr = null;
 }
 
