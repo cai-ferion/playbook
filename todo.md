@@ -1821,3 +1821,9 @@
 - [x] Hook sync into all 5 io_employees mutation paths (PATCH, POST, DELETE, 2x billing bulk sync)
 - [x] Add Supabase credentials as env secrets (SUPABASE_URL, SUPABASE_SERVICE_KEY)
 - [x] Test end-to-end sync on employee update — 460 tests pass (4 new Supabase tests)
+
+## Feature — Daily DB→ROSTER GSheet Sync
+- [x] Inspect current ROSTER sheet structure and column mapping — 43 cols, 5 sheet-only preserved
+- [x] Build roster sync module (server/roster-sync.ts) — full-replace with sheet-only column preservation
+- [x] Add daily cron schedule (2:00 AM PHT) and manual trigger endpoint (/api/io/sync-roster)
+- [x] Test end-to-end sync — 500 rows written (403 updated, 97 new), 9.5s, 460 tests pass

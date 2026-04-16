@@ -15,6 +15,7 @@ import { registerIOBackupRoutes } from "../io-backup.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import performanceRouter from "../io-performance-routes.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
+import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,7 +109,21 @@ async function startServer() {
     res.json({ __dirname, cwd: process.cwd(), publicDir, candidates: results });
   });
 
-  // Admin-only manual sync trigger
+  // Admin-only manual roster sync trigger
+  app.post("/api/io/sync-roster", async (req, res) => {
+    const actorOhr = req.headers["x-actor-ohr"] as string;
+    if (actorOhr !== "740045023") {
+      return res.status(403).json({ error: "Admin only" });
+    }
+    try {
+      const result = await runRosterSync("manual");
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Admin-only manual attendance sync trigger
   app.post("/api/io/sync-attendance", async (req, res) => {
     const actorOhr = req.headers["x-actor-ohr"] as string;
     if (actorOhr !== "740045023") {
@@ -148,6 +163,7 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Initialize cron jobs after server is listening
     initAttendanceSyncCron();
+    initRosterSyncCron();
   });
 }
 
