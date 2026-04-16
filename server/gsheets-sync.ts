@@ -80,11 +80,16 @@ function sleep(ms: number): Promise<void> {
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 const TOKEN_FILE = "/home/ubuntu/.gws_token";
+const RCLONE_CONFIG = "/home/ubuntu/.gdrive-rclone.ini";
 
 function getGwsToken(): string | null {
   // Priority 1: env var (available in shell but not always in dev server process)
   const envToken = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
-  if (envToken) return envToken;
+  if (envToken) {
+    // Also persist to file so cron jobs can use it after env changes
+    try { fs.writeFileSync(TOKEN_FILE, envToken); } catch { /* ignore */ }
+    return envToken;
+  }
   // Priority 2: token file written by shell or previous sync
   try {
     if (fs.existsSync(TOKEN_FILE)) {
@@ -93,6 +98,32 @@ function getGwsToken(): string | null {
         console.log(`[SYNC] Loaded GWS token from ${TOKEN_FILE} (${fileToken.length} chars)`);
         return fileToken;
       }
+    }
+  } catch { /* ignore */ }
+  // Priority 3: Extract from rclone config (Google Drive integration)
+  try {
+    if (fs.existsSync(RCLONE_CONFIG)) {
+      const ini = fs.readFileSync(RCLONE_CONFIG, "utf-8");
+      const tokenLine = ini.split("\n").find(l => l.trim().startsWith("token ="));
+      if (tokenLine) {
+        const tokenJson = JSON.parse(tokenLine.split("=").slice(1).join("=").trim());
+        if (tokenJson.access_token) {
+          console.log(`[SYNC] Extracted GWS token from rclone config (${tokenJson.access_token.length} chars)`);
+          // Persist for future use
+          try { fs.writeFileSync(TOKEN_FILE, tokenJson.access_token); } catch { /* ignore */ }
+          return tokenJson.access_token;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  // Priority 4: Try to get fresh token via shell exec of gws env
+  try {
+    const { execSync } = require("child_process");
+    const shellToken = execSync('echo $GOOGLE_WORKSPACE_CLI_TOKEN', { encoding: 'utf-8', timeout: 5000 }).trim();
+    if (shellToken && shellToken.length > 10) {
+      console.log(`[SYNC] Got GWS token from shell env (${shellToken.length} chars)`);
+      try { fs.writeFileSync(TOKEN_FILE, shellToken); } catch { /* ignore */ }
+      return shellToken;
     }
   } catch { /* ignore */ }
   return null;

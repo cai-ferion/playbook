@@ -142,11 +142,9 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
 
   // ===== Regimen Editability =====
   describe("Regimen Editability Rules", () => {
-    it("should have EDITOR_OHRS array with 3 OHRs", () => {
-      expect(rosterJs).toContain("EDITOR_OHRS");
-      expect(rosterJs).toContain("'740045023'");
-      expect(rosterJs).toContain("'740044909'");
-      expect(rosterJs).toContain("'703212987'");
+    it("should use RBAC permission for edit access (no hardcoded OHRs)", () => {
+      expect(rosterJs).toContain("regimen.edit_employee");
+      expect(rosterJs).toContain("ROSTER.canEdit");
     });
 
     it("should use canEdit flag", () => {
@@ -269,34 +267,28 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("regimen.onboarding_tab");
     });
 
-    it("should have ONBOARDING_REQUIRED_FIELDS array", () => {
-      expect(rosterJs).toContain("ONBOARDING_REQUIRED_FIELDS");
-      expect(rosterJs).toContain("'last_name'");
-      expect(rosterJs).toContain("'given_name'");
-      expect(rosterJs).toContain("'personal_email'");
-      expect(rosterJs).toContain("'contact_number'");
-      expect(rosterJs).toContain("'badge_id'");
+    it("should have INCOMPLETE_ROSTERING_COLUMNS covering all columns", () => {
+      expect(rosterJs).toContain("INCOMPLETE_ROSTERING_COLUMNS");
+      expect(rosterJs).toContain("INCOMPLETE_ROSTERING_LABELS");
     });
 
-    it("should have onboardingGetData function that computes completion status", () => {
-      expect(rosterJs).toContain("function onboardingGetData()");
-      expect(rosterJs).toContain("hasPassword");
+    it("should have incompleteRosteringGetData function that computes missing fields", () => {
+      expect(rosterJs).toContain("function incompleteRosteringGetData()");
       expect(rosterJs).toContain("missingFields");
       expect(rosterJs).toContain("isComplete");
     });
 
-    it("should render summary cards with total, completed, pending, no account, rate", () => {
+    it("should render summary cards with total, fully rostered, incomplete, active incomplete, rate", () => {
       expect(rosterJs).toContain("Total Employees");
-      expect(rosterJs).toContain("Completed");
-      expect(rosterJs).toContain("Pending");
-      expect(rosterJs).toContain("No Account");
+      expect(rosterJs).toContain("Fully Rostered");
+      expect(rosterJs).toContain("Incomplete");
       expect(rosterJs).toContain("Completion Rate");
     });
 
     it("should render table with missing field indicators", () => {
       expect(rosterJs).toContain("Missing Fields");
-      expect(rosterJs).toContain("ONBOARDING_FIELD_LABELS");
-      expect(rosterJs).toContain("All fields complete");
+      expect(rosterJs).toContain("Missing Count");
+      expect(rosterJs).toContain("INCOMPLETE_ROSTERING_LABELS");
     });
 
     it("should have search functionality in onboarding tab", () => {
@@ -304,13 +296,13 @@ describe("Regimen Overhaul, Filter System, Onboarding Dashboard & CSV Export", (
       expect(rosterJs).toContain("onboardingRenderTable");
     });
 
-    it("should have pagination in onboarding tab", () => {
-      expect(rosterJs).toContain("onboardingRenderPagination");
-      expect(rosterJs).toContain("_onboardingPage");
+    it("should have pagination in incomplete rostering tab", () => {
+      expect(rosterJs).toContain("incompleteRosteringRenderPagination");
+      expect(rosterJs).toContain("_incompleteRosteringPage");
     });
 
-    it("should sort pending employees first", () => {
-      expect(rosterJs).toContain("if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1");
+    it("should sort by most missing fields first", () => {
+      expect(rosterJs).toContain("b.missingFields.length - a.missingFields.length");
     });
   });
 

@@ -27,12 +27,21 @@
         <h1>Playbook</h1>
       </div>
       <div class="auth-buttons" id="auth-buttons">
-        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup')">Sign Up</button>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup-choice')">Sign Up</button>
         <button class="btn btn-outline btn-lg auth-btn" onclick="showAuthForm('login')">Login</button>
       </div>
-      <!-- Sign Up Form -->
-      <div class="auth-form" id="auth-form-signup" style="display:none;">
-
+      <!-- Sign Up Choice: Trainee vs Non-Trainee -->
+      <div class="auth-form" id="auth-form-signup-choice" style="display:none;">
+        <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Sign Up</h3>
+        <p style="text-align:center;font-size:13px;color:var(--fg-muted);margin-bottom:20px;">Please select which applies to you:</p>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup-trainee')" style="margin-bottom:10px;">I am a Trainee for IO</button>
+        <button class="btn btn-outline btn-lg auth-btn" onclick="showAuthForm('signup-production')" style="margin-bottom:10px;">I am not a Trainee for IO</button>
+        <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
+      </div>
+      <!-- Sign Up Form: Trainee (OHR + Password, then onboarding form) -->
+      <div class="auth-form" id="auth-form-signup-trainee" style="display:none;">
+        <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Trainee Sign Up</h3>
+        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID and create a password. You will then fill in your profile details.</p>
         <div class="auth-field">
           <label>OHR ID</label>
           <input type="text" class="form-input" id="signup-ohr" placeholder="Enter your OHR ID" autocomplete="off">
@@ -53,8 +62,35 @@
           </div>
         </div>
         <div class="auth-error" id="signup-error"></div>
-        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUp()">Create Account</button>
-        <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUpTrainee()">Next</button>
+        <button class="btn btn-ghost auth-back" onclick="showAuthForm('signup-choice')">Back</button>
+      </div>
+      <!-- Sign Up Form: Production (OHR + Password only) -->
+      <div class="auth-form" id="auth-form-signup-production" style="display:none;">
+        <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Production Sign Up</h3>
+        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID and create a password.</p>
+        <div class="auth-field">
+          <label>OHR ID</label>
+          <input type="text" class="form-input" id="signup-prod-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <div class="password-wrapper">
+            <input type="password" class="form-input" id="signup-prod-password" placeholder="Create a password" autocomplete="new-password">
+            <button class="password-toggle" onmousedown="unmaskPassword('signup-prod-password')" onmouseup="maskPassword('signup-prod-password')" onmouseleave="maskPassword('signup-prod-password')" ontouchstart="unmaskPassword('signup-prod-password')" ontouchend="maskPassword('signup-prod-password')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="password-rules" id="signup-prod-rules">
+            <span id="rule-prod-length">At least 8 characters</span>
+            <span id="rule-prod-capital">1 capital letter</span>
+            <span id="rule-prod-alphanum">Alphanumeric characters</span>
+            <span id="rule-prod-special">Only !, @, #, $, % allowed as special chars</span>
+          </div>
+        </div>
+        <div class="auth-error" id="signup-prod-error"></div>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUpProduction()">Create Account</button>
+        <button class="btn btn-ghost auth-back" onclick="showAuthForm('signup-choice')">Back</button>
       </div>
       <!-- Login Form -->
       <div class="auth-form" id="auth-form-login" style="display:none;">
@@ -1345,25 +1381,24 @@
           <!-- Regimen Tab Bar -->
           <div class="regimen-tabs" id="regimen-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;">
             <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Roster</button>
-            <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Onboarding</button>
+            <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Incomplete Rostering</button>
             <button class="regimen-tab" id="regimen-tab-permissions" onclick="rosterSwitchTab('permissions')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Permissions</button>
           </div>
           <!-- Roster Tab Content -->
           <div id="regimen-panel-roster">
           <!-- Pill-based Filter Bar -->
           <div class="filter-bar" id="roster-filter-bar" style="margin-top:8px;">
-            <div class="filter-bar-row" id="roster-filter-pills"></div>
-          </div>
-          <!-- Action buttons row -->
-          <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
-            <button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Employee
-            </button>
-            <button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Export CSV
-            </button>
+            <div class="filter-bar-row" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Employee
+              </button>
+              <button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+              </button>
+              <div id="roster-filter-pills" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1;"></div>
+            </div>
           </div>
           <!-- Loading -->
           <div class="loading-overlay" id="roster-loading" style="display:none;">

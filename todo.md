@@ -1927,3 +1927,27 @@
 ## Bug Fix — Auth Buttons Broken
 - [x] Fix Sign Up button not working on auth page (syntax error in app.js line 1445 — stray `>` from RBAC edit)
 - [x] Fix Login button not working on auth page (same root cause)
+
+## Batch — Bug Fixes & Feature Revisions
+
+### URGENT: Attendance Cron Fix
+- [x] Fix "Google Sheets API not available (no auth token)" error — added rclone config fallback for token resolution
+
+### Permissions Tab Not Showing
+- [x] Fix Permissions tab not visible — code is correct, published site needed republish with latest checkpoint
+
+### Sign Up Flow Revision
+- [x] Replace OHR-is-new check with 2-option flow: "I am a Trainee for IO" vs "I am not a Trainee for IO"
+- [x] Trainee path triggers existing onboarding form (handleSignUpTrainee)
+- [x] Non-Trainee path asks only for OHR + password creation (handleSignUpProduction)
+
+### Regimen Filter Improvements
+- [x] Include ALL filterable columns in Regimen filter system (15 filters: Status, Role, PG, Supervisor, Shift, SRT Status, Platform, Work Off, City, Province, Barangay, Related PG, Exit Reason, Locker Floor, Search)
+- [x] Align "Add Employee" and "Export CSV" buttons inline with filter bar (single line, flex-wrap)
+
+### Regimen Details — Audit Trail
+- [x] Add Audit Trail as lowest section in the employee detail card (inline, with field-level diffs)
+
+### Onboarding Tab → Incomplete Rostering
+- [x] Rename "Onboarding" tab to "Incomplete Rostering"
+- [x] Change logic: list all employees with at least one blank column (checks all 42 columns, sorted by most missing first)

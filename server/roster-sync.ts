@@ -46,15 +46,42 @@ const SHEET_HEADERS = [
 const SHEET_ONLY_INDICES = [2];
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
+const RCLONE_CONFIG_ROSTER = "/home/ubuntu/.gdrive-rclone.ini";
+
+function getRosterGwsToken(): string | null {
+  // Priority 1: env var
+  const envToken = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
+  if (envToken) {
+    try { fs.writeFileSync("/home/ubuntu/.gws_token", envToken); } catch { /* ignore */ }
+    return envToken;
+  }
+  // Priority 2: token file
+  try {
+    const fileToken = fs.readFileSync("/home/ubuntu/.gws_token", "utf-8").trim();
+    if (fileToken) return fileToken;
+  } catch { /* ignore */ }
+  // Priority 3: rclone config
+  try {
+    if (fs.existsSync(RCLONE_CONFIG_ROSTER)) {
+      const ini = fs.readFileSync(RCLONE_CONFIG_ROSTER, "utf-8");
+      const tokenLine = ini.split("\n").find(l => l.trim().startsWith("token ="));
+      if (tokenLine) {
+        const tokenJson = JSON.parse(tokenLine.split("=").slice(1).join("=").trim());
+        if (tokenJson.access_token) {
+          try { fs.writeFileSync("/home/ubuntu/.gws_token", tokenJson.access_token); } catch { /* ignore */ }
+          return tokenJson.access_token;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 async function getSheetsClient() {
   const { google } = await getGoogleapis();
-  let token = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
+  const token = getRosterGwsToken();
   if (!token) {
-    try {
-      token = fs.readFileSync("/home/ubuntu/.gws_token", "utf-8").trim();
-    } catch {
-      throw new Error("No GWS token available");
-    }
+    throw new Error("No GWS token available");
   }
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: token });
@@ -226,16 +253,12 @@ export async function runRosterSync(trigger: "cron" | "manual" = "cron") {
 
 // ── Cron schedule ────────────────────────────────────────────────────────────
 export function initRosterSyncCron() {
-  const token = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
-  let hasTokenFile = false;
-  try {
-    hasTokenFile = fs.existsSync("/home/ubuntu/.gws_token");
-  } catch {}
-
-  if (!token && !hasTokenFile) {
+  const token = getRosterGwsToken();
+  if (!token) {
     console.warn("[ROSTER SYNC] No GWS token — roster cron disabled");
     return;
   }
+  console.log(`[ROSTER SYNC] GWS token available (${token.length} chars) — cron enabled`);
 
   // Daily at 2:00 AM PHT (UTC+8) = 18:00 UTC previous day
   cron.schedule("0 18 * * *", async () => {

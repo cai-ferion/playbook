@@ -196,26 +196,35 @@ let currentUser = null;
 
 function showAuthForm(type) {
   document.getElementById('auth-buttons').style.display = 'none';
-  document.getElementById('auth-form-signup').style.display = type === 'signup' ? 'block' : 'none';
-  document.getElementById('auth-form-login').style.display = type === 'login' ? 'block' : 'none';
-  document.getElementById('auth-form-onboarding').style.display = type === 'onboarding' ? 'block' : 'none';
-  document.getElementById('signup-error').textContent = '';
-  document.getElementById('login-error').textContent = '';
+  // All form panels
+  const panels = ['auth-form-signup-choice', 'auth-form-signup-trainee', 'auth-form-signup-production', 'auth-form-login', 'auth-form-onboarding'];
+  panels.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Show the requested panel
+  const target = document.getElementById('auth-form-' + type);
+  if (target) target.style.display = 'block';
+  // Clear errors
+  const errIds = ['signup-error', 'login-error', 'signup-prod-error'];
+  errIds.forEach(id => { const el = document.getElementById(id); if (el) { el.textContent = ''; el.style.color = ''; } });
+  // Clear fields when not in onboarding flow
   if (type !== 'onboarding') {
-    document.getElementById('signup-ohr').value = '';
-    document.getElementById('signup-password').value = '';
+    const clearIds = ['signup-ohr', 'signup-password', 'signup-prod-ohr', 'signup-prod-password', 'login-ohr', 'login-password'];
+    clearIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
-  document.getElementById('login-ohr').value = '';
-  document.getElementById('login-password').value = '';
 }
 
 function showAuthButtons() {
   document.getElementById('auth-buttons').style.display = 'flex';
-  document.getElementById('auth-form-signup').style.display = 'none';
-  document.getElementById('auth-form-login').style.display = 'none';
-  document.getElementById('auth-form-onboarding').style.display = 'none';
+  const panels = ['auth-form-signup-choice', 'auth-form-signup-trainee', 'auth-form-signup-production', 'auth-form-login', 'auth-form-onboarding'];
+  panels.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
   window._onboardOhr = null;
   window._onboardPw = null;
+  window._signupType = null;
 }
 
 function unmaskPassword(inputId) {
@@ -253,7 +262,8 @@ function updatePasswordRules(pw) {
 window._onboardOhr = null;
 window._onboardPw = null;
 
-async function handleSignUp() {
+// Trainee Sign Up: validate OHR, then route to onboarding form
+async function handleSignUpTrainee() {
   const ohr = document.getElementById('signup-ohr').value.trim();
   const pw = document.getElementById('signup-password').value;
   const errorEl = document.getElementById('signup-error');
@@ -264,9 +274,7 @@ async function handleSignUp() {
   if (!updatePasswordRules(pw)) { errorEl.textContent = 'Password does not meet all requirements.'; return; }
 
   try {
-    const empResp = await fetch(
-      `${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`
-    );
+    const empResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
     const empData = await empResp.json();
 
     if (!Array.isArray(empData) || empData.length === 0) {
@@ -288,11 +296,107 @@ async function handleSignUp() {
     // OHR is valid and has no password — route to onboarding form
     window._onboardOhr = ohr;
     window._onboardPw = pw;
+    window._signupType = 'trainee';
     showAuthForm('onboarding');
 
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
   }
+}
+
+// Production Sign Up: validate OHR, set password only (no onboarding form)
+async function handleSignUpProduction() {
+  const ohr = document.getElementById('signup-prod-ohr').value.trim();
+  const pw = document.getElementById('signup-prod-password').value;
+  const errorEl = document.getElementById('signup-prod-error');
+  errorEl.textContent = '';
+  errorEl.style.color = '';
+
+  if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
+  if (!updateProdPasswordRules(pw)) { errorEl.textContent = 'Password does not meet all requirements.'; return; }
+
+  try {
+    const empResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
+    const empData = await empResp.json();
+
+    if (!Array.isArray(empData) || empData.length === 0) {
+      errorEl.textContent = 'OHR ID not found. Please check your ID.';
+      return;
+    }
+
+    const emp = empData[0];
+    if (emp.employement_status !== 'Active') {
+      errorEl.textContent = 'OHR ID not found. Please check your ID.';
+      return;
+    }
+
+    if (emp.password) {
+      errorEl.textContent = 'OHR ID not found. Please check your ID.';
+      return;
+    }
+
+    // Set password directly — no onboarding form needed
+    const updateResp = await fetch(`${IO_API_BASE}/employees/${ohr}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: pw,
+        _actor_ohr: ohr,
+        _actor_name: emp.full_name || ohr,
+      })
+    });
+
+    if (!updateResp.ok) {
+      errorEl.textContent = 'Failed to create account. Please try again.';
+      return;
+    }
+
+    // Notify admins
+    const notifTargets = ['740045023', '740044909'];
+    for (const targetOhr of notifTargets) {
+      fetch(`${IO_API_BASE}/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'signup',
+          title: 'Production Agent Sign Up',
+          message: `${emp.full_name || ohr} (OHR: ${ohr}) has created an account via Production Sign Up.`,
+          actor_ohr: ohr,
+          actor_name: emp.full_name || ohr,
+          target_ohr: targetOhr,
+          target_role: 'admin',
+          metadata: JSON.stringify({ ohr_id: ohr, full_name: emp.full_name }),
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+      }).catch(() => {});
+    }
+
+    errorEl.style.color = 'var(--success)';
+    errorEl.textContent = 'Account created! You can now login.';
+    setTimeout(() => {
+      errorEl.style.color = '';
+      showAuthForm('login');
+      document.getElementById('login-ohr').value = ohr;
+    }, 2000);
+  } catch (err) {
+    errorEl.textContent = 'Network error. Please try again.';
+  }
+}
+
+// Password rules for the production signup form
+function updateProdPasswordRules(pw) {
+  const rules = validatePassword(pw);
+  const setClass = (id, pass) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = pass ? 'rule-pass' : (pw.length > 0 ? 'rule-fail' : '');
+  };
+  setClass('rule-prod-length', rules.length);
+  setClass('rule-prod-capital', rules.capital);
+  setClass('rule-prod-alphanum', rules.alphanum);
+  setClass('rule-prod-special', rules.special);
+  return rules.length && rules.capital && rules.alphanum && rules.special;
 }
 
 // Onboarding form validation and submission
@@ -695,11 +799,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     signupPw.addEventListener('input', () => updatePasswordRules(signupPw.value));
   }
 
+  // Production signup password rules listener
+  const signupProdPw = document.getElementById('signup-prod-password');
+  if (signupProdPw) {
+    signupProdPw.addEventListener('input', () => updateProdPasswordRules(signupProdPw.value));
+  }
+
   // Enter key support for login form
   const loginOhr = document.getElementById('login-ohr');
   const loginPw = document.getElementById('login-password');
   if (loginOhr) loginOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
   if (loginPw) loginPw.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+
+  // Enter key support for trainee signup
+  const signupOhr = document.getElementById('signup-ohr');
+  if (signupOhr) signupOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpTrainee(); });
+  if (signupPw) signupPw.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpTrainee(); });
+
+  // Enter key support for production signup
+  const signupProdOhr = document.getElementById('signup-prod-ohr');
+  if (signupProdOhr) signupProdOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpProduction(); });
+  if (signupProdPw) signupProdPw.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpProduction(); });
 });
 
 function initMultiSelects() {

@@ -82,9 +82,9 @@ describe("Batch 17 — Revisions", () => {
       expect(rosterJs).toContain("function formatSrtId");
     });
 
-    it("should have editable fields for admin (740045023)", () => {
+    it("should have editable fields (permission-driven via RBAC)", () => {
       expect(rosterJs).toContain("roster-edit-field");
-      expect(rosterJs).toContain("740045023");
+      expect(rosterJs).toContain("regimen.edit_employee");
     });
 
     it("should have rosterSaveDetailEdits function", () => {

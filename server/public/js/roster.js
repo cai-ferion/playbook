@@ -1,60 +1,41 @@
-/**
- * Regimen — Employee Roster Viewer/Editor
- * Role-based visibility and editability:
- *   - Agents: Cannot see Regimen at all (nav hidden)
- *   - SMEs, QAs, Team Leads (except 740045023), Trainers: Limited columns (read-only)
- *   - Managers & OHR 740045023: ALL columns visible
- *   - Editable by OHR 740045023, 740044909, 703212987 only
- * Audit trail: all edits logged to io_audit_log
- * Filter system: pill-based (same as Anchor/Compass)
- */
+/* ===== Regimen – Roster Management (Pill-based Filter, RBAC, Audit Trail) ===== */
+
+// ===== Column Definitions =====
 
 const ROSTER = {
   employees: [],
   filtered: [],
   page: 1,
-  pageSize: 30,
-  editingId: null,
+  pageSize: 50,
   canEdit: false,
-  visibilityTier: 'full', // 'limited' or 'full'
+  visibilityTier: 'limited', // 'limited' or 'full'
+  editingId: null,
 
-  // OHRs with edit permission
-  EDITOR_OHRS: ['740045023', '740044909', '703212987'],
-  ADMIN_OHR: '740045023',
-
-  // --- Column Definitions (grouped: Identity → Role & Assignment → System IDs → Dates → Attrition) ---
-
-  // Columns visible to SMEs, QAs, Team Leads (non-admin), Trainers
   LIMITED_COLUMNS: [
-    // Identity
     { key: 'ohr_id', label: 'OHR ID', group: 'Identity' },
     { key: 'full_name', label: 'Full Name', group: 'Identity' },
     { key: 'last_name', label: 'Last Name', group: 'Identity' },
     { key: 'given_name', label: 'Given Name', group: 'Identity' },
     { key: 'middle_name', label: 'Middle Name', group: 'Identity' },
     { key: 'suffix', label: 'Suffix', group: 'Identity' },
-    { key: 'billing_name', label: 'Billing Name', group: 'Identity' },
-    { key: 'srt_name', label: 'SRT Name', group: 'Identity' },
-    // Role & Assignment
-    { key: 'employement_status', label: 'Status', group: 'Role & Assignment' },
+    { key: 'employement_status', label: 'Status', group: 'Identity' },
     { key: 'actual_role', label: 'Role', group: 'Role & Assignment' },
     { key: 'supervisor_name', label: 'Supervisor', group: 'Role & Assignment' },
-    { key: 'supervisor_email', label: 'Supervisor Email', group: 'Role & Assignment' },
     { key: 'shift_time', label: 'Shift Time', group: 'Role & Assignment' },
     { key: 'work_off', label: 'Work Off', group: 'Role & Assignment' },
     { key: 'planning_group', label: 'Planning Group', group: 'Role & Assignment' },
     { key: 'complete_planning_group', label: 'Related PG', group: 'Role & Assignment' },
     { key: 'srt_status', label: 'SRT Status', group: 'Role & Assignment' },
-    // System IDs
+    { key: 'platform', label: 'Platform', group: 'Role & Assignment' },
     { key: 'srt_id', label: 'SRT ID', group: 'System IDs' },
     { key: 'workday_id', label: 'Workday ID', group: 'System IDs' },
     { key: 'meta_email', label: 'Meta Email', group: 'System IDs' },
-    // Assets
-    { key: 'macbook_asset_id', label: 'MacBook Asset', group: 'Asset & Logistics' },
-    { key: 'chromebook_asset_id', label: 'Chromebook Asset', group: 'Asset & Logistics' },
+    { key: 'hire_date', label: 'Hire Date', group: 'Dates' },
+    { key: 'regular_date', label: 'Regular Date', group: 'Dates' },
+    { key: 'meta_onboarding_date', label: 'Meta Onboarding Date', group: 'Dates' },
+    { key: 'live_date', label: 'Go Live Date', group: 'Dates' },
   ],
 
-  // ALL columns for Managers & admin
   ALL_COLUMNS: [
     // Identity
     { key: 'ohr_id', label: 'OHR ID', group: 'Identity' },
@@ -63,20 +44,18 @@ const ROSTER = {
     { key: 'given_name', label: 'Given Name', group: 'Identity' },
     { key: 'middle_name', label: 'Middle Name', group: 'Identity' },
     { key: 'suffix', label: 'Suffix', group: 'Identity' },
-    { key: 'billing_name', label: 'Billing Name', group: 'Identity' },
-    { key: 'srt_name', label: 'SRT Name', group: 'Identity' },
-    { key: 'dob', label: 'DOB', group: 'Identity' },
-    { key: 'personal_email', label: 'Personal Email', group: 'Identity' },
-    { key: 'contact_number', label: 'Contact Number', group: 'Identity' },
-    { key: 'primary_address', label: 'Primary Address', group: 'Identity' },
-    { key: 'barangay', label: 'Barangay', group: 'Identity' },
-    { key: 'city', label: 'City', group: 'Identity' },
-    { key: 'province', label: 'Province', group: 'Identity' },
+    { key: 'employement_status', label: 'Status', group: 'Identity' },
+    // Personal Info
+    { key: 'dob', label: 'Date of Birth', group: 'Personal Info' },
+    { key: 'personal_email', label: 'Personal Email', group: 'Personal Info' },
+    { key: 'contact_number', label: 'Contact Number', group: 'Personal Info' },
+    { key: 'primary_address', label: 'Primary Address', group: 'Personal Info' },
+    { key: 'barangay', label: 'Barangay', group: 'Personal Info' },
+    { key: 'city', label: 'City', group: 'Personal Info' },
+    { key: 'province', label: 'Province', group: 'Personal Info' },
     // Role & Assignment
-    { key: 'employement_status', label: 'Status', group: 'Role & Assignment' },
     { key: 'actual_role', label: 'Role', group: 'Role & Assignment' },
     { key: 'supervisor_name', label: 'Supervisor', group: 'Role & Assignment' },
-    { key: 'supervisor_email', label: 'Supervisor Email', group: 'Role & Assignment' },
     { key: 'shift_time', label: 'Shift Time', group: 'Role & Assignment' },
     { key: 'work_off', label: 'Work Off', group: 'Role & Assignment' },
     { key: 'planning_group', label: 'Planning Group', group: 'Role & Assignment' },
@@ -107,12 +86,10 @@ const ROSTER = {
     { key: 'exit_reason', label: 'Exit Reason', group: 'Attrition' },
   ],
 
-  /** Returns the active column set based on user's visibility tier */
   getVisibleColumns() {
     return this.visibilityTier === 'full' ? this.ALL_COLUMNS : this.LIMITED_COLUMNS;
   },
 
-  /** Columns for the edit/add forms (always full set — only editors see forms) */
   FORM_COLUMNS: [
     { key: 'ohr_id', label: 'OHR ID' },
     { key: 'full_name', label: 'Full Name' },
@@ -126,9 +103,11 @@ const ROSTER = {
   ]
 };
 
-// ===== Pill-based Filter State (same pattern as Anchor/Compass) =====
+// ===== Pill-based Filter State =====
+// Expanded to cover all filterable columns
 
 const ROSTER_FILTER_FIELDS = [
+  // Primary filters (always visible)
   { key: 'employement_status', label: 'Status', type: 'multi', recordKey: 'employement_status' },
   { key: 'actual_role', label: 'Role', type: 'multi', recordKey: 'actual_role' },
   { key: 'planning_group', label: 'Planning Group', type: 'multi', recordKey: 'planning_group', searchable: true, sortable: true },
@@ -136,13 +115,19 @@ const ROSTER_FILTER_FIELDS = [
   { key: 'shift_time', label: 'Shift Time', type: 'multi', recordKey: 'shift_time' },
   { key: 'srt_status', label: 'SRT Status', type: 'multi', recordKey: 'srt_status' },
   { key: 'platform', label: 'Platform', type: 'multi', recordKey: 'platform' },
+  { key: 'work_off', label: 'Work Off', type: 'multi', recordKey: 'work_off' },
   { key: 'city', label: 'City', type: 'multi', recordKey: 'city', searchable: true },
+  { key: 'province', label: 'Province', type: 'multi', recordKey: 'province', searchable: true },
+  { key: 'barangay', label: 'Barangay', type: 'multi', recordKey: 'barangay', searchable: true },
+  { key: 'complete_planning_group', label: 'Related PG', type: 'multi', recordKey: 'complete_planning_group', searchable: true },
+  { key: 'exit_reason', label: 'Exit Reason', type: 'multi', recordKey: 'exit_reason' },
+  { key: 'locker_floor', label: 'Locker Floor', type: 'multi', recordKey: 'locker_floor' },
   { key: 'search', label: 'Search', type: 'text' },
 ];
 
 const rosterFilterState = {
-  filters: {},  // key → { key, label, type, values/value, recordKey }
-  sort: null,   // { key, direction } or null
+  filters: {},
+  sort: null,
   openPill: null,
 };
 
@@ -190,7 +175,6 @@ async function rosterFetchEmployees() {
 
   if (loading) loading.style.display = 'none';
 
-  // Determine permissions based on current user
   rosterDeterminePermissions();
 
   // Show/hide add button — editors only
@@ -215,7 +199,7 @@ async function rosterFetchEmployees() {
   rosterApplyFilters();
 }
 
-// ===== Pill-based Filter Bar (ported from Anchor/Compass) =====
+// ===== Pill-based Filter Bar =====
 
 function rosterGetAllValues(field) {
   return [...new Set(ROSTER.employees.map(r => r[field.recordKey]).filter(Boolean))].sort();
@@ -240,13 +224,22 @@ function rosterIsFiltered(field) {
   return f.values && f.values.length > 0 && f.values.length < allValues.length;
 }
 
+function rosterGetVisibleFilterFields() {
+  // For limited tier, hide personal-info and attrition-related filters
+  if (ROSTER.visibilityTier === 'limited') {
+    const limitedHide = ['province', 'barangay', 'exit_reason', 'locker_floor'];
+    return ROSTER_FILTER_FIELDS.filter(f => !limitedHide.includes(f.key));
+  }
+  return ROSTER_FILTER_FIELDS;
+}
+
 function rosterRenderFilterBar() {
   const container = document.getElementById('roster-filter-pills');
   if (!container) return;
+
+  const visibleFields = rosterGetVisibleFilterFields();
   let html = '';
-  for (const field of ROSTER_FILTER_FIELDS) {
-    // Hide platform/city for limited tier users
-    if (ROSTER.visibilityTier === 'limited' && ['platform', 'city'].includes(field.key)) continue;
+  for (const field of visibleFields) {
     const summary = rosterGetFilterSummary(field);
     const isActive = rosterIsFiltered(field);
     const hasSort = rosterFilterState.sort && rosterFilterState.sort.key === field.key;
@@ -267,7 +260,7 @@ function rosterRenderFilterBar() {
   // Clear Filters button
   html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Reset all filters">'
     + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
-    + ' Clear Filters'
+    + ' Clear'
     + '</button>';
   // Record count
   var curEl = document.getElementById('roster-record-count');
@@ -331,7 +324,6 @@ function rosterRenderTextDropdown(dd, field) {
         } else {
           delete rosterFilterState.filters[field.key];
         }
-        // Update pill text
         var pill = document.getElementById('roster-pill-' + field.key);
         if (pill) {
           var valSpan = pill.querySelector('.filter-pill-value');
@@ -347,12 +339,11 @@ function rosterRenderTextDropdown(dd, field) {
 function rosterRenderMultiDropdown(dd, field) {
   var values = rosterGetAllValues(field);
   var f = rosterFilterState.filters[field.key];
-  var selectedSet = new Set(f ? f.values : values); // default: all selected
+  var selectedSet = new Set(f ? f.values : values);
   var searchable = field.searchable || values.length > 15;
 
   var html = '<div class="filter-dropdown-header">';
   html += '<span class="filter-dropdown-title">' + escapeHtml(field.label) + '</span>';
-  // Sort buttons (if sortable)
   if (field.sortable) {
     var isAsc = rosterFilterState.sort && rosterFilterState.sort.key === field.key && rosterFilterState.sort.direction === 'asc';
     var isDesc = rosterFilterState.sort && rosterFilterState.sort.key === field.key && rosterFilterState.sort.direction === 'desc';
@@ -365,7 +356,6 @@ function rosterRenderMultiDropdown(dd, field) {
   if (searchable) {
     html += '<div class="filter-dropdown-search"><input type="text" class="form-input form-input-sm" id="roster-dd-search-' + field.key + '" placeholder="Search..." oninput="rosterFilterDropdownSearch(\'' + field.key + '\')"></div>';
   }
-  // Select All / Deselect All
   html += '<div class="filter-dropdown-actions">'
     + '<button class="filter-action-link" onclick="event.stopPropagation(); rosterSelectAll(\'' + field.key + '\')">Select All</button>'
     + '<button class="filter-action-link" onclick="event.stopPropagation(); rosterDeselectAll(\'' + field.key + '\')" style="color:#DC2626;">Deselect All</button>'
@@ -401,7 +391,6 @@ window.rosterOnCheckboxChange = function (key) {
   } else {
     rosterFilterState.filters[key] = { key: key, label: field.label, type: 'multi', values: checked, recordKey: field.recordKey };
   }
-  // Update pill summary without closing dropdown
   var pill = document.getElementById('roster-pill-' + key);
   if (pill) {
     var valSpan = pill.querySelector('.filter-pill-value');
@@ -523,12 +512,11 @@ function _detachRosterOutsideClick() {
   }
 }
 
-// ===== Apply Filters (pill-based) =====
+// ===== Apply Filters =====
 
 function rosterApplyFilters() {
   let data = [...ROSTER.employees];
 
-  // Apply each filter
   var keys = Object.keys(rosterFilterState.filters);
   for (var ki = 0; ki < keys.length; ki++) {
     var f = rosterFilterState.filters[keys[ki]];
@@ -575,7 +563,7 @@ function rosterApplyFilters() {
   rosterRenderTable();
 }
 
-// Keep old functions as no-ops for backward compat
+// Backward compat stubs
 function rosterPopulateFilters() {}
 function rosterOmnibarOpenMenu() {}
 function rosterOmnibarCloseMenu() {}
@@ -583,7 +571,7 @@ function rosterOmnibarClearAll() { rosterClearAllFilters(); }
 function rosterRenderOmniChips() {}
 function rosterRenderOmniMenu() {}
 
-// ===== Table Rendering (role-based columns) =====
+// ===== Table Rendering =====
 
 function rosterRenderTable() {
   const thead = document.getElementById('roster-table-head');
@@ -851,7 +839,7 @@ function rosterCloseForm() {
   ROSTER.editingId = null;
 }
 
-// ===== Employee Detail Card =====
+// ===== Employee Detail Card (with inline Audit Trail) =====
 
 function formatSrtId(val) {
   if (!val) return '';
@@ -876,10 +864,9 @@ function rosterOpenDetail(ohrId) {
   const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
   const canEditDetail = ROSTER.canEdit;
 
-  // Use the columns appropriate for this user's visibility tier
   const visibleCols = ROSTER.getVisibleColumns();
 
-  // Group columns by their group property
+  // Group columns
   const groups = {};
   visibleCols.forEach(c => {
     if (!groups[c.group]) groups[c.group] = [];
@@ -933,6 +920,13 @@ function rosterOpenDetail(ohrId) {
     html += `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">${escapeHtml(groupName)}</h4>`;
     cols.forEach(c => html += renderField(c));
   }
+
+  // Inline Audit Trail section (always at the bottom)
+  html += `<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">Audit Trail</h4>`;
+  html += `<div id="detail-audit-trail" style="min-height:60px;">
+    <div style="text-align:center;padding:16px;color:var(--fg-muted);font-size:12px;">Loading audit trail...</div>
+  </div>`;
+
   html += '</div>';
 
   formBody.innerHTML = html;
@@ -941,14 +935,50 @@ function rosterOpenDetail(ohrId) {
   let footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
   if (canEditDetail) {
     footerHtml += ` <button class="btn btn-primary btn-sm" onclick="rosterSaveDetailEdits('${escapeAttr(emp.ohr_id)}')">Save Changes</button>`;
-    footerHtml += ` <button class="btn btn-ghost btn-sm" onclick="rosterViewAuditTrail('${escapeAttr(emp.ohr_id)}')" title="View edit history" style="margin-left:auto;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Audit Trail
-    </button>`;
   }
   formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
+
+  // Load audit trail inline
+  rosterLoadInlineAuditTrail(ohrId);
+}
+
+async function rosterLoadInlineAuditTrail(ohrId) {
+  const container = document.getElementById('detail-audit-trail');
+  if (!container) return;
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/audit-log?record_type=io_employees&record_id=${encodeURIComponent(ohrId)}&limit=50`);
+    if (!resp.ok) throw new Error('Failed to fetch audit trail');
+    const logs = await resp.json();
+
+    if (!logs || logs.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--fg-muted);font-size:12px;">No edit history found for this employee.</div>';
+      return;
+    }
+
+    let html = '';
+    logs.forEach(log => {
+      const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Unknown time';
+      const actor = log.actor_name || log.actor_ohr || 'System';
+      html += `<div style="padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;font-size:12px;">${escapeHtml(log.field_name || log.action || 'Update')}</span>
+          <span style="font-size:11px;color:var(--fg-muted);">${escapeHtml(ts)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--fg-muted);margin-top:2px;">by ${escapeHtml(actor)}</div>
+        ${log.old_value || log.new_value ? `<div style="font-size:11px;margin-top:4px;">
+          ${log.old_value ? `<span style="background:#EF444420;color:#EF4444;padding:1px 4px;border-radius:3px;text-decoration:line-through;">${escapeHtml(String(log.old_value))}</span>` : ''}
+          ${log.old_value && log.new_value ? ' → ' : ''}
+          ${log.new_value ? `<span style="background:#22C55E20;color:#22C55E;padding:1px 4px;border-radius:3px;">${escapeHtml(String(log.new_value))}</span>` : ''}
+        </div>` : ''}
+      </div>`;
+    });
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<div style="color:var(--danger);padding:8px;font-size:12px;">Failed to load audit trail: ${escapeHtml(e.message)}</div>`;
+  }
 }
 
 async function rosterSaveDetailEdits(ohrId) {
@@ -980,7 +1010,7 @@ async function rosterSaveDetailEdits(ohrId) {
   }
 }
 
-// ===== Audit Trail Viewer =====
+// ===== Audit Trail Viewer (modal — kept for backward compat) =====
 
 async function rosterViewAuditTrail(ohrId) {
   const modal = document.getElementById('audit-modal');
@@ -1037,7 +1067,6 @@ window.rosterExportCSV = function () {
     return;
   }
 
-  // Build CSV
   const escCSV = (v) => {
     if (v == null) return '';
     const s = String(v);
@@ -1076,7 +1105,6 @@ window.rosterSwitchTab = function (tab) {
   const panels = ['roster', 'onboarding', 'permissions'];
   const tabs = ['roster', 'onboarding', 'permissions'];
 
-  // Hide all panels, deactivate all tabs
   panels.forEach(p => {
     const panel = document.getElementById('regimen-panel-' + p);
     if (panel) panel.style.display = 'none';
@@ -1088,7 +1116,6 @@ window.rosterSwitchTab = function (tab) {
     }
   });
 
-  // Show active panel and tab
   const activePanel = document.getElementById('regimen-panel-' + tab);
   if (activePanel) activePanel.style.display = '';
   const activeTab = document.getElementById('regimen-tab-' + tab);
@@ -1098,52 +1125,39 @@ window.rosterSwitchTab = function (tab) {
     activeTab.classList.add('active');
   }
 
-  // Initialize tab-specific content
-  if (tab === 'onboarding') onboardingRenderDashboard();
+  if (tab === 'onboarding') incompleteRosteringRenderDashboard();
   if (tab === 'permissions' && typeof initPermissions === 'function') initPermissions();
 };
 
-// ===== Onboarding Completion Dashboard =====
+// ===== Incomplete Rostering (replaces Onboarding) =====
+// Shows ALL employees who have at least one column blank
 
-const ONBOARDING_REQUIRED_FIELDS = [
-  'last_name', 'given_name', 'hire_date', 'dob', 'personal_email',
-  'contact_number', 'primary_address', 'barangay', 'city', 'province',
-  'chromebook_asset_id', 'badge_id', 'badge_serial',
-  'locker_floor', 'locker_number'
-];
+const INCOMPLETE_ROSTERING_COLUMNS = ROSTER.ALL_COLUMNS.map(c => c.key);
 
-const ONBOARDING_FIELD_LABELS = {
-  last_name: 'Last Name', given_name: 'Given Name', hire_date: 'Hire Date',
-  dob: 'DOB', personal_email: 'Personal Email', contact_number: 'Contact Number',
-  primary_address: 'Primary Address', barangay: 'Barangay', city: 'City',
-  province: 'Province', chromebook_asset_id: 'Chromebook Asset',
-  badge_id: 'Badge ID', badge_serial: 'Badge Serial',
-  locker_floor: 'Locker Floor', locker_number: 'Locker Number'
-};
+const INCOMPLETE_ROSTERING_LABELS = {};
+ROSTER.ALL_COLUMNS.forEach(c => { INCOMPLETE_ROSTERING_LABELS[c.key] = c.label; });
 
-let _onboardingPage = 1;
-const _onboardingPageSize = 25;
+let _incompleteRosteringPage = 1;
+const _incompleteRosteringPageSize = 25;
 
-function onboardingGetData() {
-  // All employees that are Active (potential onboarding candidates)
-  // "Completed" = has password AND all required fields filled
-  // "Pending" = no password OR missing required fields
+function incompleteRosteringGetData() {
   return ROSTER.employees.map(emp => {
-    const hasPassword = !!emp.password;
-    const missingFields = ONBOARDING_REQUIRED_FIELDS.filter(f => !emp[f] || String(emp[f]).trim() === '');
-    const isComplete = hasPassword && missingFields.length === 0;
-    return { ...emp, hasPassword, missingFields, isComplete };
+    const missingFields = INCOMPLETE_ROSTERING_COLUMNS.filter(f => {
+      const val = emp[f];
+      return val === null || val === undefined || String(val).trim() === '';
+    });
+    const isComplete = missingFields.length === 0;
+    return { ...emp, missingFields, isComplete };
   });
 }
 
-function onboardingRenderDashboard() {
-  const allData = onboardingGetData();
-  const completed = allData.filter(e => e.isComplete);
-  const pending = allData.filter(e => !e.isComplete);
-  const noPassword = allData.filter(e => !e.hasPassword);
-  const rate = allData.length > 0 ? ((completed.length / allData.length) * 100).toFixed(1) : '0.0';
+function incompleteRosteringRenderDashboard() {
+  const allData = incompleteRosteringGetData();
+  const complete = allData.filter(e => e.isComplete);
+  const incomplete = allData.filter(e => !e.isComplete);
+  const activeIncomplete = incomplete.filter(e => e.employement_status === 'Active');
+  const rate = allData.length > 0 ? ((complete.length / allData.length) * 100).toFixed(1) : '0.0';
 
-  // Summary cards
   const summaryEl = document.getElementById('onboarding-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
@@ -1152,16 +1166,16 @@ function onboardingRenderDashboard() {
         <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Total Employees</div>
       </div>
       <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:#22C55E;">${completed.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Completed</div>
+        <div style="font-size:24px;font-weight:700;color:#22C55E;">${complete.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Fully Rostered</div>
       </div>
       <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:#F59E0B;">${pending.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Pending</div>
+        <div style="font-size:24px;font-weight:700;color:#F59E0B;">${incomplete.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Incomplete</div>
       </div>
       <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-        <div style="font-size:24px;font-weight:700;color:#EF4444;">${noPassword.length}</div>
-        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">No Account</div>
+        <div style="font-size:24px;font-weight:700;color:#EF4444;">${activeIncomplete.length}</div>
+        <div style="font-size:12px;color:var(--fg-muted);margin-top:4px;">Active & Incomplete</div>
       </div>
       <div style="flex:1;min-width:140px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
         <div style="font-size:24px;font-weight:700;color:var(--primary);">${rate}%</div>
@@ -1170,15 +1184,15 @@ function onboardingRenderDashboard() {
     `;
   }
 
-  onboardingRenderTable();
+  incompleteRosteringRenderTable();
 }
 
-window.onboardingRenderTable = function () {
+window.incompleteRosteringRenderTable = function () {
   const thead = document.getElementById('onboarding-table-head');
   const tbody = document.getElementById('onboarding-table-body');
   if (!thead || !tbody) return;
 
-  let allData = onboardingGetData();
+  let allData = incompleteRosteringGetData();
 
   // Search filter
   const searchEl = document.getElementById('onboarding-search');
@@ -1190,9 +1204,12 @@ window.onboardingRenderTable = function () {
     );
   }
 
-  // Sort: pending first, then by name
+  // Only show incomplete employees
+  allData = allData.filter(e => !e.isComplete);
+
+  // Sort: most missing fields first, then by name
   allData.sort((a, b) => {
-    if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
+    if (a.missingFields.length !== b.missingFields.length) return b.missingFields.length - a.missingFields.length;
     return (a.full_name || '').localeCompare(b.full_name || '');
   });
 
@@ -1200,56 +1217,57 @@ window.onboardingRenderTable = function () {
     <th style="white-space:nowrap;">OHR ID</th>
     <th style="white-space:nowrap;">Full Name</th>
     <th style="white-space:nowrap;">Status</th>
-    <th style="white-space:nowrap;">Account</th>
-    <th style="white-space:nowrap;">Onboarding Status</th>
+    <th style="white-space:nowrap;">Role</th>
+    <th style="white-space:nowrap;">Missing Count</th>
     <th style="white-space:nowrap;">Missing Fields</th>
   </tr>`;
 
-  const start = (_onboardingPage - 1) * _onboardingPageSize;
-  const pageData = allData.slice(start, start + _onboardingPageSize);
+  const start = (_incompleteRosteringPage - 1) * _incompleteRosteringPageSize;
+  const pageData = allData.slice(start, start + _incompleteRosteringPageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-muted);">No employees found</td></tr>';
-    onboardingRenderPagination(allData.length);
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--fg-muted);">All employees are fully rostered!</td></tr>';
+    incompleteRosteringRenderPagination(allData.length);
     return;
   }
 
   tbody.innerHTML = pageData.map(emp => {
-    const statusColor = emp.isComplete ? '#22C55E' : '#F59E0B';
-    const statusLabel = emp.isComplete ? 'Complete' : 'Pending';
-    const accountColor = emp.hasPassword ? '#22C55E' : '#EF4444';
-    const accountLabel = emp.hasPassword ? 'Active' : 'No Account';
-    const missingHtml = emp.missingFields.length > 0
-      ? emp.missingFields.map(f => `<span style="background:#EF444415;color:#EF4444;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">${escapeHtml(ONBOARDING_FIELD_LABELS[f] || f)}</span>`).join('')
-      : '<span style="color:#22C55E;font-size:12px;">All fields complete</span>';
+    const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+    const missingHtml = emp.missingFields.map(f =>
+      `<span style="background:#EF444415;color:#EF4444;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">${escapeHtml(INCOMPLETE_ROSTERING_LABELS[f] || f)}</span>`
+    ).join('');
 
-    return `<tr>
+    return `<tr class="module-row" onclick="rosterOpenDetail('${escapeAttr(emp.ohr_id)}')" style="cursor:pointer;">
       <td style="white-space:nowrap;font-weight:600;">${escapeHtml(emp.ohr_id || '')}</td>
       <td style="white-space:nowrap;">${escapeHtml(emp.full_name || '')}</td>
-      <td><span class="module-status-badge" style="background:${emp.employement_status === 'Active' ? '#22C55E' : '#EF4444'}20;color:${emp.employement_status === 'Active' ? '#22C55E' : '#EF4444'};border:1px solid ${emp.employement_status === 'Active' ? '#22C55E' : '#EF4444'}40;">${escapeHtml(emp.employement_status || '')}</span></td>
-      <td><span class="module-status-badge" style="background:${accountColor}20;color:${accountColor};border:1px solid ${accountColor}40;">${accountLabel}</span></td>
-      <td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${statusLabel}</span></td>
-      <td style="max-width:400px;">${missingHtml}</td>
+      <td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(emp.employement_status || '')}</span></td>
+      <td style="white-space:nowrap;">${escapeHtml(emp.actual_role || '')}</td>
+      <td style="text-align:center;font-weight:600;color:#EF4444;">${emp.missingFields.length}</td>
+      <td style="max-width:500px;">${missingHtml}</td>
     </tr>`;
   }).join('');
 
-  onboardingRenderPagination(allData.length);
+  incompleteRosteringRenderPagination(allData.length);
 };
 
-function onboardingRenderPagination(total) {
+function incompleteRosteringRenderPagination(total) {
   const el = document.getElementById('onboarding-pagination');
   if (!el) return;
-  const totalPages = Math.ceil(total / _onboardingPageSize) || 1;
-  const start = (_onboardingPage - 1) * _onboardingPageSize + 1;
-  const end = Math.min(_onboardingPage * _onboardingPageSize, total);
+  const totalPages = Math.ceil(total / _incompleteRosteringPageSize) || 1;
+  const start = (_incompleteRosteringPage - 1) * _incompleteRosteringPageSize + 1;
+  const end = Math.min(_incompleteRosteringPage * _incompleteRosteringPageSize, total);
 
   el.innerHTML = `
     <span class="module-page-info">${total > 0 ? `${start}-${end} of ${total}` : '0 records'}</span>
-    <button class="btn btn-ghost btn-xs" ${_onboardingPage <= 1 ? 'disabled' : ''} onclick="_onboardingPage--;onboardingRenderTable();">&laquo; Prev</button>
-    <span class="module-page-num">Page ${_onboardingPage} of ${totalPages}</span>
-    <button class="btn btn-ghost btn-xs" ${_onboardingPage >= totalPages ? 'disabled' : ''} onclick="_onboardingPage++;onboardingRenderTable();">Next &raquo;</button>
+    <button class="btn btn-ghost btn-xs" ${_incompleteRosteringPage <= 1 ? 'disabled' : ''} onclick="_incompleteRosteringPage--;incompleteRosteringRenderTable();">&laquo; Prev</button>
+    <span class="module-page-num">Page ${_incompleteRosteringPage} of ${totalPages}</span>
+    <button class="btn btn-ghost btn-xs" ${_incompleteRosteringPage >= totalPages ? 'disabled' : ''} onclick="_incompleteRosteringPage++;incompleteRosteringRenderTable();">Next &raquo;</button>
   `;
 }
+
+// Keep old function name for backward compat
+function onboardingRenderDashboard() { incompleteRosteringRenderDashboard(); }
+window.onboardingRenderTable = function() { incompleteRosteringRenderTable(); };
 
 // ===== Init =====
 
