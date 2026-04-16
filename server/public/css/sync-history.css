@@ -1,5 +1,40 @@
 /* ===== Sync History Page Styles ===== */
 
+/* Tab Bar */
+.sh-tabs-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+}
+
+.sh-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 150ms ease;
+}
+
+.sh-tab-btn:hover {
+  color: var(--fg);
+  background: var(--bg-surface-hover);
+}
+
+.sh-tab-btn.sh-tab-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
 /* Status Card */
 .sh-status-card {
   background: var(--bg-surface);

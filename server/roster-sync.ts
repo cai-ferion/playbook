@@ -40,6 +40,7 @@ const SHEET_HEADERS = [
   "Live Date", "Badge ID No.", "Badge Serial No.", "Platform",
   "InChat [FYI - IO]", "InDistro [GP MNL IO Agents]", "InDistro [GP MNL S-ABF Agents]",
   "InDistro [GP MNL CS-ABF Agents]",
+  "Offboarding Date", "Resignation Date", "Relieving Date", "Exit Date", "Exit Reason",
 ];
 
 // Indices of sheet-only columns (0-based) that we must preserve from existing sheet
@@ -108,6 +109,11 @@ function dbRowToSheetRow(emp: any): (string | number)[] {
     "",                                   // AO: InDistro IO Agents (sheet-only)
     "",                                   // AP: InDistro S-ABF (sheet-only)
     "",                                   // AQ: InDistro CS-ABF (sheet-only)
+    emp.offboarding_date || "",            // AR: Offboarding Date
+    emp.resignation_date || "",            // AS: Resignation Date
+    emp.relieving_date || "",              // AT: Relieving Date
+    emp.exit_date || "",                   // AU: Exit Date
+    emp.exit_reason || "",                 // AV: Exit Reason
   ];
 }
 
@@ -135,7 +141,7 @@ export async function runRosterSync(trigger: "cron" | "manual" = "cron") {
     // 2. Read existing sheet data to preserve sheet-only columns
     const existingResp = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:AQ1000`,
+      range: `${SHEET_NAME}!A1:AV1000`,
     });
     const existingRows = existingResp.data.values || [];
     // Build a map of OHR → existing sheet-only values
@@ -172,7 +178,7 @@ export async function runRosterSync(trigger: "cron" | "manual" = "cron") {
     // 5. Clear the sheet and write all data in one go
     await sheets.spreadsheets.values.clear({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:AQ`,
+      range: `${SHEET_NAME}!A1:AV`,
     });
 
     // Write in batches of 200 rows to avoid payload limits

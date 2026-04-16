@@ -2809,10 +2809,16 @@ router.get("/sync-log", async (req: Request, res: Response) => {
 
     const limit = Number(req.query.limit) || 50;
     const offset = Number(req.query.offset) || 0;
+    const syncType = req.query.sync_type as string | undefined;
+    const baseWhere = syncType ? eq(ioSyncLog.sync_type, syncType) : undefined;
 
     const [rows, countResult] = await Promise.all([
-      db.select().from(ioSyncLog).orderBy(desc(ioSyncLog.id)).limit(limit).offset(offset),
-      db.select({ count: sql<number>`COUNT(*)` }).from(ioSyncLog),
+      baseWhere
+        ? db.select().from(ioSyncLog).where(baseWhere).orderBy(desc(ioSyncLog.id)).limit(limit).offset(offset)
+        : db.select().from(ioSyncLog).orderBy(desc(ioSyncLog.id)).limit(limit).offset(offset),
+      baseWhere
+        ? db.select({ count: sql<number>`COUNT(*)` }).from(ioSyncLog).where(baseWhere)
+        : db.select({ count: sql<number>`COUNT(*)` }).from(ioSyncLog),
     ]);
 
     res.json({

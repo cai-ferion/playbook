@@ -1827,3 +1827,9 @@
 - [x] Build roster sync module (server/roster-sync.ts) — full-replace with sheet-only column preservation
 - [x] Add daily cron schedule (2:00 AM PHT) and manual trigger endpoint (/api/io/sync-roster)
 - [x] Test end-to-end sync — 500 rows written (403 updated, 97 new), 9.5s, 460 tests pass
+
+## Batch — Sync History Revisions + Attrition Columns
+- [x] Add roster sync history tab to the Sync History page in desktop app
+- [x] Add "Sync Roster" manual trigger button to the roster tab
+- [x] Add "Sync Attendance" manual trigger button to the attendance tab
+- [x] Add attrition columns (exit_date, exit_reason, offboarding_date, resignation_date, relieving_date) to ROSTER sheet headers and sync module — verified in sheet (AR-AV)
