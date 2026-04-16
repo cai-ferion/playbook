@@ -45,35 +45,68 @@ const SHEET_HEADERS = [
 // Col C (2) = Access Level
 const SHEET_ONLY_INDICES = [2];
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth — Multi-source token resolution ────────────────────────────────────
+import { execSync } from "child_process";
 const RCLONE_CONFIG_ROSTER = "/home/ubuntu/.gdrive-rclone.ini";
+const TOKEN_FILE_ROSTER = "/home/ubuntu/.gws_token";
 
 function getRosterGwsToken(): string | null {
-  // Priority 1: env var
+  // Source 1: process.env (set at server start)
   const envToken = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
-  if (envToken) {
-    try { fs.writeFileSync("/home/ubuntu/.gws_token", envToken); } catch { /* ignore */ }
+  if (envToken && envToken.length > 20) {
     return envToken;
   }
-  // Priority 2: token file
+
+  // Source 2: Shell env (captures tokens refreshed after server start)
   try {
-    const fileToken = fs.readFileSync("/home/ubuntu/.gws_token", "utf-8").trim();
-    if (fileToken) return fileToken;
-  } catch { /* ignore */ }
-  // Priority 3: rclone config
+    const shellToken = execSync(
+      'bash -lc "echo \\$GOOGLE_WORKSPACE_CLI_TOKEN"',
+      { encoding: "utf-8", timeout: 5000 }
+    ).trim();
+    if (shellToken && shellToken.length > 20 && shellToken.startsWith("ya29.")) {
+      process.env.GOOGLE_WORKSPACE_CLI_TOKEN = shellToken;
+      try { fs.writeFileSync(TOKEN_FILE_ROSTER, shellToken); } catch { /* ignore */ }
+      return shellToken;
+    }
+  } catch { /* ignore — shell may not be available in deployed env */ }
+
+  // Source 3: Rclone config (Google Drive integration)
   try {
     if (fs.existsSync(RCLONE_CONFIG_ROSTER)) {
       const ini = fs.readFileSync(RCLONE_CONFIG_ROSTER, "utf-8");
       const tokenLine = ini.split("\n").find(l => l.trim().startsWith("token ="));
       if (tokenLine) {
         const tokenJson = JSON.parse(tokenLine.split("=").slice(1).join("=").trim());
-        if (tokenJson.access_token) {
-          try { fs.writeFileSync("/home/ubuntu/.gws_token", tokenJson.access_token); } catch { /* ignore */ }
-          return tokenJson.access_token;
+        if (tokenJson.access_token && tokenJson.access_token.length > 20) {
+          if (tokenJson.expiry) {
+            const expiry = new Date(tokenJson.expiry);
+            if (expiry.getTime() < Date.now()) {
+              console.log(`[ROSTER-SYNC] Rclone token expired at ${tokenJson.expiry}, skipping`);
+            } else {
+              try { fs.writeFileSync(TOKEN_FILE_ROSTER, tokenJson.access_token); } catch { /* ignore */ }
+              return tokenJson.access_token;
+            }
+          } else {
+            try { fs.writeFileSync(TOKEN_FILE_ROSTER, tokenJson.access_token); } catch { /* ignore */ }
+            return tokenJson.access_token;
+          }
         }
       }
     }
   } catch { /* ignore */ }
+
+  // Source 4: Token file (persisted from previous successful resolution)
+  try {
+    if (fs.existsSync(TOKEN_FILE_ROSTER)) {
+      const fileToken = fs.readFileSync(TOKEN_FILE_ROSTER, "utf-8").trim();
+      if (fileToken && fileToken.length > 20) return fileToken;
+    }
+  } catch { /* ignore */ }
+
+  // Source 5: Webdev secret
+  const secretToken = process.env.GWS_ACCESS_TOKEN;
+  if (secretToken && secretToken.length > 20) return secretToken;
+
   return null;
 }
 

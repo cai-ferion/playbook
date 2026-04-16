@@ -2,8 +2,15 @@
  * Google Sheets Attendance Sync — Native Node.js implementation
  *
  * Pushes io_attendance data → ATTEND_26 sheet twice daily (1:30 AM, 4:30 PM PHT).
- * Uses googleapis directly — no Python subprocess, no gws CLI dependency.
- * Logs each sync run to io_sync_log for the Sync History page.
+ * Uses googleapis directly with a multi-source token resolution strategy that
+ * reads the freshest available OAuth token at each sync invocation.
+ *
+ * Token resolution priority (checked at every sync call, not cached):
+ *   1. process.env.GOOGLE_WORKSPACE_CLI_TOKEN (set by sandbox runtime)
+ *   2. Shell env via child_process (captures tokens refreshed after server start)
+ *   3. Rclone config file (Google Drive integration token)
+ *   4. /home/ubuntu/.gws_token file (persisted from previous successful resolution)
+ *   5. Webdev secret GWS_ACCESS_TOKEN (for deployed server, if set)
  *
  * Rate-limit strategy: batchUpdate groups up to 500 cell-ranges per call,
  * with 2-second pauses between batches to stay under Google's 60 writes/min quota.
@@ -11,9 +18,9 @@
 
 import cron from "node-cron";
 import fs from "fs";
+import { execSync } from "child_process";
 
 // Lazy-loaded googleapis — 200MB package, ~1.4s import time.
-// Only loaded when sync actually runs, not on server cold start.
 let _sheetsModule: typeof import("googleapis") | null = null;
 async function getGoogleapis() {
   if (!_sheetsModule) {
@@ -35,8 +42,6 @@ const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-// Google Sheets epoch: Dec 30, 1899
-const SHEETS_EPOCH = new Date(1899, 11, 30);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +53,7 @@ function dateToSerial(d: Date): number {
 }
 
 function formatDateDisplay(d: Date): string {
-  const jsDay = d.getDay(); // 0=Sun..6=Sat
+  const jsDay = d.getDay();
   return `${DAY_NAMES[jsDay]}, ${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -77,67 +82,88 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth — Multi-source token resolution ────────────────────────────────────
+// Reads the freshest available token at each invocation. Never caches.
 
 const TOKEN_FILE = "/home/ubuntu/.gws_token";
 const RCLONE_CONFIG = "/home/ubuntu/.gdrive-rclone.ini";
 
-function getGwsToken(): string | null {
-  // Priority 1: env var (available in shell but not always in dev server process)
+function resolveGwsToken(): { token: string; source: string } | null {
+  // Source 1: Process env (set at server start, may be stale)
   const envToken = process.env.GOOGLE_WORKSPACE_CLI_TOKEN;
-  if (envToken) {
-    // Also persist to file so cron jobs can use it after env changes
-    try { fs.writeFileSync(TOKEN_FILE, envToken); } catch { /* ignore */ }
-    return envToken;
+  if (envToken && envToken.length > 20) {
+    return { token: envToken, source: "process.env" };
   }
-  // Priority 2: token file written by shell or previous sync
+
+  // Source 2: Shell env (captures tokens refreshed after server start)
   try {
-    if (fs.existsSync(TOKEN_FILE)) {
-      const fileToken = fs.readFileSync(TOKEN_FILE, "utf-8").trim();
-      if (fileToken) {
-        console.log(`[SYNC] Loaded GWS token from ${TOKEN_FILE} (${fileToken.length} chars)`);
-        return fileToken;
-      }
+    const shellToken = execSync(
+      'bash -lc "echo \\$GOOGLE_WORKSPACE_CLI_TOKEN"',
+      { encoding: "utf-8", timeout: 5000 }
+    ).trim();
+    if (shellToken && shellToken.length > 20 && shellToken.startsWith("ya29.")) {
+      // Persist for future use and update process.env
+      process.env.GOOGLE_WORKSPACE_CLI_TOKEN = shellToken;
+      try { fs.writeFileSync(TOKEN_FILE, shellToken); } catch { /* ignore */ }
+      return { token: shellToken, source: "shell env" };
     }
-  } catch { /* ignore */ }
-  // Priority 3: Extract from rclone config (Google Drive integration)
+  } catch { /* ignore — shell may not be available in deployed env */ }
+
+  // Source 3: Rclone config (Google Drive integration)
   try {
     if (fs.existsSync(RCLONE_CONFIG)) {
       const ini = fs.readFileSync(RCLONE_CONFIG, "utf-8");
       const tokenLine = ini.split("\n").find(l => l.trim().startsWith("token ="));
       if (tokenLine) {
         const tokenJson = JSON.parse(tokenLine.split("=").slice(1).join("=").trim());
-        if (tokenJson.access_token) {
-          console.log(`[SYNC] Extracted GWS token from rclone config (${tokenJson.access_token.length} chars)`);
-          // Persist for future use
-          try { fs.writeFileSync(TOKEN_FILE, tokenJson.access_token); } catch { /* ignore */ }
-          return tokenJson.access_token;
+        if (tokenJson.access_token && tokenJson.access_token.length > 20) {
+          // Check if expired
+          if (tokenJson.expiry) {
+            const expiry = new Date(tokenJson.expiry);
+            if (expiry.getTime() < Date.now()) {
+              console.log(`[SYNC] Rclone token expired at ${tokenJson.expiry}, skipping`);
+            } else {
+              try { fs.writeFileSync(TOKEN_FILE, tokenJson.access_token); } catch { /* ignore */ }
+              return { token: tokenJson.access_token, source: "rclone config" };
+            }
+          } else {
+            try { fs.writeFileSync(TOKEN_FILE, tokenJson.access_token); } catch { /* ignore */ }
+            return { token: tokenJson.access_token, source: "rclone config" };
+          }
         }
       }
     }
   } catch { /* ignore */ }
-  // Priority 4: Try to get fresh token via shell exec of gws env
+
+  // Source 4: Token file (persisted from previous successful resolution)
   try {
-    const { execSync } = require("child_process");
-    const shellToken = execSync('echo $GOOGLE_WORKSPACE_CLI_TOKEN', { encoding: 'utf-8', timeout: 5000 }).trim();
-    if (shellToken && shellToken.length > 10) {
-      console.log(`[SYNC] Got GWS token from shell env (${shellToken.length} chars)`);
-      try { fs.writeFileSync(TOKEN_FILE, shellToken); } catch { /* ignore */ }
-      return shellToken;
+    if (fs.existsSync(TOKEN_FILE)) {
+      const fileToken = fs.readFileSync(TOKEN_FILE, "utf-8").trim();
+      if (fileToken && fileToken.length > 20) {
+        return { token: fileToken, source: "token file" };
+      }
     }
   } catch { /* ignore */ }
+
+  // Source 5: Webdev secret (for deployed server)
+  const secretToken = process.env.GWS_ACCESS_TOKEN;
+  if (secretToken && secretToken.length > 20) {
+    return { token: secretToken, source: "webdev secret" };
+  }
+
   return null;
 }
 
 async function getSheetsClient() {
-  const token = getGwsToken();
-  if (!token) {
-    console.warn("[SYNC] No GWS token available (env var or token file) — sync disabled");
+  const resolved = resolveGwsToken();
+  if (!resolved) {
+    console.warn("[SYNC] No GWS token available from any source — sync disabled");
     return null;
   }
+  console.log(`[SYNC] Using token from ${resolved.source} (${resolved.token.length} chars)`);
   const { google } = await getGoogleapis();
   const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: token });
+  auth.setCredentials({ access_token: resolved.token });
   return google.sheets({ version: "v4", auth });
 }
 
@@ -182,7 +208,7 @@ function dbRowToSheetRow(row: AttRow): string[] {
   ];
 }
 
-// ── Parse sync output (for backward compat with sync log) ────────────────────
+// ── Sync stats ──────────────────────────────────────────────────────────────
 
 interface SyncStats {
   rows_updated: number;
@@ -482,11 +508,11 @@ export function initAttendanceSyncCron() {
   console.log("[SYNC] Initializing attendance sync cron jobs (PHT timezone)...");
 
   // Pre-flight: check if sync is possible in this environment
-  const token = getGwsToken();
-  if (!token) {
-    console.warn("[SYNC] No GWS token available — cron sync will be skipped until token is provided");
+  const resolved = resolveGwsToken();
+  if (!resolved) {
+    console.warn("[SYNC] No GWS token available — cron sync will attempt on each trigger");
   } else {
-    console.log(`[SYNC] GWS token available (${token.length} chars) — cron sync enabled`);
+    console.log(`[SYNC] GWS token available from ${resolved.source} (${resolved.token.length} chars) — cron enabled`);
   }
 
   // 1:30 AM PHT daily

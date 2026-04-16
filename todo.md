@@ -1981,3 +1981,9 @@
 - [x] Fix batch22 test: ROSTER.ALL_COLUMNS → ROSTER.getVisibleColumns() (code uses dynamic visibility)
 - [x] Fix batch16 test: function rosterOpenDetail → window.rosterOpenDetail (window-assigned function)
 - [x] Fix batch17 tests: formTitle.innerHTML → title.textContent, 'Asset & Logistics' → 'Assets & Logistics', roster-edit-field → data-field, regimen.edit_employee → regimen.edit_employees, rosterSaveDetailEdits → rosterSaveDetail
+
+## Bug Fix — Attendance Sync Auth Token (Recurring)
+- [x] Fix "Google Sheets API not available (no auth token)" error recurring on deployed site
+- [x] Implement multi-source token resolution: process.env → shell env → rclone config → token file → webdev secret
+- [x] Apply same fix to both gsheets-sync.ts (attendance) and roster-sync.ts (roster)
+- [x] Verified: sync runs successfully (347 rows updated, 21849 DB rows, 21875 sheet rows)
