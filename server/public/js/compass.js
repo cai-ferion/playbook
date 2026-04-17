@@ -2323,9 +2323,23 @@ function compassSetViewMode(mode) {
   }
 }
 
+// Performance: lazy-load compass-violations.js on first Compass open
+function _compassLazyLoadViolations() {
+  if (typeof HR_VIOLATIONS !== 'undefined' || COMPASS._violationsLoading) return;
+  COMPASS._violationsLoading = true;
+  const script = document.createElement('script');
+  script.src = 'js/compass-violations.js?v=102g';
+  script.onload = () => { COMPASS._violationsLoading = false; };
+  script.onerror = () => { COMPASS._violationsLoading = false; console.error('Failed to lazy-load compass-violations.js'); };
+  document.head.appendChild(script);
+}
+
 async function initCompass() {
   await compassFetchEmployees();
   await compassFetchLogs();
+
+  // Performance: lazy-load HR_VIOLATIONS catalog (non-blocking)
+  _compassLazyLoadViolations();
 
   // Performance: prefetch ZTP + RCA catalogs in background (no await — non-blocking)
   compassPrefetchCatalogs();

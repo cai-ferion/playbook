@@ -2047,3 +2047,6 @@
 - [x] Deep audit and fix lag on form open (compassShowNewForm) — form HTML cached after first build, reused with field reset
 - [x] Fix lag on coaching type change (compassOnTypeChange) — cached DOM refs, prefetched ZTP/RCA catalogs
 - [x] Fix lag on dropdown/field interactions — eliminated redundant getElementById calls via _formEls cache
+
+## Compass — Lazy-Load HR_VIOLATIONS Catalog
+- [x] Defer loading compass-violations.js until Compass is actually opened
