@@ -2019,3 +2019,7 @@
 - [x] Left column: Add Employee + Export CSV buttons, search bar, filtered count + Clear
 - [x] Right column: 3 stacked rows — row 1 = date filters, row 2 = identity filters, row 3 = role/system/asset/attrition
 - [x] Filter bar uses inline-flex so it doesn't extend to full table width
+
+## Regimen Filter Bar — Count Alignment & Clear Button Style
+- [x] Left-align filtered count (#roster-filter-count) in the left column
+- [x] Restyle Clear button to match Export CSV (btn btn-outline btn-sm)

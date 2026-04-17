@@ -192,8 +192,8 @@ function rosterRenderFilterBar() {
   }
   const countContainer = document.getElementById('roster-count-container');
   if (countContainer) {
-    countContainer.innerHTML = '<span class="filter-bar-meta" id="roster-filter-count"></span>'
-      + '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters" style="font-size:11px;">✕ Clear</button>';
+    countContainer.innerHTML = '<span class="filter-bar-meta" id="roster-filter-count" style="flex:1;"></span>'
+      + '<button class="btn btn-outline btn-sm" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
   }
 
   // === Right column: 3 stacked rows of pills ===
