@@ -2011,3 +2011,6 @@
 - [x] Remove Supervisor and Planning Group filters from Incomplete Roster IR_FILTER_FIELDS
 - [x] Permissions tab removed from Regimen entirely, admin-only via Admin Tools
 - [x] Moved Permissions to Admin Tools as tabbed panel (Tools | Permissions) with adminSwitchTab()
+
+## Regimen Filter Bar — Wrap Fix
+- [x] Change Regimen filter bar from single horizontal scroll row to flex-wrap layout (dates row + wrapped non-date rows, no horizontal scroll)

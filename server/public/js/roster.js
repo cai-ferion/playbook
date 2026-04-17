@@ -177,18 +177,17 @@ function rosterRenderFilterBar() {
 
   let html = '';
 
-  // Line 1: Date filters
-  if (dateFields.length > 0) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px;">';
-    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;min-width:40px;">Dates</span>';
-    dateFields.forEach(f => { html += renderPill(f); });
-    html += '</div>';
-  }
+  // Row 1: Date filters + Clear + Count
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-bottom:6px;border-bottom:1px solid var(--border);">';
+  html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;min-width:40px;">Dates</span>';
+  dateFields.forEach(f => { html += renderPill(f); });
+  html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters" style="margin-left:auto;">✕ Clear</button>';
+  html += '<span class="filter-bar-meta" id="roster-filter-count"></span>';
+  html += '</div>';
 
-  // Lines 2-3: Search + Non-date filters
+  // Rows 2-3: Search + Non-date filters (flex-wrap naturally flows into multiple rows)
   if (multiFields.length > 0 || searchField) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
-    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;min-width:40px;">Filters</span>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:6px;">';
     if (searchField) {
       html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
         + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
@@ -200,12 +199,6 @@ function rosterRenderFilterBar() {
     multiFields.forEach(f => { html += renderPill(f); });
     html += '</div>';
   }
-
-  // Clear filters button
-  html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters">✕ Clear</button>';
-
-  // Record count
-  html += '<span class="filter-bar-meta" id="roster-filter-count"></span>';
 
   container.innerHTML = html;
 }
