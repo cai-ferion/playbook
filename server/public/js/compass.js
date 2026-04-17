@@ -1379,20 +1379,7 @@ async function compassShowNewForm() {
       </div>
     </div>
 
-    <!-- CAP Level section removed — CAP will be a dedicated page under Compass -->
-    <div class="form-section" id="compass-cap-level-section" style="display:none !important;">
-      <div class="form-field">
-        <label class="form-label">Is this for a Corrective Action Plan (CAP)?</label>
-        <div class="cap-radio-group" id="compass-cap-radios" style="display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;">
-          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
-            <input type="radio" name="compass-cap-level" value="" checked onchange="compassOnCapLevelChange()"> <span>No CAP</span>
-          </label>
-        </div>
-        <div id="compass-cap-notice" style="display:none; margin-top:8px; padding:8px 12px; background:#FEF3C720; border:1px solid #F59E0B40; border-radius:var(--radius); font-size:12px; color:#D97706;">
-          <strong>Note:</strong> After creating this coaching log, you will be redirected to fill out the Notice to Explain (NTE) form.
-        </div>
-      </div>
-    </div>
+    <!-- CAP removed — dedicated page under Compass -->
 
     <!-- Job ID for QA Feedback (hidden by default) -->
     <div class="form-section" id="compass-job-id-section" style="display:none;">
@@ -1626,17 +1613,6 @@ function compassOnTypeChange() {
     if (triadCoacheeField) triadCoacheeField.style.display = '';
   } else {
     coacheeField.style.display = '';
-  }
-
-  // CAP level section disabled — CAP will be a dedicated page under Compass
-  const capSection = document.getElementById('compass-cap-level-section');
-  if (capSection) {
-    capSection.style.display = 'none';
-    // Reset CAP radios when type changes
-    const radios = document.querySelectorAll('input[name="compass-cap-level"]');
-    radios.forEach(r => r.checked = r.value === '');
-    const notice = document.getElementById('compass-cap-notice');
-    if (notice) notice.style.display = 'none';
   }
 
   // Incident Report = Violation Tracker (renamed from CAP 0 Coaching)
@@ -2067,24 +2043,6 @@ async function compassSubmitNew() {
     console.error('Failed to create coaching log:', e);
     showToast('Failed to create coaching log: ' + e.message, 'error');
   }
-}
-
-// ===== CAP Level Handling =====
-
-function compassOnCapLevelChange() {
-  const selected = document.querySelector('input[name="compass-cap-level"]:checked')?.value || '';
-  const notice = document.getElementById('compass-cap-notice');
-  if (notice) notice.style.display = selected ? '' : 'none';
-
-  // Change button text: "Next" for CAP 1-3 (will open NTE form), "Create" otherwise
-  const submitBtn = document.getElementById('compass-submit-btn');
-  if (submitBtn) {
-    submitBtn.textContent = ['CAP 1', 'CAP 2', 'CAP 3'].includes(selected) ? 'Next' : 'Create';
-  }
-}
-
-function compassGetSelectedCapLevel() {
-  return document.querySelector('input[name="compass-cap-level"]:checked')?.value || '';
 }
 
 function compassCloseForm() {

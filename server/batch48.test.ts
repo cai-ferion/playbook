@@ -89,20 +89,12 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
       expect(schema).toContain('issued_by: varchar("issued_by"');
     });
 
-    it("CAP level section exists but is permanently hidden (CAP will be dedicated page)", () => {
-      expect(compassJs).toContain('compass-cap-level-section');
-      expect(compassJs).toContain('name="compass-cap-level"');
-      // CAP 1-3 radios removed from Add form — only No CAP remains
-      expect(compassJs).toContain('display:none !important');
-    });
-
-    it("CAP section is always hidden (disabled for dedicated page)", () => {
-      // CAP level section is now permanently hidden — will be a dedicated page
-      expect(compassJs).toContain("capSection.style.display = 'none'");
-    });
-
-    it("compassOnCapLevelChange function exists", () => {
-      expect(compassJs).toContain("function compassOnCapLevelChange()");
+    it("CAP section HTML and functions fully removed (CAP will be dedicated page)", () => {
+      // CAP level section HTML, compassOnCapLevelChange, and compassGetSelectedCapLevel all removed
+      expect(compassJs).not.toContain('function compassOnCapLevelChange()');
+      expect(compassJs).not.toContain('function compassGetSelectedCapLevel()');
+      // Comment marker remains
+      expect(compassJs).toContain('CAP removed');
     });
 
     it("cap_level is included in the coaching record payload", () => {

@@ -2037,3 +2037,8 @@
 ## Compass — Remove CAP from Add Button & Rename CAP 0
 - [x] Remove CAP functions from the Compass Add button (will be a dedicated page later)
 - [x] Rename "CAP 0 Coaching" to "Incident Report"
+
+## Compass — Remove Duplicate Add Form & Clean Up Dead Code
+- [x] Remove duplicate ccShowNewForm/ccSubmitNewForm from compass-coaching.js
+- [x] Wire Coaching Logs "New" button to use main compass.js compassShowNewForm
+- [x] Remove dead CAP functions (compassOnCapLevelChange, compassGetSelectedCapLevel)

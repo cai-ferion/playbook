@@ -41,8 +41,8 @@ function buildDashboardHTML(data) {
   return `
     <div style="padding:20px;max-width:1200px;">
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px;">
-        ${statCard('Total Coaching Logs', c.total, 'var(--accent, #6366f1)', 'compass-coaching')}
-        ${statCard('Pending Acknowledgement', c.pending_ack, '#f59e0b', 'compass-coaching')}
+        ${statCard('Total Coaching Logs', c.total, 'var(--accent, #6366f1)', 'compass-input')}
+        ${statCard('Pending Acknowledgement', c.pending_ack, '#f59e0b', 'compass-input')}
         ${statCard('Active QA Disputes', c.active_disputes, '#ef4444', 'compass-disputes')}
         ${statCard('Total CA Cases', ca.total, '#8b5cf6', 'compass-ca')}
         ${statCard('Active CA Cases', ca.active, '#ec4899', 'compass-ca')}
@@ -52,10 +52,10 @@ function buildDashboardHTML(data) {
         <div style="background:var(--bg-card, #1e1e2e);border:1px solid var(--border, #333);border-radius:8px;padding:20px;">
           <h3 style="margin:0 0 12px;font-size:15px;color:var(--fg);font-weight:600;">Quick Actions</h3>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button class="btn btn-primary btn-sm" onclick="switchView('compass-coaching')" style="text-align:left;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              New Coaching Log
-            </button>
+<button class="btn btn-primary btn-sm" onclick="switchView('compass-input'); setTimeout(compassShowNewForm, 300);" style="text-align:left;">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+               New Coaching Log
+             </button>
             ${currentUser.actual_role !== 'Agent' ? `<button class="btn btn-outline btn-sm" onclick="switchView('compass-ca')" style="text-align:left;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               New CA Case
