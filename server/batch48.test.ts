@@ -89,18 +89,16 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
       expect(schema).toContain('issued_by: varchar("issued_by"');
     });
 
-    it("has CAP radio group in the coaching form", () => {
+    it("CAP level section exists but is permanently hidden (CAP will be dedicated page)", () => {
       expect(compassJs).toContain('compass-cap-level-section');
       expect(compassJs).toContain('name="compass-cap-level"');
-      expect(compassJs).toContain('value="CAP 1"');
-      expect(compassJs).toContain('value="CAP 2"');
-      expect(compassJs).toContain('value="CAP 3"');
+      // CAP 1-3 radios removed from Add form — only No CAP remains
+      expect(compassJs).toContain('display:none !important');
     });
 
-    it("CAP section shown only for General Coaching and Follow-Up Session", () => {
-      expect(compassJs).toContain(
-        "type === 'General Coaching' || type === 'Follow-Up Session'"
-      );
+    it("CAP section is always hidden (disabled for dedicated page)", () => {
+      // CAP level section is now permanently hidden — will be a dedicated page
+      expect(compassJs).toContain("capSection.style.display = 'none'");
     });
 
     it("compassOnCapLevelChange function exists", () => {
@@ -111,11 +109,11 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
       expect(compassJs).toContain("cap_level: capLevel || null");
     });
 
-    it("redirects to NTE form when CAP 1-3 is selected", () => {
+    it("NTE flow is disabled in Add form (CAP will be dedicated page)", () => {
+      // shouldOpenNte is always false now — NTE flow disabled
+      expect(compassJs).toContain("const shouldOpenNte = false");
+      // compassOpenNteForm still exists for viewing existing NTEs
       expect(compassJs).toContain("compassOpenNteForm");
-      expect(compassJs).toContain(
-        "['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel)"
-      );
     });
   });
 

@@ -70,7 +70,7 @@ function buildDashboardHTML(data) {
         <div style="background:var(--bg-card, #1e1e2e);border:1px solid var(--border, #333);border-radius:8px;padding:20px;">
           <h3 style="margin:0 0 12px;font-size:15px;color:var(--fg);font-weight:600;">Module Overview</h3>
           <div style="font-size:13px;color:var(--fg-muted);line-height:1.8;">
-            <p><strong>Coaching Logs</strong> — Record and track coaching sessions (CAP 0, Follow-Up, Group, Triad, QA Feedback, ZTP).</p>
+            <p><strong>Coaching Logs</strong> — Record and track coaching sessions (Incident Report, Follow-Up, Group, Triad, QA Feedback, ZTP).</p>
             <p><strong>QA Disputes</strong> — 6-level escalation board for QA feedback disputes.</p>
             <p><strong>CA Cases</strong> — Full corrective action lifecycle: incident &rarr; NTE &rarr; hearing &rarr; CAP &rarr; active period &rarr; closed.</p>
             <p><strong>AI Assistant</strong> — Advisory tool for CAP recommendations based on employee history and GPHR Policy v3.0.</p>

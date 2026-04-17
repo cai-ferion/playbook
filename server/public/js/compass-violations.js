@@ -1,7 +1,7 @@
 /**
  * HR Policy Violations & Penalties Catalog (GP HR Procedures & Policy 3.0)
  * Extracted from GPHRProcedures&Policy3.0-02.01.26.pdf
- * Used by CAP 0 Coaching (Violation Tracker) form
+ * Used by Incident Report (Violation Tracker) form
  */
 const HR_VIOLATIONS = [
   {

@@ -2033,3 +2033,7 @@
 
 ## Input Portal — Attendance Lock Window
 - [x] Change attendance lock from 1-day to 2-day window (current day + previous day editable)
+
+## Compass — Remove CAP from Add Button & Rename CAP 0
+- [x] Remove CAP functions from the Compass Add button (will be a dedicated page later)
+- [x] Rename "CAP 0 Coaching" to "Incident Report"

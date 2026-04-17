@@ -73,7 +73,7 @@ const COMPASS = {
   pageGiven: 1,
   pageReceived: 1,
 
-  COACHING_TYPES: ['General Coaching', 'CAP 0 Coaching', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+  COACHING_TYPES: ['General Coaching', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
     'Pending SME Review',
@@ -1379,22 +1379,13 @@ async function compassShowNewForm() {
       </div>
     </div>
 
-    <!-- CAP Level (visible for General Coaching, CAP 0 Coaching & Follow Up Session) -->
-    <div class="form-section" id="compass-cap-level-section" style="display:none;">
+    <!-- CAP Level section removed — CAP will be a dedicated page under Compass -->
+    <div class="form-section" id="compass-cap-level-section" style="display:none !important;">
       <div class="form-field">
         <label class="form-label">Is this for a Corrective Action Plan (CAP)?</label>
         <div class="cap-radio-group" id="compass-cap-radios" style="display:flex; gap:16px; flex-wrap:wrap; margin-top:6px;">
           <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
             <input type="radio" name="compass-cap-level" value="" checked onchange="compassOnCapLevelChange()"> <span>No CAP</span>
-          </label>
-          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
-            <input type="radio" name="compass-cap-level" value="CAP 1" onchange="compassOnCapLevelChange()"> <span>CAP 1</span>
-          </label>
-          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
-            <input type="radio" name="compass-cap-level" value="CAP 2" onchange="compassOnCapLevelChange()"> <span>CAP 2</span>
-          </label>
-          <label class="cap-radio-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; color:var(--fg);">
-            <input type="radio" name="compass-cap-level" value="CAP 3" onchange="compassOnCapLevelChange()"> <span>CAP 3</span>
           </label>
         </div>
         <div id="compass-cap-notice" style="display:none; margin-top:8px; padding:8px 12px; background:#FEF3C720; border:1px solid #F59E0B40; border-radius:var(--radius); font-size:12px; color:#D97706;">
@@ -1431,7 +1422,7 @@ async function compassShowNewForm() {
       </div>
     </div>
 
-    <!-- CAP 0 Violation Tracker Fields (hidden by default) -->
+    <!-- Incident Report / Violation Tracker Fields (hidden by default) -->
     <div class="form-section" id="compass-violation-section" style="display:none;">
       <h4 class="form-section-title" style="color:#DC2626;">⚠ Violation Tracker</h4>
       <div class="form-field">
@@ -1637,10 +1628,10 @@ function compassOnTypeChange() {
     coacheeField.style.display = '';
   }
 
-  // Show CAP level section for General Coaching and Follow Up Session (NOT CAP 0 — that's violation tracker)
+  // CAP level section disabled — CAP will be a dedicated page under Compass
   const capSection = document.getElementById('compass-cap-level-section');
   if (capSection) {
-    capSection.style.display = (type === 'General Coaching' || type === 'Follow-Up Session') ? '' : 'none';
+    capSection.style.display = 'none';
     // Reset CAP radios when type changes
     const radios = document.querySelectorAll('input[name="compass-cap-level"]');
     radios.forEach(r => r.checked = r.value === '');
@@ -1648,11 +1639,11 @@ function compassOnTypeChange() {
     if (notice) notice.style.display = 'none';
   }
 
-  // CAP 0 Coaching = Violation Tracker
+  // Incident Report = Violation Tracker (renamed from CAP 0 Coaching)
   const violationSection = document.getElementById('compass-violation-section');
   if (violationSection) {
-    violationSection.style.display = type === 'CAP 0 Coaching' ? '' : 'none';
-    if (type === 'CAP 0 Coaching') {
+    violationSection.style.display = type === 'Incident Report' ? '' : 'none';
+    if (type === 'Incident Report') {
       compassInitViolationCatalog();
       // Auto-set session goal to "Compliance & Behavior" and hide the section
       if (sessionGoalSection) sessionGoalSection.style.display = 'none';
@@ -1898,8 +1889,8 @@ async function compassSubmitNew() {
   } else if (type === 'ZTP Coaching') {
     // ZTP Coaching always uses "Compliance" as session goal
     sessionGoal = 'Compliance';
-  } else if (type === 'CAP 0 Coaching') {
-    // CAP 0 Coaching (Violation Tracker) auto-sets to "Compliance & Behavior"
+  } else if (type === 'Incident Report') {
+    // Incident Report (Violation Tracker) auto-sets to "Compliance & Behavior"
     sessionGoal = 'Compliance & Behavior';
   } else if (type !== 'Follow-Up Session') {
     sessionGoal = compassGetSelectedGoals();
@@ -1915,8 +1906,8 @@ async function compassSubmitNew() {
   // For follow-ups, also pull coachee info from the parent log if employee not found
   const parentLog = (type === 'Follow-Up Session') ? COMPASS.selectedParentLog : null;
 
-  // Get CAP level if applicable (not for CAP 0 Coaching — that's the violation tracker)
-  const capLevel = (type === 'General Coaching' || type === 'Follow-Up Session') ? compassGetSelectedCapLevel() : '';
+  // CAP level disabled — always empty (CAP will be a dedicated page)
+  const capLevel = '';
 
   const record = {
     coaching_type: type,
@@ -1979,7 +1970,7 @@ async function compassSubmitNew() {
     record.sme_joiner_2_email = joiner2Emp ? (joiner2Emp.meta_email || '') : '';
   }
 
-  if (type === 'CAP 0 Coaching') {
+  if (type === 'Incident Report') {
     // Violation Tracker fields
     const incidentTs = document.getElementById('compass-new-incident-ts')?.value || '';
     if (!incidentTs) { showToast('Please enter the incident timestamp', 'error'); return; }
@@ -2049,18 +2040,10 @@ async function compassSubmitNew() {
     return;
   }
 
-  // CAP 1-3: defer coaching log creation — open NTE form first, create both on NTE submit
-  const shouldOpenNte = capLevel && ['CAP 1', 'CAP 2', 'CAP 3'].includes(capLevel);
+  // CAP 1-3 NTE flow disabled — CAP will be a dedicated page under Compass
+  const shouldOpenNte = false;
   if (shouldOpenNte) {
-    await compassOpenNteForm({
-      coaching_id: null, // will be created on NTE submit
-      employee_name: coachee ? coachee.full_name : (parentLog ? parentLog.coachee : ''),
-      ohr_id: coacheeOhr,
-      cap_level: capLevel,
-      coach_name: coach ? coach.full_name : '',
-      coach_ohr: coach ? coach.ohr_id : '',
-      pendingCoachingRecord: record // pass the full record to create later
-    });
+    // NTE flow placeholder — will be reimplemented in dedicated CAP page
     return;
   }
 
@@ -2479,7 +2462,7 @@ document.addEventListener('selectionchange', function() {
 
 // ===== Multi-Select Goal Helpers =====
 
-// Goals to hide for "General Coaching" and "CAP 0 Coaching" types
+// Goals to hide for "General Coaching" and "Incident Report" types
 const NEW_SESSION_HIDDEN_GOALS = ['Coaching Observation', 'Quality Error Findings'];
 
 function compassFilterGoalOptions(type) {
@@ -2488,7 +2471,7 @@ function compassFilterGoalOptions(type) {
   const labels = dropdown.querySelectorAll('label.multi-select-option');
   labels.forEach(label => {
     const goalName = label.getAttribute('data-goal');
-    if ((type === 'General Coaching' || type === 'CAP 0 Coaching') && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
+    if ((type === 'General Coaching' || type === 'Incident Report') && NEW_SESSION_HIDDEN_GOALS.includes(goalName)) {
       label.style.display = 'none';
       // Also uncheck if hidden
       const cb = label.querySelector('input[type="checkbox"]');
@@ -4206,7 +4189,7 @@ function compassOpenNteDetail(nte) {
 }
 
 
-// ===== CAP 0 Violation Tracker Functions =====
+// ===== Incident Report / Violation Tracker Functions =====
 
 /**
  * Initialize the violation category dropdown from HR_VIOLATIONS data.

@@ -65,12 +65,12 @@ describe('Batch 47 — Root Cause Analysis Alignment', () => {
   });
 });
 
-describe('Batch 47 — Coaching Types: General Coaching + CAP 0 Coaching', () => {
+describe('Batch 47 — Coaching Types: General Coaching + Incident Report', () => {
   const compass = readPublicJS('compass.js');
 
-  it('COACHING_TYPES includes both General Coaching and CAP 0 Coaching', () => {
+  it('COACHING_TYPES includes both General Coaching and Incident Report', () => {
     expect(compass).toContain("'General Coaching'");
-    expect(compass).toContain("'CAP 0 Coaching'");
+    expect(compass).toContain("'Incident Report'");
   });
 
   it('group coaching creates individual logs with General Coaching type', () => {

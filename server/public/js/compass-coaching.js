@@ -64,7 +64,7 @@ function ccBuildListHTML() {
         <input type="text" id="cc-search" placeholder="Search by name, ID, or goals..." style="flex:1;min-width:200px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input, var(--bg));color:var(--fg);font-size:13px;" oninput="ccOnSearch(this.value)">
         <select id="cc-filter-type" onchange="ccOnFilterType(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input, var(--bg));color:var(--fg);font-size:13px;">
           <option value="">All Types</option>
-          <option value="CAP 0">CAP 0</option>
+          <option value="Incident Report">Incident Report</option>
           <option value="Follow-Up Session">Follow-Up</option>
           <option value="Group Coaching">Group</option>
           <option value="Triad Coaching">Triad</option>
@@ -328,7 +328,7 @@ async function ccShowNewForm() {
         <div>
           <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px;">Coaching Type *</label>
           <select id="cc-form-type" class="form-select" style="width:100%;" onchange="ccFormTypeChanged()">
-            <option value="CAP 0">CAP 0 Coaching</option>
+            <option value="Incident Report">Incident Report</option>
             <option value="Follow-Up Session">Follow-Up Session</option>
             <option value="Group Coaching">Group Coaching</option>
             <option value="Triad Coaching">Triad Coaching</option>
@@ -404,7 +404,7 @@ function ccFormTypeChanged() {
   const ztpSec = document.getElementById('cc-form-ztp-section');
   const goalsInput = document.getElementById('cc-form-goals');
 
-  rcaSec.style.display = (type === 'QA Feedback' || type === 'CAP 0' || type === 'Follow-Up Session') ? 'block' : 'none';
+  rcaSec.style.display = (type === 'QA Feedback' || type === 'Incident Report' || type === 'Follow-Up Session') ? 'block' : 'none';
   ztpSec.style.display = (type === 'ZTP Coaching') ? 'block' : 'none';
 
   if (type === 'QA Feedback') goalsInput.value = 'Quality Error Findings';
