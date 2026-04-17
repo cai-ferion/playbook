@@ -1569,7 +1569,7 @@ function renderInputTable() {
         if (!col.editable || locked) {
           // Format date column
           if (col.key === 'date') {
-            return `<td class="cell-readonly col-date ${widthClass}">${formatDateDisplay(val)}${locked && col.editable ? ' <span class="lock-icon" title="Locked after 11 AM PHT">&#128274;</span>' : ''}</td>`;
+            return `<td class="cell-readonly col-date ${widthClass}">${formatDateDisplay(val)}${locked && col.editable ? ' <span class="lock-icon" title="Locked (older than 2-day edit window)">&#128274;</span>' : ''}</td>`;
           }
           if (locked && col.editable) {
             return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;

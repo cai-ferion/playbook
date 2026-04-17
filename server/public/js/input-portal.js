@@ -873,7 +873,7 @@ function renderTableRow(item) {
   var rowClass = (isEdited ? 'row-edited ' : '') + (locked ? 'row-locked ' : '') + (isSelected ? 'row-selected ' : '');
 
   // Checkbox cell
-  var lockTitle = 'Locked (after 11 AM PHT cutoff)';
+  var lockTitle = 'Locked (older than 2-day edit window)';
   var checkboxCell = locked
     ? '<td class="col-checkbox cell-readonly"><span class="lock-icon" title="' + lockTitle + '">&#128274;</span></td>'
     : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + globalIdx + ', this.checked)"></td>';
