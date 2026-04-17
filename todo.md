@@ -1999,3 +1999,9 @@
 - [x] Group Regimen filters: "Filters" label for non-dates, "Dates" label for date-range, with border separator
 - [x] Restore original employee card styling (detail-row/detail-label/detail-value CSS) with dropdown selects + Audit Trail section
 - [x] Fix edit capability — regimen.edit_employees (plural) → regimen.edit_employee (singular) typo fixed
+
+## Regimen Fixes — Round 2 (Post-Publish)
+- [x] Fixed permission reading: sessionStorage('playbook_user').permissions instead of non-existent 'playbook_permissions' key
+- [x] Restored exact 2-column grid card layout from deployed version (8a09692) with Audit Trail section appended
+- [x] Fixed edit: removed stale playbook_token/playbook_ohr refs, using currentUser global for actor info
+- [x] Removed Auth header from rosterFetchEmployees (unnecessary)

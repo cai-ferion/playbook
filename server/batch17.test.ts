@@ -57,7 +57,7 @@ describe("Batch 17 — Revisions", () => {
     const rosterJs = fs.readFileSync(path.join(__dirname, "../server/public/js/roster.js"), "utf-8");
 
     it("should set detail card title with employee name", () => {
-      expect(rosterJs).toContain("formTitle.innerHTML");
+      expect(rosterJs).toContain("title.textContent");
     });
 
     it("should have 'Related PG' instead of 'Complete PG'", () => {
@@ -83,7 +83,7 @@ describe("Batch 17 — Revisions", () => {
     });
 
     it("should have editable fields (permission-driven via RBAC)", () => {
-      expect(rosterJs).toContain("roster-edit-field");
+      expect(rosterJs).toContain("data-field");
       expect(rosterJs).toContain("regimen.edit_employee");
     });
 

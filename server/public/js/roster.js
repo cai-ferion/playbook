@@ -561,98 +561,75 @@ function rosterRenderPagination() {
 
 // ===== Detail Panel with Inline Audit Trail =====
 window.rosterOpenDetail = function(ohrId) {
-  var emp = ROSTER.employees.find(function(e) { return e.ohr_id === ohrId; });
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
-  var overlay = document.getElementById('roster-form-overlay');
-  var formTitle = document.getElementById('roster-form-title');
-  var formBody = document.getElementById('roster-form-body');
-  var formFooter = document.getElementById('roster-form-footer');
-  if (!overlay || !formBody) return;
-
-  formTitle.innerHTML = '';
-  var statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
-  var canEditDetail = ROSTER.canEdit;
-  var visibleCols = ROSTER.getVisibleColumns();
-
-  // Group columns by their group property (preserving insertion order)
-  var groups = {};
-  var GROUP_LABELS = {
-    'identity': 'Identity', 'role': 'Role & Assignment', 'system': 'System IDs',
-    'asset': 'Assets & Logistics', 'dates': 'Dates', 'attrition': 'Attrition'
-  };
-  visibleCols.forEach(function(c) {
-    var gLabel = GROUP_LABELS[c.group] || c.group;
-    if (!groups[gLabel]) groups[gLabel] = [];
-    groups[gLabel].push(c);
-  });
-
-  var roleOptions = ['Agent', 'QA', 'SME', 'Operational SME', 'Quality Analyst', 'Team Lead', 'Trainer', 'Manager'];
-  var statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated', 'Nesting'];
-  var srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training'];
-
-  function renderField(col) {
-    var val = col.key === 'srt_id' ? formatSrtId(emp[col.key]) : emp[col.key];
-    var displayVal = (val !== null && val !== undefined && val !== '') ? String(val) : '\u2014';
-
-    // Status field with dropdown or badge
-    if (col.key === 'employement_status') {
-      if (canEditDetail) {
-        return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
-          + '<select class="form-select form-select-sm roster-edit-field" data-key="' + col.key + '" style="font-size:13px;padding:2px 6px;max-width:280px;">'
-          + statusOptions.map(function(s) { return '<option value="' + s + '"' + (emp[col.key] === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')
-          + '</select></span></div>';
-      }
-      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
-        + '<span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(displayVal) + '</span></span></div>';
-    }
-    // Role field with dropdown
-    if (col.key === 'actual_role' && canEditDetail) {
-      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
-        + '<select class="form-select form-select-sm roster-edit-field" data-key="' + col.key + '" style="font-size:13px;padding:2px 6px;max-width:280px;">'
-        + roleOptions.map(function(r) { return '<option value="' + r + '"' + (emp[col.key] === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
-        + '</select></span></div>';
-    }
-    // SRT Status field with dropdown
-    if (col.key === 'srt_status' && canEditDetail) {
-      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
-        + '<select class="form-select form-select-sm roster-edit-field" data-key="' + col.key + '" style="font-size:13px;padding:2px 6px;max-width:280px;">'
-        + srtStatusOptions.map(function(s) { return '<option value="' + s + '"' + (emp[col.key] === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')
-        + '</select></span></div>';
-    }
-    // Editable text input
-    if (canEditDetail) {
-      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
-        + '<input type="text" class="form-input form-input-sm roster-edit-field" data-key="' + escapeAttr(col.key) + '" value="' + escapeAttr(displayVal === '\u2014' ? '' : displayVal) + '" style="font-size:13px;padding:2px 6px;width:100%;max-width:280px;">'
-        + '</span></div>';
-    }
-    // Read-only
-    return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">' + escapeHtml(displayVal) + '</span></div>';
+  const overlay = document.getElementById('roster-form-overlay');
+  const title = document.getElementById('roster-form-title');
+  const body = document.getElementById('roster-form-body');
+  const footer = document.getElementById('roster-form-footer');
+  if (!overlay || !body) return;
+  title.textContent = (emp.full_name || emp.ohr_id) + ' — Details';
+  const cols = ROSTER.getVisibleColumns();
+  // Group columns
+  const groups = [
+    { label: 'Identity', keys: cols.filter(c => c.group === 'identity') },
+    { label: 'Role & Assignment', keys: cols.filter(c => c.group === 'role') },
+    { label: 'System IDs', keys: cols.filter(c => c.group === 'system') },
+    { label: 'Assets & Logistics', keys: cols.filter(c => c.group === 'asset') },
+    { label: 'Dates', keys: cols.filter(c => c.group === 'dates') },
+    { label: 'Attrition', keys: cols.filter(c => c.group === 'attrition') }
+  ];
+  let html = '';
+  if (ROSTER.canEdit) {
+    // Editable form — 2-column grid with label on top, input below
+    groups.forEach(g => {
+      if (g.keys.length === 0) return;
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:4px;">' + g.label + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
+      g.keys.forEach(c => {
+        const val = emp[c.key] != null ? emp[c.key] : '';
+        const isReadOnly = c.key === 'ohr_id' || c.key === 'full_name';
+        html += '<div>'
+          + '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">' + escapeHtml(c.label) + '</label>'
+          + '<input type="text" class="form-input form-input-sm" data-field="' + c.key + '" value="' + escapeAttr(val) + '"'
+          + (isReadOnly ? ' readonly style="opacity:0.6;"' : '')
+          + '></div>';
+      });
+      html += '</div></div>';
+    });
+  } else {
+    // Read-only view — 2-column grid with label left, value right
+    groups.forEach(g => {
+      if (g.keys.length === 0) return;
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:4px;">' + g.label + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">';
+      g.keys.forEach(c => {
+        let val = emp[c.key];
+        if (c.key === 'srt_id') val = formatSrtId(val);
+        html += '<div style="display:flex;gap:8px;padding:4px 0;">'
+          + '<span style="font-size:11px;font-weight:600;color:var(--fg-muted);min-width:120px;">' + escapeHtml(c.label) + '</span>'
+          + '<span style="font-size:12px;color:var(--fg);">' + escapeHtml(val != null ? val : '—') + '</span>'
+          + '</div>';
+      });
+      html += '</div></div>';
+    });
   }
-
-  var html = '<div class="detail-section">';
-  for (var groupName in groups) {
-    html += '<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">' + escapeHtml(groupName) + '</h4>';
-    groups[groupName].forEach(function(c) { html += renderField(c); });
-  }
-  html += '</div>';
-
   // ===== Inline Audit Trail Section =====
-  html += '<div class="detail-section" style="margin-top:16px;border-top:2px solid var(--border);padding-top:16px;">';
-  html += '<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Audit Trail</h4>';
+  html += '<div style="margin-top:16px;border-top:2px solid var(--border);padding-top:16px;">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Audit Trail</div>';
   html += '<div id="roster-detail-audit-body" style="font-size:12px;color:var(--fg-muted);">Loading audit trail...</div>';
   html += '</div>';
-
-  formBody.innerHTML = html;
-
+  body.innerHTML = html;
   // Footer
-  var footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
-  if (canEditDetail) {
-    footerHtml += ' <button class="btn btn-primary btn-sm" onclick="rosterSaveDetail(\'' + escapeAttr(emp.ohr_id) + '\')">' + 'Save Changes</button>';
+  if (ROSTER.canEdit) {
+    footer.innerHTML = '<button class="btn btn-primary btn-sm" onclick="rosterSaveDetail(\'' + escapeAttr(ohrId) + '\')">Save Changes</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Cancel</button>';
+  } else {
+    footer.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Close</button>';
   }
-  formFooter.innerHTML = footerHtml;
-
   overlay.style.display = 'flex';
-
   // Load audit trail inline
   rosterLoadInlineAuditTrail(ohrId);
 };
@@ -660,20 +637,14 @@ window.rosterOpenDetail = function(ohrId) {
 async function rosterLoadInlineAuditTrail(ohrId) {
   const body = document.getElementById('roster-detail-audit-body');
   if (!body) return;
-
   try {
-    const token = sessionStorage.getItem('playbook_token');
-    const resp = await fetch('/api/io/audit-log?record_type=employee&record_id=' + encodeURIComponent(ohrId), {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const resp = await fetch('/api/io/audit-log?record_type=employee&record_id=' + encodeURIComponent(ohrId));
     if (!resp.ok) throw new Error('Failed to load');
     const logs = await resp.json();
-
     if (!logs || logs.length === 0) {
       body.innerHTML = '<div style="color:var(--fg-muted);padding:8px 0;">No changes recorded for this employee.</div>';
       return;
     }
-
     let html = '<div style="max-height:300px;overflow-y:auto;">';
     logs.forEach(log => {
       const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : '';
@@ -687,7 +658,7 @@ async function rosterLoadInlineAuditTrail(ohrId) {
             if (v && typeof v === 'object' && 'from' in v && 'to' in v) {
               return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: '
                 + '<span style="color:#EF4444;text-decoration:line-through;">' + escapeHtml(v.from || '(empty)') + '</span>'
-                + ' → <span style="color:#22C55E;">' + escapeHtml(v.to || '(empty)') + '</span>';
+                + ' &rarr; <span style="color:#22C55E;">' + escapeHtml(v.to || '(empty)') + '</span>';
             }
             return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: ' + escapeHtml(JSON.stringify(v));
           }).join('<br>');
@@ -695,7 +666,6 @@ async function rosterLoadInlineAuditTrail(ohrId) {
       } catch (e) {
         changes = escapeHtml(String(log.changes || ''));
       }
-
       html += '<div style="padding:8px 0;border-bottom:1px solid var(--border-muted);">'
         + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
         + '<span style="font-weight:600;color:var(--fg);">' + escapeHtml(log.changed_by || 'System') + '</span>'
@@ -717,17 +687,16 @@ window.rosterCloseForm = function() {
 };
 
 window.rosterSaveDetail = async function(ohrId) {
-  var body = document.getElementById('roster-form-body');
+  const body = document.getElementById('roster-form-body');
   if (!body) return;
-  // Collect from all editable fields (inputs + selects with .roster-edit-field or data-field)
-  var editFields = body.querySelectorAll('.roster-edit-field, input[data-field]');
-  var updates = {};
-  var emp = ROSTER.employees.find(function(e) { return e.ohr_id === ohrId; });
-  editFields.forEach(function(el) {
-    var field = el.getAttribute('data-key') || el.getAttribute('data-field');
-    if (!field || field === 'ohr_id' || field === 'full_name') return;
-    var newVal = el.value.trim();
-    var oldVal = emp[field] != null ? String(emp[field]).trim() : '';
+  const inputs = body.querySelectorAll('input[data-field]');
+  const updates = {};
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  inputs.forEach(input => {
+    const field = input.getAttribute('data-field');
+    if (field === 'ohr_id' || field === 'full_name') return;
+    const newVal = input.value.trim();
+    const oldVal = emp[field] != null ? String(emp[field]).trim() : '';
     if (newVal !== oldVal) updates[field] = newVal;
   });
 
@@ -737,13 +706,12 @@ window.rosterSaveDetail = async function(ohrId) {
   }
 
   try {
-    const token = sessionStorage.getItem('playbook_token');
-    // Include actor info for audit trail
-    updates._actor_ohr = sessionStorage.getItem('playbook_ohr') || '';
-    updates._actor_name = sessionStorage.getItem('playbook_name') || '';
+    // Include actor info for audit trail using currentUser (global)
+    updates._actor_ohr = currentUser ? currentUser.ohr_id : '';
+    updates._actor_name = currentUser ? currentUser.full_name : '';
     const resp = await fetch('/api/io/employees/' + encodeURIComponent(ohrId), {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
     if (!resp.ok) throw new Error('Save failed');
@@ -795,10 +763,9 @@ window.rosterSaveNewEmployee = async function() {
   if (!ohr.trim()) { showToast('OHR ID is required', 'error'); return; }
 
   try {
-    const token = sessionStorage.getItem('playbook_token');
     const resp = await fetch('/api/io/employees', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ohr_id: ohr.trim(), employement_status: status, actual_role: role, planning_group: pg })
     });
     if (!resp.ok) {
@@ -1182,10 +1149,7 @@ async function rosterFetchEmployees() {
   if (loading) loading.style.display = '';
 
   try {
-    const token = sessionStorage.getItem('playbook_token');
-    const resp = await fetch('/api/io/employees', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const resp = await fetch('/api/io/employees');
     if (!resp.ok) throw new Error('Failed to fetch employees');
     ROSTER.employees = await resp.json();
   } catch (e) {
@@ -1195,10 +1159,15 @@ async function rosterFetchEmployees() {
 
   if (loading) loading.style.display = 'none';
 
-  // Determine permissions from cached permissions
-  const permsRaw = sessionStorage.getItem('playbook_permissions');
+  // Determine permissions from currentUser stored in sessionStorage
   let perms = {};
-  try { perms = permsRaw ? JSON.parse(permsRaw) : {}; } catch(e) {}
+  try {
+    const userRaw = sessionStorage.getItem('playbook_user');
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      perms = user.permissions || {};
+    }
+  } catch(e) {}
 
   // Tier: full if regimen.full_columns is granted
   ROSTER.tier = perms['regimen.full_columns'] ? 'full' : 'limited';
