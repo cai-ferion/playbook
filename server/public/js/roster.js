@@ -177,29 +177,27 @@ function rosterRenderFilterBar() {
 
   let html = '';
 
-  // Search pill first
-  if (searchField) {
-    html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
-      + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
-      + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
-      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
-      + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
-      + '</div>';
-  }
-
-  // Non-date filters group
-  if (multiFields.length > 0) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
-    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;">Filters</span>';
-    multiFields.forEach(f => { html += renderPill(f); });
+  // Line 1: Date filters
+  if (dateFields.length > 0) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px;">';
+    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;min-width:40px;">Dates</span>';
+    dateFields.forEach(f => { html += renderPill(f); });
     html += '</div>';
   }
 
-  // Date filters group
-  if (dateFields.length > 0) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-left:2px solid var(--border);padding-left:10px;margin-left:4px;">';
-    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;">Dates</span>';
-    dateFields.forEach(f => { html += renderPill(f); });
+  // Lines 2-3: Search + Non-date filters
+  if (multiFields.length > 0 || searchField) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
+    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;min-width:40px;">Filters</span>';
+    if (searchField) {
+      html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
+        + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
+        + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
+        + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
+        + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
+        + '</div>';
+    }
+    multiFields.forEach(f => { html += renderPill(f); });
     html += '</div>';
   }
 
@@ -816,7 +814,7 @@ window.rosterExportCSV = function() {
 
 // ===== Tab Switching =====
 window.rosterSwitchTab = function(tab) {
-  const panels = ['roster', 'onboarding', 'permissions'];
+  const panels = ['roster', 'onboarding'];
 
   panels.forEach(p => {
     const panel = document.getElementById('regimen-panel-' + p);
@@ -839,7 +837,6 @@ window.rosterSwitchTab = function(tab) {
   }
 
   if (tab === 'onboarding') incompleteRosteringRenderDashboard();
-  if (tab === 'permissions' && typeof initPermissions === 'function') initPermissions();
 };
 
 // ===== Incomplete Rostering =====
@@ -873,8 +870,6 @@ function irGetAllValues(field) {
 const IR_FILTER_FIELDS = [
   { key: 'employement_status', label: 'Status', type: 'multi' },
   { key: 'actual_role', label: 'Role', type: 'multi' },
-  { key: 'planning_group', label: 'Planning Group', type: 'multi' },
-  { key: 'supervisor', label: 'Supervisor', type: 'multi' },
   { key: '_ir_search', label: 'Search', type: 'search' }
 ];
 
@@ -1182,8 +1177,7 @@ async function rosterFetchEmployees() {
   // Show/hide tabs
   const onboardingTab = document.getElementById('regimen-tab-onboarding');
   if (onboardingTab) onboardingTab.style.display = perms['regimen.onboarding_tab'] ? '' : 'none';
-  const permTab = document.getElementById('regimen-tab-permissions');
-  if (permTab) permTab.style.display = perms['regimen.permissions_tab'] ? '' : 'none';
+  // Permissions tab moved to Admin Tools
 
   // Render
   rosterRenderFilterBar();

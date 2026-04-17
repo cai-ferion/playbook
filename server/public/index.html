@@ -733,6 +733,13 @@
 
       <!-- ===== View 4: Admin Tools ===== -->
       <div class="view-container view-hidden" id="view-admin">
+        <!-- Admin Tools Tab Bar -->
+        <div class="regimen-tabs" id="admin-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
+          <button class="regimen-tab active" id="admin-tab-tools" onclick="adminSwitchTab('tools')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Tools</button>
+          <button class="regimen-tab" id="admin-tab-permissions" onclick="adminSwitchTab('permissions')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);">Permissions</button>
+        </div>
+        <!-- Tools Tab Content -->
+        <div id="admin-panel-tools">
         <div class="admin-tools-container">
 
           <!-- Pause Site -->
@@ -818,6 +825,49 @@
           </div>
 
         </div>
+        </div><!-- /admin-panel-tools -->
+        <!-- Permissions Tab Content (admin-only, moved from Regimen) -->
+        <div id="admin-panel-permissions" style="display:none;">
+          <div style="padding:16px 0;">
+            <!-- Search & filter -->
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+              <input type="text" class="form-input form-input-sm" id="admin-perm-search" placeholder="Search by name or OHR..." oninput="permFilterTable()" style="max-width:320px;">
+              <select class="form-input form-input-sm" id="admin-perm-role-filter" onchange="permFilterTable()" style="max-width:180px;">
+                <option value="">All Roles</option>
+                <option value="Agent">Agent</option>
+                <option value="Operational SME">SME</option>
+                <option value="Quality Analyst">QA</option>
+                <option value="Trainer">Trainer</option>
+                <option value="Team Lead">Team Lead</option>
+                <option value="Manager">Manager</option>
+              </select>
+            </div>
+            <!-- Permissions Table -->
+            <div class="module-table-wrapper">
+              <table class="data-table module-table" id="admin-perm-table">
+                <thead id="admin-perm-table-head"></thead>
+                <tbody id="admin-perm-table-body"></tbody>
+              </table>
+            </div>
+            <div class="module-pagination" id="admin-perm-pagination"></div>
+          </div>
+          <!-- Permission Detail Panel (modal overlay) -->
+          <div class="module-form-overlay" id="admin-perm-detail-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:700px;max-height:90vh;" onclick="event.stopPropagation()">
+              <div class="module-form-header">
+                <h3 id="admin-perm-detail-title">Permissions</h3>
+                <button class="module-form-close" onclick="permCloseDetail()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="admin-perm-detail-body" style="overflow-y:auto;"></div>
+              <div class="module-form-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-outline btn-sm" onclick="permResetToDefaults()">Reset to Defaults</button>
+                <button class="btn btn-primary btn-sm" id="admin-perm-save-btn" onclick="permSaveChanges()">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /admin-panel-permissions -->
       </div>
 
       <!-- ===== View 3: Risk Alerts ===== -->
@@ -1371,7 +1421,7 @@
           <div class="regimen-tabs" id="regimen-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;">
             <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Roster</button>
             <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Incomplete Rostering</button>
-            <button class="regimen-tab" id="regimen-tab-permissions" onclick="rosterSwitchTab('permissions')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Permissions</button>
+
           </div>
           <!-- Roster Tab Content -->
           <div id="regimen-panel-roster">
@@ -1436,48 +1486,7 @@
             </div>
           </div>
           </div>
-          <!-- Permissions Tab Content -->
-          <div id="regimen-panel-permissions" style="display:none;">
-            <div style="padding:16px 0;">
-              <!-- Search & filter -->
-              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-                <input type="text" class="form-input form-input-sm" id="perm-search" placeholder="Search by name or OHR..." oninput="permFilterTable()" style="max-width:320px;">
-                <select class="form-input form-input-sm" id="perm-role-filter" onchange="permFilterTable()" style="max-width:180px;">
-                  <option value="">All Roles</option>
-                  <option value="Agent">Agent</option>
-                  <option value="Operational SME">SME</option>
-                  <option value="Quality Analyst">QA</option>
-                  <option value="Trainer">Trainer</option>
-                  <option value="Team Lead">Team Lead</option>
-                  <option value="Manager">Manager</option>
-                </select>
-              </div>
-              <!-- Permissions Table -->
-              <div class="module-table-wrapper">
-                <table class="data-table module-table" id="perm-table">
-                  <thead id="perm-table-head"></thead>
-                  <tbody id="perm-table-body"></tbody>
-                </table>
-              </div>
-              <div class="module-pagination" id="perm-pagination"></div>
-            </div>
-          </div>
-          <!-- Permission Detail Panel (modal overlay) -->
-          <div class="module-form-overlay" id="perm-detail-overlay" style="display:none;">
-            <div class="module-form-panel" style="max-width:700px;max-height:90vh;" onclick="event.stopPropagation()">
-              <div class="module-form-header">
-                <h3 id="perm-detail-title">Permissions</h3>
-                <button class="module-form-close" onclick="permCloseDetail()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="module-form-body" id="perm-detail-body" style="overflow-y:auto;"></div>
-              <div class="module-form-footer" style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-outline btn-sm" onclick="permResetToDefaults()">Reset to Defaults</button>
-                <button class="btn btn-primary btn-sm" id="perm-save-btn" onclick="permSaveChanges()">Save Changes</button>
-              </div>
-            </div>
-          </div>
+          <!-- Permissions Tab moved to Admin Tools -->
         </div>
       </div>
     </div>

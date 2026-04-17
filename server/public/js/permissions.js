@@ -110,8 +110,9 @@ async function initPermissions() {
 // ── Filter & Render Table ────────────────────────────────────────────────
 
 function permFilterTable() {
-  const search = (document.getElementById('perm-search')?.value || '').toLowerCase().trim();
-  const roleFilter = document.getElementById('perm-role-filter')?.value || '';
+  // Try admin-perm- IDs first (Admin Tools), fall back to perm- IDs (legacy)
+  const search = (document.getElementById('admin-perm-search')?.value || document.getElementById('perm-search')?.value || '').toLowerCase().trim();
+  const roleFilter = document.getElementById('admin-perm-role-filter')?.value || document.getElementById('perm-role-filter')?.value || '';
 
   permState.filtered = permState.employees.filter(emp => {
     if (roleFilter && emp.actual_role !== roleFilter) return false;
@@ -127,8 +128,8 @@ function permFilterTable() {
 }
 
 function permRenderTable() {
-  const thead = document.getElementById('perm-table-head');
-  const tbody = document.getElementById('perm-table-body');
+  const thead = document.getElementById('admin-perm-table-head') || document.getElementById('perm-table-head');
+  const tbody = document.getElementById('admin-perm-table-body') || document.getElementById('perm-table-body');
   if (!thead || !tbody) return;
 
   thead.innerHTML = `<tr>
@@ -174,7 +175,7 @@ function permRenderTable() {
 }
 
 function permRenderPagination() {
-  const container = document.getElementById('perm-pagination');
+  const container = document.getElementById('admin-perm-pagination') || document.getElementById('perm-pagination');
   if (!container) return;
   const { filtered, page, pageSize } = permState;
   const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -205,10 +206,11 @@ function permOpenDetail(ohrId) {
   }
 
   // Render header
-  document.getElementById('perm-detail-title').textContent = `${emp.full_name || ohrId} — Permissions`;
+  const titleEl = document.getElementById('admin-perm-detail-title') || document.getElementById('perm-detail-title');
+  if (titleEl) titleEl.textContent = `${emp.full_name || ohrId} — Permissions`;
 
   // Render body
-  const body = document.getElementById('perm-detail-body');
+  const body = document.getElementById('admin-perm-detail-body') || document.getElementById('perm-detail-body');
   body.innerHTML = `
     <div style="padding:0 16px 8px;font-size:12px;color:var(--fg-muted);border-bottom:1px solid var(--border);margin-bottom:12px;">
       <strong>OHR:</strong> ${ohrId} &nbsp;|&nbsp; <strong>Role:</strong> ${emp.actual_role || '—'} &nbsp;|&nbsp; <strong>Status:</strong> ${emp.employement_status || '—'}
@@ -234,12 +236,14 @@ function permOpenDetail(ohrId) {
   `;
 
   // Show panel (module-form-overlay pattern)
-  document.getElementById('perm-detail-overlay').style.display = 'flex';
+  const overlay = document.getElementById('admin-perm-detail-overlay') || document.getElementById('perm-detail-overlay');
+  if (overlay) overlay.style.display = 'flex';
   permUpdateSaveBtn();
 }
 
 function permCloseDetail() {
-  document.getElementById('perm-detail-overlay').style.display = 'none';
+  const overlay = document.getElementById('admin-perm-detail-overlay') || document.getElementById('perm-detail-overlay');
+  if (overlay) overlay.style.display = 'none';
   permState.detailOhr = null;
 }
 
@@ -259,7 +263,7 @@ function permGroupToggle(groupLabel, value) {
 }
 
 function permUpdateSaveBtn() {
-  const btn = document.getElementById('perm-save-btn');
+  const btn = document.getElementById('admin-perm-save-btn') || document.getElementById('perm-save-btn');
   if (!btn) return;
   // Check if anything changed
   const ohrId = permState.detailOhr;
@@ -277,7 +281,7 @@ async function permSaveChanges() {
   const ohrId = permState.detailOhr;
   if (!ohrId) return;
 
-  const btn = document.getElementById('perm-save-btn');
+  const btn = document.getElementById('admin-perm-save-btn') || document.getElementById('perm-save-btn');
   btn.disabled = true;
   btn.textContent = 'Saving...';
 

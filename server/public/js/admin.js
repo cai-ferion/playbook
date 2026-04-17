@@ -224,6 +224,28 @@ function onAdminViewLoad() {
   }
 }
 
+// ===== Admin Tab Switching (Tools / Permissions) =====
+function adminSwitchTab(tab) {
+  const toolsPanel = document.getElementById('admin-panel-tools');
+  const permsPanel = document.getElementById('admin-panel-permissions');
+  const toolsTab = document.getElementById('admin-tab-tools');
+  const permsTab = document.getElementById('admin-tab-permissions');
+
+  if (tab === 'tools') {
+    if (toolsPanel) toolsPanel.style.display = '';
+    if (permsPanel) permsPanel.style.display = 'none';
+    if (toolsTab) { toolsTab.style.borderBottomColor = 'var(--primary)'; toolsTab.style.color = 'var(--primary)'; toolsTab.classList.add('active'); }
+    if (permsTab) { permsTab.style.borderBottomColor = 'transparent'; permsTab.style.color = 'var(--fg-muted)'; permsTab.classList.remove('active'); }
+  } else if (tab === 'permissions') {
+    if (toolsPanel) toolsPanel.style.display = 'none';
+    if (permsPanel) permsPanel.style.display = '';
+    if (permsTab) { permsTab.style.borderBottomColor = 'var(--primary)'; permsTab.style.color = 'var(--primary)'; permsTab.classList.add('active'); }
+    if (toolsTab) { toolsTab.style.borderBottomColor = 'transparent'; toolsTab.style.color = 'var(--fg-muted)'; toolsTab.classList.remove('active'); }
+    // Initialize permissions if not loaded
+    if (typeof initPermissions === 'function') initPermissions();
+  }
+}
+
 // ===== Database Backup / Export =====
 
 async function loadBackupTables() {

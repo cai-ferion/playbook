@@ -2005,3 +2005,9 @@
 - [x] Restored exact 2-column grid card layout from deployed version (8a09692) with Audit Trail section appended
 - [x] Fixed edit: removed stale playbook_token/playbook_ohr refs, using currentUser global for actor info
 - [x] Removed Auth header from rosterFetchEmployees (unnecessary)
+
+## Regimen Revisions — Batch (Filter Layout + Permissions Move)
+- [x] Reorganize Regimen filter bars: line 1 = date filters ("Dates" label), lines 2-3 = search + non-date filters ("Filters" label)
+- [x] Remove Supervisor and Planning Group filters from Incomplete Roster IR_FILTER_FIELDS
+- [x] Permissions tab removed from Regimen entirely, admin-only via Admin Tools
+- [x] Moved Permissions to Admin Tools as tabbed panel (Tools | Permissions) with adminSwitchTab()
