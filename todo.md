@@ -2014,3 +2014,8 @@
 
 ## Regimen Filter Bar — Wrap Fix
 - [x] Change Regimen filter bar from single horizontal scroll row to flex-wrap layout (dates row + wrapped non-date rows, no horizontal scroll)
+
+## Regimen Filter Bar — 2-Column Layout
+- [x] Left column: Add Employee + Export CSV buttons, search bar, filtered count + Clear
+- [x] Right column: 3 stacked rows — row 1 = date filters, row 2 = identity filters, row 3 = role/system/asset/attrition
+- [x] Filter bar uses inline-flex so it doesn't extend to full table width

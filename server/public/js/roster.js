@@ -175,28 +175,46 @@ function rosterRenderFilterBar() {
       + '</div>';
   }
 
+  // Classify multi-select fields into identity vs rest
+  const identityKeys = ALL_COLUMNS.filter(c => c.group === 'identity').map(c => c.key);
+  const identityFields = multiFields.filter(f => identityKeys.includes(f.key));
+  const restFields = multiFields.filter(f => !identityKeys.includes(f.key));
+
+  // === Left column: search bar + count ===
+  const searchContainer = document.getElementById('roster-search-container');
+  if (searchContainer) {
+    searchContainer.innerHTML = '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">'
+      + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
+      + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
+      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
+      + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;">'
+      + '</div>';
+  }
+  const countContainer = document.getElementById('roster-count-container');
+  if (countContainer) {
+    countContainer.innerHTML = '<span class="filter-bar-meta" id="roster-filter-count"></span>'
+      + '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters" style="font-size:11px;">✕ Clear</button>';
+  }
+
+  // === Right column: 3 stacked rows of pills ===
   let html = '';
 
-  // Row 1: Date filters + Clear + Count
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-bottom:6px;border-bottom:1px solid var(--border);">';
-  html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;min-width:40px;">Dates</span>';
+  // Row 1: Date filters
+  html += '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
   dateFields.forEach(f => { html += renderPill(f); });
-  html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters" style="margin-left:auto;">✕ Clear</button>';
-  html += '<span class="filter-bar-meta" id="roster-filter-count"></span>';
   html += '</div>';
 
-  // Rows 2-3: Search + Non-date filters (flex-wrap naturally flows into multiple rows)
-  if (multiFields.length > 0 || searchField) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-top:6px;">';
-    if (searchField) {
-      html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
-        + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
-        + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
-        + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
-        + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
-        + '</div>';
-    }
-    multiFields.forEach(f => { html += renderPill(f); });
+  // Row 2: Identity filters
+  if (identityFields.length > 0) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
+    identityFields.forEach(f => { html += renderPill(f); });
+    html += '</div>';
+  }
+
+  // Row 3: Rest (role, system, asset, attrition non-date)
+  if (restFields.length > 0) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
+    restFields.forEach(f => { html += renderPill(f); });
     html += '</div>';
   }
 
