@@ -1,0 +1,49 @@
+Screenshot analysis for user 740049320 (limited tier):
+
+The filter bar shows ALL filter pills including ones for columns NOT in LIMITED_COLUMNS.
+Looking at the screenshot, the filter bar shows pills for:
+- Last Name, Given Name, Middle Name, Suffix (identity - these ARE in LIMITED_COLUMNS)
+- Status, Role, Supervisor, Shift Time, Work Off (role - these ARE in LIMITED_COLUMNS)
+- Planning Group, Related PG, SRT Status, Platform (role - these ARE in LIMITED_COLUMNS)
+- SRT ID, Workday ID, Meta Email (system - these ARE in LIMITED_COLUMNS)
+- Hire Date, Regular Date, Meta Onboarding Date, Go Live Date (dates - these ARE in LIMITED_COLUMNS)
+- Search + Clear
+
+But the TABLE also shows ALL these columns for this user. Looking at the table headers:
+OHR ID, Full Name, Last Name, Given Name, Middle Name, Suffix, Status, Role, Supervisor, 
+Shift Time, Work Off, Planning Group, Related PG, SRT Status, Platform, SRT ID, Workday ID, Meta Email
+
+Wait - the table IS showing only LIMITED_COLUMNS. The filter pills match the table columns.
+
+BUT the user said "remove filters that associate with roster columns that are restricted for them."
+Looking more carefully at the screenshot - the user sees ALL the limited columns in both filter and table.
+The columns NOT in LIMITED_COLUMNS (restricted) are:
+- billing_name, srt_name, dob, personal_email, contact_number, primary_address, barangay, city, province
+- supervisor_email
+- macbook_asset, chromebook_asset, badge_id, badge_serial, locker_floor, locker_number
+- offboarding_date, resignation_date, relieving_date, exit_date, exit_reason
+
+So the filter bar IS already correctly filtering based on visible columns (buildFilterFields uses getVisibleColumns).
+
+WAIT - looking at the screenshot again more carefully. The user sees the table with columns including 
+SRT ID, Workday ID, Meta Email. But the filter bar also shows these. The user's complaint might be that
+there are TOO MANY filter pills showing for a limited user - they see filters for columns they shouldn't
+need to filter by, or columns that are "restricted" in some other sense.
+
+Actually re-reading the user's message: "remove filters that associate with roster columns that are restricted for them"
+This means the user wants FEWER filter pills for limited-tier users. The current LIMITED_COLUMNS list includes
+many columns, and ALL of them get filter pills. The user wants the filter pills to only show for columns
+that are NOT restricted - i.e., only show filter pills for columns that the limited user can see.
+
+But buildFilterFields() already uses ROSTER.getVisibleColumns() which returns only LIMITED_COLUMNS for limited tier.
+So the pills ARE already matching the visible columns.
+
+The issue might be that the PUBLISHED site still has old code. Or the user wants even fewer filters.
+
+Actually - looking at the screenshot vs the code: the screenshot shows the PUBLISHED site (play-book.manus.space).
+The latest checkpoint (5a0cda90) hasn't been published yet. The published version might have older code where
+buildFilterFields used ALL_COLUMNS instead of getVisibleColumns.
+
+Let me check - buildFilterFields was always using getVisibleColumns since it was written. But the user may
+need to republish. OR the issue is that the LIMITED_COLUMNS list is too generous and includes columns
+the user considers "restricted."

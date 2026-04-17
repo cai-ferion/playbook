@@ -1664,11 +1664,12 @@ function renderInputPagination(currentPage, totalPages) {
 // ===== Row Locking Logic =====
 
 /**
- * Check if a row should be locked based on:
- * - Past dates are always locked
- * - Current date is editable before 11:00 AM PHT, locked after
+ * 2-day editable window:
+ * - Today and yesterday are always editable
+ * - Day before yesterday: editable before 11:00 AM PHT, locked after
+ * - Dates older than 2 days before are always locked
  * - Future dates are not locked
- * - Exempt: OHR 740045023 and actual_role = 'Manager'
+ * - Exempt: Managers and users with anchor.edit_attendance permission
  */
 function isRowLocked(record) {
   // Exempt users with edit_attendance permission and Managers — never locked
@@ -1682,24 +1683,32 @@ function isRowLocked(record) {
   const phtTime = new Date(now.getTime() + phtOffset * 60000);
   const phtHour = phtTime.getUTCHours();
 
+  // Compute today in PHT
+  const todayPHT = phtTime.getUTCFullYear() + '-' + String(phtTime.getUTCMonth() + 1).padStart(2, '0') + '-' + String(phtTime.getUTCDate()).padStart(2, '0');
+
   // Compute yesterday in PHT
   const yesterdayPHT_d = new Date(phtTime);
   yesterdayPHT_d.setUTCDate(yesterdayPHT_d.getUTCDate() - 1);
   const yesterdayPHT = yesterdayPHT_d.getUTCFullYear() + '-' + String(yesterdayPHT_d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(yesterdayPHT_d.getUTCDate()).padStart(2, '0');
 
+  // Compute day before yesterday in PHT
+  const twoDaysAgoPHT_d = new Date(phtTime);
+  twoDaysAgoPHT_d.setUTCDate(twoDaysAgoPHT_d.getUTCDate() - 2);
+  const twoDaysAgoPHT = twoDaysAgoPHT_d.getUTCFullYear() + '-' + String(twoDaysAgoPHT_d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(twoDaysAgoPHT_d.getUTCDate()).padStart(2, '0');
+
   if (!record.date) return true;
 
-  // Dates before yesterday are always locked
-  if (record.date < yesterdayPHT) {
+  // Dates older than 2 days ago are always locked
+  if (record.date < twoDaysAgoPHT) {
     return true;
   }
 
-  // Yesterday: editable before 11:00 AM PHT, locked after
-  if (record.date === yesterdayPHT) {
+  // Day before yesterday: editable before 11:00 AM PHT, locked after
+  if (record.date === twoDaysAgoPHT) {
     return phtHour >= 11; // locked if 11 AM or later
   }
 
-  // Current day and future dates are not locked
+  // Yesterday, today, and future dates are not locked
   return false;
 }
 

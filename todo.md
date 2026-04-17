@@ -2026,3 +2026,10 @@
 
 ## Regimen — Incomplete Roster Missing Field Color
 - [x] Change missing-field highlight color to a mellower, less eye-straining tone
+
+## Regimen — Filter Bar Layout on Published Site
+- [ ] Fix filter pills stacking vertically (single column) instead of 2-column layout on published site
+- [ ] Ensure the 2-column layout (left: buttons/search/count, right: 3 rows of pills) works after publish
+
+## Input Portal — Attendance Lock Window
+- [x] Change attendance lock from 1-day to 2-day window (current day + previous day editable)
