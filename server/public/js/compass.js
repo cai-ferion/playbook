@@ -121,7 +121,15 @@ const COMPASS = {
     { id: 'trainer-review', title: 'LV4 - TRAINER DECISION', statuses: ['QA Decision Rejected', 'QA Decision Rejected - SME'] },
     { id: 'sme-trainer', title: 'LV5 - SME-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
     { id: 'qtp-review', title: 'LV6 - QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected', 'Trainer Decision Rejected - SME'] }
-  ]
+  ],
+
+  // Performance: cached form state
+  _formBuilt: false,       // true after first innerHTML build
+  _formEls: {},            // cached DOM references for form elements
+  _ztpCatalogReady: false, // true after ZTP catalog prefetched
+  _rcaCatalogReady: false, // true after RCA catalog prefetched
+  _rcaData: [],            // cached RCA cascade data
+  _ztpCategories: [],      // cached ZTP category list
 };
 
 // ===== Sub-page Switching =====
@@ -1284,6 +1292,119 @@ function compassGoBack() {
 
 // ===== New Coaching Log Form =====
 
+// Performance: prefetch ZTP + RCA catalogs in background
+async function compassPrefetchCatalogs() {
+  // ZTP categories
+  if (!COMPASS._ztpCatalogReady) {
+    try {
+      const resp = await fetch(`${IO_API_BASE}/coaching-ztp?select=infraction_category`);
+      const data = resp.ok ? await resp.json() : [];
+      COMPASS._ztpCategories = [...new Set(data.map(d => d.infraction_category).filter(Boolean))];
+      COMPASS._ztpCatalogReady = true;
+    } catch (e) { console.error('ZTP prefetch failed:', e); }
+  }
+  // RCA data
+  if (!COMPASS._rcaCatalogReady) {
+    try {
+      const resp = await fetch(`${IO_API_BASE}/coaching-rca`);
+      if (resp.ok) COMPASS._rcaData = await resp.json();
+      COMPASS._rcaCatalogReady = true;
+    } catch (e) { console.error('RCA prefetch failed:', e); }
+  }
+}
+
+// Performance: cache DOM references after first form build
+function _compassCacheFormEls() {
+  const ids = [
+    'compass-new-type', 'compass-coachee-field', 'compass-coachee-list-field',
+    'compass-followup-field', 'compass-session-goal-section', 'compass-ztp-section',
+    'compass-rca-section', 'compass-triad-coachee-field', 'compass-coachee-search',
+    'compass-violation-section', 'compass-support-joiner-section', 'compass-job-id-section',
+    'compass-new-coachee', 'compass-triad-coachee', 'compass-triad-coachee-search',
+    'compass-followup-search', 'compass-followup-dropdown', 'compass-followup-selected',
+    'compass-multi-coachee-display', 'compass-multi-coachee-tags',
+    'compass-multi-coachee-options', 'compass-new-details',
+    'compass-new-job-id', 'compass-new-incident-ts',
+    'compass-new-violation-cat', 'compass-new-violation-type', 'compass-new-violation-subtype',
+    'compass-violation-subtype-field', 'compass-violation-penalty',
+    'compass-new-infraction-cat', 'compass-new-infraction', 'compass-new-infraction-desc',
+    'compass-new-rca-l1', 'compass-new-rca-l2', 'compass-new-rca-l3',
+    'compass-new-rca-l4', 'compass-new-rca-l5', 'compass-new-guidelines',
+    'compass-goal-display', 'compass-goal-dropdown', 'compass-attachment-list',
+    'compass-attachments', 'compass-submit-btn',
+    'compass-joiner1-search', 'compass-new-joiner1', 'compass-joiner2-search', 'compass-new-joiner2'
+  ];
+  const els = {};
+  for (const id of ids) els[id] = document.getElementById(id);
+  COMPASS._formEls = els;
+}
+
+// Performance: reset all form fields without rebuilding innerHTML
+function _compassResetFormFields() {
+  const el = COMPASS._formEls;
+  // Type select
+  if (el['compass-new-type']) el['compass-new-type'].value = '';
+  // Coachee fields
+  if (el['compass-new-coachee']) el['compass-new-coachee'].value = '';
+  if (el['compass-coachee-search']) el['compass-coachee-search'].value = '';
+  if (el['compass-triad-coachee']) el['compass-triad-coachee'].value = '';
+  if (el['compass-triad-coachee-search']) el['compass-triad-coachee-search'].value = '';
+  // Follow-up
+  if (el['compass-followup-search']) el['compass-followup-search'].value = '';
+  if (el['compass-followup-dropdown']) el['compass-followup-dropdown'].style.display = 'none';
+  if (el['compass-followup-selected']) el['compass-followup-selected'].style.display = 'none';
+  // Multi-coachee
+  if (el['compass-multi-coachee-display']) el['compass-multi-coachee-display'].textContent = 'Select coachees...';
+  if (el['compass-multi-coachee-tags']) el['compass-multi-coachee-tags'].innerHTML = '';
+  if (el['compass-multi-coachee-options']) {
+    el['compass-multi-coachee-options'].querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  }
+  // Session goals — uncheck all
+  if (el['compass-goal-dropdown']) {
+    el['compass-goal-dropdown'].querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    el['compass-goal-dropdown'].classList.remove('open');
+  }
+  if (el['compass-goal-display']) el['compass-goal-display'].textContent = '\u2014 Select \u2014';
+  // Rich text editor
+  if (el['compass-new-details']) el['compass-new-details'].innerHTML = '';
+  // Job ID
+  if (el['compass-new-job-id']) el['compass-new-job-id'].value = '';
+  // Violation tracker
+  if (el['compass-new-incident-ts']) el['compass-new-incident-ts'].value = '';
+  if (el['compass-new-violation-cat']) el['compass-new-violation-cat'].selectedIndex = 0;
+  if (el['compass-new-violation-type']) el['compass-new-violation-type'].innerHTML = '<option value="">\u2014 Select Violation \u2014</option>';
+  if (el['compass-violation-subtype-field']) el['compass-violation-subtype-field'].style.display = 'none';
+  if (el['compass-violation-penalty']) el['compass-violation-penalty'].style.display = 'none';
+  // ZTP
+  if (el['compass-new-infraction-cat']) el['compass-new-infraction-cat'].selectedIndex = 0;
+  if (el['compass-new-infraction']) el['compass-new-infraction'].innerHTML = '<option value="">\u2014 Select Infraction \u2014</option>';
+  if (el['compass-new-infraction-desc']) el['compass-new-infraction-desc'].textContent = 'Select an infraction to see description...';
+  // RCA — reset L1 manually then downstream
+  if (el['compass-new-rca-l1']) {
+    el['compass-new-rca-l1'].innerHTML = '<option value="">\u2014 Select L1 Category \u2014</option>';
+    el['compass-new-rca-l1'].disabled = false;
+  }
+  compassResetRCAFrom('l2');
+  // Attachments
+  if (el['compass-attachment-list']) el['compass-attachment-list'].innerHTML = '';
+  if (el['compass-attachments']) el['compass-attachments'].value = '';
+  // Support joiners
+  if (el['compass-joiner1-search']) el['compass-joiner1-search'].value = '';
+  if (el['compass-new-joiner1']) el['compass-new-joiner1'].value = '';
+  if (el['compass-joiner2-search']) el['compass-joiner2-search'].value = '';
+  if (el['compass-new-joiner2']) el['compass-new-joiner2'].value = '';
+  // Reset all section visibility to defaults
+  if (el['compass-coachee-field']) el['compass-coachee-field'].style.display = 'none';
+  if (el['compass-coachee-list-field']) el['compass-coachee-list-field'].style.display = 'none';
+  if (el['compass-triad-coachee-field']) el['compass-triad-coachee-field'].style.display = 'none';
+  if (el['compass-followup-field']) el['compass-followup-field'].style.display = 'none';
+  if (el['compass-violation-section']) el['compass-violation-section'].style.display = 'none';
+  if (el['compass-support-joiner-section']) el['compass-support-joiner-section'].style.display = 'none';
+  if (el['compass-ztp-section']) el['compass-ztp-section'].style.display = 'none';
+  if (el['compass-rca-section']) el['compass-rca-section'].style.display = 'none';
+  if (el['compass-job-id-section']) el['compass-job-id-section'].style.display = 'none';
+}
+
 async function compassShowNewForm() {
   // Employees already prefetched in initCompass — no await needed here
   if (COMPASS.employees.length === 0) await compassFetchEmployees();
@@ -1295,6 +1416,27 @@ async function compassShowNewForm() {
   const overlay = document.getElementById('compass-form-overlay');
 
   formTitle.textContent = 'New Coaching Log';
+
+  // Performance: only build form HTML once, then reuse with field reset
+  if (COMPASS._formBuilt) {
+    _compassResetFormFields();
+    formFooter.innerHTML = `
+      <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="compass-submit-btn" onclick="compassSubmitNew()">Create</button>
+    `;
+    COMPASS._formEls['compass-submit-btn'] = document.getElementById('compass-submit-btn');
+    overlay.style.display = 'flex';
+    // Default to 'General Coaching' for non-QA roles
+    const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
+    if (!isQA) {
+      const typeSelect = COMPASS._formEls['compass-new-type'];
+      if (typeSelect) {
+        typeSelect.value = 'General Coaching';
+        compassOnTypeChange();
+      }
+    }
+    return;
+  }
 
   formBody.innerHTML = `
     <div class="form-section">
@@ -1540,39 +1682,51 @@ async function compassShowNewForm() {
     <button class="btn btn-primary btn-sm" id="compass-submit-btn" onclick="compassSubmitNew()">Create</button>
   `;
 
+  // Performance: mark form as built and cache all DOM references
+  COMPASS._formBuilt = true;
+  _compassCacheFormEls();
+
   overlay.style.display = 'flex';
 
   // Default to 'General Coaching' for non-QA roles
-    const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
-    if (!isQA) {
-      const typeSelect = document.getElementById('compass-new-type');
-      if (typeSelect) {
-        typeSelect.value = 'General Coaching';
-        compassOnTypeChange();
-      }
+  const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
+  if (!isQA) {
+    const typeSelect = COMPASS._formEls['compass-new-type'];
+    if (typeSelect) {
+      typeSelect.value = 'General Coaching';
+      compassOnTypeChange();
+    }
   }
 }
 
 function compassOnTypeChange() {
-  const type = document.getElementById('compass-new-type')?.value || '';
-  const coacheeField = document.getElementById('compass-coachee-field');
-  const coacheeListField = document.getElementById('compass-coachee-list-field');
-  const followupField = document.getElementById('compass-followup-field');
-  const sessionGoalSection = document.getElementById('compass-session-goal-section');
-  const ztpSection = document.getElementById('compass-ztp-section');
-  const rcaSection = document.getElementById('compass-rca-section');
+  // Performance: use cached DOM refs when available, fallback to getElementById
+  const el = COMPASS._formEls || {};
+  const _el = (id) => el[id] || document.getElementById(id);
+
+  const type = (_el('compass-new-type') || {}).value || '';
+  const coacheeField = _el('compass-coachee-field');
+  const coacheeListField = _el('compass-coachee-list-field');
+  const followupField = _el('compass-followup-field');
+  const sessionGoalSection = _el('compass-session-goal-section');
+  const ztpSection = _el('compass-ztp-section');
+  const rcaSection = _el('compass-rca-section');
+  const triadCoacheeField = _el('compass-triad-coachee-field');
+  const coacheeSearch = _el('compass-coachee-search');
+  const violationSection = _el('compass-violation-section');
+  const joinerSection = _el('compass-support-joiner-section');
+  const jobIdSection = _el('compass-job-id-section');
 
   // Reset all coachee-related fields
-  coacheeField.style.display = 'none';
-  coacheeListField.style.display = 'none';
+  if (coacheeField) coacheeField.style.display = 'none';
+  if (coacheeListField) coacheeListField.style.display = 'none';
   if (followupField) followupField.style.display = 'none';
-  // Reset Triad-specific coachee field
-  const triadCoacheeField = document.getElementById('compass-triad-coachee-field');
   if (triadCoacheeField) triadCoacheeField.style.display = 'none';
   // Reset Coachee label back to default
-  const coacheeLabel = coacheeField.querySelector('.form-label');
-  if (coacheeLabel) coacheeLabel.innerHTML = 'Coachee <span class="required">*</span>';
-  const coacheeSearch = document.getElementById('compass-coachee-search');
+  if (coacheeField) {
+    const coacheeLabel = coacheeField.querySelector('.form-label');
+    if (coacheeLabel) coacheeLabel.innerHTML = 'Coachee <span class="required">*</span>';
+  }
   if (coacheeSearch) coacheeSearch.placeholder = 'Search coachee...';
 
   // Show session goal by default
@@ -1581,74 +1735,90 @@ function compassOnTypeChange() {
   // Filter session goal options based on coaching type
   compassFilterGoalOptions(type);
 
-  // Always clear role filter first, Triad will re-apply it
+  COMPASS.selectedParentLog = null;
+  // Also clear role filter first, Triad will re-apply it
   compassFilterCoacheesByRole(null);
 
   if (type === 'Follow-Up Session') {
-    // Show follow-up search; hide session goal (copied from parent log)
     if (followupField) followupField.style.display = '';
     if (sessionGoalSection) sessionGoalSection.style.display = 'none';
     COMPASS.selectedParentLog = null;
-    const searchInput = document.getElementById('compass-followup-search');
+    const searchInput = _el('compass-followup-search');
     if (searchInput) searchInput.value = '';
-    const dropdown = document.getElementById('compass-followup-dropdown');
+    const dropdown = _el('compass-followup-dropdown');
     if (dropdown) dropdown.style.display = 'none';
-    const selected = document.getElementById('compass-followup-selected');
+    const selected = _el('compass-followup-selected');
     if (selected) selected.style.display = 'none';
   } else if (type === 'Group Coaching') {
-    coacheeListField.style.display = '';
+    if (coacheeListField) coacheeListField.style.display = '';
   } else if (type === 'Triad Coaching') {
-    // Triad Coaching: "Coachee" becomes "Leader" (the person being observed coaching)
-    coacheeField.style.display = '';
-    // Rename the label to "Leader"
-    const coacheeLabel = coacheeField.querySelector('.form-label');
-    if (coacheeLabel) coacheeLabel.innerHTML = 'Leader <span class="required">*</span>';
-    const coacheeSearch = document.getElementById('compass-coachee-search');
+    if (coacheeField) {
+      coacheeField.style.display = '';
+      const coacheeLabel = coacheeField.querySelector('.form-label');
+      if (coacheeLabel) coacheeLabel.innerHTML = 'Leader <span class="required">*</span>';
+    }
     if (coacheeSearch) coacheeSearch.placeholder = 'Search leader...';
     if (sessionGoalSection) sessionGoalSection.style.display = 'none';
-    // Filter leader dropdown to Triad-eligible roles
     compassFilterCoacheesByRole(['Quality & Policy Expert', 'Operational SME', 'Team Lead', 'Trainer']);
-    // Show the Triad Coachee field (the person being coached by the leader)
-    const triadCoacheeField = document.getElementById('compass-triad-coachee-field');
     if (triadCoacheeField) triadCoacheeField.style.display = '';
   } else {
-    coacheeField.style.display = '';
+    if (coacheeField) coacheeField.style.display = '';
   }
 
-  // Incident Report = Violation Tracker (renamed from CAP 0 Coaching)
-  const violationSection = document.getElementById('compass-violation-section');
+  // Incident Report = Violation Tracker
   if (violationSection) {
     violationSection.style.display = type === 'Incident Report' ? '' : 'none';
     if (type === 'Incident Report') {
       compassInitViolationCatalog();
-      // Auto-set session goal to "Compliance & Behavior" and hide the section
       if (sessionGoalSection) sessionGoalSection.style.display = 'none';
     }
   }
 
   // Support Joiner fields for QA Feedback
-  const joinerSection = document.getElementById('compass-support-joiner-section');
-  if (joinerSection) {
-    joinerSection.style.display = type === 'QA Feedback' ? '' : 'none';
-  }
+  if (joinerSection) joinerSection.style.display = type === 'QA Feedback' ? '' : 'none';
 
-  ztpSection.style.display = type === 'ZTP Coaching' ? '' : 'none';
+  // ZTP: use prefetched catalog data instead of network fetch
+  if (ztpSection) ztpSection.style.display = type === 'ZTP Coaching' ? '' : 'none';
   if (type === 'ZTP Coaching') {
-    compassLoadZtpCategories();
-    // Default session goal to "Compliance" and hide the section
+    _compassPopulateZtpFromCache();
     if (sessionGoalSection) sessionGoalSection.style.display = 'none';
   }
 
-  rcaSection.style.display = type === 'QA Feedback' ? '' : 'none';
-
-  // Show Job ID field for QA Feedback
-  const jobIdSection = document.getElementById('compass-job-id-section');
+  if (rcaSection) rcaSection.style.display = type === 'QA Feedback' ? '' : 'none';
   if (jobIdSection) jobIdSection.style.display = type === 'QA Feedback' ? '' : 'none';
 
   if (type === 'QA Feedback') {
-    // Default session goal to "Quality Error Findings" and hide the section
     if (sessionGoalSection) sessionGoalSection.style.display = 'none';
-    // Initialize cascading RCA dropdowns
+    // Use prefetched RCA data instead of network fetch
+    _compassPopulateRcaFromCache();
+  }
+}
+
+// Performance: populate ZTP dropdown from prefetched cache (no network call)
+function _compassPopulateZtpFromCache() {
+  if (COMPASS._ztpCatalogReady && COMPASS._ztpCategories.length > 0) {
+    const sel = COMPASS._formEls['compass-new-infraction-cat'] || document.getElementById('compass-new-infraction-cat');
+    if (sel) {
+      sel.innerHTML = '<option value="">\u2014 Select Category \u2014</option>' +
+        COMPASS._ztpCategories.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+    }
+  } else {
+    // Fallback: fetch if prefetch hasn't completed yet
+    compassLoadZtpCategories();
+  }
+}
+
+// Performance: populate RCA L1 dropdown from prefetched cache (no network call)
+function _compassPopulateRcaFromCache() {
+  if (COMPASS._rcaCatalogReady && COMPASS._rcaData.length > 0) {
+    const l1Select = COMPASS._formEls['compass-new-rca-l1'] || document.getElementById('compass-new-rca-l1');
+    if (!l1Select) return;
+    const l1Values = [...new Set(COMPASS._rcaData.map(r => r.level_1_category).filter(Boolean))].sort();
+    l1Select.innerHTML = '<option value="">\u2014 Select L1 Category \u2014</option>' +
+      l1Values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
+    compassResetRCAFrom('l2');
+  } else {
+    // Fallback: fetch if prefetch hasn't completed yet
     compassInitRCACascade();
   }
 }
@@ -2049,6 +2219,12 @@ function compassCloseForm() {
   const overlay = document.getElementById('compass-form-overlay');
   if (overlay) overlay.style.display = 'none';
   COMPASS.editingId = null;
+  // If the overlay was used for detail/NTE view, invalidate form cache
+  // so next Add click rebuilds the form HTML
+  if (COMPASS._formBuilt && !document.getElementById('compass-new-type')) {
+    COMPASS._formBuilt = false;
+    COMPASS._formEls = {};
+  }
   COMPASS.selectedParentLog = null;
   _compassDetailStack = []; // Clear navigation stack on close
 }
@@ -2150,6 +2326,9 @@ function compassSetViewMode(mode) {
 async function initCompass() {
   await compassFetchEmployees();
   await compassFetchLogs();
+
+  // Performance: prefetch ZTP + RCA catalogs in background (no await — non-blocking)
+  compassPrefetchCatalogs();
 
   const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
   const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
@@ -2374,15 +2553,16 @@ function compassResetRCAFrom(fromLevel) {
   };
   const startIdx = levels.indexOf(fromLevel);
   if (startIdx < 0) return;
+  const el = COMPASS._formEls || {};
   for (let i = startIdx; i < levels.length; i++) {
-    const sel = document.getElementById(`compass-new-rca-${levels[i]}`);
+    const sel = el[`compass-new-rca-${levels[i]}`] || document.getElementById(`compass-new-rca-${levels[i]}`);
     if (sel) {
       sel.innerHTML = `<option value="">${placeholders[levels[i]]}</option>`;
       sel.disabled = true;
     }
   }
   // Reset guidelines
-  const guidelinesDiv = document.getElementById('compass-new-guidelines');
+  const guidelinesDiv = el['compass-new-guidelines'] || document.getElementById('compass-new-guidelines');
   if (guidelinesDiv) guidelinesDiv.textContent = 'Select L5 Root Cause to see description...';
 }
 

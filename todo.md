@@ -2042,3 +2042,8 @@
 - [x] Remove duplicate ccShowNewForm/ccSubmitNewForm from compass-coaching.js
 - [x] Wire Coaching Logs "New" button to use main compass.js compassShowNewForm
 - [x] Remove dead CAP functions (compassOnCapLevelChange, compassGetSelectedCapLevel)
+
+## Compass — Add Form Performance Optimization
+- [x] Deep audit and fix lag on form open (compassShowNewForm) — form HTML cached after first build, reused with field reset
+- [x] Fix lag on coaching type change (compassOnTypeChange) — cached DOM refs, prefetched ZTP/RCA catalogs
+- [x] Fix lag on dropdown/field interactions — eliminated redundant getElementById calls via _formEls cache
