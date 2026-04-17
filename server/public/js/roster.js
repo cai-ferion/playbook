@@ -1115,7 +1115,7 @@ window.incompleteRosteringRenderTable = function() {
     const rate = parseFloat(emp.completionRate);
     const rateColor = rate >= 90 ? '#22C55E' : rate >= 70 ? '#F59E0B' : '#EF4444';
     const missingHtml = emp.missingFields.map(f =>
-      '<span style="background:#EF444415;color:#EF4444;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">' + escapeHtml(IR_LABELS[f] || f) + '</span>'
+      '<span style="background:#F5E6D3;color:#8B6914;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">' + escapeHtml(IR_LABELS[f] || f) + '</span>'
     ).join('');
 
     return '<tr class="module-row" onclick="rosterOpenDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
@@ -1124,7 +1124,7 @@ window.incompleteRosteringRenderTable = function() {
       + '<td><span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(emp.employement_status || '') + '</span></td>'
       + '<td style="white-space:nowrap;">' + escapeHtml(emp.actual_role || '') + '</td>'
       + '<td style="text-align:center;font-weight:600;color:' + rateColor + ';">' + emp.completionRate + '%</td>'
-      + '<td style="text-align:center;font-weight:600;color:#EF4444;">' + emp.missingFields.length + '</td>'
+      + '<td style="text-align:center;font-weight:600;color:#B8860B;">' + emp.missingFields.length + '</td>'
       + '<td style="max-width:500px;">' + missingHtml + '</td>'
       + '</tr>';
   }).join('');

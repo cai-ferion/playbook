@@ -2023,3 +2023,6 @@
 ## Regimen Filter Bar — Count Alignment & Clear Button Style
 - [x] Left-align filtered count (#roster-filter-count) in the left column
 - [x] Restyle Clear button to match Export CSV (btn btn-outline btn-sm)
+
+## Regimen — Incomplete Roster Missing Field Color
+- [x] Change missing-field highlight color to a mellower, less eye-straining tone
