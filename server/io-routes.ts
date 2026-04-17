@@ -3229,7 +3229,7 @@ const ALL_PERMISSION_KEYS = [
   'anchor.risk_intelligence',
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
   'helm.analytics',
-  'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.edit_employee', 'regimen.export_csv',
+  'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.edit_employee', 'regimen.export_csv', 'regimen.full_columns',
 ];
 
 // Role-based defaults — used as fallback when no DB row exists

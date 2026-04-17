@@ -1993,3 +1993,9 @@
 - [x] Create SYNC_LOG tab in Google Sheet (who triggered, timestamp, details)
 - [x] Delete January-February attendance rows from ATTEND_26 Google Sheet (22,791 rows removed)
 - [x] Fix CSV export in Input Portal — server-side export with all omnibar filters
+
+## Regimen Fixes — Batch (Post-Sync Overhaul)
+- [x] Restore Incomplete Roster and Permissions tabs — added regimen.full_columns to ALL_PERMISSION_KEYS (was missing)
+- [x] Group Regimen filters: "Filters" label for non-dates, "Dates" label for date-range, with border separator
+- [x] Restore original employee card styling (detail-row/detail-label/detail-value CSS) with dropdown selects + Audit Trail section
+- [x] Fix edit capability — regimen.edit_employees (plural) → regimen.edit_employee (singular) typo fixed

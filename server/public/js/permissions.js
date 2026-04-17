@@ -55,6 +55,7 @@ const PERM_GROUPS = [
       { key: 'regimen.permissions_tab', label: 'Permissions Tab' },
       { key: 'regimen.edit_employee', label: 'Edit Employee Records' },
       { key: 'regimen.export_csv', label: 'Export CSV' },
+      { key: 'regimen.full_columns', label: 'Full Column Access' },
     ],
   },
   {

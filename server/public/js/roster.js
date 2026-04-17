@@ -159,28 +159,49 @@ function rosterRenderFilterBar() {
   const container = document.getElementById('roster-filter-pills');
   if (!container) return;
 
-  let html = '';
-  _rosterFilterFields.forEach(field => {
+  // Separate fields into groups: search, non-date (multi), date
+  const searchField = _rosterFilterFields.find(f => f.type === 'search');
+  const multiFields = _rosterFilterFields.filter(f => f.type === 'multi');
+  const dateFields = _rosterFilterFields.filter(f => f.type === 'date_range');
+
+  function renderPill(field) {
     const summary = rosterGetFilterSummary(field);
     const isActive = rosterIsFiltered(field);
-
-    if (field.type === 'search') {
-      html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
-        + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
-        + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
-        + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
-        + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
-        + '</div>';
-      return;
-    }
-
-    html += '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="roster-pill-' + field.key + '" onclick="rosterToggleDropdown(\'' + field.key + '\')">'
+    return '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="roster-pill-' + field.key + '" onclick="rosterToggleDropdown(\'' + field.key + '\')">' 
       + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span> '
       + '<span class="filter-pill-value">' + escapeHtml(summary) + '</span>'
       + '<span class="filter-pill-icon">▾</span>'
       + '<div class="filter-dropdown" id="roster-dd-' + field.key + '"></div>'
       + '</div>';
-  });
+  }
+
+  let html = '';
+
+  // Search pill first
+  if (searchField) {
+    html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
+      + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
+      + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
+      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
+      + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
+      + '</div>';
+  }
+
+  // Non-date filters group
+  if (multiFields.length > 0) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">';
+    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;">Filters</span>';
+    multiFields.forEach(f => { html += renderPill(f); });
+    html += '</div>';
+  }
+
+  // Date filters group
+  if (dateFields.length > 0) {
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-left:2px solid var(--border);padding-left:10px;margin-left:4px;">';
+    html += '<span style="font-size:10px;font-weight:700;color:var(--fg-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0 4px;">Dates</span>';
+    dateFields.forEach(f => { html += renderPill(f); });
+    html += '</div>';
+  }
 
   // Clear filters button
   html += '<button class="filter-bar-clear" onclick="rosterClearAllFilters()" title="Clear all filters">✕ Clear</button>';
@@ -540,83 +561,95 @@ function rosterRenderPagination() {
 
 // ===== Detail Panel with Inline Audit Trail =====
 window.rosterOpenDetail = function(ohrId) {
-  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  var emp = ROSTER.employees.find(function(e) { return e.ohr_id === ohrId; });
   if (!emp) return;
+  var overlay = document.getElementById('roster-form-overlay');
+  var formTitle = document.getElementById('roster-form-title');
+  var formBody = document.getElementById('roster-form-body');
+  var formFooter = document.getElementById('roster-form-footer');
+  if (!overlay || !formBody) return;
 
-  const overlay = document.getElementById('roster-form-overlay');
-  const title = document.getElementById('roster-form-title');
-  const body = document.getElementById('roster-form-body');
-  const footer = document.getElementById('roster-form-footer');
-  if (!overlay || !body) return;
+  formTitle.innerHTML = '';
+  var statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+  var canEditDetail = ROSTER.canEdit;
+  var visibleCols = ROSTER.getVisibleColumns();
 
-  title.textContent = (emp.full_name || emp.ohr_id) + ' — Details';
+  // Group columns by their group property (preserving insertion order)
+  var groups = {};
+  var GROUP_LABELS = {
+    'identity': 'Identity', 'role': 'Role & Assignment', 'system': 'System IDs',
+    'asset': 'Assets & Logistics', 'dates': 'Dates', 'attrition': 'Attrition'
+  };
+  visibleCols.forEach(function(c) {
+    var gLabel = GROUP_LABELS[c.group] || c.group;
+    if (!groups[gLabel]) groups[gLabel] = [];
+    groups[gLabel].push(c);
+  });
 
-  const cols = ROSTER.getVisibleColumns();
+  var roleOptions = ['Agent', 'QA', 'SME', 'Operational SME', 'Quality Analyst', 'Team Lead', 'Trainer', 'Manager'];
+  var statusOptions = ['Active', 'Inactive', 'Resigned', 'Terminated', 'Nesting'];
+  var srtStatusOptions = ['Production', 'Inactive', 'Exit', 'Nesting', 'Training'];
 
-  // Group columns
-  const groups = [
-    { label: 'Identity', keys: cols.filter(c => c.group === 'identity') },
-    { label: 'Role & Assignment', keys: cols.filter(c => c.group === 'role') },
-    { label: 'System IDs', keys: cols.filter(c => c.group === 'system') },
-    { label: 'Assets & Logistics', keys: cols.filter(c => c.group === 'asset') },
-    { label: 'Dates', keys: cols.filter(c => c.group === 'dates') },
-    { label: 'Attrition', keys: cols.filter(c => c.group === 'attrition') }
-  ];
+  function renderField(col) {
+    var val = col.key === 'srt_id' ? formatSrtId(emp[col.key]) : emp[col.key];
+    var displayVal = (val !== null && val !== undefined && val !== '') ? String(val) : '\u2014';
 
-  let html = '';
-
-  if (ROSTER.canEdit) {
-    // Editable form
-    groups.forEach(g => {
-      if (g.keys.length === 0) return;
-      html += '<div style="margin-bottom:16px;">';
-      html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:4px;">' + g.label + '</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
-      g.keys.forEach(c => {
-        const val = emp[c.key] != null ? emp[c.key] : '';
-        const isReadOnly = c.key === 'ohr_id' || c.key === 'full_name';
-        html += '<div>'
-          + '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">' + escapeHtml(c.label) + '</label>'
-          + '<input type="text" class="form-input form-input-sm" data-field="' + c.key + '" value="' + escapeAttr(val) + '"'
-          + (isReadOnly ? ' readonly style="opacity:0.6;"' : '')
-          + '></div>';
-      });
-      html += '</div></div>';
-    });
-  } else {
-    // Read-only view
-    groups.forEach(g => {
-      if (g.keys.length === 0) return;
-      html += '<div style="margin-bottom:16px;">';
-      html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:4px;">' + g.label + '</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">';
-      g.keys.forEach(c => {
-        let val = emp[c.key];
-        if (c.key === 'srt_id') val = formatSrtId(val);
-        html += '<div style="display:flex;gap:8px;padding:4px 0;">'
-          + '<span style="font-size:11px;font-weight:600;color:var(--fg-muted);min-width:120px;">' + escapeHtml(c.label) + '</span>'
-          + '<span style="font-size:12px;color:var(--fg);">' + escapeHtml(val != null ? val : '—') + '</span>'
-          + '</div>';
-      });
-      html += '</div></div>';
-    });
+    // Status field with dropdown or badge
+    if (col.key === 'employement_status') {
+      if (canEditDetail) {
+        return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
+          + '<select class="form-select form-select-sm roster-edit-field" data-key="' + col.key + '" style="font-size:13px;padding:2px 6px;max-width:280px;">'
+          + statusOptions.map(function(s) { return '<option value="' + s + '"' + (emp[col.key] === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')
+          + '</select></span></div>';
+      }
+      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
+        + '<span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(displayVal) + '</span></span></div>';
+    }
+    // Role field with dropdown
+    if (col.key === 'actual_role' && canEditDetail) {
+      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
+        + '<select class="form-select form-select-sm roster-edit-field" data-key="' + col.key + '" style="font-size:13px;padding:2px 6px;max-width:280px;">'
+        + roleOptions.map(function(r) { return '<option value="' + r + '"' + (emp[col.key] === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
+        + '</select></span></div>';
+    }
+    // SRT Status field with dropdown
+    if (col.key === 'srt_status' && canEditDetail) {
+      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
+        + '<select class="form-select form-select-sm roster-edit-field" data-key="' + col.key + '" style="font-size:13px;padding:2px 6px;max-width:280px;">'
+        + srtStatusOptions.map(function(s) { return '<option value="' + s + '"' + (emp[col.key] === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')
+        + '</select></span></div>';
+    }
+    // Editable text input
+    if (canEditDetail) {
+      return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">'
+        + '<input type="text" class="form-input form-input-sm roster-edit-field" data-key="' + escapeAttr(col.key) + '" value="' + escapeAttr(displayVal === '\u2014' ? '' : displayVal) + '" style="font-size:13px;padding:2px 6px;width:100%;max-width:280px;">'
+        + '</span></div>';
+    }
+    // Read-only
+    return '<div class="detail-row"><span class="detail-label">' + escapeHtml(col.label) + '</span><span class="detail-value">' + escapeHtml(displayVal) + '</span></div>';
   }
 
+  var html = '<div class="detail-section">';
+  for (var groupName in groups) {
+    html += '<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;margin-top:20px;">' + escapeHtml(groupName) + '</h4>';
+    groups[groupName].forEach(function(c) { html += renderField(c); });
+  }
+  html += '</div>';
+
   // ===== Inline Audit Trail Section =====
-  html += '<div style="margin-top:16px;border-top:2px solid var(--border);padding-top:16px;">';
-  html += '<div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Audit Trail</div>';
+  html += '<div class="detail-section" style="margin-top:16px;border-top:2px solid var(--border);padding-top:16px;">';
+  html += '<h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Audit Trail</h4>';
   html += '<div id="roster-detail-audit-body" style="font-size:12px;color:var(--fg-muted);">Loading audit trail...</div>';
   html += '</div>';
 
-  body.innerHTML = html;
+  formBody.innerHTML = html;
 
   // Footer
-  if (ROSTER.canEdit) {
-    footer.innerHTML = '<button class="btn btn-primary btn-sm" onclick="rosterSaveDetail(\'' + escapeAttr(ohrId) + '\')">Save Changes</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Cancel</button>';
-  } else {
-    footer.innerHTML = '<button class="btn btn-ghost btn-sm" onclick="rosterCloseForm()">Close</button>';
+  var footerHtml = '<button class="btn btn-outline btn-sm" onclick="rosterCloseForm()">Close</button>';
+  if (canEditDetail) {
+    footerHtml += ' <button class="btn btn-primary btn-sm" onclick="rosterSaveDetail(\'' + escapeAttr(emp.ohr_id) + '\')">' + 'Save Changes</button>';
   }
+  formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
 
@@ -684,18 +717,17 @@ window.rosterCloseForm = function() {
 };
 
 window.rosterSaveDetail = async function(ohrId) {
-  const body = document.getElementById('roster-form-body');
+  var body = document.getElementById('roster-form-body');
   if (!body) return;
-
-  const inputs = body.querySelectorAll('input[data-field]');
-  const updates = {};
-  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
-
-  inputs.forEach(input => {
-    const field = input.getAttribute('data-field');
-    if (field === 'ohr_id' || field === 'full_name') return;
-    const newVal = input.value.trim();
-    const oldVal = emp[field] != null ? String(emp[field]).trim() : '';
+  // Collect from all editable fields (inputs + selects with .roster-edit-field or data-field)
+  var editFields = body.querySelectorAll('.roster-edit-field, input[data-field]');
+  var updates = {};
+  var emp = ROSTER.employees.find(function(e) { return e.ohr_id === ohrId; });
+  editFields.forEach(function(el) {
+    var field = el.getAttribute('data-key') || el.getAttribute('data-field');
+    if (!field || field === 'ohr_id' || field === 'full_name') return;
+    var newVal = el.value.trim();
+    var oldVal = emp[field] != null ? String(emp[field]).trim() : '';
     if (newVal !== oldVal) updates[field] = newVal;
   });
 
@@ -1171,8 +1203,8 @@ async function rosterFetchEmployees() {
   // Tier: full if regimen.full_columns is granted
   ROSTER.tier = perms['regimen.full_columns'] ? 'full' : 'limited';
 
-  // Can edit: regimen.edit_employees
-  ROSTER.canEdit = !!perms['regimen.edit_employees'];
+  // Can edit: regimen.edit_employee
+  ROSTER.canEdit = !!perms['regimen.edit_employee'];
 
   // Show/hide add button
   const addBtn = document.getElementById('roster-add-btn');
