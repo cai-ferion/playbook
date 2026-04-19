@@ -4442,8 +4442,16 @@ function compassOnViolationCatChange() {
     return;
   }
 
-  typeSelect.innerHTML = '<option value="">\u2014 Select Violation \u2014</option>' +
-    cat.violations.map(v => `<option value="${escapeAttr(v.type)}">${escapeHtml(v.type)}</option>`).join('');
+  // Build options from all sub-subsection items across subsections
+  let opts = '<option value="">\u2014 Select Violation \u2014</option>';
+  cat.subsections.forEach(sub => {
+    opts += `<optgroup label="${escapeAttr(sub.code)} ${escapeAttr(sub.title)}">`;
+    sub.items.forEach(item => {
+      opts += `<option value="${escapeAttr(item.text)}" data-code="${escapeAttr(item.code)}" data-penalty="${escapeAttr(item.penalty)}">${escapeHtml(item.code)} \u2014 ${escapeHtml(item.text)}</option>`;
+    });
+    opts += '</optgroup>';
+  });
+  typeSelect.innerHTML = opts;
 
   // Reset downstream
   const subtypeField = document.getElementById('compass-violation-subtype-field');
@@ -4456,7 +4464,6 @@ function compassOnViolationTypeChange() {
   const catVal = document.getElementById('compass-new-violation-cat')?.value || '';
   const typeVal = document.getElementById('compass-new-violation-type')?.value || '';
   const subtypeField = document.getElementById('compass-violation-subtype-field');
-  const subtypeSelect = document.getElementById('compass-new-violation-subtype');
   const penaltyDiv = document.getElementById('compass-violation-penalty');
 
   if (!catVal || !typeVal || typeof HR_VIOLATIONS === 'undefined') {
@@ -4465,22 +4472,16 @@ function compassOnViolationTypeChange() {
     return;
   }
 
-  const cat = HR_VIOLATIONS.find(c => c.category === catVal);
-  const violation = cat ? cat.violations.find(v => v.type === typeVal) : null;
-  if (!violation) return;
+  // No subtypes in the new structure — hide the subtype field
+  if (subtypeField) subtypeField.style.display = 'none';
 
-  // Show subtypes if available
-  if (violation.subtypes && violation.subtypes.length > 0 && subtypeField && subtypeSelect) {
-    subtypeSelect.innerHTML = '<option value="">\u2014 Select Subtype \u2014</option>' +
-      violation.subtypes.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
-    subtypeField.style.display = '';
-  } else if (subtypeField) {
-    subtypeField.style.display = 'none';
-  }
+  // Find the selected item's penalty from data attributes
+  const typeSelect = document.getElementById('compass-new-violation-type');
+  const selectedOpt = typeSelect?.selectedOptions?.[0];
+  const penalty = selectedOpt?.dataset?.penalty || '';
 
-  // Show penalty info
-  if (penaltyDiv && violation.penalty) {
-    penaltyDiv.innerHTML = `<strong>Penalty:</strong> ${escapeHtml(violation.penalty)}`;
+  if (penaltyDiv && penalty) {
+    penaltyDiv.innerHTML = `<strong>Penalty:</strong> ${escapeHtml(penalty)}`;
     penaltyDiv.style.display = '';
   } else if (penaltyDiv) {
     penaltyDiv.style.display = 'none';
@@ -4617,16 +4618,18 @@ function _nteWizardRender() {
 
 // ---- Step 1: Employee + Violation Type ----
 function _nteWizardStep1(formBody, formFooter, progressHtml) {
-  // Build violation category options from HR_VIOLATIONS
+  // Build violation options from HR_VIOLATIONS (3-level: section → subsection → sub-subsection)
   let violationOptions = '<option value="">— Select Violation —</option>';
   if (typeof HR_VIOLATIONS !== 'undefined') {
     HR_VIOLATIONS.forEach(cat => {
-      violationOptions += `<optgroup label="${escapeAttr(cat.category)}">`;
-      cat.violations.forEach(v => {
-        const selected = NTE_WIZARD.violationType && NTE_WIZARD.violationType.code === v.code ? 'selected' : '';
-        violationOptions += `<option value="${escapeAttr(v.code)}" ${selected}>${escapeHtml(v.code)} — ${escapeHtml(v.type)} (${escapeHtml(v.penalty)})</option>`;
+      cat.subsections.forEach(sub => {
+        violationOptions += `<optgroup label="${escapeAttr(cat.category)} › ${escapeAttr(sub.code)} ${escapeAttr(sub.title)}">`;
+        sub.items.forEach(item => {
+          const selected = NTE_WIZARD.violationType && NTE_WIZARD.violationType.code === item.code ? 'selected' : '';
+          violationOptions += `<option value="${escapeAttr(item.code)}" ${selected}>${escapeHtml(item.code)} — ${escapeHtml(item.text)} (${escapeHtml(item.penalty)})</option>`;
+        });
+        violationOptions += '</optgroup>';
       });
-      violationOptions += '</optgroup>';
     });
   }
 
@@ -4651,16 +4654,8 @@ function _nteWizardStep1(formBody, formFooter, progressHtml) {
           ${violationOptions}
         </select>
       </div>
-      <div id="nte-wiz-subtype-field" style="display:${NTE_WIZARD.violationType && NTE_WIZARD.violationType.subtypes && NTE_WIZARD.violationType.subtypes.length > 0 ? '' : 'none'};">
-        <div class="form-field" style="margin-top:8px;">
-          <label class="form-label">Subtype / Description</label>
-          <select class="form-select" id="nte-wiz-subtype">
-            <option value="">— Select Subtype —</option>
-          </select>
-        </div>
-      </div>
       <div id="nte-wiz-penalty-info" style="margin-top:8px; padding:8px 12px; background:#6366F110; border:1px solid #6366F130; border-radius:var(--radius); font-size:12px; color:#6366F1; display:${NTE_WIZARD.violationType ? '' : 'none'};">
-        ${NTE_WIZARD.violationType ? `<strong>Standard Penalty:</strong> ${escapeHtml(NTE_WIZARD.violationType.penalty)} &nbsp;|&nbsp; <strong>Category:</strong> ${escapeHtml(NTE_WIZARD.violationType.category || '')}` : ''}
+        ${NTE_WIZARD.violationType ? `<strong>Standard Penalty:</strong> ${escapeHtml(NTE_WIZARD.violationType.penalty)} &nbsp;|&nbsp; <strong>Section:</strong> ${escapeHtml(NTE_WIZARD.violationType.category || '')} &nbsp;|&nbsp; <strong>Subsection:</strong> ${escapeHtml(NTE_WIZARD.violationType.subsection || '')}` : ''}
       </div>
     </div>
 
@@ -4683,14 +4678,6 @@ function _nteWizardStep1(formBody, formFooter, progressHtml) {
     <button class="btn btn-primary btn-sm" onclick="_nteWizGoStep2()">Next →</button>
   `;
 
-  // Populate subtypes if violation is already selected
-  if (NTE_WIZARD.violationType && NTE_WIZARD.violationType.subtypes && NTE_WIZARD.violationType.subtypes.length > 0) {
-    const subtypeSel = document.getElementById('nte-wiz-subtype');
-    if (subtypeSel) {
-      subtypeSel.innerHTML = '<option value="">— Select Subtype —</option>' +
-        NTE_WIZARD.violationType.subtypes.map(s => `<option value="${escapeAttr(s)}" ${NTE_WIZARD.violationSubtype === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
-    }
-  }
 }
 
 var _nteWizFilterTimer = null;
@@ -4744,14 +4731,25 @@ function _nteWizOnViolationChange() {
   const code = document.getElementById('nte-wiz-violation')?.value;
   if (!code) { NTE_WIZARD.violationType = null; NTE_WIZARD.violationSubtype = ''; _nteWizardRender(); return; }
 
-  // Find the violation in HR_VIOLATIONS
+  // Find the sub-subsection item in the new 3-level HR_VIOLATIONS
   for (const cat of HR_VIOLATIONS) {
-    for (const v of cat.violations) {
-      if (v.code === code) {
-        NTE_WIZARD.violationType = { ...v, category: cat.category };
-        NTE_WIZARD.violationSubtype = '';
-        _nteWizardRender();
-        return;
+    for (const sub of cat.subsections) {
+      for (const item of sub.items) {
+        if (item.code === code) {
+          NTE_WIZARD.violationType = {
+            code: item.code,
+            type: item.text,
+            text: item.text,
+            penalty: item.penalty,
+            category: cat.category,
+            subsection: sub.code + ' ' + sub.title,
+            subsectionCode: sub.code,
+            subsectionTitle: sub.title
+          };
+          NTE_WIZARD.violationSubtype = '';
+          _nteWizardRender();
+          return;
+        }
       }
     }
   }
@@ -4760,9 +4758,6 @@ function _nteWizOnViolationChange() {
 async function _nteWizGoStep2() {
   if (!NTE_WIZARD.employee) { showToast('Please select an employee', 'error'); return; }
   if (!NTE_WIZARD.violationType) { showToast('Please select a violation type', 'error'); return; }
-  // Save subtype if selected
-  const subtypeSel = document.getElementById('nte-wiz-subtype');
-  if (subtypeSel) NTE_WIZARD.violationSubtype = subtypeSel.value || '';
 
   NTE_WIZARD.step = 2;
 

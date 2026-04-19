@@ -2159,3 +2159,11 @@
 ## Disputes Area — Card Movement Animation
 - [x] Add sleek, smooth animation when a card is moved to a new section (FLIP technique)
 - [x] Make the animation impressive and polished (staggered entrance, color-coded columns, escalation timeline, glow effects)
+
+## NTE Violation Picker — Sub-subsection Revision
+- [x] Rewrite compass-violations.js with exact GP HR Policy 3.0 hierarchy (7 sections, subsections, sub-subsections)
+- [x] Update NTE wizard Step 1 picker to select sub-subsections (x.y.z) as the violation items
+- [x] Update Incident Report violation tracker cascade to use new 3-level structure
+- [x] Update LLM prompt to pass full hierarchy context (section, subsection, sub-subsection)
+- [x] DOCX generator already renders x.y.z as normal text — verified no changes needed
+- [x] Update batch-disputes-visibility.test.ts to match new data shape (item.text, item.code, item.penalty)

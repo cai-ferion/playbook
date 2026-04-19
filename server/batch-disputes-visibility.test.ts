@@ -104,9 +104,15 @@ describe('Lean Query — sme_joiner fields included', () => {
   });
 });
 
-describe('Violation Tracker — Property name fix', () => {
-  it('uses v.type (not v.name) for violation catalog options', () => {
-    // The cascading dropdown should reference v.type from HR_VIOLATIONS
-    expect(compassJs).toContain('v.type');
+describe('Violation Tracker — Sub-subsection picker', () => {
+  it('uses item.text for sub-subsection violation items', () => {
+    // The NTE wizard and incident report pickers reference item.text from HR_VIOLATIONS
+    expect(compassJs).toContain('item.text');
+  });
+  it('uses item.code for sub-subsection violation codes', () => {
+    expect(compassJs).toContain('item.code');
+  });
+  it('uses item.penalty for sub-subsection penalty info', () => {
+    expect(compassJs).toContain('item.penalty');
   });
 });

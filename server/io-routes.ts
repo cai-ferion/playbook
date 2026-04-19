@@ -3544,9 +3544,9 @@ IMPORTANT RULES:
 
 **VIOLATION:**
 - Code: ${violation.code}
-- Type: ${violation.type}
-- Category: ${violation.category}
-- Subtype: ${violation.subtype || 'N/A'}
+- Description: ${violation.type || violation.text || 'N/A'}
+- Section: ${violation.category || 'N/A'}
+- Subsection: ${violation.subsection || violation.subsectionCode ? (violation.subsectionCode + ' ' + (violation.subsectionTitle || '')) : 'N/A'}
 - Standard Penalty: ${violation.penalty}
 - Recommended CAP Level: ${cap_level}
 
@@ -3565,13 +3565,14 @@ Please generate:
 1. **INCIDENT NARRATIVE** (2-3 paragraphs): A formal description of the incident(s) referencing specific dates from the attendance data. Start with "This serves to formally notify..." or similar formal opening. Reference the specific dates of violation. If this is a repeat offense, mention the previous NTEs.
 
 2. **POLICY VIOLATED**: Cite the specific sections of GP HR Procedures & Policy 3.0 that were violated. Format as a hierarchical list with each level on its own line:
-   - First line: The main section number and title (e.g., "1. Attendance")
-   - Second line: The subsection (e.g., "1.1 Absenteeism:")
-   - Third line: The specific item (e.g., "1.1.1 Unauthorized Absence")
+   - First line: The main section number and title (e.g., "7. Attendance Discipline")
+   - Second line: The subsection code and title (e.g., "7.0 Attendance Violations")
+   - Third line: The specific sub-subsection code and full description text (e.g., "7.3 Unauthorized Absence \u2014 Absence without prior approval received from the immediate supervisor")
+   - Use the EXACT section, subsection, and sub-subsection from the violation data provided above
    - Do NOT include "The alleged violation is in contravention of the following company policies:" or any similar intro text
    - Do NOT reference Article 282 of the Labor Code of the Philippines
    - Do NOT include "This conduct may also constitute serious misconduct..." or similar outro text
-   - ONLY output the hierarchical policy section/subsection/description lines, nothing else
+   - ONLY output the hierarchical section/subsection/sub-subsection lines, nothing else
 
 Format your response as JSON with two keys: "narrative" (HTML string) and "policy_text" (HTML string with each line separated by <br> tags, NO bullet points or list markers).`;
 
