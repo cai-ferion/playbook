@@ -24,6 +24,7 @@ import {
   TabStopPosition,
   TabStopType,
   Tab,
+  ShadingType,
 } from "docx";
 import * as fs from "fs";
 import * as path from "path";
@@ -256,77 +257,56 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
   ));
 
   // ── Policy citations — hierarchical format ──
-  // Format: "4. Misconduct- IT..." (bold, highlighted), "4.1 IT Security..." (bold), "4.1.3 Violation..."
+  // Sections ("4. Misconduct...") → gray highlight + bold
+  // Subsections ("4.1 IT Security...") → bold only
+  // Descriptions ("4.1.3 Violation...") → normal text
+  // No bullets, vertical stacking
   for (const section of input.policy_sections) {
     const lines = stripHtml(section).split("\n").filter(l => l.trim());
     for (const line of lines) {
       const trimmed = line.trim();
-      // Skip bullet prefixes
       const clean = trimmed.replace(/^[•\-]\s*/, "");
 
-      // Detect "Possible Penalty:" lines → underline
-      if (/^possible penalty/i.test(clean)) {
-        children.push(para(
-          [txt(clean, { underline: true })],
-          { after: PARA_AFTER },
-        ));
+      // Skip "Possible Penalty:" lines — handled separately below
+      if (/^possible penalty/i.test(clean)) continue;
+
+      // Top-level section headers (e.g., "4. Misconduct- IT..." or "1. Attendance")
+      // → Gray highlight + Bold
+      if (/^\d+\.?\s+\w/.test(clean) && !/^\d+\.\d+/.test(clean) && clean.length < 120) {
+        children.push(new Paragraph({
+          children: [txt(clean, { bold: true })],
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 80 },
+          shading: { type: ShadingType.CLEAR, fill: "D9D9D9" },
+        }));
       }
-      // Detect top-level section headers (e.g., "4. Misconduct- IT..." or "1. Attendance")
-      // Pattern: digit + period + space + text, short enough to be a header
-      else if (/^\d+\.?\s+\w/.test(clean) && !/^\d+\.\d+/.test(clean) && clean.length < 120) {
+      // Sub-sections (e.g., "4.1 IT Security" or "1.1 Absenteeism")
+      // → Bold only
+      else if (/^\d+\.\d+\s/.test(clean) && !/^\d+\.\d+\.\d+/.test(clean) && clean.length < 120) {
         children.push(para(
           [txt(clean, { bold: true })],
           { after: 80 },
         ));
       }
-      // Detect sub-sections (e.g., "4.1 IT Security" or "1.1 Absenteeism")
-      else if (/^\d+\.\d+\s/.test(clean) && !/^\d+\.\d+\.\d+/.test(clean) && clean.length < 120) {
-        children.push(para(
-          [txt(clean, { bold: true })],
-          { after: 80, indent: 360 },
-        ));
-      }
-      // Detect sub-sub-sections (e.g., "4.1.3 Violation of Information Security")
+      // Descriptions / sub-sub-sections (e.g., "4.1.3 Violation of Information Security")
+      // → Normal text
       else if (/^\d+\.\d+\.\d+/.test(clean) && clean.length < 150) {
         children.push(para(
           [txt(clean)],
-          { after: 80, indent: 720 },
+          { after: 80 },
         ));
       }
-      // Normal text
+      // Any other text → normal
       else {
         children.push(para([txt(clean)], { after: 80 }));
       }
     }
   }
 
-  // Possible penalty line (overall)
+  // Possible penalty line
   children.push(emptyLine());
   children.push(para(
     [txt(`Possible Penalty: ${capDisplay}`, { underline: true })],
-    { after: PARA_AFTER },
-  ));
-
-  // ── Article 282 ──
-  children.push(new Paragraph({
-    children: [
-      txt("and, "),
-      txt("Article 282 of the Labor Code of the Philippines", { bold: true }),
-      txt(", particularly:"),
-    ],
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { after: 80 },
-  }));
-  children.push(para(
-    [txt(`a. Serious misconduct or willful disobedience by the employee of the lawful orders of ${possessive} employer or representative in connection with ${possessive} work.`)],
-    { after: 80 },
-  ));
-  children.push(para(
-    [txt(`b. Gross and habitual neglect by the employee of ${possessive} duties.`)],
-    { after: 80 },
-  ));
-  children.push(para(
-    [txt("e. Other causes analogous to the foregoing: violation to company policies.")],
     { after: PARA_AFTER },
   ));
 

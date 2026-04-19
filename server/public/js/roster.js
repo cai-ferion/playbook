@@ -55,7 +55,9 @@ const ALL_COLUMNS = [
   { key: 'resignation_date', label: 'Resignation Date', group: 'attrition', isDate: true },
   { key: 'relieving_date', label: 'Relieving Date', group: 'attrition', isDate: true },
   { key: 'exit_date', label: 'Exit Date', group: 'attrition', isDate: true },
-  { key: 'exit_reason', label: 'Exit Reason', group: 'attrition' }
+  { key: 'exit_reason', label: 'Exit Reason', group: 'attrition' },
+  { key: 'department', label: 'Department', group: 'role' },
+  { key: 'sex', label: 'Sex', group: 'identity', ownerOnly: true }
 ];
 
 // Limited columns for non-admin tiers
@@ -64,7 +66,7 @@ const LIMITED_COLUMNS = [
   'employement_status','actual_role','supervisor_name','shift_time','work_off',
   'planning_group','related_planning_group','srt_status','platform',
   'srt_id','workday_id','meta_email','hire_date','regular_date',
-  'meta_onboarding_date','go_live_date'
+  'meta_onboarding_date','go_live_date','department'
 ];
 
 // Date columns for date-range filter type
@@ -83,9 +85,11 @@ const ROSTER = {
   filters: {},       // key -> { values: [...] } for multi, { startDate, endDate } for date_range
   searchQuery: '',
   ALL_COLUMNS: ALL_COLUMNS,
+  isOwner: false,
   getVisibleColumns() {
-    if (this.tier === 'full') return ALL_COLUMNS;
-    return ALL_COLUMNS.filter(c => LIMITED_COLUMNS.includes(c.key));
+    const base = this.tier === 'full' ? ALL_COLUMNS : ALL_COLUMNS.filter(c => LIMITED_COLUMNS.includes(c.key));
+    // Filter out ownerOnly columns for non-owner users
+    return base.filter(c => !c.ownerOnly || this.isOwner);
   }
 };
 
@@ -1180,6 +1184,12 @@ async function rosterFetchEmployees() {
 
   // Can edit: regimen.edit_employee
   ROSTER.canEdit = !!perms['regimen.edit_employee'];
+
+  // Owner check for ownerOnly columns (Sex column)
+  try {
+    const u = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    ROSTER.isOwner = u.open_id === '740045023' || u.ohr_id === '740045023';
+  } catch(e) { ROSTER.isOwner = false; }
 
   // Show/hide add button
   const addBtn = document.getElementById('roster-add-btn');

@@ -72,12 +72,6 @@ function ccBuildListHTML() {
           <option value="QA Feedback">QA Feedback</option>
           <option value="ZTP Coaching">ZTP</option>
         </select>
-        <select id="cc-filter-status" onchange="ccOnFilterStatus(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input, var(--bg));color:var(--fg);font-size:13px;">
-          <option value="">All Statuses</option>
-          <option value="Pending Acknowledgement">Pending Ack</option>
-          <option value="Acknowledged">Acknowledged</option>
-          <option value="QA Dispute - LV1">QA Dispute</option>
-        </select>
         <span style="font-size:12px;color:var(--fg-muted);">Total: <strong id="cc-total-count" style="color:var(--fg);">${ccState.total}</strong></span>
       </div>
       <div class="module-table-wrapper">
@@ -89,7 +83,6 @@ function ccBuildListHTML() {
               <th>Coachee</th>
               <th>Coach</th>
               <th>Date</th>
-              <th>Status</th>
               <th style="width:60px;">Actions</th>
             </tr>
           </thead>
@@ -120,7 +113,6 @@ function ccRenderTable() {
       <td>${log.coachee_name || ''}</td>
       <td>${log.coach_name || ''}</td>
       <td style="font-size:12px;">${log.coaching_date || ''}</td>
-      <td><span style="font-size:12px;${statusClass}">${log.status || ''}</span></td>
       <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();ccShowDetail('${log.coaching_id}')">View</button></td>
     </tr>`;
   }).join('');

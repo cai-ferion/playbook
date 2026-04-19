@@ -2139,3 +2139,23 @@
 - [x] Consistent line spacing across all paragraphs (unified PARA_AFTER = 160 half-points)
 - [x] Remove underline/lines from signature blocks (plain text only)
 - [x] employees/slim endpoint now returns department and sex fields
+
+## Regimen Table — Department + Sex Columns
+- [x] Add Department column visible to all users in Regimen table
+- [x] Add Sex column visible only to owner (740045023) in Regimen table
+
+## NTE DOCX — Policy Section Formatting
+- [x] Sections: highlighted gray background, bold text
+- [x] Subsections: bold text only
+- [x] Descriptions: normal text
+- [x] Vertical stacking, no bullets
+- [x] Remove "The alleged violation is in contravention of the following company policies:" text
+- [x] Remove "This conduct may also constitute serious misconduct..." Article 282 reference text
+
+## Coaching Profile — Remove Status Filter + Acknowledged Cleanup
+- [x] Remove Status filter from Coaching Profile filter bar
+- [x] Remove "Acknowledged" status from non-QA Feedback coaching logs (no non-QA logs had Acknowledged status in DB — filter dropdown removed)
+
+## Disputes Area — Card Movement Animation
+- [x] Add sleek, smooth animation when a card is moved to a new section (FLIP technique)
+- [x] Make the animation impressive and polished (staggered entrance, color-coded columns, escalation timeline, glow effects)

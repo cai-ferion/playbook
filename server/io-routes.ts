@@ -3564,13 +3564,16 @@ Please generate:
 
 1. **INCIDENT NARRATIVE** (2-3 paragraphs): A formal description of the incident(s) referencing specific dates from the attendance data. Start with "This serves to formally notify..." or similar formal opening. Reference the specific dates of violation. If this is a repeat offense, mention the previous NTEs.
 
-2. **POLICY VIOLATED** (bulleted list): Cite the specific sections of GP HR Procedures & Policy 3.0 that were violated. Include:
-   - The main category (e.g., "Section 7: Attendance Discipline")
-   - The specific subsection (e.g., "7.3: Unauthorized Absence")
-   - Any applicable sub-items
-   - Reference to Article 282 of the Labor Code of the Philippines if applicable
+2. **POLICY VIOLATED**: Cite the specific sections of GP HR Procedures & Policy 3.0 that were violated. Format as a hierarchical list with each level on its own line:
+   - First line: The main section number and title (e.g., "1. Attendance")
+   - Second line: The subsection (e.g., "1.1 Absenteeism:")
+   - Third line: The specific item (e.g., "1.1.1 Unauthorized Absence")
+   - Do NOT include "The alleged violation is in contravention of the following company policies:" or any similar intro text
+   - Do NOT reference Article 282 of the Labor Code of the Philippines
+   - Do NOT include "This conduct may also constitute serious misconduct..." or similar outro text
+   - ONLY output the hierarchical policy section/subsection/description lines, nothing else
 
-Format your response as JSON with two keys: "narrative" (HTML string) and "policy_text" (HTML string with bullet points).`;
+Format your response as JSON with two keys: "narrative" (HTML string) and "policy_text" (HTML string with each line separated by <br> tags, NO bullet points or list markers).`;
 
     const response = await invokeLLM({
       messages: [
