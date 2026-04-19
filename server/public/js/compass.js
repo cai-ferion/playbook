@@ -1405,7 +1405,73 @@ function _compassResetFormFields() {
   if (el['compass-job-id-section']) el['compass-job-id-section'].style.display = 'none';
 }
 
-async function compassShowNewForm() {
+// ===== Type-First Selector (replaces direct form open) =====
+function compassShowTypeSelector() {
+  const overlay = document.getElementById('compass-form-overlay');
+  const formTitle = document.getElementById('compass-form-title');
+  const formBody = document.getElementById('compass-form-body');
+  const formFooter = document.getElementById('compass-form-footer');
+
+  formTitle.textContent = 'New Log — Choose Type';
+  COMPASS.editingId = null;
+  // Invalidate cached form so the correct type-specific form is built fresh
+  COMPASS._formBuilt = false;
+  COMPASS._formEls = {};
+
+  const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
+
+  // Type cards config: icon SVG, label, description, color accent
+  const types = [
+    { id: 'General Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', label: 'General Coaching', desc: 'One-on-one coaching session', accent: '#3B82F6' },
+    { id: 'Follow-Up Session', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>', label: 'Follow-Up Session', desc: 'Continue a previous session', accent: '#8B5CF6' },
+    { id: 'Group Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', label: 'Group Coaching', desc: 'Session with multiple coachees', accent: '#10B981' },
+    { id: 'Triad Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>', label: 'Triad Coaching', desc: 'Coaching observation with leader', accent: '#F59E0B' },
+    { id: 'QA Feedback', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>', label: 'QA Feedback', desc: 'Quality error findings & RCA', accent: '#EC4899' },
+    { id: 'Incident Report', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', label: 'Incident Report', desc: 'Violation tracker & incident log', accent: '#EF4444' },
+    { id: 'ZTP Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
+    { id: 'NTE Build Assist', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>', label: 'NTE Build Assist', desc: 'AI-powered Notice to Explain builder', accent: '#6366F1', special: true }
+  ];
+
+  formBody.innerHTML = `
+    <div style="padding:4px 0;">
+      <p style="font-size:13px; color:var(--fg-muted); margin-bottom:16px;">Select the type of log you want to create:</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        ${types.map(t => `
+          <div class="compass-type-card" onclick="compassSelectType('${escapeAttr(t.id)}')" style="
+            display:flex; align-items:flex-start; gap:12px; padding:14px 16px;
+            border:1px solid ${t.special ? t.accent + '40' : 'var(--border)'};
+            border-radius:var(--radius-lg); cursor:pointer;
+            background:${t.special ? t.accent + '08' : 'var(--bg-surface)'};
+            transition:all 0.15s ease;
+          " onmouseover="this.style.borderColor='${t.accent}'; this.style.background='${t.accent}10';" onmouseout="this.style.borderColor='${t.special ? t.accent + '40' : 'var(--border)'}'; this.style.background='${t.special ? t.accent + '08' : 'var(--bg-surface)'}';">
+            <div style="flex-shrink:0; color:${t.accent}; margin-top:2px;">${t.icon}</div>
+            <div style="min-width:0;">
+              <div style="font-size:13px; font-weight:600; color:var(--fg); line-height:1.3;">${escapeHtml(t.label)}</div>
+              <div style="font-size:11px; color:var(--fg-muted); margin-top:2px; line-height:1.3;">${escapeHtml(t.desc)}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+async function compassSelectType(type) {
+  if (type === 'NTE Build Assist') {
+    compassShowNteBuildAssist();
+    return;
+  }
+  // For all other types, open the standard coaching form with the type pre-selected
+  await compassShowNewFormForType(type);
+}
+
+async function compassShowNewFormForType(preselectedType) {
   // Employees already prefetched in initCompass — no await needed here
   if (COMPASS.employees.length === 0) await compassFetchEmployees();
   COMPASS.editingId = null;
@@ -1426,14 +1492,11 @@ async function compassShowNewForm() {
     `;
     COMPASS._formEls['compass-submit-btn'] = document.getElementById('compass-submit-btn');
     overlay.style.display = 'flex';
-    // Default to 'General Coaching' for non-QA roles
-    const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
-    if (!isQA) {
-      const typeSelect = COMPASS._formEls['compass-new-type'];
-      if (typeSelect) {
-        typeSelect.value = 'General Coaching';
-        compassOnTypeChange();
-      }
+    // Set the pre-selected type
+    const typeSelect = COMPASS._formEls['compass-new-type'];
+    if (typeSelect && preselectedType) {
+      typeSelect.value = preselectedType;
+      compassOnTypeChange();
     }
     return;
   }
@@ -1688,12 +1751,11 @@ async function compassShowNewForm() {
 
   overlay.style.display = 'flex';
 
-  // Default to 'General Coaching' for non-QA roles
-  const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
-  if (!isQA) {
+  // Set the pre-selected type from the type selector
+  if (preselectedType) {
     const typeSelect = COMPASS._formEls['compass-new-type'];
     if (typeSelect) {
-      typeSelect.value = 'General Coaching';
+      typeSelect.value = preselectedType;
       compassOnTypeChange();
     }
   }
@@ -4501,5 +4563,657 @@ document.addEventListener('click', function(e) {
     if (wrapper && !wrapper.contains(e.target)) {
       compassToggleJoinerDropdown(num, false);
     }
+  }
+});
+
+
+// ===== NTE Build Assist Wizard =====
+// Multi-step wizard: 1) Employee + Violation Type  2) Date range + Attendance  3) AI Narrative + Review  4) Confirm & Save
+
+var NTE_WIZARD = {
+  step: 1,
+  employee: null,       // selected employee object
+  violationType: null,  // { code, type, penalty, category }
+  violationSubtype: '', // optional subtype
+  dateRange: { start: '', end: '' },
+  attendance: [],       // fetched attendance rows for the period
+  previousNtes: [],     // existing NTEs for this employee
+  capLevel: '',         // auto-determined or manually adjusted
+  narrative: '',        // AI-generated incident narrative
+  policyText: '',       // AI-generated policy citation
+  isGenerating: false
+};
+
+function compassShowNteBuildAssist() {
+  NTE_WIZARD = { step: 1, employee: null, violationType: null, violationSubtype: '', dateRange: { start: '', end: '' }, attendance: [], previousNtes: [], capLevel: '', narrative: '', policyText: '', isGenerating: false };
+  _nteWizardRender();
+}
+
+function _nteWizardRender() {
+  const overlay = document.getElementById('compass-form-overlay');
+  const formTitle = document.getElementById('compass-form-title');
+  const formBody = document.getElementById('compass-form-body');
+  const formFooter = document.getElementById('compass-form-footer');
+
+  const stepLabels = ['Employee & Violation', 'Date Range & Attendance', 'AI Narrative & Review', 'Confirm & Save'];
+  formTitle.innerHTML = `<span style="display:flex;align-items:center;gap:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+    NTE Build Assist
+    <span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Step ${NTE_WIZARD.step} of 4 — ${stepLabels[NTE_WIZARD.step - 1]}</span>
+  </span>`;
+
+  // Progress bar
+  const progressHtml = `<div style="display:flex;gap:4px;margin-bottom:16px;">
+    ${[1,2,3,4].map(s => `<div style="flex:1;height:3px;border-radius:2px;background:${s <= NTE_WIZARD.step ? '#6366F1' : 'var(--border)'};transition:background 0.2s;"></div>`).join('')}
+  </div>`;
+
+  if (NTE_WIZARD.step === 1) _nteWizardStep1(formBody, formFooter, progressHtml);
+  else if (NTE_WIZARD.step === 2) _nteWizardStep2(formBody, formFooter, progressHtml);
+  else if (NTE_WIZARD.step === 3) _nteWizardStep3(formBody, formFooter, progressHtml);
+  else if (NTE_WIZARD.step === 4) _nteWizardStep4(formBody, formFooter, progressHtml);
+
+  overlay.style.display = 'flex';
+}
+
+// ---- Step 1: Employee + Violation Type ----
+function _nteWizardStep1(formBody, formFooter, progressHtml) {
+  // Build violation category options from HR_VIOLATIONS
+  let violationOptions = '<option value="">— Select Violation —</option>';
+  if (typeof HR_VIOLATIONS !== 'undefined') {
+    HR_VIOLATIONS.forEach(cat => {
+      violationOptions += `<optgroup label="${escapeAttr(cat.category)}">`;
+      cat.violations.forEach(v => {
+        const selected = NTE_WIZARD.violationType && NTE_WIZARD.violationType.code === v.code ? 'selected' : '';
+        violationOptions += `<option value="${escapeAttr(v.code)}" ${selected}>${escapeHtml(v.code)} — ${escapeHtml(v.type)} (${escapeHtml(v.penalty)})</option>`;
+      });
+      violationOptions += '</optgroup>';
+    });
+  }
+
+  formBody.innerHTML = `${progressHtml}
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Employee <span class="required">*</span></label>
+        <div class="searchable-select" id="nte-wiz-employee-wrapper">
+          <input type="hidden" id="nte-wiz-employee-ohr" value="${NTE_WIZARD.employee ? escapeAttr(NTE_WIZARD.employee.ohr_id) : ''}">
+          <input type="text" class="form-input" id="nte-wiz-employee-search" placeholder="Search by name or OHR ID..." autocomplete="off"
+            value="${NTE_WIZARD.employee ? escapeAttr(NTE_WIZARD.employee.full_name + ' (' + NTE_WIZARD.employee.ohr_id + ')') : ''}"
+            oninput="_nteWizFilterEmployees()" onclick="_nteWizToggleEmployeeDropdown(true)">
+          <div class="searchable-select-dropdown" id="nte-wiz-employee-dropdown" style="display:none; max-height:200px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Violation Type <span class="required">*</span></label>
+        <select class="form-select" id="nte-wiz-violation" onchange="_nteWizOnViolationChange()">
+          ${violationOptions}
+        </select>
+      </div>
+      <div id="nte-wiz-subtype-field" style="display:${NTE_WIZARD.violationType && NTE_WIZARD.violationType.subtypes && NTE_WIZARD.violationType.subtypes.length > 0 ? '' : 'none'};">
+        <div class="form-field" style="margin-top:8px;">
+          <label class="form-label">Subtype / Description</label>
+          <select class="form-select" id="nte-wiz-subtype">
+            <option value="">— Select Subtype —</option>
+          </select>
+        </div>
+      </div>
+      <div id="nte-wiz-penalty-info" style="margin-top:8px; padding:8px 12px; background:#6366F110; border:1px solid #6366F130; border-radius:var(--radius); font-size:12px; color:#6366F1; display:${NTE_WIZARD.violationType ? '' : 'none'};">
+        ${NTE_WIZARD.violationType ? `<strong>Standard Penalty:</strong> ${escapeHtml(NTE_WIZARD.violationType.penalty)} &nbsp;|&nbsp; <strong>Category:</strong> ${escapeHtml(NTE_WIZARD.violationType.category || '')}` : ''}
+      </div>
+    </div>
+
+    ${NTE_WIZARD.employee ? `
+    <div class="form-section" style="background:var(--bg-inset); padding:12px 16px; border-radius:var(--radius); border:1px solid var(--border);">
+      <div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Employee Details</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:12px;">
+        <div><strong>Name:</strong> ${escapeHtml(NTE_WIZARD.employee.full_name)}</div>
+        <div><strong>OHR:</strong> ${escapeHtml(NTE_WIZARD.employee.ohr_id)}</div>
+        <div><strong>Role:</strong> ${escapeHtml(NTE_WIZARD.employee.actual_role || '—')}</div>
+        <div><strong>PG:</strong> ${escapeHtml(NTE_WIZARD.employee.planning_group || '—')}</div>
+        <div><strong>Supervisor:</strong> ${escapeHtml(NTE_WIZARD.employee.supervisor_name || '—')}</div>
+        <div><strong>Email:</strong> ${escapeHtml(NTE_WIZARD.employee.meta_email || '—')}</div>
+      </div>
+    </div>` : ''}
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="compassShowTypeSelector()">← Back</button>
+    <button class="btn btn-primary btn-sm" onclick="_nteWizGoStep2()">Next →</button>
+  `;
+
+  // Populate subtypes if violation is already selected
+  if (NTE_WIZARD.violationType && NTE_WIZARD.violationType.subtypes && NTE_WIZARD.violationType.subtypes.length > 0) {
+    const subtypeSel = document.getElementById('nte-wiz-subtype');
+    if (subtypeSel) {
+      subtypeSel.innerHTML = '<option value="">— Select Subtype —</option>' +
+        NTE_WIZARD.violationType.subtypes.map(s => `<option value="${escapeAttr(s)}" ${NTE_WIZARD.violationSubtype === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+    }
+  }
+}
+
+var _nteWizFilterTimer = null;
+function _nteWizFilterEmployees() {
+  clearTimeout(_nteWizFilterTimer);
+  _nteWizFilterTimer = setTimeout(() => {
+    const search = (document.getElementById('nte-wiz-employee-search')?.value || '').toLowerCase();
+    const dropdown = document.getElementById('nte-wiz-employee-dropdown');
+    if (!dropdown || !search) { if (dropdown) dropdown.style.display = 'none'; return; }
+
+    // Filter only agents (exclude managers)
+    const matches = COMPASS.employees
+      .filter(e => e.actual_role !== 'Manager' && (
+        (e.full_name || '').toLowerCase().includes(search) ||
+        (e.ohr_id || '').toLowerCase().includes(search)
+      ))
+      .slice(0, 30);
+
+    if (matches.length === 0) {
+      dropdown.innerHTML = '<div style="padding:8px 12px; color:var(--fg-muted); font-size:12px;">No matches found</div>';
+    } else {
+      dropdown.innerHTML = matches.map(e => `
+        <div class="searchable-select-option" onclick="_nteWizSelectEmployee('${escapeAttr(e.ohr_id)}')" style="padding:6px 12px; cursor:pointer; font-size:12px;">
+          <strong>${escapeHtml(e.full_name)}</strong> <span style="color:var(--fg-muted);">(${escapeHtml(e.ohr_id)})</span>
+          <span style="color:var(--fg-subtle); font-size:11px; margin-left:4px;">${escapeHtml(e.planning_group || '')}</span>
+        </div>
+      `).join('');
+    }
+    dropdown.style.display = '';
+  }, 120);
+}
+
+function _nteWizToggleEmployeeDropdown(show) {
+  const dropdown = document.getElementById('nte-wiz-employee-dropdown');
+  if (dropdown) dropdown.style.display = show ? '' : 'none';
+  if (show) _nteWizFilterEmployees();
+}
+
+function _nteWizSelectEmployee(ohrId) {
+  const emp = COMPASS.employees.find(e => e.ohr_id === ohrId);
+  if (!emp) return;
+  NTE_WIZARD.employee = emp;
+  document.getElementById('nte-wiz-employee-ohr').value = ohrId;
+  document.getElementById('nte-wiz-employee-search').value = emp.full_name + ' (' + emp.ohr_id + ')';
+  document.getElementById('nte-wiz-employee-dropdown').style.display = 'none';
+  // Re-render to show employee details card
+  _nteWizardRender();
+}
+
+function _nteWizOnViolationChange() {
+  const code = document.getElementById('nte-wiz-violation')?.value;
+  if (!code) { NTE_WIZARD.violationType = null; NTE_WIZARD.violationSubtype = ''; _nteWizardRender(); return; }
+
+  // Find the violation in HR_VIOLATIONS
+  for (const cat of HR_VIOLATIONS) {
+    for (const v of cat.violations) {
+      if (v.code === code) {
+        NTE_WIZARD.violationType = { ...v, category: cat.category };
+        NTE_WIZARD.violationSubtype = '';
+        _nteWizardRender();
+        return;
+      }
+    }
+  }
+}
+
+async function _nteWizGoStep2() {
+  if (!NTE_WIZARD.employee) { showToast('Please select an employee', 'error'); return; }
+  if (!NTE_WIZARD.violationType) { showToast('Please select a violation type', 'error'); return; }
+  // Save subtype if selected
+  const subtypeSel = document.getElementById('nte-wiz-subtype');
+  if (subtypeSel) NTE_WIZARD.violationSubtype = subtypeSel.value || '';
+
+  NTE_WIZARD.step = 2;
+
+  // Set default date range: last 14 days
+  const today = new Date();
+  const twoWeeksAgo = new Date(today);
+  twoWeeksAgo.setDate(today.getDate() - 14);
+  if (!NTE_WIZARD.dateRange.start) NTE_WIZARD.dateRange.start = twoWeeksAgo.toISOString().split('T')[0];
+  if (!NTE_WIZARD.dateRange.end) NTE_WIZARD.dateRange.end = today.toISOString().split('T')[0];
+
+  _nteWizardRender();
+
+  // Fetch attendance and previous NTEs in parallel
+  await _nteWizFetchAttendanceAndNtes();
+}
+
+async function _nteWizFetchAttendanceAndNtes() {
+  const loadingEl = document.getElementById('nte-wiz-attendance-loading');
+  if (loadingEl) loadingEl.style.display = '';
+
+  try {
+    const [attResp, nteResp] = await Promise.all([
+      fetch(`${IO_API_BASE}/attendance?ohr_id=${encodeURIComponent(NTE_WIZARD.employee.ohr_id)}&log_date_gte=${NTE_WIZARD.dateRange.start}&log_date_lte=${NTE_WIZARD.dateRange.end}&limit=100`),
+      fetch(`${IO_API_BASE}/coaching-nte?ohr_id=${encodeURIComponent(NTE_WIZARD.employee.ohr_id)}`)
+    ]);
+    NTE_WIZARD.attendance = attResp.ok ? await attResp.json() : [];
+    // Handle paginated response
+    if (NTE_WIZARD.attendance.data) NTE_WIZARD.attendance = NTE_WIZARD.attendance.data;
+    NTE_WIZARD.previousNtes = nteResp.ok ? await nteResp.json() : [];
+
+    // Auto-determine CAP level based on previous NTEs + violation standard penalty
+    _nteWizDetermineCapLevel();
+  } catch (e) {
+    console.error('NTE Wizard fetch error:', e);
+    showToast('Failed to load data: ' + e.message, 'error');
+  }
+
+  // Re-render step 2 with data
+  _nteWizardRender();
+}
+
+function _nteWizDetermineCapLevel() {
+  // Standard penalty from the violation type
+  const standardPenalty = NTE_WIZARD.violationType?.penalty || 'CAP 0';
+
+  // Count previous NTEs for this employee (only attendance-related, same category)
+  const prevCount = NTE_WIZARD.previousNtes.length;
+
+  // Progressive escalation: if they already have NTEs, escalate
+  // CAP 0 → CAP 1 → CAP 2 → CAP 3 → Review for Termination
+  const capLevels = ['CAP 0', 'CAP 1', 'CAP 2', 'CAP 3', 'Review for Termination'];
+  const standardIdx = capLevels.indexOf(standardPenalty);
+  const escalatedIdx = Math.min(standardIdx + prevCount, capLevels.length - 1);
+
+  // Use the higher of standard penalty or escalated level
+  NTE_WIZARD.capLevel = capLevels[Math.max(standardIdx, escalatedIdx)];
+}
+
+// ---- Step 2: Date Range & Attendance ----
+function _nteWizardStep2(formBody, formFooter, progressHtml) {
+  // Build attendance table
+  let attHtml = '';
+  if (NTE_WIZARD.attendance.length > 0) {
+    // Sort by date
+    const sorted = [...NTE_WIZARD.attendance].sort((a, b) => (a.log_date || '').localeCompare(b.log_date || ''));
+    attHtml = `<div style="max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius); margin-top:8px;">
+      <table style="width:100%; font-size:11px; border-collapse:collapse;">
+        <thead><tr style="background:var(--bg-inset); position:sticky; top:0;">
+          <th style="padding:6px 8px; text-align:left; border-bottom:1px solid var(--border);">Date</th>
+          <th style="padding:6px 8px; text-align:center; border-bottom:1px solid var(--border);">Tag</th>
+          <th style="padding:6px 8px; text-align:left; border-bottom:1px solid var(--border);">Reason</th>
+          <th style="padding:6px 8px; text-align:center; border-bottom:1px solid var(--border);">OT</th>
+        </tr></thead>
+        <tbody>
+          ${sorted.map(r => {
+            const tag = (r.tag || '—').toUpperCase();
+            const tagColor = tag === 'UPL' ? '#EF4444' : tag === 'P' ? '#10B981' : tag === 'WO' ? '#6B7280' : tag === 'LATE' ? '#F59E0B' : tag === 'NCNS' ? '#DC2626' : 'var(--fg)';
+            const d = r.log_date ? new Date(r.log_date + 'T00:00:00') : null;
+            const dateStr = d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : r.log_date;
+            return `<tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:5px 8px;">${escapeHtml(dateStr)}</td>
+              <td style="padding:5px 8px; text-align:center;"><span style="display:inline-block; padding:1px 8px; border-radius:10px; font-size:10px; font-weight:600; background:${tagColor}15; color:${tagColor};">${escapeHtml(tag)}</span></td>
+              <td style="padding:5px 8px; color:var(--fg-muted);">${escapeHtml(r.upl_reason || '—')}</td>
+              <td style="padding:5px 8px; text-align:center;">${r.ot_hours || '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  } else {
+    attHtml = '<div id="nte-wiz-attendance-loading" style="text-align:center; padding:20px; color:var(--fg-muted); font-size:12px;">Loading attendance data...</div>';
+  }
+
+  // Previous NTEs summary
+  const prevHtml = NTE_WIZARD.previousNtes.length > 0
+    ? `<div style="margin-top:12px;">
+        <div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Previous NTEs (${NTE_WIZARD.previousNtes.length})</div>
+        ${NTE_WIZARD.previousNtes.map(n => `<div style="padding:6px 10px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:4px; font-size:11px;">
+          <strong style="color:${n.cap_level === 'CAP 3' ? '#EF4444' : n.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6'};">${escapeHtml(n.cap_level)}</strong>
+          <span style="color:var(--fg-muted); margin-left:8px;">${n.date_of_incident ? new Date(n.date_of_incident).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</span>
+          <span style="color:var(--fg-subtle); margin-left:8px;">${escapeHtml((n.incident_description || '').replace(/<[^>]*>/g, '').substring(0, 80))}${(n.incident_description || '').length > 80 ? '...' : ''}</span>
+        </div>`).join('')}
+      </div>`
+    : '<div style="margin-top:12px; font-size:12px; color:var(--fg-muted); font-style:italic;">No previous NTEs on record.</div>';
+
+  // CAP level display
+  const capColor = NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : NTE_WIZARD.capLevel === 'CAP 1' ? '#3B82F6' : NTE_WIZARD.capLevel === 'Review for Termination' ? '#DC2626' : '#6B7280';
+
+  formBody.innerHTML = `${progressHtml}
+    <div class="form-section">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-field">
+          <label class="form-label">Start Date</label>
+          <input type="date" class="form-input" id="nte-wiz-start" value="${escapeAttr(NTE_WIZARD.dateRange.start)}" onchange="_nteWizDateChange()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">End Date</label>
+          <input type="date" class="form-input" id="nte-wiz-end" value="${escapeAttr(NTE_WIZARD.dateRange.end)}" onchange="_nteWizDateChange()">
+        </div>
+      </div>
+      <button class="btn btn-outline btn-xs" style="margin-top:8px;" onclick="_nteWizRefreshAttendance()">↻ Refresh Attendance</button>
+    </div>
+
+    <div class="form-section">
+      <div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Attendance Snapshot (Annexure A)</div>
+      ${attHtml}
+    </div>
+
+    <div class="form-section">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px;">Recommended CAP Level</div>
+          <div style="margin-top:4px;">
+            <span style="display:inline-block; padding:4px 14px; border-radius:12px; font-size:13px; font-weight:700; background:${capColor}15; color:${capColor};">${escapeHtml(NTE_WIZARD.capLevel)}</span>
+          </div>
+        </div>
+        <div class="form-field" style="width:160px;">
+          <label class="form-label" style="font-size:11px;">Override CAP Level</label>
+          <select class="form-select" id="nte-wiz-cap-override" onchange="NTE_WIZARD.capLevel = this.value; _nteWizardRender();" style="font-size:12px;">
+            <option value="CAP 0" ${NTE_WIZARD.capLevel === 'CAP 0' ? 'selected' : ''}>CAP 0</option>
+            <option value="CAP 1" ${NTE_WIZARD.capLevel === 'CAP 1' ? 'selected' : ''}>CAP 1</option>
+            <option value="CAP 2" ${NTE_WIZARD.capLevel === 'CAP 2' ? 'selected' : ''}>CAP 2</option>
+            <option value="CAP 3" ${NTE_WIZARD.capLevel === 'CAP 3' ? 'selected' : ''}>CAP 3</option>
+            <option value="Review for Termination" ${NTE_WIZARD.capLevel === 'Review for Termination' ? 'selected' : ''}>Review for Termination</option>
+          </select>
+        </div>
+      </div>
+      ${prevHtml}
+    </div>
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="NTE_WIZARD.step = 1; _nteWizardRender();">← Back</button>
+    <button class="btn btn-primary btn-sm" onclick="_nteWizGoStep3()">Generate Narrative →</button>
+  `;
+}
+
+function _nteWizDateChange() {
+  NTE_WIZARD.dateRange.start = document.getElementById('nte-wiz-start')?.value || '';
+  NTE_WIZARD.dateRange.end = document.getElementById('nte-wiz-end')?.value || '';
+}
+
+async function _nteWizRefreshAttendance() {
+  _nteWizDateChange();
+  NTE_WIZARD.attendance = [];
+  _nteWizardRender();
+  await _nteWizFetchAttendanceAndNtes();
+}
+
+async function _nteWizGoStep3() {
+  _nteWizDateChange();
+  if (!NTE_WIZARD.dateRange.start || !NTE_WIZARD.dateRange.end) {
+    showToast('Please select a date range', 'error'); return;
+  }
+
+  NTE_WIZARD.step = 3;
+  NTE_WIZARD.isGenerating = true;
+  _nteWizardRender();
+
+  // Call the AI narrative generation endpoint
+  try {
+    const resp = await fetch(`${IO_API_BASE}/nte-build-assist/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employee: {
+          full_name: NTE_WIZARD.employee.full_name,
+          ohr_id: NTE_WIZARD.employee.ohr_id,
+          actual_role: NTE_WIZARD.employee.actual_role,
+          planning_group: NTE_WIZARD.employee.planning_group,
+          supervisor_name: NTE_WIZARD.employee.supervisor_name,
+          supervisor_email: NTE_WIZARD.employee.supervisor_email,
+          meta_email: NTE_WIZARD.employee.meta_email
+        },
+        violation: {
+          code: NTE_WIZARD.violationType.code,
+          type: NTE_WIZARD.violationType.type,
+          penalty: NTE_WIZARD.violationType.penalty,
+          category: NTE_WIZARD.violationType.category,
+          subtype: NTE_WIZARD.violationSubtype
+        },
+        cap_level: NTE_WIZARD.capLevel,
+        date_range: NTE_WIZARD.dateRange,
+        attendance: NTE_WIZARD.attendance.map(a => ({ log_date: a.log_date, tag: a.tag, upl_reason: a.upl_reason, ot_hours: a.ot_hours })),
+        previous_ntes: NTE_WIZARD.previousNtes.map(n => ({ cap_level: n.cap_level, date_of_incident: n.date_of_incident, incident_description: (n.incident_description || '').replace(/<[^>]*>/g, '').substring(0, 200) }))
+      })
+    });
+
+    if (!resp.ok) throw new Error('AI generation failed');
+    const result = await resp.json();
+    NTE_WIZARD.narrative = result.narrative || '';
+    NTE_WIZARD.policyText = result.policy_text || '';
+  } catch (e) {
+    console.error('NTE narrative generation error:', e);
+    showToast('AI generation failed. You can write the narrative manually.', 'error');
+    NTE_WIZARD.narrative = '';
+    NTE_WIZARD.policyText = '';
+  }
+
+  NTE_WIZARD.isGenerating = false;
+  _nteWizardRender();
+}
+
+// ---- Step 3: AI Narrative & Review ----
+function _nteWizardStep3(formBody, formFooter, progressHtml) {
+  if (NTE_WIZARD.isGenerating) {
+    formBody.innerHTML = `${progressHtml}
+      <div style="text-align:center; padding:60px 20px;">
+        <div style="display:inline-block; width:32px; height:32px; border:3px solid var(--border); border-top-color:#6366F1; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+        <div style="margin-top:16px; color:var(--fg-muted); font-size:13px;">Generating NTE narrative with AI...</div>
+        <div style="margin-top:8px; color:var(--fg-subtle); font-size:11px;">Analyzing attendance data, violation history, and policy references</div>
+      </div>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+    formFooter.innerHTML = '';
+    return;
+  }
+
+  formBody.innerHTML = `${progressHtml}
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Incident Narrative <span class="required">*</span></label>
+        <div style="font-size:11px; color:var(--fg-muted); margin-bottom:4px;">AI-generated — review and edit as needed</div>
+        <div class="rte-container">
+          <div class="rte-toolbar">
+            <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-wiz-narrative')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+            <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-wiz-narrative')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+          </div>
+          <div class="rte-editor" id="nte-wiz-narrative" contenteditable="true" data-placeholder="Describe the incident..." style="min-height:100px;">${NTE_WIZARD.narrative}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Policy / Standard Violated <span class="required">*</span></label>
+        <div style="font-size:11px; color:var(--fg-muted); margin-bottom:4px;">AI-generated policy citations — review and edit</div>
+        <div class="rte-container">
+          <div class="rte-toolbar">
+            <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-wiz-policy')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+            <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-wiz-policy')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+          </div>
+          <div class="rte-editor" id="nte-wiz-policy" contenteditable="true" data-placeholder="Specify the policy violated..." style="min-height:80px;">${NTE_WIZARD.policyText}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section" style="background:var(--bg-inset); padding:12px 16px; border-radius:var(--radius); border:1px solid var(--border);">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:12px;">
+        <div><strong>Employee:</strong> ${escapeHtml(NTE_WIZARD.employee.full_name)}</div>
+        <div><strong>Violation:</strong> ${escapeHtml(NTE_WIZARD.violationType.code + ' — ' + NTE_WIZARD.violationType.type)}</div>
+        <div><strong>CAP Level:</strong> <span style="color:${NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : '#3B82F6'}; font-weight:600;">${escapeHtml(NTE_WIZARD.capLevel)}</span></div>
+      </div>
+    </div>
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="NTE_WIZARD.step = 2; _nteWizardRender();">← Back</button>
+    <button class="btn btn-outline btn-sm" onclick="_nteWizRegenerate()">↻ Regenerate</button>
+    <button class="btn btn-primary btn-sm" onclick="_nteWizGoStep4()">Review & Confirm →</button>
+  `;
+}
+
+async function _nteWizRegenerate() {
+  // Save current edits before regenerating
+  NTE_WIZARD.isGenerating = true;
+  _nteWizardRender();
+  await _nteWizGoStep3();
+}
+
+function _nteWizGoStep4() {
+  // Save the edited narrative and policy text
+  NTE_WIZARD.narrative = document.getElementById('nte-wiz-narrative')?.innerHTML?.trim() || '';
+  NTE_WIZARD.policyText = document.getElementById('nte-wiz-policy')?.innerHTML?.trim() || '';
+
+  if (!NTE_WIZARD.narrative || NTE_WIZARD.narrative === '<br>') {
+    showToast('Please provide an incident narrative', 'error'); return;
+  }
+  if (!NTE_WIZARD.policyText || NTE_WIZARD.policyText === '<br>') {
+    showToast('Please specify the policy violated', 'error'); return;
+  }
+
+  NTE_WIZARD.step = 4;
+  _nteWizardRender();
+}
+
+// ---- Step 4: Confirm & Save ----
+function _nteWizardStep4(formBody, formFooter, progressHtml) {
+  const capColor = NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : NTE_WIZARD.capLevel === 'CAP 1' ? '#3B82F6' : NTE_WIZARD.capLevel === 'Review for Termination' ? '#DC2626' : '#6B7280';
+  const coach = typeof currentUser !== 'undefined' ? currentUser : null;
+
+  formBody.innerHTML = `${progressHtml}
+    <div style="padding:12px 16px; background:#6366F108; border:1px solid #6366F130; border-radius:var(--radius); margin-bottom:16px;">
+      <div style="font-size:13px; font-weight:600; color:#6366F1; margin-bottom:4px;">📋 NTE Summary — Ready to Submit</div>
+      <div style="font-size:11px; color:var(--fg-muted);">Review all details below. This will create a coaching log and NTE record.</div>
+    </div>
+
+    <div class="form-section">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
+        <div class="detail-row"><span class="detail-label">EMPLOYEE</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.full_name)} (${escapeHtml(NTE_WIZARD.employee.ohr_id)})</span></div>
+        <div class="detail-row"><span class="detail-label">ROLE</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.actual_role || '—')}</span></div>
+        <div class="detail-row"><span class="detail-label">SUPERVISOR</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.supervisor_name || '—')}</span></div>
+        <div class="detail-row"><span class="detail-label">PLANNING GROUP</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.planning_group || '—')}</span></div>
+        <div class="detail-row"><span class="detail-label">VIOLATION</span><span class="detail-value">${escapeHtml(NTE_WIZARD.violationType.code + ' — ' + NTE_WIZARD.violationType.type)}</span></div>
+        <div class="detail-row"><span class="detail-label">CAP LEVEL</span><span class="detail-value"><span style="padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600; background:${capColor}15; color:${capColor};">${escapeHtml(NTE_WIZARD.capLevel)}</span></span></div>
+        <div class="detail-row"><span class="detail-label">DATE RANGE</span><span class="detail-value">${escapeHtml(NTE_WIZARD.dateRange.start)} to ${escapeHtml(NTE_WIZARD.dateRange.end)}</span></div>
+        <div class="detail-row"><span class="detail-label">ISSUED BY</span><span class="detail-value">${escapeHtml(coach ? coach.full_name : '—')} ${coach ? '(' + escapeHtml(coach.ohr_id) + ')' : ''}</span></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h4 class="form-section-title">Incident Narrative</h4>
+      <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6;">${NTE_WIZARD.narrative}</div>
+    </div>
+
+    <div class="form-section">
+      <h4 class="form-section-title">Policy Violated</h4>
+      <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6;">${NTE_WIZARD.policyText}</div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Expected Behavior / Corrective Action <span class="required">*</span></label>
+        <div class="rte-container">
+          <div class="rte-toolbar">
+            <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-wiz-expected')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
+            <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-wiz-expected')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
+          </div>
+          <div class="rte-editor" id="nte-wiz-expected" contenteditable="true" data-placeholder="Describe the expected behavior and corrective actions..." style="min-height:80px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Deadline for Improvement</label>
+        <input type="date" class="form-input" id="nte-wiz-deadline" value="">
+      </div>
+    </div>
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="NTE_WIZARD.step = 3; _nteWizardRender();">← Back</button>
+    <button class="btn btn-primary btn-sm" id="nte-wiz-submit-btn" onclick="_nteWizSubmit()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l2 2 4-4"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      Create NTE
+    </button>
+  `;
+}
+
+async function _nteWizSubmit() {
+  const expectedBehavior = document.getElementById('nte-wiz-expected')?.innerHTML?.trim() || '';
+  if (!expectedBehavior || expectedBehavior === '<br>') {
+    showToast('Please describe the expected behavior / corrective action', 'error'); return;
+  }
+
+  const deadline = document.getElementById('nte-wiz-deadline')?.value || '';
+  const coach = typeof currentUser !== 'undefined' ? currentUser : null;
+
+  const submitBtn = document.getElementById('nte-wiz-submit-btn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating...'; }
+
+  try {
+    // 1. Create the coaching log first
+    const coachingRecord = {
+      coaching_type: 'General Coaching',
+      coach: coach ? coach.full_name : '',
+      coach_ohr: coach ? coach.ohr_id : '',
+      coach_meta_email: coach ? (coach.meta_email || '') : '',
+      coach_sup: coach ? (coach.supervisor_name || '') : '',
+      coach_sup_email: coach ? (coach.supervisor_email || '') : '',
+      coach_pg: coach ? coach.planning_group : '',
+      coaching_date: new Date().toISOString(),
+      coachee: NTE_WIZARD.employee.full_name,
+      coachee_ohr: NTE_WIZARD.employee.ohr_id,
+      coachee_meta_email: NTE_WIZARD.employee.meta_email || '',
+      coachee_sup: NTE_WIZARD.employee.supervisor_name || '',
+      coachee_sup_email: NTE_WIZARD.employee.supervisor_email || '',
+      coachee_pg: NTE_WIZARD.employee.planning_group || '',
+      session_goal: 'Attendance & Tardiness',
+      coaching_details: NTE_WIZARD.narrative,
+      status: 'Pending Acknowledgement',
+      cap_level: NTE_WIZARD.capLevel,
+      coachee_list: []
+    };
+
+    const coachResp = await fetch(`${IO_API_BASE}/coaching`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(coachingRecord)
+    });
+    if (!coachResp.ok) throw new Error('Failed to create coaching log');
+    const created = await coachResp.json();
+    const coachingId = created?.coaching_id || (Array.isArray(created) ? created[0]?.coaching_id : null) || created?.id;
+
+    // 2. Create the NTE record
+    const nteRecord = {
+      coaching_id: coachingId,
+      employee_name: NTE_WIZARD.employee.full_name,
+      ohr_id: NTE_WIZARD.employee.ohr_id,
+      cap_level: NTE_WIZARD.capLevel,
+      date_of_incident: NTE_WIZARD.dateRange.start,
+      incident_description: NTE_WIZARD.narrative,
+      policy_violated: NTE_WIZARD.policyText,
+      expected_behavior: expectedBehavior,
+      deadline_for_improvement: deadline,
+      issued_by: coach ? coach.full_name : '',
+      issued_by_ohr: coach ? coach.ohr_id : ''
+    };
+
+    const nteResp = await fetch(`${IO_API_BASE}/coaching-nte`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nteRecord)
+    });
+    if (!nteResp.ok) throw new Error('Failed to save NTE');
+
+    showToast('NTE created successfully! Coaching log: ' + coachingId, 'success');
+    compassCloseForm();
+    await compassFetchLogs();
+  } catch (e) {
+    console.error('NTE submission error:', e);
+    showToast('Failed to create NTE: ' + e.message, 'error');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create NTE'; }
+  }
+}
+
+// Close outside click for NTE wizard employee dropdown
+document.addEventListener('click', function(e) {
+  const wrapper = document.getElementById('nte-wiz-employee-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    _nteWizToggleEmployeeDropdown(false);
   }
 });

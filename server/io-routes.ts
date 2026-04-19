@@ -4,6 +4,7 @@
  */
 import { Router, Request, Response } from "express";
 import { getDb } from "./db.js";
+import { invokeLLM } from "./_core/llm.js";
 import {
   ioEmployees,
   ioAttendance,
@@ -3486,6 +3487,128 @@ router.get("/wfm-session-log", async (req: Request, res: Response) => {
     const rows = await db.select().from(wfmSessionLog).orderBy(desc(wfmSessionLog.id)).limit(200);
     res.json(rows);
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// NTE BUILD ASSIST — AI Narrative Generation
+// ============================================================
+
+router.post("/nte-build-assist/generate", async (req: Request, res: Response) => {
+  try {
+    const { employee, violation, cap_level, date_range, attendance, previous_ntes } = req.body;
+
+    if (!employee || !violation) {
+      return res.status(400).json({ error: "Employee and violation are required" });
+    }
+
+    // Build attendance summary for the AI
+    const attSummary = (attendance || []).map((a: any) => {
+      const tag = (a.tag || '—').toUpperCase();
+      return `${a.log_date}: ${tag}${a.upl_reason ? ' (' + a.upl_reason + ')' : ''}`;
+    }).join('\n');
+
+    // Build previous NTE context
+    const prevNteSummary = (previous_ntes || []).length > 0
+      ? (previous_ntes || []).map((n: any) => `- ${n.cap_level} on ${n.date_of_incident || 'unknown date'}: ${n.incident_description || 'No description'}`).join('\n')
+      : 'None on record.';
+
+    // Identify violation dates (UPL, NCNS, LATE)
+    const violationTags = ['UPL', 'NCNS', 'LATE', 'AWOL'];
+    const violationDates = (attendance || []).filter((a: any) => violationTags.includes((a.tag || '').toUpperCase())).map((a: any) => {
+      const d = new Date(a.log_date + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    });
+
+    const systemPrompt = `You are a professional HR document writer for Genpact Philippines. You write Notice to Explain (NTE) letters that are formal, precise, and legally compliant with Philippine labor law (Article 282 of the Labor Code). Your tone is firm but fair, using third-person formal language.
+
+IMPORTANT RULES:
+- Use formal business English
+- Reference specific dates and facts from the attendance data
+- Cite the exact policy section and subsection from GP HR Procedures & Policy 3.0
+- Do NOT fabricate dates or facts not in the provided data
+- Keep the narrative concise (2-3 paragraphs)
+- Use the employee's last name with appropriate honorific (Mr./Ms.)`;
+
+    const userPrompt = `Generate two sections for an NTE letter:
+
+**EMPLOYEE:**
+- Name: ${employee.full_name}
+- OHR ID: ${employee.ohr_id}
+- Role: ${employee.actual_role || 'Process Associate'}
+- Planning Group: ${employee.planning_group || 'N/A'}
+- Supervisor: ${employee.supervisor_name || 'N/A'}
+
+**VIOLATION:**
+- Code: ${violation.code}
+- Type: ${violation.type}
+- Category: ${violation.category}
+- Subtype: ${violation.subtype || 'N/A'}
+- Standard Penalty: ${violation.penalty}
+- Recommended CAP Level: ${cap_level}
+
+**DATE RANGE:** ${date_range?.start || 'N/A'} to ${date_range?.end || 'N/A'}
+
+**ATTENDANCE DATA:**
+${attSummary || 'No attendance data provided.'}
+
+**VIOLATION DATES:** ${violationDates.length > 0 ? violationDates.join(', ') : 'See attendance data above'}
+
+**PREVIOUS NTEs:**
+${prevNteSummary}
+
+Please generate:
+
+1. **INCIDENT NARRATIVE** (2-3 paragraphs): A formal description of the incident(s) referencing specific dates from the attendance data. Start with "This serves to formally notify..." or similar formal opening. Reference the specific dates of violation. If this is a repeat offense, mention the previous NTEs.
+
+2. **POLICY VIOLATED** (bulleted list): Cite the specific sections of GP HR Procedures & Policy 3.0 that were violated. Include:
+   - The main category (e.g., "Section 7: Attendance Discipline")
+   - The specific subsection (e.g., "7.3: Unauthorized Absence")
+   - Any applicable sub-items
+   - Reference to Article 282 of the Labor Code of the Philippines if applicable
+
+Format your response as JSON with two keys: "narrative" (HTML string) and "policy_text" (HTML string with bullet points).`;
+
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "nte_narrative",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              narrative: { type: "string", description: "HTML-formatted incident narrative (2-3 paragraphs)" },
+              policy_text: { type: "string", description: "HTML-formatted policy citations with bullet points" }
+            },
+            required: ["narrative", "policy_text"],
+            additionalProperties: false
+          }
+        }
+      }
+    });
+
+    const rawContent = response?.choices?.[0]?.message?.content || '{}';
+    const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      // If JSON parsing fails, use the raw content
+      parsed = { narrative: content, policy_text: '' };
+    }
+
+    res.json({
+      narrative: parsed.narrative || '',
+      policy_text: parsed.policy_text || ''
+    });
+  } catch (err: any) {
+    console.error("[IO API] NTE Build Assist generate error:", err);
     res.status(500).json({ error: err.message });
   }
 });

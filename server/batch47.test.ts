@@ -77,8 +77,11 @@ describe('Batch 47 — Coaching Types: General Coaching + Incident Report', () =
     expect(compass).toContain("coaching_type: 'General Coaching'");
   });
 
-  it('default coaching type for non-QA is General Coaching', () => {
-    expect(compass).toContain("typeSelect.value = 'General Coaching'");
+  it('default coaching type for non-QA is General Coaching (via type selector)', () => {
+    // Type-first selector now pre-selects the type via compassShowNewFormForType(preselectedType)
+    expect(compass).toContain("typeSelect.value = preselectedType");
+    // General Coaching is still the first type card in the selector
+    expect(compass).toContain("id: 'General Coaching'");
   });
 });
 

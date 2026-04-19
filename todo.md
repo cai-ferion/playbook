@@ -2090,3 +2090,18 @@
 
 ## WFM User — Fix Attendance Dropdowns Still Interactive
 - [x] Attendance tag dropdowns should render as plain text (not selects) for WFM users
+
+## Compass — Type-First Dropdown Refactor + NTE Build Assist
+- [x] Refactor "Add" button to show type selector dropdown first (reduces form latency)
+- [x] Type options: General Coaching, Follow-Up Session, Group Coaching, Triad Coaching, QA Feedback, Incident Report, ZTP Coaching, NTE Build Assist
+- [x] Each type opens only its relevant form fields (lazy load via preselectedType)
+- [x] Build NTE Build Assist wizard: Step 1 — Employee picker (searchable) + Violation type selector (from HR_VIOLATIONS)
+- [x] Build NTE Build Assist wizard: Step 2 — Date range + auto-fetch attendance + previous NTEs + CAP level recommendation
+- [x] Build NTE Build Assist wizard: Step 3 — AI-generated incident narrative + policy citations (editable)
+- [x] Build NTE Build Assist wizard: Step 4 — Review & confirm + expected behavior + deadline + submit
+- [x] Backend: /api/io/nte-build-assist/generate endpoint with LLM integration
+- [x] Backend: Attendance data pull for Annexure A (from io_attendance via existing API)
+- [ ] Backend: DOCX generation from NTE template (future enhancement)
+- [x] Backend: Auto-determine CAP level from violation history (progressive escalation)
+- [x] Integration: Auto-create coaching log + NTE record on submission
+- [x] Tests: vitest updated for type-first selector pattern
