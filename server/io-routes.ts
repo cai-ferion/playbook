@@ -28,6 +28,7 @@ import {
   compassCaTimeline,
   compassViolationCatalog,
   ioPermissions,
+  wfmSessionLog,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
 import crypto from "crypto";
@@ -3447,6 +3448,44 @@ router.post("/permissions/seed/:ohr_id", async (req: Request, res: Response) => 
     res.json({ ok: true, count: rows.length });
   } catch (err: any) {
     console.error("[PERMISSIONS] Error seeding permissions for", req.params.ohr_id, err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// WFM Temporary User — Session Logging
+// ============================================================
+
+// Log WFM login/action for traceability (shared-credential audit trail)
+router.post("/wfm-session-log", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const { action: act, details } = req.body;
+    const ip = req.headers["x-forwarded-for"] as string || req.socket.remoteAddress || "unknown";
+    const ua = req.headers["user-agent"] || "unknown";
+    await db.insert(wfmSessionLog).values({
+      login_at: new Date().toISOString(),
+      ip_address: typeof ip === "string" ? ip.split(",")[0].trim() : "unknown",
+      user_agent: ua,
+      action: act || "login",
+      details: details || null,
+    });
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[WFM-LOG] Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get WFM session log history (admin-only, for audit)
+router.get("/wfm-session-log", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const rows = await db.select().from(wfmSessionLog).orderBy(desc(wfmSessionLog.id)).limit(200);
+    res.json(rows);
+  } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });

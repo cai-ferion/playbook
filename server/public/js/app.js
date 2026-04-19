@@ -569,6 +569,37 @@ async function handleLogin() {
   if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
   if (!pw) { errorEl.textContent = 'Please enter your password.'; return; }
 
+  // ── WFM Temporary User Intercept ──
+  // Shared credential: username=00000, password=00000
+  // Bypasses employee lookup entirely, restricted to sync pages only
+  if (ohr === '00000' && pw === '00000') {
+    currentUser = {
+      ohr_id: '00000',
+      full_name: 'WFM Team',
+      actual_role: 'WFM',
+      employement_status: 'Active',
+      planning_group: '',
+      complete_planning_group: '',
+      actualPlanningGroup: '',
+      supervisor_name: '',
+      permissions: { 'nav.regimen': true }
+    };
+    sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+    document.getElementById('auth-page').style.display = 'none';
+    document.getElementById('app-container').style.display = 'flex';
+    applyNavPermissions(currentUser);
+    // Log WFM session for traceability
+    fetch(`${IO_API_BASE}/wfm-session-log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', details: 'WFM shared-credential login' })
+    }).catch(() => {});
+    // Route directly to Regimen (sync page)
+    if (typeof initRoster === 'function') initRoster();
+    switchView('roster');
+    return;
+  }
+
   // Check if locally locked out (3 failed attempts)
   if (failedAttempts[ohr] >= 3) {
     errorEl.innerHTML = 'Your account has been locked due to multiple failed login attempts.<br>Please contact <strong>Arvin Bantasan</strong> for assistance.';
@@ -756,38 +787,47 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentUser = JSON.parse(stored);
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
-      // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
-      try {
-        const permRes2 = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
-        const permData2 = await permRes2.json();
-        currentUser.permissions = permData2.permissions || {};
-      } catch (permErr2) {
-        console.warn('[RBAC] Failed to refresh permissions on restore:', permErr2);
-        // Fall back to stored permissions if any
-        if (!currentUser.permissions) currentUser.permissions = {};
-      }
-      sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
-      // Apply DB-driven nav visibility
-      applyNavPermissions(currentUser);
-
-      initMultiSelects();
-      initDashboardMultiSelects();
-      await loadDataOptimized();
-      startRefreshTimer();
-      // Auto-expand Anchor and Helm nav groups
-      const anchorGroup2 = document.getElementById('nav-group-anchor');
-      if (anchorGroup2) anchorGroup2.classList.add('expanded');
-      const helmGroup2 = document.getElementById('nav-group-helm');
-      if (helmGroup2) helmGroup2.classList.add('expanded');
-      // Default sidebar to Alerts (notifications) for all users
-      if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
-      if (typeof initNotifications === 'function') initNotifications();
-      // Route based on permissions
-      if (!currentUser.permissions['nav.anchor']) {
-        switchView('helm-board');
+      // ── WFM session restore: skip heavy data loading, route to Regimen ──
+      if (currentUser.ohr_id === '00000' && currentUser.actual_role === 'WFM') {
+        currentUser.permissions = { 'nav.regimen': true };
+        sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+        applyNavPermissions(currentUser);
+        if (typeof initRoster === 'function') initRoster();
+        switchView('roster');
       } else {
-        switchView('alerts');
+        // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
+        try {
+          const permRes2 = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
+          const permData2 = await permRes2.json();
+          currentUser.permissions = permData2.permissions || {};
+        } catch (permErr2) {
+          console.warn('[RBAC] Failed to refresh permissions on restore:', permErr2);
+          if (!currentUser.permissions) currentUser.permissions = {};
+        }
+        sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+
+        // Apply DB-driven nav visibility
+        applyNavPermissions(currentUser);
+
+        initMultiSelects();
+        initDashboardMultiSelects();
+        await loadDataOptimized();
+        startRefreshTimer();
+        // Auto-expand Anchor and Helm nav groups
+        const anchorGroup2 = document.getElementById('nav-group-anchor');
+        if (anchorGroup2) anchorGroup2.classList.add('expanded');
+        const helmGroup2 = document.getElementById('nav-group-helm');
+        if (helmGroup2) helmGroup2.classList.add('expanded');
+        // Default sidebar to Alerts (notifications) for all users
+        if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+        if (typeof initNotifications === 'function') initNotifications();
+        // Route based on permissions
+        if (!currentUser.permissions['nav.anchor']) {
+          switchView('helm-board');
+        } else {
+          switchView('alerts');
+        }
       }
     } catch (e) {
       sessionStorage.removeItem('playbook_user');

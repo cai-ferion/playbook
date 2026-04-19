@@ -2050,3 +2050,12 @@
 
 ## Compass — Lazy-Load HR_VIOLATIONS Catalog
 - [x] Defer loading compass-violations.js until Compass is actually opened
+
+## WFM Temporary User — Shared Credential Login
+- [x] Add wfm_session_log table for traceability (IP, user-agent, timestamp)
+- [x] Implement WFM login intercept (OHR: 00000, Password: 00000) — bypasses employee lookup
+- [x] WFM session uses sessionStorage with role=WFM, permissions={nav.regimen:true}
+- [x] Gate WFM role to Regimen only — all other nav groups hidden
+- [x] Add Sync to Sheet button in Regimen toolbar (visible to WFM users)
+- [x] WFM session restore skips heavy data loading, routes directly to Regimen
+- [x] Backend wfm-session-log endpoint logs login + sync actions for audit trail

@@ -1185,6 +1185,15 @@ async function rosterFetchEmployees() {
   const addBtn = document.getElementById('roster-add-btn');
   if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
 
+  // Show/hide Sync to Sheet button (WFM users + admins with sync permission)
+  const syncSheetBtn = document.getElementById('roster-sync-sheet-btn');
+  if (syncSheetBtn) {
+    const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const isWfm = user.actual_role === 'WFM';
+    const hasSyncPerm = !!perms['regimen.sync_sheet'];
+    syncSheetBtn.style.display = (isWfm || hasSyncPerm) ? '' : 'none';
+  }
+
   // Show/hide tabs
   const onboardingTab = document.getElementById('regimen-tab-onboarding');
   if (onboardingTab) onboardingTab.style.display = perms['regimen.onboarding_tab'] ? '' : 'none';
@@ -1195,6 +1204,44 @@ async function rosterFetchEmployees() {
   rosterApplyFilters();
   rosterRenderTable();
 }
+
+// ===== Sync to Google Sheet (WFM) =====
+window.rosterSyncToSheet = async function() {
+  const btn = document.getElementById('roster-sync-sheet-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing...'; }
+
+  try {
+    const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const resp = await fetch('/api/io/sync-roster', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-actor-ohr': user.ohr_id || '00000'
+      }
+    });
+    const result = await resp.json();
+    if (resp.ok && result.status === 'success') {
+      showToast(`Sync complete: ${result.rows_updated || 0} updated, ${result.rows_appended || 0} appended (${((result.duration_ms || 0) / 1000).toFixed(1)}s)`, 'success');
+      // Log WFM action for traceability
+      if (user.actual_role === 'WFM') {
+        fetch('/api/io/wfm-session-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sync_trigger', details: `Roster sync: ${result.rows_updated} updated, ${result.rows_appended} appended` })
+        }).catch(() => {});
+      }
+    } else {
+      showToast('Sync failed: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    showToast('Sync error: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync to Sheet';
+    }
+  }
+};
 
 async function initRoster() {
   await rosterFetchEmployees();

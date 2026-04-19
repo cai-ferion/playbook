@@ -516,6 +516,21 @@ export const ioSyncLog = mysqlTable("io_sync_log", {
 export type IoSyncLog = typeof ioSyncLog.$inferSelect;
 export type InsertIoSyncLog = typeof ioSyncLog.$inferInsert;
 
+/**
+ * wfm_session_log — Tracks WFM temporary user login sessions for traceability.
+ * Since WFM uses a shared credential (00000), this captures IP + user-agent
+ * to maintain an audit trail.
+ */
+export const wfmSessionLog = mysqlTable("wfm_session_log", {
+  id: int("id").autoincrement().primaryKey(),
+  login_at: varchar("login_at", { length: 64 }).notNull(),
+  ip_address: varchar("ip_address", { length: 64 }),
+  user_agent: text("user_agent"),
+  action: varchar("action", { length: 50 }).default("login"), // 'login', 'sync_trigger', etc.
+  details: text("details"),
+});
+export type WfmSessionLog = typeof wfmSessionLog.$inferSelect;
+export type InsertWfmSessionLog = typeof wfmSessionLog.$inferInsert;
 
 // ============================================================
 // Compass Overhaul — Normalized Schema
