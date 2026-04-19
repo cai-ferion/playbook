@@ -27,6 +27,10 @@ import {
 } from "docx";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ── Interfaces ──────────────────────────────────────────────────
 interface NTEInput {
@@ -110,7 +114,7 @@ function emptyLine(): Paragraph {
 
 // ── Build shared header (Genpact logo top-right) ────────────────
 function buildHeader(): Header {
-  const logoPath = path.resolve(__dirname, "genpact-logo.png");
+  const logoPath = path.resolve(__dirname, "genpact-logo.png");  // server/genpact-logo.png
   let logoBuffer: Buffer;
   try {
     logoBuffer = fs.readFileSync(logoPath);

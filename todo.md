@@ -2126,3 +2126,7 @@
 - [x] Annexure A: blank page (user attaches evidence after generation)
 - [x] Add "department" column to io_employees table (migration applied)
 - [x] Fix Regimen table supervisor column showing blank (key mismatch: 'supervisor' vs 'supervisor_name')
+
+## Fix __dirname ESM Error + Department Population
+- [x] Fix __dirname not defined in nte-docx-generator.ts (ESM compatibility — used import.meta.url + fileURLToPath)
+- [x] Populate department column: 20 QTP employees, 480 Ops (all matched)
