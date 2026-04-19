@@ -2167,3 +2167,8 @@
 - [x] Update LLM prompt to pass full hierarchy context (section, subsection, sub-subsection)
 - [x] DOCX generator already renders x.y.z as normal text — verified no changes needed
 - [x] Update batch-disputes-visibility.test.ts to match new data shape (item.text, item.code, item.penalty)
+
+## NTE Violation Picker — Fixes & Enhancements
+- [x] Fix subsection showing "N/A" in DOCX — fixed operator precedence bug in LLM prompt interpolation + added subsection fields to API payload
+- [x] Add type-ahead search filter to the NTE violation picker for 100+ sub-subsections
+- [ ] CWD Sign-off Sheet option explained to user — keeping for now (adds extra page for Critical Workday acknowledgment)

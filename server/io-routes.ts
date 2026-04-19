@@ -3546,7 +3546,7 @@ IMPORTANT RULES:
 - Code: ${violation.code}
 - Description: ${violation.type || violation.text || 'N/A'}
 - Section: ${violation.category || 'N/A'}
-- Subsection: ${violation.subsection || violation.subsectionCode ? (violation.subsectionCode + ' ' + (violation.subsectionTitle || '')) : 'N/A'}
+- Subsection: ${violation.subsection || (violation.subsectionCode ? (violation.subsectionCode + ' ' + (violation.subsectionTitle || '')) : 'N/A')}
 - Standard Penalty: ${violation.penalty}
 - Recommended CAP Level: ${cap_level}
 

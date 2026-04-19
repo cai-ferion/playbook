@@ -4650,9 +4650,13 @@ function _nteWizardStep1(formBody, formFooter, progressHtml) {
     <div class="form-section">
       <div class="form-field">
         <label class="form-label">Violation Type <span class="required">*</span></label>
-        <select class="form-select" id="nte-wiz-violation" onchange="_nteWizOnViolationChange()">
-          ${violationOptions}
-        </select>
+        <div class="searchable-select" id="nte-wiz-violation-wrapper">
+          <input type="text" class="form-input" id="nte-wiz-violation-search" placeholder="Search violations by code, keyword, or section..."
+            autocomplete="off"
+            value="${NTE_WIZARD.violationType ? escapeAttr(NTE_WIZARD.violationType.code + ' \u2014 ' + NTE_WIZARD.violationType.text) : ''}"
+            oninput="_nteWizFilterViolations()" onclick="_nteWizToggleViolationDropdown(true)" onfocus="_nteWizToggleViolationDropdown(true)">
+          <div class="searchable-select-dropdown" id="nte-wiz-violation-dropdown" style="display:none; max-height:280px; overflow-y:auto;"></div>
+        </div>
       </div>
       <div id="nte-wiz-penalty-info" style="margin-top:8px; padding:8px 12px; background:#6366F110; border:1px solid #6366F130; border-radius:var(--radius); font-size:12px; color:#6366F1; display:${NTE_WIZARD.violationType ? '' : 'none'};">
         ${NTE_WIZARD.violationType ? `<strong>Standard Penalty:</strong> ${escapeHtml(NTE_WIZARD.violationType.penalty)} &nbsp;|&nbsp; <strong>Section:</strong> ${escapeHtml(NTE_WIZARD.violationType.category || '')} &nbsp;|&nbsp; <strong>Subsection:</strong> ${escapeHtml(NTE_WIZARD.violationType.subsection || '')}` : ''}
@@ -4727,14 +4731,98 @@ function _nteWizSelectEmployee(ohrId) {
   _nteWizardRender();
 }
 
-function _nteWizOnViolationChange() {
-  const code = document.getElementById('nte-wiz-violation')?.value;
-  if (!code) { NTE_WIZARD.violationType = null; NTE_WIZARD.violationSubtype = ''; _nteWizardRender(); return; }
+// ---- Searchable Violation Picker ----
+var _nteWizViolationFilterTimer = null;
 
-  // Find the sub-subsection item in the new 3-level HR_VIOLATIONS
-  for (const cat of HR_VIOLATIONS) {
-    for (const sub of cat.subsections) {
-      for (const item of sub.items) {
+// Build a flat list of all violation items for search
+function _nteWizGetAllViolationItems() {
+  if (typeof HR_VIOLATIONS === 'undefined') return [];
+  var items = [];
+  HR_VIOLATIONS.forEach(function(cat) {
+    cat.subsections.forEach(function(sub) {
+      sub.items.forEach(function(item) {
+        items.push({
+          code: item.code,
+          text: item.text,
+          penalty: item.penalty,
+          category: cat.category,
+          subsectionCode: sub.code,
+          subsectionTitle: sub.title,
+          subsection: sub.code + ' ' + sub.title,
+          // Searchable string: code + text + category + subsection title
+          _search: (item.code + ' ' + item.text + ' ' + cat.category + ' ' + sub.title).toLowerCase()
+        });
+      });
+    });
+  });
+  return items;
+}
+
+function _nteWizFilterViolations() {
+  clearTimeout(_nteWizViolationFilterTimer);
+  _nteWizViolationFilterTimer = setTimeout(function() {
+    var search = (document.getElementById('nte-wiz-violation-search')?.value || '').toLowerCase().trim();
+    var dropdown = document.getElementById('nte-wiz-violation-dropdown');
+    if (!dropdown) return;
+
+    var allItems = _nteWizGetAllViolationItems();
+    var matches;
+    if (!search) {
+      // Show all items grouped by section when empty
+      matches = allItems;
+    } else {
+      // Filter by search terms (all terms must match)
+      var terms = search.split(/\s+/);
+      matches = allItems.filter(function(item) {
+        return terms.every(function(t) { return item._search.includes(t); });
+      });
+    }
+
+    if (matches.length === 0) {
+      dropdown.innerHTML = '<div style="padding:10px 14px; color:var(--fg-muted); font-size:12px;">No violations found</div>';
+    } else {
+      // Group by category + subsection for display
+      var grouped = {};
+      matches.forEach(function(item) {
+        var key = item.category + ' \u203a ' + item.subsection;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(item);
+      });
+
+      var html = '';
+      Object.keys(grouped).forEach(function(groupLabel) {
+        html += '<div style="padding:4px 12px; font-size:10px; font-weight:600; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.3px; background:var(--bg-inset); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:1;">' + escapeHtml(groupLabel) + '</div>';
+        grouped[groupLabel].forEach(function(item) {
+          var isSelected = NTE_WIZARD.violationType && NTE_WIZARD.violationType.code === item.code;
+          html += '<div class="searchable-select-option" onclick="_nteWizSelectViolation(\'' + escapeAttr(item.code) + '\')" style="padding:6px 12px; cursor:pointer; font-size:12px; line-height:1.4; border-bottom:1px solid var(--border);' + (isSelected ? ' background:#6366F110;' : '') + '">';
+          html += '<strong style="color:#6366F1;">' + escapeHtml(item.code) + '</strong> ';
+          html += '<span>' + escapeHtml(item.text) + '</span> ';
+          html += '<span style="color:var(--fg-subtle); font-size:10px;">(' + escapeHtml(item.penalty) + ')</span>';
+          html += '</div>';
+        });
+      });
+      dropdown.innerHTML = html;
+    }
+    dropdown.style.display = '';
+  }, 100);
+}
+
+function _nteWizToggleViolationDropdown(show) {
+  var dropdown = document.getElementById('nte-wiz-violation-dropdown');
+  if (dropdown) {
+    dropdown.style.display = show ? '' : 'none';
+    if (show) _nteWizFilterViolations();
+  }
+}
+
+function _nteWizSelectViolation(code) {
+  // Find the item in HR_VIOLATIONS
+  for (var ci = 0; ci < HR_VIOLATIONS.length; ci++) {
+    var cat = HR_VIOLATIONS[ci];
+    for (var si = 0; si < cat.subsections.length; si++) {
+      var sub = cat.subsections[si];
+      for (var ii = 0; ii < sub.items.length; ii++) {
+        var item = sub.items[ii];
         if (item.code === code) {
           NTE_WIZARD.violationType = {
             code: item.code,
@@ -4754,6 +4842,15 @@ function _nteWizOnViolationChange() {
     }
   }
 }
+
+// Close violation dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  var wrapper = document.getElementById('nte-wiz-violation-wrapper');
+  var dropdown = document.getElementById('nte-wiz-violation-dropdown');
+  if (wrapper && dropdown && !wrapper.contains(e.target)) {
+    dropdown.style.display = 'none';
+  }
+});
 
 async function _nteWizGoStep2() {
   if (!NTE_WIZARD.employee) { showToast('Please select an employee', 'error'); return; }
@@ -4955,9 +5052,12 @@ async function _nteWizGoStep3() {
         violation: {
           code: NTE_WIZARD.violationType.code,
           type: NTE_WIZARD.violationType.type,
+          text: NTE_WIZARD.violationType.text,
           penalty: NTE_WIZARD.violationType.penalty,
           category: NTE_WIZARD.violationType.category,
-          subtype: NTE_WIZARD.violationSubtype
+          subsection: NTE_WIZARD.violationType.subsection || '',
+          subsectionCode: NTE_WIZARD.violationType.subsectionCode || '',
+          subsectionTitle: NTE_WIZARD.violationType.subsectionTitle || ''
         },
         cap_level: NTE_WIZARD.capLevel,
         date_range: NTE_WIZARD.dateRange,
