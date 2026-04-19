@@ -2130,3 +2130,12 @@
 ## Fix __dirname ESM Error + Department Population
 - [x] Fix __dirname not defined in nte-docx-generator.ts (ESM compatibility — used import.meta.url + fileURLToPath)
 - [x] Populate department column: 20 QTP employees, 480 Ops (all matched)
+
+## NTE DOCX — Formatting Fixes
+- [x] Policy violations: hierarchical format (each line of multi-line policy_sections rendered separately with indent)
+- [x] Whole document in Justified alignment (AlignmentType.JUSTIFIED on all paragraphs)
+- [x] Add "sex" column to io_employees, pre-fill based on name inference (155F, 345M)
+- [x] Gender-aware pronouns (he/she/his/her/him) + honorifics (Mr./Ms.) based on sex column
+- [x] Consistent line spacing across all paragraphs (unified PARA_AFTER = 160 half-points)
+- [x] Remove underline/lines from signature blocks (plain text only)
+- [x] employees/slim endpoint now returns department and sex fields

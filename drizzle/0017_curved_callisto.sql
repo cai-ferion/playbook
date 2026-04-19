@@ -1,0 +1,1 @@
+ALTER TABLE `io_employees` ADD `sex` varchar(2);

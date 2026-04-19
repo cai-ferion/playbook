@@ -43,6 +43,7 @@ interface NTEInput {
     department?: string;      // for "Supervisor, {Department}"
     supervisor_name?: string;
     gender?: string;          // "Male" | "Female"
+    sex?: string;             // "M" | "F" — preferred over gender
   };
   narrative: string;          // AI-generated incident paragraph (plain text or HTML)
   policy_sections: string[];  // Each entry is one policy citation block (may contain newlines)
@@ -84,8 +85,18 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+// Determine if employee is female based on sex column or gender field
+function isFemale(emp: NTEInput["employee"]): boolean {
+  if (emp.sex === "F") return true;
+  if (emp.sex === "M") return false;
+  if (emp.gender === "Female") return true;
+  return false; // default male
+}
+
 const SIZE = 22;          // 11pt in half-points
 const FONT = "Calibri";
+// Consistent line spacing: 200 half-points after each paragraph (≈10pt)
+const PARA_AFTER = 200;
 
 function txt(text: string, opts: Partial<{ bold: boolean; italic: boolean; underline: boolean; allCaps: boolean; size: number }> = {}): TextRun {
   return new TextRun({
@@ -99,11 +110,12 @@ function txt(text: string, opts: Partial<{ bold: boolean; italic: boolean; under
   });
 }
 
+// All body paragraphs default to JUSTIFIED alignment and consistent spacing
 function para(children: TextRun[], opts: Partial<{ after: number; before: number; align: (typeof AlignmentType)[keyof typeof AlignmentType]; indent: number }> = {}): Paragraph {
   return new Paragraph({
     children,
-    alignment: opts.align,
-    spacing: { after: opts.after ?? 0, before: opts.before ?? 0 },
+    alignment: opts.align ?? AlignmentType.JUSTIFIED,
+    spacing: { after: opts.after ?? PARA_AFTER, before: opts.before ?? 0 },
     indent: opts.indent ? { left: opts.indent } : undefined,
   });
 }
@@ -114,19 +126,14 @@ function emptyLine(): Paragraph {
 
 // ── Build shared header (Genpact logo top-right) ────────────────
 function buildHeader(): Header {
-  const logoPath = path.resolve(__dirname, "genpact-logo.png");  // server/genpact-logo.png
+  const logoPath = path.resolve(__dirname, "genpact-logo.png");
   let logoBuffer: Buffer;
   try {
     logoBuffer = fs.readFileSync(logoPath);
   } catch {
-    // Fallback: no logo if file missing
-    return new Header({
-      children: [emptyLine()],
-    });
+    return new Header({ children: [emptyLine()] });
   }
 
-  // Logo: 507×236 px → scale to ~1.2in wide (86400 EMU = 1.2in)
-  // 1 inch = 914400 EMU; 1.2in = 1097280 EMU
   const logoWidthEMU = 1097280;
   const logoHeightEMU = Math.round(logoWidthEMU * (236 / 507));
 
@@ -138,7 +145,7 @@ function buildHeader(): Header {
           new ImageRun({
             data: logoBuffer,
             transformation: {
-              width: Math.round(logoWidthEMU / 914400 * 96),  // px at 96 dpi
+              width: Math.round(logoWidthEMU / 914400 * 96),
               height: Math.round(logoHeightEMU / 914400 * 96),
             },
             type: "png",
@@ -174,7 +181,12 @@ function pageProps() {
 //  MAIN GENERATOR
 // ════════════════════════════════════════════════════════════════
 export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
-  const honorific = input.employee.gender === "Female" ? "Ms." : "Mr.";
+  const female = isFemale(input.employee);
+  const honorific = female ? "Ms." : "Mr.";
+  const pronoun = female ? "she" : "he";
+  const possessive = female ? "her" : "his";
+  const objective = female ? "her" : "him";
+
   const hrName = input.hr_name || "Jocelyn Ramos";
   const flmName = input.flm_name || input.employee.supervisor_name || "[Supervisor Name]";
   const department = input.employee.department || "Operations";
@@ -200,29 +212,28 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
     spacing: { after: 300 },
   }));
 
-  // Date — bold, left
-  children.push(para([txt(input.date, { bold: true })], { after: 300 }));
+  // Date — bold, left-aligned (exception to justified)
+  children.push(para([txt(input.date, { bold: true })], { align: AlignmentType.LEFT, after: 300 }));
 
-  // Employee block
-  children.push(para([txt(input.employee.full_name, { bold: true })]));
-  children.push(para([txt(role)]));
-  children.push(para([txt("Genpact")], { after: 300 }));
+  // Employee block — left-aligned
+  children.push(para([txt(input.employee.full_name, { bold: true })], { align: AlignmentType.LEFT, after: 0 }));
+  children.push(para([txt(role)], { align: AlignmentType.LEFT, after: 0 }));
+  children.push(para([txt("Genpact")], { align: AlignmentType.LEFT, after: 300 }));
 
-  // Salutation
+  // Salutation — left-aligned
   children.push(para(
     [txt(`Dear ${honorific} ${input.employee.last_name}`)],
-    { after: 200 },
+    { align: AlignmentType.LEFT, after: PARA_AFTER },
   ));
 
   // Incident narrative — AI-generated, may be multi-paragraph
   const narrativeClean = stripHtml(input.narrative);
   const narrativeParas = narrativeClean.split(/\n\n+/).filter(p => p.trim());
   for (const p of narrativeParas) {
-    children.push(para([txt(p.trim())], { after: 200 }));
+    children.push(para([txt(p.trim())], { after: PARA_AFTER }));
   }
 
   // ── Mandate paragraph ──
-  // "IN VIEW THEREOF" bold, "MANDATED" bold, "within one hundred-twenty (120) hours" bold+italic
   children.push(new Paragraph({
     children: [
       txt("IN VIEW THEREOF", { bold: true }),
@@ -234,45 +245,57 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
       txt("within one hundred-twenty (120) hours from receipt of this Notice", { bold: true, italic: true }),
       txt(", stating your position why you should not be administratively held liable in reference to your alleged violation/s of:"),
     ],
-    spacing: { after: 200 },
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: { after: PARA_AFTER },
   }));
 
   // ── Policy section header ──
   children.push(para(
     [txt("GENPACT's Corrective Action Policy particularly:", { bold: true })],
-    { after: 200 },
+    { after: PARA_AFTER },
   ));
 
-  // Policy citations — each entry from the wizard
-  // The AI generates these as structured text; render with proper formatting
+  // ── Policy citations — hierarchical format ──
+  // Format: "4. Misconduct- IT..." (bold, highlighted), "4.1 IT Security..." (bold), "4.1.3 Violation..."
   for (const section of input.policy_sections) {
     const lines = stripHtml(section).split("\n").filter(l => l.trim());
     for (const line of lines) {
       const trimmed = line.trim();
+      // Skip bullet prefixes
+      const clean = trimmed.replace(/^[•\-]\s*/, "");
+
       // Detect "Possible Penalty:" lines → underline
-      if (/^possible penalty/i.test(trimmed)) {
+      if (/^possible penalty/i.test(clean)) {
         children.push(para(
-          [txt(trimmed, { underline: true })],
-          { after: 120 },
+          [txt(clean, { underline: true })],
+          { after: PARA_AFTER },
         ));
       }
-      // Detect section headers (e.g., "1. Attendance" or "4. Misconduct") → bold+underline
-      else if (/^\d+\.?\s+\w/.test(trimmed) && trimmed.length < 120) {
+      // Detect top-level section headers (e.g., "4. Misconduct- IT..." or "1. Attendance")
+      // Pattern: digit + period + space + text, short enough to be a header
+      else if (/^\d+\.?\s+\w/.test(clean) && !/^\d+\.\d+/.test(clean) && clean.length < 120) {
         children.push(para(
-          [txt(trimmed, { bold: true, underline: true })],
+          [txt(clean, { bold: true })],
           { after: 80 },
         ));
       }
-      // Detect sub-sections (e.g., "1.1 Absenteeism") → bold
-      else if (/^\d+\.\d+/.test(trimmed) && trimmed.length < 120) {
+      // Detect sub-sections (e.g., "4.1 IT Security" or "1.1 Absenteeism")
+      else if (/^\d+\.\d+\s/.test(clean) && !/^\d+\.\d+\.\d+/.test(clean) && clean.length < 120) {
         children.push(para(
-          [txt(trimmed, { bold: true })],
-          { after: 80 },
+          [txt(clean, { bold: true })],
+          { after: 80, indent: 360 },
+        ));
+      }
+      // Detect sub-sub-sections (e.g., "4.1.3 Violation of Information Security")
+      else if (/^\d+\.\d+\.\d+/.test(clean) && clean.length < 150) {
+        children.push(para(
+          [txt(clean)],
+          { after: 80, indent: 720 },
         ));
       }
       // Normal text
       else {
-        children.push(para([txt(trimmed)], { after: 80 }));
+        children.push(para([txt(clean)], { after: 80 }));
       }
     }
   }
@@ -281,7 +304,7 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
   children.push(emptyLine());
   children.push(para(
     [txt(`Possible Penalty: ${capDisplay}`, { underline: true })],
-    { after: 200 },
+    { after: PARA_AFTER },
   ));
 
   // ── Article 282 ──
@@ -291,69 +314,70 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
       txt("Article 282 of the Labor Code of the Philippines", { bold: true }),
       txt(", particularly:"),
     ],
+    alignment: AlignmentType.JUSTIFIED,
     spacing: { after: 80 },
   }));
   children.push(para(
-    [txt("a. Serious misconduct or willful disobedience by the employee of the lawful orders of his employer or representative in connection with his work.")],
+    [txt(`a. Serious misconduct or willful disobedience by the employee of the lawful orders of ${possessive} employer or representative in connection with ${possessive} work.`)],
     { after: 80 },
   ));
   children.push(para(
-    [txt("b. Gross and habitual neglect by the employee of his duties.")],
+    [txt(`b. Gross and habitual neglect by the employee of ${possessive} duties.`)],
     { after: 80 },
   ));
   children.push(para(
     [txt("e. Other causes analogous to the foregoing: violation to company policies.")],
-    { after: 200 },
+    { after: PARA_AFTER },
   ));
 
   // ── Boilerplate: evidence submission ──
   children.push(para(
     [txt("Within the same period, you may submit such evidence (documentary information or written deposition of your witness/es) that may support your explanation. Any witness/es you will identify will be required to confirm and verify the declarations stated in their disposition.")],
-    { after: 200 },
+    { after: PARA_AFTER },
   ));
 
   // ── Failure to submit — ALL CAPS, ALL BOLD ──
   children.push(para(
     [txt("YOUR FAILURE TO SUBMIT SAID EXPLANATION AND DOCUMENTS WITHIN THE PRESCRIBED PERIOD SHALL BE DEEMED A WAIVER ON YOUR PART TO PRESENT THE SAME. IN SUCH EVENT, THE MATTER WILL BE DECIDED BASED ON THE RECORDS AND EVIDENCE AVAILABLE. MANAGEMENT RESERVES THE RIGHT TO INCREASE THE PENALTY UP TO TERMINATION DEPENDING ON THE CIRCUMSTANCES OF THE CASE.", { bold: true })],
-    { after: 200 },
+    { after: PARA_AFTER },
   ));
 
-  // ── Remaining boilerplate ──
+  // ── Remaining boilerplate — all with consistent PARA_AFTER spacing ──
   children.push(para(
     [txt("If the company would be requiring further clarification based on your duly submitted written explanation, it hereby reserves the right to invite you to an administrative hearing, which will be confirmed and arranged by your aligned HR. The company, likewise, reserves the right to invite you on other dates as it may deem proper.")],
-    { after: 80 },
+    { after: PARA_AFTER },
   ));
   children.push(para(
     [txt("You may retain the assistance and services of private counsel during the proceedings. Should you wish to be represented by a preferred counsel, please notify us at least two (2) days in advance so we can arrange attendance of our internal counsel.")],
-    { after: 200 },
+    { after: PARA_AFTER },
   ));
   children.push(para(
-    [txt("Should the grounds for above alleged violation/s be established, the appropriate disciplinary action will be imposed as prescribed under the applicable laws, rules and policies governing the alleged offense/s.")],
-    { after: 200 },
+    [txt(`Should the grounds for above alleged violation/s be established, the appropriate disciplinary action will be imposed as prescribed under the applicable laws, rules and policies governing the alleged offense/s.`)],
+    { after: PARA_AFTER },
   ));
   children.push(para(
     [txt("Please note that Genpact adheres to a no-retaliation policy, violation of which will result in strict and prompt imposition of appropriate penalties.")],
     { after: 300 },
   ));
 
-  // ── Sincerely ──
-  children.push(para([txt("Sincerely,")], { after: 600 }));
+  // ── Sincerely — left-aligned ──
+  children.push(para([txt("Sincerely,")], { align: AlignmentType.LEFT, after: 600 }));
 
-  // Supervisor signature block
-  children.push(para([txt(flmName, { bold: true })]));
-  children.push(para([txt(`Supervisor, ${department}`)], { after: 600 }));
+  // Supervisor signature block — NO underlines/lines
+  children.push(para([txt(flmName, { bold: true })], { align: AlignmentType.LEFT, after: 0 }));
+  children.push(para([txt(`Supervisor, ${department}`)], { align: AlignmentType.LEFT, after: 600 }));
 
-  // HR signature block (space for signature)
+  // HR signature block — NO underlines/lines
   children.push(emptyLine());
-  children.push(para([txt(hrName, { bold: true })]));
-  children.push(para([txt("Employee Relations Manager, HR")], { after: 400 }));
+  children.push(para([txt(hrName, { bold: true })], { align: AlignmentType.LEFT, after: 0 }));
+  children.push(para([txt("Employee Relations Manager, HR")], { align: AlignmentType.LEFT, after: 400 }));
 
-  // Received by
+  // Received by — NO underlines/lines
   children.push(emptyLine());
-  children.push(para([txt("Received by:", { bold: true })], { after: 200 }));
-  children.push(para([txt(input.employee.full_name, { bold: true })]));
-  children.push(para([txt(role)]));
-  children.push(para([txt("Date Received:")]));
+  children.push(para([txt("Received by:", { bold: true })], { align: AlignmentType.LEFT, after: PARA_AFTER }));
+  children.push(para([txt(input.employee.full_name, { bold: true })], { align: AlignmentType.LEFT, after: 0 }));
+  children.push(para([txt(role)], { align: AlignmentType.LEFT, after: 0 }));
+  children.push(para([txt("Date Received:")], { align: AlignmentType.LEFT }));
 
   // ── Section 2: Annexure A (blank page) ────────────────────────
   const annexureChildren: Paragraph[] = [];
@@ -361,7 +385,6 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
     [txt("Annexure A:", { bold: true, size: 24 })],
     { after: 400 },
   ));
-  // Blank — user attaches evidence after generation
   annexureChildren.push(emptyLine());
 
   // ── Build sections array ──────────────────────────────────────
@@ -397,7 +420,7 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
     ));
     cwdChildren.push(para(
       [txt("I, the undersigned employee, hereby acknowledge the following:")],
-      { after: 200 },
+      { after: PARA_AFTER },
     ));
 
     // Acknowledgment of Policy
@@ -415,7 +438,7 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
     cwdChildren.push(para([txt("Understanding of Disciplinary Consequences", { bold: true, underline: true })], { before: 200, after: 100 }));
     const discItems = [
       "I understand that any violation of the established CWD Policy, including but not limited to any instance of Absence, Unscheduled Leave, or Unapproved Leave during a declared Critical Workday, may result in disciplinary action.",
-      "I acknowledge that disciplinary action can have consequences up to and including removal from the Program and termination of my employment, as determined and initiated by Genpact.",
+      `I acknowledge that disciplinary action can have consequences up to and including removal from the Program and termination of my employment, as determined and initiated by Genpact.`,
       "I agree and understand that Management reserves the right of discretion to impose the necessary penalty than the standard disciplinary action (e.g., CAP 2), depending upon the existence of any aggravating or mitigating circumstance(s) specific to each case.",
     ];
     discItems.forEach((item, i) => {
@@ -434,7 +457,7 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
 
     // Signed by
     cwdChildren.push(para([txt("Signed by:")], { before: 400, after: 400 }));
-    cwdChildren.push(para([txt("Name of Employee | Date")], { after: 200 }));
+    cwdChildren.push(para([txt("Name of Employee | Date")], { after: PARA_AFTER }));
 
     sections.push({
       properties: pageProps(),

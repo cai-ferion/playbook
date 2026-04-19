@@ -106,6 +106,8 @@ router.get("/employees/slim", async (req: Request, res: Response) => {
       complete_planning_group: ioEmployees.complete_planning_group,
       shift_time: ioEmployees.shift_time,
       srt_status: ioEmployees.srt_status,
+      department: ioEmployees.department,
+      sex: ioEmployees.sex,
     }).from(ioEmployees).orderBy(asc(ioEmployees.ohr_id)).limit(3000);
     res.json(rows);
   } catch (err: any) {
@@ -3644,6 +3646,7 @@ router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
         department: employee.department || "Operations",
         supervisor_name: employee.supervisor_name || "",
         gender: employee.gender || "Male",
+        sex: employee.sex || "",
       },
       narrative: narrative || "",
       policy_sections: Array.isArray(policy_sections) ? policy_sections : (policy_sections ? [policy_sections] : []),

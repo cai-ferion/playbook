@@ -5222,6 +5222,7 @@ async function _nteWizSubmit() {
         department: NTE_WIZARD.employee.department || 'Operations',
         supervisor_name: NTE_WIZARD.employee.supervisor_name || '',
         gender: NTE_WIZARD.employee.gender || 'Male',
+        sex: NTE_WIZARD.employee.sex || '',
       },
       narrative: NTE_WIZARD.narrative,
       policy_sections: NTE_WIZARD.policyText ? [NTE_WIZARD.policyText] : [],
