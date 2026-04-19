@@ -2075,3 +2075,11 @@
 ## WFM User — Read-Only Mode & Nav Restriction
 - [x] Make WFM user read-only: disable tag editing, Save Changes, Undo All, Select Rows, bulk tag
 - [x] Hide Dashboard, Risk Intelligence, Billing sub-nav items for WFM user (already permission-gated)
+
+## WFM User — Filter Bar & Alerts Tab
+- [x] Show filter bar (omnibar) for WFM users in Input Portal
+- [x] Hide Alerts nav tab for WFM users (show only Menu)
+
+## WFM Session Log — DB Fix
+- [x] Fix wfm_session_log table: recreated via MySQL wire protocol (was originally created via Supabase SQL editor in PostgreSQL syntax, invisible to MySQL wire protocol)
+- [x] Drizzle ORM insert/select now works correctly for wfm_session_log

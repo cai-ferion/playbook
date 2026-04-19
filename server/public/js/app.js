@@ -594,8 +594,12 @@ async function handleLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', details: 'WFM shared-credential login' })
     }).catch(() => {});
-    // Load data and route to Input Portal
+    // Hide Alerts tab for WFM
+    var alertsToggle = document.getElementById('sidebar-toggle-notif');
+    if (alertsToggle) alertsToggle.style.display = 'none';
+    // Load data, init filter bar, and route to Input Portal
     if (typeof forceSync === 'function') await forceSync();
+    if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
     switchView('input');
     return;
   }
@@ -793,7 +797,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUser.permissions = { 'nav.anchor': true, 'anchor.download_csv': true };
         sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
         applyNavPermissions(currentUser);
+        // Hide Alerts tab for WFM
+        var alertsToggle2 = document.getElementById('sidebar-toggle-notif');
+        if (alertsToggle2) alertsToggle2.style.display = 'none';
         if (typeof forceSync === 'function') await forceSync();
+        if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
         switchView('input');
       } else {
         // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
