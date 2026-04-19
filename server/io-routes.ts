@@ -3499,10 +3499,11 @@ router.get("/wfm-session-log", async (req: Request, res: Response) => {
 
 router.post("/nte-build-assist/generate", async (req: Request, res: Response) => {
   try {
-    const { employee, violation, cap_level, date_range, attendance, previous_ntes } = req.body;
+    const { employee, violation, violations, cap_level, date_range, attendance, previous_ntes } = req.body;
+    const allViolations = (violations && violations.length > 0) ? violations : (violation ? [violation] : []);
 
-    if (!employee || !violation) {
-      return res.status(400).json({ error: "Employee and violation are required" });
+    if (!employee || allViolations.length === 0) {
+      return res.status(400).json({ error: "Employee and at least one violation are required" });
     }
 
     // Build attendance summary for the AI
@@ -3542,12 +3543,8 @@ IMPORTANT RULES:
 - Planning Group: ${employee.planning_group || 'N/A'}
 - Supervisor: ${employee.supervisor_name || 'N/A'}
 
-**VIOLATION:**
-- Code: ${violation.code}
-- Description: ${violation.type || violation.text || 'N/A'}
-- Section: ${violation.category || 'N/A'}
-- Subsection: ${violation.subsection || (violation.subsectionCode ? (violation.subsectionCode + ' ' + (violation.subsectionTitle || '')) : 'N/A')}
-- Standard Penalty: ${violation.penalty}
+**VIOLATION(S):**
+${allViolations.map((v: any, i: number) => `Violation ${i + 1}:\n- Code: ${v.code}\n- Description: ${v.type || v.text || 'N/A'}\n- Section: ${v.category || 'N/A'}\n- Subsection: ${v.subsection || (v.subsectionCode ? (v.subsectionCode + ' ' + (v.subsectionTitle || '')) : 'N/A')}\n- Standard Penalty: ${v.penalty}`).join('\n\n')}
 - Recommended CAP Level: ${cap_level}
 
 **DATE RANGE:** ${date_range?.start || 'N/A'} to ${date_range?.end || 'N/A'}
@@ -3564,15 +3561,13 @@ Please generate:
 
 1. **INCIDENT NARRATIVE** (2-3 paragraphs): A formal description of the incident(s) referencing specific dates from the attendance data. Start with "This serves to formally notify..." or similar formal opening. Reference the specific dates of violation. If this is a repeat offense, mention the previous NTEs.
 
-2. **POLICY VIOLATED**: Cite the specific sections of GP HR Procedures & Policy 3.0 that were violated. Format as a hierarchical list with each level on its own line:
-   - First line: The main section number and title (e.g., "7. Attendance Discipline")
-   - Second line: The subsection code and title (e.g., "7.0 Attendance Violations")
-   - Third line: The specific sub-subsection code and full description text (e.g., "7.3 Unauthorized Absence \u2014 Absence without prior approval received from the immediate supervisor")
+2. **POLICY VIOLATED**: For each violation, cite the specific sections of GP HR Procedures & Policy 3.0 that were violated. Format as a hierarchical list with each level on its own line:
+   - For each violation, output: section title, subsection code+title, sub-subsection code+description
+   - If multiple violations share the same section, do NOT repeat the section header
+   - If multiple violations share the same section AND subsection, do NOT repeat either
    - Use the EXACT section, subsection, and sub-subsection from the violation data provided above
-   - Do NOT include "The alleged violation is in contravention of the following company policies:" or any similar intro text
-   - Do NOT reference Article 282 of the Labor Code of the Philippines
-   - Do NOT include "This conduct may also constitute serious misconduct..." or similar outro text
-   - ONLY output the hierarchical section/subsection/sub-subsection lines, nothing else
+   - Do NOT include any intro text, Article 282 references, or outro text
+   - ONLY output the hierarchical lines, nothing else
 
 Format your response as JSON with two keys: "narrative" (HTML string) and "policy_text" (HTML string with each line separated by <br> tags, NO bullet points or list markers).`;
 
@@ -3628,7 +3623,7 @@ router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
     const { generateNTEDocx } = await import("./nte-docx-generator.js");
     const {
       date, employee, narrative, policy_sections, cap_level,
-      violation, flm_name, hr_name,
+      violation, violations, flm_name, hr_name,
       include_cwd_page
     } = req.body;
 
@@ -3655,7 +3650,8 @@ router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
       narrative: narrative || "",
       policy_sections: Array.isArray(policy_sections) ? policy_sections : (policy_sections ? [policy_sections] : []),
       cap_level: cap_level || "CAP 0",
-      violation: violation || { code: "", type: "", category: "" },
+      violation: violation || (violations && violations[0]) || { code: "", type: "", category: "", penalty: "" },
+      violations: violations || (violation ? [violation] : []),
       flm_name: flm_name || employee.supervisor_name || "",
       hr_name: hr_name || "Jocelyn Ramos",
       include_cwd_page: include_cwd_page || false,

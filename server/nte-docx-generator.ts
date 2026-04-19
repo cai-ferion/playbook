@@ -34,6 +34,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ── Interfaces ──────────────────────────────────────────────────
+interface ViolationEntry {
+  code: string;             // e.g. "4.1.3"
+  type: string;             // sub-subsection text
+  text?: string;            // alias for type
+  penalty: string;          // e.g. "CAP 1"
+  category: string;         // section name, e.g. "4. Misconduct- IT Infrastructure..."
+  subsection?: string;      // full subsection, e.g. "4.1 IT Security, Information Security..."
+  subsectionCode?: string;  // e.g. "4.1"
+  subsectionTitle?: string; // e.g. "IT Security, Information Security, Data Privacy Violation:"
+  subtype?: string;
+}
+
 interface NTEInput {
   date: string;               // e.g. "April 13, 2026"
   employee: {
@@ -47,14 +59,10 @@ interface NTEInput {
     sex?: string;             // "M" | "F" — preferred over gender
   };
   narrative: string;          // AI-generated incident paragraph (plain text or HTML)
-  policy_sections: string[];  // Each entry is one policy citation block (may contain newlines)
+  policy_sections: string[];  // Legacy: each entry is one policy citation block (may contain newlines)
   cap_level: string;          // e.g. "CAP 1"
-  violation: {
-    code: string;
-    type: string;
-    category: string;
-    subtype?: string;
-  };
+  violation: ViolationEntry;  // Primary (first) violation for backward compat
+  violations?: ViolationEntry[]; // Multi-violation support
   flm_name?: string;
   hr_name?: string;
   include_cwd_page?: boolean;
@@ -256,57 +264,110 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
     { after: PARA_AFTER },
   ));
 
-  // ── Policy citations — hierarchical format ──
-  // Sections ("4. Misconduct...") → gray highlight + bold
-  // Subsections ("4.1 IT Security...") → bold only
-  // Descriptions ("4.1.3 Violation...") → normal text
-  // No bullets, vertical stacking
-  for (const section of input.policy_sections) {
-    const lines = stripHtml(section).split("\n").filter(l => l.trim());
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const clean = trimmed.replace(/^[•\-]\s*/, "");
+  // ── Deterministic multi-violation policy citations with smart deduplication ──
+  // Uses the violations array if available, falls back to legacy policy_sections parsing
+  const allViolations: ViolationEntry[] = (input.violations && input.violations.length > 0)
+    ? input.violations
+    : (input.violation ? [input.violation] : []);
 
-      // Skip "Possible Penalty:" lines — handled separately below
-      if (/^possible penalty/i.test(clean)) continue;
+  if (allViolations.length > 0) {
+    let prevSection = "";
+    let prevSubsection = "";
 
-      // Top-level section headers (e.g., "4. Misconduct- IT..." or "1. Attendance")
-      // → Gray highlight + Bold
-      if (/^\d+\.?\s+\w/.test(clean) && !/^\d+\.\d+/.test(clean) && clean.length < 120) {
+    for (let vi = 0; vi < allViolations.length; vi++) {
+      const v = allViolations[vi];
+      const sectionName = v.category || "";
+      const subsectionFull = v.subsection || (v.subsectionCode ? v.subsectionCode + " " + (v.subsectionTitle || "") : "");
+      const subSubText = v.code + " " + (v.text || v.type || "");
+      const penaltyLabel = CAP_DISPLAY[v.penalty] || v.penalty || "";
+
+      // (1) If section differs from previous → show section + subsection + sub-subsection
+      if (sectionName !== prevSection) {
         children.push(new Paragraph({
-          children: [txt(clean, { bold: true })],
+          children: [txt(sectionName, { bold: true })],
           alignment: AlignmentType.JUSTIFIED,
           spacing: { after: 80 },
           shading: { type: ShadingType.CLEAR, fill: "D9D9D9" },
         }));
+        if (subsectionFull) {
+          children.push(para([txt(subsectionFull, { bold: true })], { after: 80 }));
+        }
+        children.push(para([txt(subSubText)], { after: 80 }));
       }
-      // Sub-sections (e.g., "4.1 IT Security" or "1.1 Absenteeism")
-      // → Bold only
-      else if (/^\d+\.\d+\s/.test(clean) && !/^\d+\.\d+\.\d+/.test(clean) && clean.length < 120) {
-        children.push(para(
-          [txt(clean, { bold: true })],
-          { after: 80 },
-        ));
+      // (2) Same section, different subsection → show subsection + sub-subsection only
+      else if (subsectionFull !== prevSubsection) {
+        if (subsectionFull) {
+          children.push(para([txt(subsectionFull, { bold: true })], { after: 80 }));
+        }
+        children.push(para([txt(subSubText)], { after: 80 }));
       }
-      // Descriptions / sub-sub-sections (e.g., "4.1.3 Violation of Information Security")
-      // → Normal text
-      else if (/^\d+\.\d+\.\d+/.test(clean) && clean.length < 150) {
-        children.push(para(
-          [txt(clean)],
-          { after: 80 },
-        ));
-      }
-      // Any other text → normal
+      // (3) Same section AND same subsection → show only sub-subsection
       else {
-        children.push(para([txt(clean)], { after: 80 }));
+        children.push(para([txt(subSubText)], { after: 80 }));
+      }
+
+      // Possible penalty for this violation
+      children.push(emptyLine());
+      children.push(para(
+        [txt(`Possible Penalty: ${penaltyLabel}`, { underline: true })],
+        { after: PARA_AFTER },
+      ));
+
+      prevSection = sectionName;
+      prevSubsection = subsectionFull;
+    }
+  } else {
+    // Legacy fallback: parse policy_sections strings
+    for (const section of input.policy_sections) {
+      const lines = stripHtml(section).split("\n").filter(l => l.trim());
+      for (const line of lines) {
+        const trimmed = line.trim();
+        const clean = trimmed.replace(/^[•\-]\s*/, "");
+        if (/^possible penalty/i.test(clean)) continue;
+        if (/^\d+\.?\s+\w/.test(clean) && !/^\d+\.\d+/.test(clean) && clean.length < 120) {
+          children.push(new Paragraph({
+            children: [txt(clean, { bold: true })],
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { after: 80 },
+            shading: { type: ShadingType.CLEAR, fill: "D9D9D9" },
+          }));
+        } else if (/^\d+\.\d+\s/.test(clean) && !/^\d+\.\d+\.\d+/.test(clean) && clean.length < 120) {
+          children.push(para([txt(clean, { bold: true })], { after: 80 }));
+        } else if (/^\d+\.\d+\.\d+/.test(clean) && clean.length < 150) {
+          children.push(para([txt(clean)], { after: 80 }));
+        } else {
+          children.push(para([txt(clean)], { after: 80 }));
+        }
       }
     }
+    // Single overall penalty line for legacy path
+    children.push(emptyLine());
+    children.push(para(
+      [txt(`Possible Penalty: ${capDisplay}`, { underline: true })],
+      { after: PARA_AFTER },
+    ));
   }
 
-  // Possible penalty line
-  children.push(emptyLine());
+  // ── Article 282 of the Labor Code of the Philippines (NON-NEGOTIABLE) ──
+  children.push(new Paragraph({
+    children: [
+      txt("and, "),
+      txt("Article 282 of the Labor Code of the Philippines", { bold: true }),
+      txt(", particularly:"),
+    ],
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: { after: 80 },
+  }));
   children.push(para(
-    [txt(`Possible Penalty: ${capDisplay}`, { underline: true })],
+    [txt("a. Serious misconduct or willful disobedience by the employee of the lawful orders of his employer or representative in connection with his work.")],
+    { after: 80 },
+  ));
+  children.push(para(
+    [txt("b. Gross and habitual neglect by the employee of his duties.")],
+    { after: 80 },
+  ));
+  children.push(para(
+    [txt("e. Other causes analogous to the foregoing: violation to company policies.")],
     { after: PARA_AFTER },
   ));
 

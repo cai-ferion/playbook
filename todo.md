@@ -2177,3 +2177,12 @@
 - [x] Remove CWD Sign-off Sheet checkbox from NTE wizard Step 4
 - [x] Remove CWD page generation from DOCX generator (hardcoded include_cwd_page: false)
 - [x] Add keyboard navigation (arrow keys + Enter + Escape) to violation search dropdown
+
+## NTE — Article 282 Reinstatement & Multi-Violation Support
+- [x] Reinstate Article 282 block as hardcoded non-negotiable text in DOCX generator
+- [x] Update NTE wizard Step 1 to support selecting multiple violations
+- [x] Display selected violations as chips/tags with remove capability
+- [x] Update API payload to send array of violations
+- [x] Update LLM prompt to handle multiple violations
+- [x] Implement smart hierarchy deduplication in DOCX generator (suppress repeated section/subsection)
+- [x] Update Step 3 preview and Step 4 review to show multiple violations

@@ -4574,7 +4574,8 @@ document.addEventListener('click', function(e) {
 var NTE_WIZARD = {
   step: 1,
   employee: null,       // selected employee object
-  violationType: null,  // { code, type, penalty, category }
+  violationType: null,  // { code, type, penalty, category } — primary (first) violation for backward compat
+  violations: [],       // array of violation objects for multi-violation support
   violationSubtype: '', // optional subtype
   dateRange: { start: '', end: '' },
   attendance: [],       // fetched attendance rows for the period
@@ -4586,7 +4587,7 @@ var NTE_WIZARD = {
 };
 
 function compassShowNteBuildAssist() {
-  NTE_WIZARD = { step: 1, employee: null, violationType: null, violationSubtype: '', dateRange: { start: '', end: '' }, attendance: [], previousNtes: [], capLevel: '', narrative: '', policyText: '', isGenerating: false };
+  NTE_WIZARD = { step: 1, employee: null, violationType: null, violations: [], violationSubtype: '', dateRange: { start: '', end: '' }, attendance: [], previousNtes: [], capLevel: '', narrative: '', policyText: '', isGenerating: false };
   _nteWizardRender();
 }
 
@@ -4616,21 +4617,21 @@ function _nteWizardRender() {
   overlay.style.display = 'flex';
 }
 
-// ---- Step 1: Employee + Violation Type ----
+// ---- Step 1: Employee + Violation Type (Multi-select) ----
 function _nteWizardStep1(formBody, formFooter, progressHtml) {
-  // Build violation options from HR_VIOLATIONS (3-level: section → subsection → sub-subsection)
-  let violationOptions = '<option value="">— Select Violation —</option>';
-  if (typeof HR_VIOLATIONS !== 'undefined') {
-    HR_VIOLATIONS.forEach(cat => {
-      cat.subsections.forEach(sub => {
-        violationOptions += `<optgroup label="${escapeAttr(cat.category)} › ${escapeAttr(sub.code)} ${escapeAttr(sub.title)}">`;
-        sub.items.forEach(item => {
-          const selected = NTE_WIZARD.violationType && NTE_WIZARD.violationType.code === item.code ? 'selected' : '';
-          violationOptions += `<option value="${escapeAttr(item.code)}" ${selected}>${escapeHtml(item.code)} — ${escapeHtml(item.text)} (${escapeHtml(item.penalty)})</option>`;
-        });
-        violationOptions += '</optgroup>';
-      });
+  // Build selected violations chips
+  var chipsHtml = '';
+  if (NTE_WIZARD.violations.length > 0) {
+    chipsHtml = '<div id="nte-wiz-violation-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">';
+    NTE_WIZARD.violations.forEach(function(v, idx) {
+      chipsHtml += '<div style="display:inline-flex; align-items:center; gap:4px; padding:4px 10px; background:#6366F112; border:1px solid #6366F130; border-radius:16px; font-size:11px; line-height:1.3;">';
+      chipsHtml += '<strong style="color:#6366F1;">' + escapeHtml(v.code) + '</strong> ';
+      chipsHtml += '<span style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(v.text) + '</span>';
+      chipsHtml += '<span style="color:var(--fg-subtle); font-size:10px;">(' + escapeHtml(v.penalty) + ')</span>';
+      chipsHtml += '<button type="button" onclick="_nteWizRemoveViolation(' + idx + ')" style="background:none; border:none; cursor:pointer; color:#6366F1; font-size:14px; line-height:1; padding:0 2px; font-weight:700;" title="Remove">×</button>';
+      chipsHtml += '</div>';
     });
+    chipsHtml += '</div>';
   }
 
   formBody.innerHTML = `${progressHtml}
@@ -4649,17 +4650,14 @@ function _nteWizardStep1(formBody, formFooter, progressHtml) {
 
     <div class="form-section">
       <div class="form-field">
-        <label class="form-label">Violation Type <span class="required">*</span></label>
+        <label class="form-label">Violation(s) <span class="required">*</span> <span style="font-size:10px; color:var(--fg-muted); font-weight:400;">— select one or more</span></label>
         <div class="searchable-select" id="nte-wiz-violation-wrapper">
           <input type="text" class="form-input" id="nte-wiz-violation-search" placeholder="Search violations by code, keyword, or section..."
-            autocomplete="off"
-            value="${NTE_WIZARD.violationType ? escapeAttr(NTE_WIZARD.violationType.code + ' \u2014 ' + NTE_WIZARD.violationType.text) : ''}"
+            autocomplete="off" value=""
             oninput="_nteWizFilterViolations()" onclick="_nteWizToggleViolationDropdown(true)" onfocus="_nteWizToggleViolationDropdown(true)">
           <div class="searchable-select-dropdown" id="nte-wiz-violation-dropdown" style="display:none; max-height:280px; overflow-y:auto;"></div>
         </div>
-      </div>
-      <div id="nte-wiz-penalty-info" style="margin-top:8px; padding:8px 12px; background:#6366F110; border:1px solid #6366F130; border-radius:var(--radius); font-size:12px; color:#6366F1; display:${NTE_WIZARD.violationType ? '' : 'none'};">
-        ${NTE_WIZARD.violationType ? `<strong>Standard Penalty:</strong> ${escapeHtml(NTE_WIZARD.violationType.penalty)} &nbsp;|&nbsp; <strong>Section:</strong> ${escapeHtml(NTE_WIZARD.violationType.category || '')} &nbsp;|&nbsp; <strong>Subsection:</strong> ${escapeHtml(NTE_WIZARD.violationType.subsection || '')}` : ''}
+        ${chipsHtml}
       </div>
     </div>
 
@@ -4682,6 +4680,13 @@ function _nteWizardStep1(formBody, formFooter, progressHtml) {
     <button class="btn btn-primary btn-sm" onclick="_nteWizGoStep2()">Next →</button>
   `;
 
+}
+
+function _nteWizRemoveViolation(idx) {
+  NTE_WIZARD.violations.splice(idx, 1);
+  // Keep violationType in sync with first violation
+  NTE_WIZARD.violationType = NTE_WIZARD.violations.length > 0 ? NTE_WIZARD.violations[0] : null;
+  _nteWizardRender();
 }
 
 var _nteWizFilterTimer = null;
@@ -4842,6 +4847,11 @@ function _nteWizToggleViolationDropdown(show) {
 }
 
 function _nteWizSelectViolation(code) {
+  // Check if already selected
+  if (NTE_WIZARD.violations.some(function(v) { return v.code === code; })) {
+    showToast('Violation already selected', 'error');
+    return;
+  }
   for (var ci = 0; ci < HR_VIOLATIONS.length; ci++) {
     var cat = HR_VIOLATIONS[ci];
     for (var si = 0; si < cat.subsections.length; si++) {
@@ -4849,7 +4859,7 @@ function _nteWizSelectViolation(code) {
       for (var ii = 0; ii < sub.items.length; ii++) {
         var item = sub.items[ii];
         if (item.code === code) {
-          NTE_WIZARD.violationType = {
+          var violationObj = {
             code: item.code,
             type: item.text,
             text: item.text,
@@ -4859,6 +4869,9 @@ function _nteWizSelectViolation(code) {
             subsectionCode: sub.code,
             subsectionTitle: sub.title
           };
+          NTE_WIZARD.violations.push(violationObj);
+          // Keep violationType as first violation for backward compat
+          if (!NTE_WIZARD.violationType) NTE_WIZARD.violationType = violationObj;
           NTE_WIZARD.violationSubtype = '';
           _nteWizardRender();
           return;
@@ -4911,7 +4924,7 @@ document.addEventListener('click', function(e) {
 
 async function _nteWizGoStep2() {
   if (!NTE_WIZARD.employee) { showToast('Please select an employee', 'error'); return; }
-  if (!NTE_WIZARD.violationType) { showToast('Please select a violation type', 'error'); return; }
+  if (NTE_WIZARD.violations.length === 0) { showToast('Please select at least one violation', 'error'); return; }
 
   NTE_WIZARD.step = 2;
 
@@ -4954,20 +4967,22 @@ async function _nteWizFetchAttendanceAndNtes() {
 }
 
 function _nteWizDetermineCapLevel() {
-  // Standard penalty from the violation type
-  const standardPenalty = NTE_WIZARD.violationType?.penalty || 'CAP 0';
+  // Find the highest standard penalty across all selected violations
+  const capLevels = ['CAP 0', 'CAP 1', 'CAP 2', 'CAP 3', 'Review for Termination'];
+  var highestIdx = 0;
+  NTE_WIZARD.violations.forEach(function(v) {
+    var idx = capLevels.indexOf(v.penalty || 'CAP 0');
+    if (idx > highestIdx) highestIdx = idx;
+  });
 
-  // Count previous NTEs for this employee (only attendance-related, same category)
+  // Count previous NTEs for this employee
   const prevCount = NTE_WIZARD.previousNtes.length;
 
-  // Progressive escalation: if they already have NTEs, escalate
-  // CAP 0 → CAP 1 → CAP 2 → CAP 3 → Review for Termination
-  const capLevels = ['CAP 0', 'CAP 1', 'CAP 2', 'CAP 3', 'Review for Termination'];
-  const standardIdx = capLevels.indexOf(standardPenalty);
-  const escalatedIdx = Math.min(standardIdx + prevCount, capLevels.length - 1);
+  // Progressive escalation: if they already have NTEs, escalate from the highest base
+  const escalatedIdx = Math.min(highestIdx + prevCount, capLevels.length - 1);
 
   // Use the higher of standard penalty or escalated level
-  NTE_WIZARD.capLevel = capLevels[Math.max(standardIdx, escalatedIdx)];
+  NTE_WIZARD.capLevel = capLevels[Math.max(highestIdx, escalatedIdx)];
 }
 
 // ---- Step 2: Date Range & Attendance ----
@@ -5106,16 +5121,19 @@ async function _nteWizGoStep3() {
           supervisor_email: NTE_WIZARD.employee.supervisor_email,
           meta_email: NTE_WIZARD.employee.meta_email
         },
-        violation: {
-          code: NTE_WIZARD.violationType.code,
-          type: NTE_WIZARD.violationType.type,
-          text: NTE_WIZARD.violationType.text,
-          penalty: NTE_WIZARD.violationType.penalty,
-          category: NTE_WIZARD.violationType.category,
-          subsection: NTE_WIZARD.violationType.subsection || '',
-          subsectionCode: NTE_WIZARD.violationType.subsectionCode || '',
-          subsectionTitle: NTE_WIZARD.violationType.subsectionTitle || ''
-        },
+        violation: NTE_WIZARD.violations[0] ? {
+          code: NTE_WIZARD.violations[0].code,
+          type: NTE_WIZARD.violations[0].type,
+          text: NTE_WIZARD.violations[0].text,
+          penalty: NTE_WIZARD.violations[0].penalty,
+          category: NTE_WIZARD.violations[0].category,
+          subsection: NTE_WIZARD.violations[0].subsection || '',
+          subsectionCode: NTE_WIZARD.violations[0].subsectionCode || '',
+          subsectionTitle: NTE_WIZARD.violations[0].subsectionTitle || ''
+        } : {},
+        violations: NTE_WIZARD.violations.map(function(v) {
+          return { code: v.code, type: v.type, text: v.text, penalty: v.penalty, category: v.category, subsection: v.subsection || '', subsectionCode: v.subsectionCode || '', subsectionTitle: v.subsectionTitle || '' };
+        }),
         cap_level: NTE_WIZARD.capLevel,
         date_range: NTE_WIZARD.dateRange,
         attendance: NTE_WIZARD.attendance.map(a => ({ log_date: a.log_date, tag: a.tag, upl_reason: a.upl_reason, ot_hours: a.ot_hours })),
@@ -5183,10 +5201,13 @@ function _nteWizardStep3(formBody, formFooter, progressHtml) {
     </div>
 
     <div class="form-section" style="background:var(--bg-inset); padding:12px 16px; border-radius:var(--radius); border:1px solid var(--border);">
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:12px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
         <div><strong>Employee:</strong> ${escapeHtml(NTE_WIZARD.employee.full_name)}</div>
-        <div><strong>Violation:</strong> ${escapeHtml(NTE_WIZARD.violationType.code + ' — ' + NTE_WIZARD.violationType.type)}</div>
         <div><strong>CAP Level:</strong> <span style="color:${NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : '#3B82F6'}; font-weight:600;">${escapeHtml(NTE_WIZARD.capLevel)}</span></div>
+      </div>
+      <div style="margin-top:8px; font-size:11px;"><strong>Violation(s):</strong></div>
+      <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px;">
+        ${NTE_WIZARD.violations.map(v => `<span style="padding:2px 8px; background:#6366F110; border:1px solid #6366F130; border-radius:12px; font-size:10px;"><strong>${escapeHtml(v.code)}</strong> ${escapeHtml(v.text.substring(0, 50))}${v.text.length > 50 ? '...' : ''}</span>`).join('')}
       </div>
     </div>
   `;
@@ -5238,8 +5259,7 @@ function _nteWizardStep4(formBody, formFooter, progressHtml) {
         <div class="detail-row"><span class="detail-label">ROLE</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.actual_role || '—')}</span></div>
         <div class="detail-row"><span class="detail-label">SUPERVISOR</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.supervisor_name || '—')}</span></div>
         <div class="detail-row"><span class="detail-label">PLANNING GROUP</span><span class="detail-value">${escapeHtml(NTE_WIZARD.employee.planning_group || '—')}</span></div>
-        <div class="detail-row"><span class="detail-label">VIOLATION</span><span class="detail-value">${escapeHtml(NTE_WIZARD.violationType.code + ' — ' + NTE_WIZARD.violationType.type)}</span></div>
-        <div class="detail-row"><span class="detail-label">CAP LEVEL</span><span class="detail-value"><span style="padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600; background:${capColor}15; color:${capColor};">${escapeHtml(NTE_WIZARD.capLevel)}</span></span></div>
+        <div class="detail-row"><span class="detail-label">VIOLATION(S)</span><span class="detail-value">${NTE_WIZARD.violations.map(function(v) { return escapeHtml(v.code + ' \u2014 ' + v.type); }).join('<br>')}</span></div>    <div class="detail-row"><span class="detail-label">CAP LEVEL</span><span class="detail-value"><span style="padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600; background:${capColor}15; color:${capColor};">${escapeHtml(NTE_WIZARD.capLevel)}</span></span></div>
         <div class="detail-row"><span class="detail-label">DATE RANGE</span><span class="detail-value">${escapeHtml(NTE_WIZARD.dateRange.start)} to ${escapeHtml(NTE_WIZARD.dateRange.end)}</span></div>
         <div class="detail-row"><span class="detail-label">ISSUED BY</span><span class="detail-value">${escapeHtml(coach ? coach.full_name : '—')} ${coach ? '(' + escapeHtml(coach.ohr_id) + ')' : ''}</span></div>
       </div>
@@ -5371,7 +5391,8 @@ async function _nteWizSubmit() {
       narrative: NTE_WIZARD.narrative,
       policy_sections: NTE_WIZARD.policyText ? [NTE_WIZARD.policyText] : [],
       cap_level: NTE_WIZARD.capLevel,
-      violation: NTE_WIZARD.violationType,
+      violation: NTE_WIZARD.violations[0] || NTE_WIZARD.violationType,
+      violations: NTE_WIZARD.violations,
       flm_name: NTE_WIZARD.employee.supervisor_name || '',
       hr_name: 'Jocelyn Ramos',
       include_cwd_page: false,
