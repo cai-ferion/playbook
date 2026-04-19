@@ -2071,3 +2071,7 @@
 ## WFM User — Input Portal Full Visibility
 - [x] WFM user sees all employees across all planning groups in Input Portal (via forceSync)
 - [x] WFM user has Refresh Data and Export CSV buttons visible (anchor.download_csv permission added)
+
+## WFM User — Read-Only Mode & Nav Restriction
+- [x] Make WFM user read-only: disable tag editing, Save Changes, Undo All, Select Rows, bulk tag
+- [x] Hide Dashboard, Risk Intelligence, Billing sub-nav items for WFM user (already permission-gated)

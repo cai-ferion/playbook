@@ -654,10 +654,11 @@ function renderInputTableServerSide() {
   // Render table header
   var thead = document.getElementById('input-table-head');
   if (!thead) return; // Guard: Input Portal DOM not ready
-  var checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
+  var _isWFM = typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM';
+  var checkboxHeader = _isWFM ? '' : '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
   var auditHeader = '<th class="col-audit"></th>';
   thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(function(col) {
-    var isEditable = col.editable;
+    var isEditable = col.editable && !_isWFM;
     var widthClass = getColumnWidthClass(col.key);
     return '<th class="' + (isEditable ? 'th-editable' : '') + ' ' + widthClass + '">' + col.label + (isEditable ? ' <span class="edit-indicator">&#9998;</span>' : '') + '</th>';
   }).join('') + auditHeader + '</tr>';
@@ -843,10 +844,11 @@ function renderInputTable() {
   // Render table header
   var thead = document.getElementById('input-table-head');
   if (!thead) return; // Guard: Input Portal DOM not ready
-  var checkboxHeader = '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
+  var _isWFM = typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM';
+  var checkboxHeader = _isWFM ? '' : '<th class="col-checkbox"><input type="checkbox" id="page-select-all" onchange="pageToggleAll(this.checked)"></th>';
   var auditHeader = '<th class="col-audit"></th>';
   thead.innerHTML = '<tr>' + checkboxHeader + TABLE_COLUMNS.map(function(col) {
-    var isEditable = col.editable;
+    var isEditable = col.editable && !_isWFM;
     var widthClass = getColumnWidthClass(col.key);
     return '<th class="' + (isEditable ? 'th-editable' : '') + ' ' + widthClass + '">' + col.label + (isEditable ? ' <span class="edit-indicator">&#9998;</span>' : '') + '</th>';
   }).join('') + auditHeader + '</tr>';
@@ -872,11 +874,14 @@ function renderTableRow(item) {
   var isSelected = bulkState.selected.has(globalIdx);
   var rowClass = (isEdited ? 'row-edited ' : '') + (locked ? 'row-locked ' : '') + (isSelected ? 'row-selected ' : '');
 
-  // Checkbox cell
+  // Checkbox cell — hidden for WFM (read-only mode)
+  var isWFM = typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM';
   var lockTitle = 'Locked (older than 2-day edit window)';
-  var checkboxCell = locked
-    ? '<td class="col-checkbox cell-readonly"><span class="lock-icon" title="' + lockTitle + '">&#128274;</span></td>'
-    : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + globalIdx + ', this.checked)"></td>';
+  var checkboxCell = isWFM
+    ? ''
+    : (locked
+      ? '<td class="col-checkbox cell-readonly"><span class="lock-icon" title="' + lockTitle + '">&#128274;</span></td>'
+      : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + globalIdx + ', this.checked)"></td>');
 
   // Audit icon cell
   var auditCell = '<td class="col-audit"><button class="audit-icon-btn" onclick="openAuditModal(\'' + record._id + '\')" title="View audit trail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></td>';
@@ -896,8 +901,12 @@ function renderTableRow(item) {
     }
 
     if (col.key === 'tag') {
-      // PL restricted to Managers and OHR 740045023 only
+      // WFM users: read-only
       var cu = typeof currentUser !== 'undefined' ? currentUser : null;
+      if (cu && cu.actual_role === 'WFM') {
+        return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val || '\u2014') + '</td>';
+      }
+      // PL restricted to Managers and OHR 740045023 only
       var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
       var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
       return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" onchange="handleCellEdit(this)">' 
@@ -906,6 +915,10 @@ function renderTableRow(item) {
         + '</select></td>';
     }
     if (col.key === 'uplReason') {
+      // WFM users: read-only
+      if (typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM') {
+        return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val || '\u2014') + '</td>';
+      }
       var canEdit = record.tag === 'UPL' || record.tag === 'LATE';
       if (!canEdit) return '<td class="cell-readonly cell-na ' + widthClass + '">&mdash;</td>';
       return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="uplReason" onchange="handleCellEdit(this)">'
@@ -914,6 +927,10 @@ function renderTableRow(item) {
         + '</select></td>';
     }
     if (col.key === 'ot') {
+      // WFM users: read-only
+      if (typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM') {
+        return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val || '\u2014') + '</td>';
+      }
       // OT mechanism lock: only S-ABF & CS-ABF Agents have OT locked (managed via OT Dashboard)
       // But only for dates AFTER 2026-04-10 — before that, OT is freely editable
       var OT_MECH_CUTOFF = '2026-04-10';
@@ -926,6 +943,10 @@ function renderTableRow(item) {
       return '<td class="cell-editable ' + widthClass + '"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="' + escapeAttr(val) + '" data-idx="' + globalIdx + '" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>';
     }
     if (col.key === 'remarks') {
+      // WFM users: read-only
+      if (typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM') {
+        return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val || '\u2014') + '</td>';
+      }
       return '<td class="cell-editable ' + widthClass + '"><textarea class="cell-input cell-textarea-remarks" data-idx="' + globalIdx + '" data-key="remarks" onchange="handleCellEdit(this)" placeholder="\u2014">' + escapeHtml(val) + '</textarea></td>';
     }
 

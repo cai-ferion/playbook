@@ -1160,6 +1160,21 @@ async function switchView(view) {
   const canDownloadCsv = currentUser && currentUser.permissions && currentUser.permissions['anchor.download_csv'];
   if (exportBtn) exportBtn.style.display = (view === 'input' && canDownloadCsv) ? '' : 'none';
 
+  // WFM read-only: hide editing toolbar elements
+  const isWFMUser = currentUser && currentUser.actual_role === 'WFM';
+  if (view === 'input' && isWFMUser) {
+    const selectModeBtn = document.getElementById('select-mode-btn');
+    const undoBtnEl = document.getElementById('undo-btn');
+    const saveBtnEl = document.getElementById('save-btn');
+    const editCountEl = document.getElementById('input-edit-count');
+    const bulkToolbar = document.getElementById('bulk-toolbar');
+    if (selectModeBtn) selectModeBtn.style.display = 'none';
+    if (undoBtnEl) undoBtnEl.style.display = 'none';
+    if (saveBtnEl) saveBtnEl.style.display = 'none';
+    if (editCountEl) editCountEl.style.display = 'none';
+    if (bulkToolbar) bulkToolbar.style.display = 'none';
+  }
+
   // Show "Last refreshed" only on Input Portal
   const headerMeta = document.getElementById('header-meta');
   if (headerMeta) headerMeta.style.display = view === 'input' ? '' : 'none';
