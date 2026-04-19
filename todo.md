@@ -2067,3 +2067,7 @@
 ## WFM Credential Update
 - [x] Change WFM username from 00000 to WFM (case-insensitive match)
 - [x] Change WFM password from 00000 to wfm2026
+
+## WFM User — Input Portal Full Visibility
+- [x] WFM user sees all employees across all planning groups in Input Portal (via forceSync)
+- [x] WFM user has Refresh Data and Export CSV buttons visible (anchor.download_csv permission added)
