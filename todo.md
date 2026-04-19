@@ -2219,3 +2219,8 @@
 - [x] Add 'NTE Log' to COMPASS_DEFINED_OPTIONS coaching_type list
 - [x] Check DB for non-QA Feedback logs with 'Acknowledged' status — none found (0 rows). Only QA Feedback uses dispute statuses.
 - [x] Remove dead compassShowTypeSelector function from compass.js
+
+## Dead Code Cleanup
+- [x] Remove compass-routes.ts (never imported/registered)
+- [x] compass_* schema definitions kept — actively used by server/routers/compass.ts and ca-cases.ts (tRPC module)
+- [x] No orphaned imports found — all compass_* references are in active tRPC routers
