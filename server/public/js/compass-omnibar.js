@@ -10,7 +10,7 @@
   const COMPASS_PILL_FIELDS = [
     { key: 'date_range', label: 'Date', type: 'date_range', sortable: true },
     { key: 'type', label: 'Type', type: 'multi', recordKey: 'coaching_type', searchable: false, sortable: true },
-    { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
+    // Status filter removed — status is only relevant for QA Feedback disputes, not general coaching
     { key: 'coach', label: 'Coach', type: 'multi', recordKey: 'coach', searchable: true, sortable: true },
     { key: 'coachee', label: 'Coachee', type: 'multi', recordKey: 'coachee', searchable: true, sortable: true },
     { key: 'sessionGoal', label: 'Session Goal', type: 'multi', recordKey: 'session_goal', searchable: true, sortable: false, isMultiValue: true },
@@ -37,8 +37,7 @@
 
   // Predefined option sets — always show these regardless of data presence
   const COMPASS_DEFINED_OPTIONS = {
-    coaching_type: ['General Coaching', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
-    status: ['Pending Acknowledgement', 'Acknowledged', 'Pending SME Review', 'Markdown Disputed - SME', 'Markdown Retained - QA', 'QA Decision Rejected', 'Markdown Retained - Trainer', 'Trainer Decision Rejected - SME', 'Markdown Retained - QTP Manager', 'Markdown Overturned'],
+    coaching_type: ['General Coaching', 'NTE Log', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
     session_goal: ['AES/Scorecard Discussion', 'Attendance & Tardiness', 'Compliance & Behavior', 'Escalation', 'Internal Discussion', 'Performance & Metrics', 'Performance Improvement Plan', 'Professional & Personal Development'],
   };
 

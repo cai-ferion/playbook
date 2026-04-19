@@ -2212,3 +2212,10 @@
 
 ## Regimen — Edit Employee Visibility Restriction
 - [x] Restrict "Edit Employee" (regimen.edit_employee) to only owner (740045023) and assistant (740044909) by default — removed 703212987 default grant
+
+## Compass Audit — Status Filter & Acknowledged Cleanup
+- [x] Remove Status filter from compass-omnibar.js COMPASS_PILL_FIELDS
+- [x] Remove status from COMPASS_DEFINED_OPTIONS in compass-omnibar.js
+- [x] Add 'NTE Log' to COMPASS_DEFINED_OPTIONS coaching_type list
+- [x] Check DB for non-QA Feedback logs with 'Acknowledged' status — none found (0 rows). Only QA Feedback uses dispute statuses.
+- [x] Remove dead compassShowTypeSelector function from compass.js

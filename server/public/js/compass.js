@@ -1468,11 +1468,6 @@ async function compassAddMenuSelect(type) {
   await compassShowNewFormForType(type);
 }
 
-// Keep backward compat for NTE wizard back button
-function compassShowTypeSelector() {
-  compassCloseForm();
-  compassToggleAddMenu();
-}
 
 async function compassShowNewFormForType(preselectedType) {
   // Employees already prefetched in initCompass — no await needed here
