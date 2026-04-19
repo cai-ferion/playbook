@@ -2087,3 +2087,6 @@
 ## WFM User — Force Menu Tab & Hide Alerts Panel
 - [x] WFM login: force sidebar to Menu tab (not Alerts) and hide entire Alerts panel/toggle
 - [x] WFM session restore: same — default to Menu tab, hide Alerts
+
+## WFM User — Fix Attendance Dropdowns Still Interactive
+- [x] Attendance tag dropdowns should render as plain text (not selects) for WFM users

@@ -266,13 +266,16 @@ function renderCompactRow(item) {
 // ============================================================
 
 function renderDetailPanel(r, idx, locked) {
-  // Tag dropdown
+  // WFM read-only flag — WFM users see all fields as plain text
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
+  var isWFM = cu && cu.actual_role === 'WFM';
+
+  // Tag dropdown
   var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
   var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
 
   var tagField;
-  if (locked) {
+  if (locked || isWFM) {
     tagField = '<span class="detail-readonly">' + escapeHtml(r.tag || '\u2014') + '</span>';
   } else {
     tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
@@ -283,7 +286,7 @@ function renderDetailPanel(r, idx, locked) {
 
   // UPL Reason
   var reasonField;
-  var canEditReason = !locked && (r.tag === 'UPL' || r.tag === 'LATE');
+  var canEditReason = !locked && !isWFM && (r.tag === 'UPL' || r.tag === 'LATE');
   if (canEditReason) {
     reasonField = '<select class="detail-select" data-idx="' + idx + '" data-key="uplReason" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
@@ -299,7 +302,7 @@ function renderDetailPanel(r, idx, locked) {
   var OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
   var isOtMechAgent = (r.role === 'Agent') && OT_MECH_PGS.indexOf(r.actualPlanningGroup) !== -1;
   var isAfterCutoff = r.date && r.date > OT_MECH_CUTOFF;
-  if (locked || (isOtMechAgent && isAfterCutoff)) {
+  if (locked || isWFM || (isOtMechAgent && isAfterCutoff)) {
     otField = '<span class="detail-readonly">' + escapeHtml(r.ot || '\u2014') + '</span>';
   } else {
     otField = '<input type="number" step="0.5" min="0" class="detail-input" value="' + escapeAttr(r.ot || '') + '" data-idx="' + idx + '" data-key="ot" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">';
@@ -307,7 +310,7 @@ function renderDetailPanel(r, idx, locked) {
 
   // Remarks
   var remarksField;
-  if (locked) {
+  if (locked || isWFM) {
     remarksField = '<span class="detail-readonly">' + escapeHtml(r.remarks || '\u2014') + '</span>';
   } else {
     remarksField = '<textarea class="detail-textarea" data-idx="' + idx + '" data-key="remarks" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">' + escapeHtml(r.remarks || '') + '</textarea>';
@@ -316,7 +319,7 @@ function renderDetailPanel(r, idx, locked) {
   // Role dropdown (per-day editable)
   var ROLE_OPTIONS = ['Agent', 'Operational SME', 'Quality & Policy Expert', 'Team Lead', 'Trainer'];
   var roleField;
-  if (locked) {
+  if (locked || isWFM) {
     roleField = '<span class="detail-readonly">' + escapeHtml(r.role || '\u2014') + '</span>';
   } else {
     roleField = '<select class="detail-select" data-idx="' + idx + '" data-key="role" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
@@ -328,7 +331,7 @@ function renderDetailPanel(r, idx, locked) {
   // Planning Group dropdown (per-day editable)
   var PG_OPTIONS = ['S-ABF', 'CS-ABF', 'RECALL_MEASUREMENT_CTR', 'FAD_CTR', 'CSO_CTR', 'SME_CTR', 'QPE_CTR', 'MULTIPLE'];
   var pgField;
-  if (locked) {
+  if (locked || isWFM) {
     pgField = '<span class="detail-readonly">' + escapeHtml(r.actualPlanningGroup || '\u2014') + '</span>';
   } else {
     pgField = '<select class="detail-select" data-idx="' + idx + '" data-key="actualPlanningGroup" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
