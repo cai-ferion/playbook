@@ -2196,3 +2196,6 @@
 - [x] Remove coaching type select from inside the coaching form body (replaced with hidden field + type label)
 - [x] Replace Add type selector overlay with dropdown menu on the Add button
 - [x] Dropdown directly opens the correct form without intermediate overlay
+
+## Bug Fix — NTE Creation Error
+- [x] Fix "Failed to create coaching log" error when filing NTE via NTE Build Assist (cap_level VARCHAR(20) too short for 'Review for Termination' — widened to VARCHAR(50))
