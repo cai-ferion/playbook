@@ -972,10 +972,14 @@
           <div class="compass-stats-strip" id="compass-stats-strip"></div>
           <!-- Compass Filter Bar (Input Portal style) with Add button as first item -->
           <div class="filter-bar" id="compass-filter-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm" id="compass-new-btn" onclick="compassShowTypeSelector()" style="white-space:nowrap;flex-shrink:0;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add
-            </button>
+            <div id="compass-new-btn" style="position:relative;flex-shrink:0;">
+              <button class="btn btn-primary btn-sm" id="compass-add-trigger" onclick="compassToggleAddMenu()" style="white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="compass-add-menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;min-width:260px;background:var(--bg-card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;overflow:hidden;"></div>
+            </div>
             <!-- Admin View Toggle (visible only to 740045023) -->
             <div id="compass-view-toggle" style="display:none;flex-shrink:0;">
               <div style="display:inline-flex;border-radius:6px;overflow:hidden;border:1px solid #cbd5e1;font-size:12px;font-weight:600;">

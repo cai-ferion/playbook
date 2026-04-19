@@ -2186,3 +2186,13 @@
 - [x] Update LLM prompt to handle multiple violations
 - [x] Implement smart hierarchy deduplication in DOCX generator (suppress repeated section/subsection)
 - [x] Update Step 3 preview and Step 4 review to show multiple violations
+
+## NTE & Coaching UX Improvements
+- [x] Remove Expected Behavior / Corrective Action field from NTE wizard Step 4
+- [x] Remove Deadline for Improvement field from NTE wizard Step 4
+- [x] Remove same fields from old NTE form (CAP 1-3 flow) and NTE detail view
+- [x] Change NTE Build Assist coaching_type from 'General Coaching' to 'NTE Log'
+- [x] Add 'NTE Log' to COACHING_TYPES array
+- [x] Remove coaching type select from inside the coaching form body (replaced with hidden field + type label)
+- [x] Replace Add type selector overlay with dropdown menu on the Add button
+- [x] Dropdown directly opens the correct form without intermediate overlay

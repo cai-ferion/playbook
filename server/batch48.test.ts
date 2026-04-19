@@ -134,15 +134,14 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
       expect(compassJs).toContain("nte-date-of-incident");
       expect(compassJs).toContain("nte-incident-desc");
       expect(compassJs).toContain("nte-policy-violated");
-      expect(compassJs).toContain("nte-expected-behavior");
-      expect(compassJs).toContain("nte-deadline");
+      // Expected behavior and deadline fields removed from NTE form
     });
 
     it("NTE form validates required fields", () => {
       expect(compassJs).toContain("Please enter the date of incident");
       expect(compassJs).toContain("Please describe the incident");
       expect(compassJs).toContain("Please specify the policy violated");
-      expect(compassJs).toContain("Please describe the expected behavior");
+      // Expected behavior validation removed — field no longer in form
     });
 
     it("NTE form fetches previous warnings for the employee", () => {

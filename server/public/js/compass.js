@@ -73,7 +73,7 @@ const COMPASS = {
   pageGiven: 1,
   pageReceived: 1,
 
-  COACHING_TYPES: ['General Coaching', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+  COACHING_TYPES: ['General Coaching', 'NTE Log', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
     'Pending SME Review',
@@ -1405,70 +1405,73 @@ function _compassResetFormFields() {
   if (el['compass-job-id-section']) el['compass-job-id-section'].style.display = 'none';
 }
 
-// ===== Type-First Selector (replaces direct form open) =====
-function compassShowTypeSelector() {
-  const overlay = document.getElementById('compass-form-overlay');
-  const formTitle = document.getElementById('compass-form-title');
-  const formBody = document.getElementById('compass-form-body');
-  const formFooter = document.getElementById('compass-form-footer');
+// ===== Add Button Dropdown Menu =====
+function compassToggleAddMenu() {
+  const menu = document.getElementById('compass-add-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  if (isOpen) {
+    menu.style.display = 'none';
+    return;
+  }
 
-  formTitle.textContent = 'New Log — Choose Type';
-  COMPASS.editingId = null;
-  // Invalidate cached form so the correct type-specific form is built fresh
-  COMPASS._formBuilt = false;
-  COMPASS._formEls = {};
-
-  const isQA = currentUser && (currentUser.actual_role || '').toLowerCase().includes('qa');
-
-  // Type cards config: icon SVG, label, description, color accent
   const types = [
-    { id: 'General Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', label: 'General Coaching', desc: 'One-on-one coaching session', accent: '#3B82F6' },
-    { id: 'Follow-Up Session', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>', label: 'Follow-Up Session', desc: 'Continue a previous session', accent: '#8B5CF6' },
-    { id: 'Group Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', label: 'Group Coaching', desc: 'Session with multiple coachees', accent: '#10B981' },
-    { id: 'Triad Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>', label: 'Triad Coaching', desc: 'Coaching observation with leader', accent: '#F59E0B' },
-    { id: 'QA Feedback', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>', label: 'QA Feedback', desc: 'Quality error findings & RCA', accent: '#EC4899' },
-    { id: 'Incident Report', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', label: 'Incident Report', desc: 'Violation tracker & incident log', accent: '#EF4444' },
-    { id: 'ZTP Coaching', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
-    { id: 'NTE Build Assist', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>', label: 'NTE Build Assist', desc: 'AI-powered Notice to Explain builder', accent: '#6366F1', special: true }
+    { id: 'General Coaching', icon: '\u{1F4AC}', label: 'General Coaching', desc: 'One-on-one coaching session', accent: '#3B82F6' },
+    { id: 'Follow-Up Session', icon: '\u{1F504}', label: 'Follow-Up Session', desc: 'Continue a previous session', accent: '#8B5CF6' },
+    { id: 'Group Coaching', icon: '\u{1F465}', label: 'Group Coaching', desc: 'Session with multiple coachees', accent: '#10B981' },
+    { id: 'Triad Coaching', icon: '\u{1F4D0}', label: 'Triad Coaching', desc: 'Coaching observation with leader', accent: '#F59E0B' },
+    { id: 'QA Feedback', icon: '\u{1F4CB}', label: 'QA Feedback', desc: 'Quality error findings & RCA', accent: '#EC4899' },
+    { id: 'Incident Report', icon: '\u26A0\uFE0F', label: 'Incident Report', desc: 'Violation tracker & incident log', accent: '#EF4444' },
+    { id: 'ZTP Coaching', icon: '\u{1F512}', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
+    { id: 'NTE Build Assist', icon: '\u{1F4C4}', label: 'NTE Build Assist', desc: 'AI-powered NTE builder', accent: '#6366F1', special: true }
   ];
 
-  formBody.innerHTML = `
-    <div style="padding:4px 0;">
-      <p style="font-size:13px; color:var(--fg-muted); margin-bottom:16px;">Select the type of log you want to create:</p>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        ${types.map(t => `
-          <div class="compass-type-card" onclick="compassSelectType('${escapeAttr(t.id)}')" style="
-            display:flex; align-items:flex-start; gap:12px; padding:14px 16px;
-            border:1px solid ${t.special ? t.accent + '40' : 'var(--border)'};
-            border-radius:var(--radius-lg); cursor:pointer;
-            background:${t.special ? t.accent + '08' : 'var(--bg-surface)'};
-            transition:all 0.15s ease;
-          " onmouseover="this.style.borderColor='${t.accent}'; this.style.background='${t.accent}10';" onmouseout="this.style.borderColor='${t.special ? t.accent + '40' : 'var(--border)'}'; this.style.background='${t.special ? t.accent + '08' : 'var(--bg-surface)'}';">
-            <div style="flex-shrink:0; color:${t.accent}; margin-top:2px;">${t.icon}</div>
-            <div style="min-width:0;">
-              <div style="font-size:13px; font-weight:600; color:var(--fg); line-height:1.3;">${escapeHtml(t.label)}</div>
-              <div style="font-size:11px; color:var(--fg-muted); margin-top:2px; line-height:1.3;">${escapeHtml(t.desc)}</div>
-            </div>
-          </div>
-        `).join('')}
+  menu.innerHTML = types.map(t => `
+    <div onclick="compassAddMenuSelect('${escapeAttr(t.id)}')" style="
+      display:flex; align-items:center; gap:10px; padding:10px 14px;
+      cursor:pointer; transition:background 0.12s;
+      ${t.special ? 'border-top:1px solid var(--border,#e2e8f0);' : ''}
+    " onmouseover="this.style.background='${t.accent}10'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">${t.icon}</span>
+      <div style="min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--fg,#1a202c);line-height:1.3;">${escapeHtml(t.label)}</div>
+        <div style="font-size:11px;color:var(--fg-muted,#64748b);line-height:1.3;">${escapeHtml(t.desc)}</div>
       </div>
     </div>
-  `;
+  `).join('');
 
-  formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
-  `;
+  menu.style.display = 'block';
 
-  overlay.style.display = 'flex';
+  // Close on outside click
+  setTimeout(() => {
+    const closeHandler = (e) => {
+      if (!menu.contains(e.target) && !document.getElementById('compass-add-trigger')?.contains(e.target)) {
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    document.addEventListener('click', closeHandler);
+  }, 0);
 }
 
-async function compassSelectType(type) {
+async function compassAddMenuSelect(type) {
+  // Close the dropdown
+  const menu = document.getElementById('compass-add-menu');
+  if (menu) menu.style.display = 'none';
+
   if (type === 'NTE Build Assist') {
     compassShowNteBuildAssist();
     return;
   }
-  // For all other types, open the standard coaching form with the type pre-selected
+  // Store the selected type and open the form directly
+  COMPASS._selectedType = type;
   await compassShowNewFormForType(type);
+}
+
+// Keep backward compat for NTE wizard back button
+function compassShowTypeSelector() {
+  compassCloseForm();
+  compassToggleAddMenu();
 }
 
 async function compassShowNewFormForType(preselectedType) {
@@ -1484,7 +1487,8 @@ async function compassShowNewFormForType(preselectedType) {
   formTitle.textContent = 'New Coaching Log';
 
   // Performance: only build form HTML once, then reuse with field reset
-  if (COMPASS._formBuilt) {
+  // But if the type changed, rebuild so the type label updates
+  if (COMPASS._formBuilt && COMPASS._lastFormType === preselectedType) {
     _compassResetFormFields();
     formFooter.innerHTML = `
       <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
@@ -1492,7 +1496,7 @@ async function compassShowNewFormForType(preselectedType) {
     `;
     COMPASS._formEls['compass-submit-btn'] = document.getElementById('compass-submit-btn');
     overlay.style.display = 'flex';
-    // Set the pre-selected type
+    // Set the pre-selected type on the hidden field
     const typeSelect = COMPASS._formEls['compass-new-type'];
     if (typeSelect && preselectedType) {
       typeSelect.value = preselectedType;
@@ -1500,16 +1504,16 @@ async function compassShowNewFormForType(preselectedType) {
     }
     return;
   }
+  // Different type selected — rebuild form
+  COMPASS._formBuilt = false;
+  COMPASS._formEls = {};
 
   formBody.innerHTML = `
-    <div class="form-section">
-      <div class="form-field">
-        <label class="form-label">Type <span class="required">*</span></label>
-        <select class="form-select" id="compass-new-type" onchange="compassOnTypeChange()">
-          <option value="">— Select Type —</option>
-          ${COMPASS.COACHING_TYPES.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('')}
-        </select>
-      </div>
+    <!-- Type stored as hidden field, pre-selected from Add dropdown -->
+    <input type="hidden" id="compass-new-type" value="${escapeAttr(preselectedType || COMPASS._selectedType || '')}">
+    <div style="padding:6px 12px;margin-bottom:8px;background:var(--bg-inset);border-radius:var(--radius);display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:var(--fg-muted);text-transform:uppercase;font-weight:600;letter-spacing:0.5px;">Type:</span>
+      <span style="font-size:13px;font-weight:600;color:var(--fg);">${escapeHtml(preselectedType || COMPASS._selectedType || '')}</span>
     </div>
 
     <div class="form-section">
@@ -1747,17 +1751,18 @@ async function compassShowNewFormForType(preselectedType) {
 
   // Performance: mark form as built and cache all DOM references
   COMPASS._formBuilt = true;
+  COMPASS._lastFormType = preselectedType;
   _compassCacheFormEls();
 
   overlay.style.display = 'flex';
 
-  // Set the pre-selected type from the type selector
+  // Set the pre-selected type and trigger field visibility
   if (preselectedType) {
     const typeSelect = COMPASS._formEls['compass-new-type'];
     if (typeSelect) {
       typeSelect.value = preselectedType;
-      compassOnTypeChange();
     }
+    compassOnTypeChange();
   }
 }
 
@@ -4236,27 +4241,7 @@ async function compassOpenNteForm(params) {
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="form-field">
-          <label class="form-label">Expected Behavior / Corrective Action <span class="required">*</span></label>
-          <div class="rte-container">
-            <div class="rte-toolbar">
-              <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-expected-behavior')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
-              <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-expected-behavior')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
-              <span class="rte-sep"></span>
-              <button type="button" class="rte-btn" onclick="compassRteExec('insertUnorderedList', 'nte-expected-behavior')" title="Bullet List"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg></button>
-            </div>
-            <div class="rte-editor" id="nte-expected-behavior" contenteditable="true" data-placeholder="Describe the expected behavior and corrective actions..."></div>
-          </div>
-        </div>
-      </div>
 
-      <div class="form-section">
-        <div class="form-field">
-          <label class="form-label">Deadline for Improvement</label>
-          <input type="date" class="form-input" id="nte-deadline" value="">
-        </div>
-      </div>
 
       <input type="hidden" id="nte-coaching-id" value="${escapeAttr(params.coaching_id)}">
       <input type="hidden" id="nte-issued-by" value="${escapeAttr(params.coach_name)}">
@@ -4278,8 +4263,8 @@ async function compassSubmitNte() {
   const dateOfIncident = document.getElementById('nte-date-of-incident')?.value;
   const incidentDesc = document.getElementById('nte-incident-desc')?.innerHTML?.trim() || '';
   const policyViolated = document.getElementById('nte-policy-violated')?.innerHTML?.trim() || '';
-  const expectedBehavior = document.getElementById('nte-expected-behavior')?.innerHTML?.trim() || '';
-  const deadline = document.getElementById('nte-deadline')?.value || '';
+  const expectedBehavior = '';
+  const deadline = '';
   const issuedBy = document.getElementById('nte-issued-by')?.value || '';
   const issuedByOhr = document.getElementById('nte-issued-by-ohr')?.value || '';
 
@@ -4287,7 +4272,7 @@ async function compassSubmitNte() {
   if (!dateOfIncident) { showToast('Please enter the date of incident', 'error'); return; }
   if (!incidentDesc || incidentDesc === '<br>') { showToast('Please describe the incident', 'error'); return; }
   if (!policyViolated || policyViolated === '<br>') { showToast('Please specify the policy violated', 'error'); return; }
-  if (!expectedBehavior || expectedBehavior === '<br>') { showToast('Please describe the expected behavior', 'error'); return; }
+
 
   let coachingId = document.getElementById('nte-coaching-id')?.value;
 
@@ -4313,8 +4298,6 @@ async function compassSubmitNte() {
       date_of_incident: dateOfIncident,
       incident_description: incidentDesc,
       policy_violated: policyViolated,
-      expected_behavior: expectedBehavior,
-      deadline_for_improvement: deadline,
       issued_by: issuedBy,
       issued_by_ohr: issuedByOhr
     };
@@ -4384,12 +4367,6 @@ function compassOpenNteDetail(nte) {
     </div>
 
     <div class="form-section">
-      <h4 class="form-section-title">Expected Behavior / Corrective Action</h4>
-      <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6; color:var(--fg);">${nte.expected_behavior || '<em style="color:var(--fg-muted);">Not provided</em>'}</div>
-    </div>
-
-    <div class="form-section">
-      <div class="detail-row"><span class="detail-label">DEADLINE</span><span class="detail-value">${formatDate(nte.deadline_for_improvement)}</span></div>
       <div class="detail-row"><span class="detail-label">ISSUED BY</span><span class="detail-value">${escapeHtml(nte.issued_by || '')} ${nte.issued_by_ohr ? '(' + escapeHtml(nte.issued_by_ohr) + ')' : ''}</span></div>
       <div class="detail-row"><span class="detail-label">CREATED</span><span class="detail-value">${formatDate(nte.created_at)}</span></div>
     </div>
@@ -4676,7 +4653,7 @@ function _nteWizardStep1(formBody, formFooter, progressHtml) {
   `;
 
   formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="compassShowTypeSelector()">← Back</button>
+    <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">← Cancel</button>
     <button class="btn btn-primary btn-sm" onclick="_nteWizGoStep2()">Next →</button>
   `;
 
@@ -5275,25 +5252,7 @@ function _nteWizardStep4(formBody, formFooter, progressHtml) {
       <div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6;">${NTE_WIZARD.policyText}</div>
     </div>
 
-    <div class="form-section">
-      <div class="form-field">
-        <label class="form-label">Expected Behavior / Corrective Action <span class="required">*</span></label>
-        <div class="rte-container">
-          <div class="rte-toolbar">
-            <button type="button" class="rte-btn" onclick="compassRteExec('bold', 'nte-wiz-expected')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>
-            <button type="button" class="rte-btn" onclick="compassRteExec('italic', 'nte-wiz-expected')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>
-          </div>
-          <div class="rte-editor" id="nte-wiz-expected" contenteditable="true" data-placeholder="Describe the expected behavior and corrective actions..." style="min-height:80px;"></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="form-section">
-      <div class="form-field">
-        <label class="form-label">Deadline for Improvement</label>
-        <input type="date" class="form-input" id="nte-wiz-deadline" value="">
-      </div>
-    </div>
 
 
   `;
@@ -5308,12 +5267,8 @@ function _nteWizardStep4(formBody, formFooter, progressHtml) {
 }
 
 async function _nteWizSubmit() {
-  const expectedBehavior = document.getElementById('nte-wiz-expected')?.innerHTML?.trim() || '';
-  if (!expectedBehavior || expectedBehavior === '<br>') {
-    showToast('Please describe the expected behavior / corrective action', 'error'); return;
-  }
-
-  const deadline = document.getElementById('nte-wiz-deadline')?.value || '';
+  const expectedBehavior = '';
+  const deadline = '';
   const coach = typeof currentUser !== 'undefined' ? currentUser : null;
 
   const submitBtn = document.getElementById('nte-wiz-submit-btn');
@@ -5322,7 +5277,7 @@ async function _nteWizSubmit() {
   try {
     // 1. Create the coaching log first
     const coachingRecord = {
-      coaching_type: 'General Coaching',
+      coaching_type: 'NTE Log',
       coach: coach ? coach.full_name : '',
       coach_ohr: coach ? coach.ohr_id : '',
       coach_meta_email: coach ? (coach.meta_email || '') : '',
@@ -5361,8 +5316,6 @@ async function _nteWizSubmit() {
       date_of_incident: NTE_WIZARD.dateRange.start,
       incident_description: NTE_WIZARD.narrative,
       policy_violated: NTE_WIZARD.policyText,
-      expected_behavior: expectedBehavior,
-      deadline_for_improvement: deadline,
       issued_by: coach ? coach.full_name : '',
       issued_by_ohr: coach ? coach.ohr_id : ''
     };
