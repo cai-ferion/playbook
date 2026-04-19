@@ -1,89 +1,69 @@
 /**
- * NTE DOCX Generator
- * Produces a Notice to Explain document matching the Genpact NTE template format.
- * Structure: Page 1-2 (NTE letter + signatures), Page 3 (Annexure A), Page 4 (CWD acknowledgment, optional).
+ * NTE DOCX Generator — Matches the exact Genpact NTE template format.
+ *
+ * Structure:
+ *   Pages 1-2: NTE letter (header, narrative, mandate, policy, Art 282, boilerplate, signatures)
+ *   Page 3:    Annexure A (blank — user attaches evidence after generation)
+ *   Page 4:    CWD acknowledgment (optional)
+ *
+ * Every page carries:
+ *   - Genpact logo in the top-right header
+ *   - "Classification: Genpact Confidential" centered footer
  */
 import {
   Document,
   Paragraph,
   TextRun,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
   AlignmentType,
   BorderStyle,
-  PageBreak,
-  HeadingLevel,
-  ShadingType,
-  VerticalAlign,
   Packer,
   UnderlineType,
   Header,
   Footer,
   ImageRun,
+  TabStopPosition,
+  TabStopType,
+  Tab,
 } from "docx";
+import * as fs from "fs";
+import * as path from "path";
 
-// ── Tag color mapping (matching the attendance color scheme) ──
-const TAG_COLORS: Record<string, { bg: string; text: string }> = {
-  P:    { bg: "2E7D32", text: "FFFFFF" },
-  LATE: { bg: "F9A825", text: "000000" },
-  UPL:  { bg: "C62828", text: "FFFFFF" },
-  PL:   { bg: "1565C0", text: "FFFFFF" },
-  ML:   { bg: "6A1B9A", text: "FFFFFF" },
-  WO:   { bg: "424242", text: "FFFFFF" },
-  NYO:  { bg: "78909C", text: "FFFFFF" },
-  EXIT: { bg: "37474F", text: "FFFFFF" },
-  NCNS: { bg: "B71C1C", text: "FFFFFF" },
-  AWOL: { bg: "880E4F", text: "FFFFFF" },
-  SL:   { bg: "00838F", text: "FFFFFF" },
-  VL:   { bg: "00695C", text: "FFFFFF" },
-};
-
-const DEFAULT_TAG_COLOR = { bg: "E0E0E0", text: "000000" };
-
-// ── CAP level display mapping ──
-const CAP_DISPLAY: Record<string, string> = {
-  "CAP 0": "Verbal Warning / Coaching (CAP 0)",
-  "CAP 1": "First Formal Corrective Action (CAP 1)",
-  "CAP 2": "Second Formal Corrective Action (CAP 2)",
-  "CAP 3": "Third Formal Corrective Action (CAP 3)",
-  "Termination": "Termination of Employment",
-};
-
-// ── Interfaces ──
+// ── Interfaces ──────────────────────────────────────────────────
 interface NTEInput {
-  date: string;           // NTE date (e.g., "April 20, 2026")
+  date: string;               // e.g. "April 13, 2026"
   employee: {
     full_name: string;
     last_name: string;
     ohr_id: string;
     actual_role?: string;
-    planning_group?: string;
+    department?: string;      // for "Supervisor, {Department}"
     supervisor_name?: string;
-    supervisor_email?: string;
-    gender?: string;       // "Male" or "Female" for Mr./Ms.
+    gender?: string;          // "Male" | "Female"
   };
-  narrative: string;       // AI-generated incident narrative (plain text)
-  policy_text: string;     // Policy section citations (plain text or HTML)
-  cap_level: string;       // e.g., "CAP 3"
+  narrative: string;          // AI-generated incident paragraph (plain text or HTML)
+  policy_sections: string[];  // Each entry is one policy citation block (may contain newlines)
+  cap_level: string;          // e.g. "CAP 1"
   violation: {
     code: string;
     type: string;
     category: string;
     subtype?: string;
   };
-  attendance: Array<{
-    log_date: string;
-    tag: string;
-  }>;
   flm_name?: string;
-  flm_email?: string;
   hr_name?: string;
-  include_cwd_page?: boolean;  // Include Critical Workday acknowledgment page
+  include_cwd_page?: boolean;
 }
 
-// ── Helper: strip HTML tags for plain text ──
+// ── CAP display labels ──────────────────────────────────────────
+const CAP_DISPLAY: Record<string, string> = {
+  "CAP 0": "Verbal Warning / Coaching (CAP 0)",
+  "CAP 1": "First Formal Corrective Action (CAP 1)",
+  "CAP 2": "Second Formal Corrective Action (CAP 2)",
+  "CAP 3": "Third Formal Corrective Action (CAP 3)",
+  "Termination": "Review for Termination (RFT)",
+};
+
+// ── Helpers ─────────────────────────────────────────────────────
 function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, "\n")
@@ -100,395 +80,367 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-// ── Helper: parse narrative into paragraphs ──
-function narrativeToParagraphs(narrative: string): Paragraph[] {
-  const clean = stripHtml(narrative);
-  const paragraphs = clean.split(/\n\n+/).filter(p => p.trim());
-  return paragraphs.map(p => new Paragraph({
-    children: [new TextRun({ text: p.trim(), size: 22, font: "Calibri" })],
-    spacing: { after: 200 },
-  }));
+const SIZE = 22;          // 11pt in half-points
+const FONT = "Calibri";
+
+function txt(text: string, opts: Partial<{ bold: boolean; italic: boolean; underline: boolean; allCaps: boolean; size: number }> = {}): TextRun {
+  return new TextRun({
+    text,
+    font: FONT,
+    size: opts.size ?? SIZE,
+    bold: opts.bold,
+    italics: opts.italic,
+    underline: opts.underline ? { type: UnderlineType.SINGLE } : undefined,
+    allCaps: opts.allCaps,
+  });
 }
 
-// ── Helper: parse policy text into paragraphs ──
-function policyToParagraphs(policyText: string): Paragraph[] {
-  const clean = stripHtml(policyText);
-  const lines = clean.split(/\n/).filter(l => l.trim());
-  return lines.map(line => {
-    const isBullet = line.startsWith("•") || line.startsWith("-");
-    const text = isBullet ? line.replace(/^[•\-]\s*/, "") : line;
-    const isSectionHeader = /^section\s/i.test(text) || /^sub\s*section/i.test(text);
-    return new Paragraph({
-      children: [new TextRun({
-        text: text.trim(),
-        size: 22,
-        font: "Calibri",
-        bold: isSectionHeader,
-      })],
-      indent: isBullet ? { left: 360 } : undefined,
-      spacing: { after: 80 },
+function para(children: TextRun[], opts: Partial<{ after: number; before: number; align: (typeof AlignmentType)[keyof typeof AlignmentType]; indent: number }> = {}): Paragraph {
+  return new Paragraph({
+    children,
+    alignment: opts.align,
+    spacing: { after: opts.after ?? 0, before: opts.before ?? 0 },
+    indent: opts.indent ? { left: opts.indent } : undefined,
+  });
+}
+
+function emptyLine(): Paragraph {
+  return new Paragraph({ children: [txt("")], spacing: { after: 0 } });
+}
+
+// ── Build shared header (Genpact logo top-right) ────────────────
+function buildHeader(): Header {
+  const logoPath = path.resolve(__dirname, "genpact-logo.png");
+  let logoBuffer: Buffer;
+  try {
+    logoBuffer = fs.readFileSync(logoPath);
+  } catch {
+    // Fallback: no logo if file missing
+    return new Header({
+      children: [emptyLine()],
     });
-  });
-}
+  }
 
-// ── Build the Annexure A attendance table ──
-function buildAnnexureTable(employeeName: string, attendance: Array<{ log_date: string; tag: string }>): Table {
-  // Sort attendance by date
-  const sorted = [...attendance].sort((a, b) => a.log_date.localeCompare(b.log_date));
+  // Logo: 507×236 px → scale to ~1.2in wide (86400 EMU = 1.2in)
+  // 1 inch = 914400 EMU; 1.2in = 1097280 EMU
+  const logoWidthEMU = 1097280;
+  const logoHeightEMU = Math.round(logoWidthEMU * (236 / 507));
 
-  // Build day headers
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-  // Header row 1: Day names
-  const headerRow1Cells = [
-    new TableCell({
-      children: [new Paragraph({
-        children: [new TextRun({ text: "Name", bold: true, size: 18, font: "Calibri", color: "FFFFFF" })],
-        alignment: AlignmentType.CENTER,
-      })],
-      shading: { type: ShadingType.SOLID, color: "2E5090", fill: "2E5090" },
-      verticalAlign: VerticalAlign.CENTER,
-      width: { size: 2400, type: WidthType.DXA },
-    }),
-    ...sorted.map(a => {
-      const d = new Date(a.log_date + "T00:00:00");
-      return new TableCell({
-        children: [new Paragraph({
-          children: [new TextRun({ text: dayNames[d.getDay()], size: 16, font: "Calibri" })],
-          alignment: AlignmentType.CENTER,
-        })],
-        verticalAlign: VerticalAlign.CENTER,
-        width: { size: 900, type: WidthType.DXA },
-      });
-    }),
-  ];
-
-  // Header row 2: Dates
-  const headerRow2Cells = [
-    new TableCell({
-      children: [new Paragraph({ children: [] })],
-      shading: { type: ShadingType.SOLID, color: "2E5090", fill: "2E5090" },
-      verticalAlign: VerticalAlign.CENTER,
-    }),
-    ...sorted.map(a => {
-      const d = new Date(a.log_date + "T00:00:00");
-      const dateStr = `${d.getDate()}-${d.toLocaleString("en-US", { month: "short" })}`;
-      return new TableCell({
-        children: [new Paragraph({
-          children: [new TextRun({ text: dateStr, size: 16, font: "Calibri", bold: true })],
-          alignment: AlignmentType.CENTER,
-        })],
-        shading: { type: ShadingType.SOLID, color: "D6DCE4", fill: "D6DCE4" },
-        verticalAlign: VerticalAlign.CENTER,
-      });
-    }),
-  ];
-
-  // Data row: Employee name + tags
-  const dataRowCells = [
-    new TableCell({
-      children: [new Paragraph({
-        children: [new TextRun({ text: employeeName, size: 16, font: "Calibri" })],
-      })],
-      verticalAlign: VerticalAlign.CENTER,
-    }),
-    ...sorted.map(a => {
-      const tag = (a.tag || "—").toUpperCase();
-      const colors = TAG_COLORS[tag] || DEFAULT_TAG_COLOR;
-      return new TableCell({
-        children: [new Paragraph({
-          children: [new TextRun({ text: tag, size: 16, font: "Calibri", color: colors.text, bold: true })],
-          alignment: AlignmentType.CENTER,
-        })],
-        shading: { type: ShadingType.SOLID, color: colors.bg, fill: colors.bg },
-        verticalAlign: VerticalAlign.CENTER,
-      });
-    }),
-  ];
-
-  return new Table({
-    rows: [
-      new TableRow({ children: headerRow1Cells }),
-      new TableRow({ children: headerRow2Cells }),
-      new TableRow({ children: dataRowCells }),
+  return new Header({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        children: [
+          new ImageRun({
+            data: logoBuffer,
+            transformation: {
+              width: Math.round(logoWidthEMU / 914400 * 96),  // px at 96 dpi
+              height: Math.round(logoHeightEMU / 914400 * 96),
+            },
+            type: "png",
+          }),
+        ],
+      }),
     ],
-    width: { size: 100, type: WidthType.PERCENTAGE },
   });
 }
 
-// ── Main: Generate NTE DOCX ──
+// ── Build shared footer ─────────────────────────────────────────
+function buildFooter(): Footer {
+  return new Footer({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [txt("Classification: Genpact Confidential", { size: 18 })],
+      }),
+    ],
+  });
+}
+
+// ── Shared page properties ──────────────────────────────────────
+function pageProps() {
+  return {
+    page: {
+      margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+    },
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MAIN GENERATOR
+// ════════════════════════════════════════════════════════════════
 export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
   const honorific = input.employee.gender === "Female" ? "Ms." : "Mr.";
-  const flmName = input.flm_name || input.employee.supervisor_name || "[FLM Name]";
-  const flmEmail = input.flm_email || input.employee.supervisor_email || "[flm@meta.com]";
   const hrName = input.hr_name || "Jocelyn Ramos";
-  const capDisplay = CAP_DISPLAY[input.cap_level] || input.cap_level;
+  const flmName = input.flm_name || input.employee.supervisor_name || "[Supervisor Name]";
+  const department = input.employee.department || "Operations";
   const role = input.employee.actual_role || "Process Associate";
+  const capDisplay = CAP_DISPLAY[input.cap_level] || input.cap_level;
 
-  // ── Page 1-2: NTE Letter ──
-  const nteLetterChildren: Paragraph[] = [];
+  const header = buildHeader();
+  const footer = buildFooter();
 
-  // Title
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Notice to Explain", bold: true, size: 32, font: "Calibri", underline: { type: UnderlineType.SINGLE } })],
-    alignment: AlignmentType.CENTER,
-    spacing: { after: 400 },
+  // ── Section 1: NTE Letter (pages 1-2) ─────────────────────────
+  const children: Paragraph[] = [];
+
+  // Title: "Notice to Explain" — bold, centered
+  children.push(para(
+    [txt("Notice to Explain", { bold: true, size: 28 })],
+    { align: AlignmentType.CENTER, after: 40 },
+  ));
+
+  // Horizontal rule
+  children.push(new Paragraph({
+    children: [],
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 1 } },
+    spacing: { after: 300 },
   }));
 
-  // Date
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: input.date, bold: true, size: 22, font: "Calibri" })],
-    spacing: { after: 400 },
-  }));
+  // Date — bold, left
+  children.push(para([txt(input.date, { bold: true })], { after: 300 }));
 
   // Employee block
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: input.employee.full_name, bold: true, size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: role, size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Genpact", size: 22, font: "Calibri" })],
-    spacing: { after: 400 },
-  }));
+  children.push(para([txt(input.employee.full_name, { bold: true })]));
+  children.push(para([txt(role)]));
+  children.push(para([txt("Genpact")], { after: 300 }));
 
   // Salutation
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: `Dear ${honorific} ${input.employee.last_name},`, size: 22, font: "Calibri" })],
+  children.push(para(
+    [txt(`Dear ${honorific} ${input.employee.last_name}`)],
+    { after: 200 },
+  ));
+
+  // Incident narrative — AI-generated, may be multi-paragraph
+  const narrativeClean = stripHtml(input.narrative);
+  const narrativeParas = narrativeClean.split(/\n\n+/).filter(p => p.trim());
+  for (const p of narrativeParas) {
+    children.push(para([txt(p.trim())], { after: 200 }));
+  }
+
+  // ── Mandate paragraph ──
+  // "IN VIEW THEREOF" bold, "MANDATED" bold, "within one hundred-twenty (120) hours" bold+italic
+  children.push(new Paragraph({
+    children: [
+      txt("IN VIEW THEREOF", { bold: true }),
+      txt(", you are hereby "),
+      txt("MANDATED", { bold: true }),
+      txt(" to submit an explanation in writing to HR, "),
+      txt(`${hrName} through jocelyn.ramos@genpact.com`),
+      txt(", "),
+      txt("within one hundred-twenty (120) hours from receipt of this Notice", { bold: true, italic: true }),
+      txt(", stating your position why you should not be administratively held liable in reference to your alleged violation/s of:"),
+    ],
     spacing: { after: 200 },
   }));
 
-  // Incident narrative (AI-generated)
-  nteLetterChildren.push(...narrativeToParagraphs(input.narrative));
+  // ── Policy section header ──
+  children.push(para(
+    [txt("GENPACT's Corrective Action Policy particularly:", { bold: true })],
+    { after: 200 },
+  ));
 
-  // Mandate paragraph
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({
-      text: `IN VIEW THEREOF, you are hereby MANDATED to submit an Explanation in writing to Operations, ${flmName}, ${flmEmail} within (48) hours from receipt of this Notice, stating your position why you should not be administratively held liable in reference to your alleged violation/s of GENPACT's Corrective Action Policy and the Philippine Labor Code particularly:`,
-      size: 22,
-      font: "Calibri",
-    })],
-    spacing: { after: 300 },
-  }));
+  // Policy citations — each entry from the wizard
+  // The AI generates these as structured text; render with proper formatting
+  for (const section of input.policy_sections) {
+    const lines = stripHtml(section).split("\n").filter(l => l.trim());
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Detect "Possible Penalty:" lines → underline
+      if (/^possible penalty/i.test(trimmed)) {
+        children.push(para(
+          [txt(trimmed, { underline: true })],
+          { after: 120 },
+        ));
+      }
+      // Detect section headers (e.g., "1. Attendance" or "4. Misconduct") → bold+underline
+      else if (/^\d+\.?\s+\w/.test(trimmed) && trimmed.length < 120) {
+        children.push(para(
+          [txt(trimmed, { bold: true, underline: true })],
+          { after: 80 },
+        ));
+      }
+      // Detect sub-sections (e.g., "1.1 Absenteeism") → bold
+      else if (/^\d+\.\d+/.test(trimmed) && trimmed.length < 120) {
+        children.push(para(
+          [txt(trimmed, { bold: true })],
+          { after: 80 },
+        ));
+      }
+      // Normal text
+      else {
+        children.push(para([txt(trimmed)], { after: 80 }));
+      }
+    }
+  }
 
-  // Policy violated section header
-  nteLetterChildren.push(...policyToParagraphs(input.policy_text));
+  // Possible penalty line (overall)
+  children.push(emptyLine());
+  children.push(para(
+    [txt(`Possible Penalty: ${capDisplay}`, { underline: true })],
+    { after: 200 },
+  ));
 
-  // Possible penalty
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: `Possible Penalty: ${capDisplay}`, size: 22, font: "Calibri", underline: { type: UnderlineType.SINGLE } })],
-    spacing: { before: 200, after: 200 },
-  }));
-
-  // Article 282
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Article 282 of the Labor Code of the Philippines", size: 22, font: "Calibri" })],
+  // ── Article 282 ──
+  children.push(new Paragraph({
+    children: [
+      txt("and, "),
+      txt("Article 282 of the Labor Code of the Philippines", { bold: true }),
+      txt(", particularly:"),
+    ],
     spacing: { after: 80 },
   }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "a. Serious Misconduct or willful disobedience by the employee of the lawful orders of his employer or representative in connection", size: 22, font: "Calibri" })],
-    spacing: { after: 80 },
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "b. Gross and Habitual neglect by the employee of his duties", size: 22, font: "Calibri" })],
-    spacing: { after: 300 },
-  }));
+  children.push(para(
+    [txt("a. Serious misconduct or willful disobedience by the employee of the lawful orders of his employer or representative in connection with his work.")],
+    { after: 80 },
+  ));
+  children.push(para(
+    [txt("b. Gross and habitual neglect by the employee of his duties.")],
+    { after: 80 },
+  ));
+  children.push(para(
+    [txt("e. Other causes analogous to the foregoing: violation to company policies.")],
+    { after: 200 },
+  ));
 
-  // Boilerplate paragraphs
-  const boilerplates = [
-    "Within the same period, you may submit such evidence (documentary information or written deposition of your witness/es) that may support your Explanation. Any witness/es you will identify will be required to confirm and verify the declarations stated in their disposition.",
-    "Your failure to submit said explanation and documents within the prescribed period shall be deemed a waiver on your part to present the same. In such event, the matter will be decided based on the records and evidence available.",
-    "If the company would be requiring further clarification based on your duly submitted written explanation, it hereby reserves the right to invite you to an administrative hearing, which will be confirmed and arranged by your aligned HR. The company, likewise, reserves the right to invite you on other dates as it may deem proper.",
-    "You may retain the assistance and services of private counsel during the proceedings. Should you wish to be represented by a preferred counsel, please notify us at least two (2) days in advance so we can arrange attendance of our internal counsel.",
-    "Should the grounds for above alleged violation/s be established, the appropriate disciplinary action will be imposed as prescribed under the applicable laws, Rules and Policies governing the alleged offense/s.",
-    "Please note that Genpact adheres to a no-retaliation policy, violation of which will result in strict and prompt imposition of appropriate penalties.",
-  ];
+  // ── Boilerplate: evidence submission ──
+  children.push(para(
+    [txt("Within the same period, you may submit such evidence (documentary information or written deposition of your witness/es) that may support your explanation. Any witness/es you will identify will be required to confirm and verify the declarations stated in their disposition.")],
+    { after: 200 },
+  ));
 
-  boilerplates.forEach(text => {
-    nteLetterChildren.push(new Paragraph({
-      children: [new TextRun({ text, size: 22, font: "Calibri" })],
-      spacing: { after: 200 },
-    }));
-  });
+  // ── Failure to submit — ALL CAPS, ALL BOLD ──
+  children.push(para(
+    [txt("YOUR FAILURE TO SUBMIT SAID EXPLANATION AND DOCUMENTS WITHIN THE PRESCRIBED PERIOD SHALL BE DEEMED A WAIVER ON YOUR PART TO PRESENT THE SAME. IN SUCH EVENT, THE MATTER WILL BE DECIDED BASED ON THE RECORDS AND EVIDENCE AVAILABLE. MANAGEMENT RESERVES THE RIGHT TO INCREASE THE PENALTY UP TO TERMINATION DEPENDING ON THE CIRCUMSTANCES OF THE CASE.", { bold: true })],
+    { after: 200 },
+  ));
 
-  // Sincerely
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Sincerely,", size: 22, font: "Calibri" })],
-    spacing: { before: 400, after: 600 },
-  }));
+  // ── Remaining boilerplate ──
+  children.push(para(
+    [txt("If the company would be requiring further clarification based on your duly submitted written explanation, it hereby reserves the right to invite you to an administrative hearing, which will be confirmed and arranged by your aligned HR. The company, likewise, reserves the right to invite you on other dates as it may deem proper.")],
+    { after: 80 },
+  ));
+  children.push(para(
+    [txt("You may retain the assistance and services of private counsel during the proceedings. Should you wish to be represented by a preferred counsel, please notify us at least two (2) days in advance so we can arrange attendance of our internal counsel.")],
+    { after: 200 },
+  ));
+  children.push(para(
+    [txt("Should the grounds for above alleged violation/s be established, the appropriate disciplinary action will be imposed as prescribed under the applicable laws, rules and policies governing the alleged offense/s.")],
+    { after: 200 },
+  ));
+  children.push(para(
+    [txt("Please note that Genpact adheres to a no-retaliation policy, violation of which will result in strict and prompt imposition of appropriate penalties.")],
+    { after: 300 },
+  ));
+
+  // ── Sincerely ──
+  children.push(para([txt("Sincerely,")], { after: 600 }));
 
   // Supervisor signature block
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "____________________________", size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: flmName, bold: true, size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Supervisor, Operations", size: 22, font: "Calibri" })],
-    spacing: { after: 400 },
-  }));
+  children.push(para([txt(flmName, { bold: true })]));
+  children.push(para([txt(`Supervisor, ${department}`)], { after: 600 }));
 
-  // HR signature block
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "____________________________", size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: hrName, bold: true, size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Employee Relations Manager, HR", size: 22, font: "Calibri" })],
-    spacing: { after: 600 },
-  }));
+  // HR signature block (space for signature)
+  children.push(emptyLine());
+  children.push(para([txt(hrName, { bold: true })]));
+  children.push(para([txt("Employee Relations Manager, HR")], { after: 400 }));
 
   // Received by
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Received by:", bold: true, size: 22, font: "Calibri" })],
-    spacing: { after: 200 },
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: input.employee.full_name, bold: true, size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: role, size: 22, font: "Calibri" })],
-  }));
-  nteLetterChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Date Received:", bold: true, size: 22, font: "Calibri" })],
-    spacing: { after: 200 },
-  }));
+  children.push(emptyLine());
+  children.push(para([txt("Received by:", { bold: true })], { after: 200 }));
+  children.push(para([txt(input.employee.full_name, { bold: true })]));
+  children.push(para([txt(role)]));
+  children.push(para([txt("Date Received:")]));
 
-  // ── Page 3: Annexure A ──
+  // ── Section 2: Annexure A (blank page) ────────────────────────
   const annexureChildren: Paragraph[] = [];
+  annexureChildren.push(para(
+    [txt("Annexure A:", { bold: true, size: 24 })],
+    { after: 400 },
+  ));
+  // Blank — user attaches evidence after generation
+  annexureChildren.push(emptyLine());
 
-  annexureChildren.push(new Paragraph({
-    children: [new PageBreak()],
-  }));
-  annexureChildren.push(new Paragraph({
-    children: [new TextRun({ text: "Annexure A:", bold: true, size: 24, font: "Calibri" })],
-    spacing: { after: 300 },
-  }));
-
-  // Build the sections array
+  // ── Build sections array ──────────────────────────────────────
   const sections: any[] = [];
 
-  // Section 1: NTE letter + Annexure A
-  const section1Children: (Paragraph | Table)[] = [
-    ...nteLetterChildren,
-    ...annexureChildren,
-  ];
-
+  // Section 1: NTE letter
   sections.push({
-    properties: {
-      page: {
-        margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
-      },
-    },
-    children: section1Children,
+    properties: pageProps(),
+    headers: { default: header },
+    footers: { default: footer },
+    children,
   });
 
-  // ── Conditionally add CWD acknowledgment page ──
+  // Section 2: Annexure A
+  sections.push({
+    properties: pageProps(),
+    headers: { default: buildHeader() },
+    footers: { default: buildFooter() },
+    children: annexureChildren,
+  });
+
+  // ── Optional Section 3: CWD acknowledgment ───────────────────
   if (input.include_cwd_page) {
     const cwdChildren: Paragraph[] = [];
 
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "CRITICAL WORKDAY POLICY ACKNOWLEDGMENT AND CONSENT", bold: true, size: 24, font: "Calibri" })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 100 },
-    }));
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Employee Sign-off Sheet", bold: true, size: 22, font: "Calibri" })],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
-    }));
-
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "I, the undersigned employee, hereby acknowledge the following:", size: 22, font: "Calibri" })],
-      spacing: { after: 200 },
-    }));
+    cwdChildren.push(para(
+      [txt("CRITICAL WORKDAY POLICY ACKNOWLEDGMENT AND CONSENT", { bold: true, size: 24 })],
+      { align: AlignmentType.CENTER, after: 100 },
+    ));
+    cwdChildren.push(para(
+      [txt("Employee Sign-off Sheet", { bold: true })],
+      { align: AlignmentType.CENTER, after: 400 },
+    ));
+    cwdChildren.push(para(
+      [txt("I, the undersigned employee, hereby acknowledge the following:")],
+      { after: 200 },
+    ));
 
     // Acknowledgment of Policy
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Acknowledgment of Policy", bold: true, size: 22, font: "Calibri", underline: { type: UnderlineType.SINGLE } })],
-      spacing: { after: 100 },
-    }));
-
+    cwdChildren.push(para([txt("Acknowledgment of Policy", { bold: true, underline: true })], { after: 100 }));
     const ackItems = [
       "I have been duly informed of, and have read and fully understood all pertinent information, details, instructions and implications concerning the company's Critical Workday (CWD) Policy, as detailed in the accompanying memorandum.",
       "I understand that CWDs are essential to meeting Client Service Level Agreements (SLAs) and maintaining operational success.",
       "I pledge my commitment to full compliance with all requirements, schedules, and policies set forth regarding Critical Workdays.",
     ];
     ackItems.forEach((item, i) => {
-      cwdChildren.push(new Paragraph({
-        children: [new TextRun({ text: `${i + 1}. ${item}`, size: 22, font: "Calibri" })],
-        indent: { left: 360 },
-        spacing: { after: 80 },
-      }));
+      cwdChildren.push(para([txt(`${i + 1}. ${item}`)], { indent: 360, after: 80 }));
     });
 
     // Understanding of Disciplinary Consequences
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Understanding of Disciplinary Consequences", bold: true, size: 22, font: "Calibri", underline: { type: UnderlineType.SINGLE } })],
-      spacing: { before: 200, after: 100 },
-    }));
-
+    cwdChildren.push(para([txt("Understanding of Disciplinary Consequences", { bold: true, underline: true })], { before: 200, after: 100 }));
     const discItems = [
       "I understand that any violation of the established CWD Policy, including but not limited to any instance of Absence, Unscheduled Leave, or Unapproved Leave during a declared Critical Workday, may result in disciplinary action.",
       "I acknowledge that disciplinary action can have consequences up to and including removal from the Program and termination of my employment, as determined and initiated by Genpact.",
-      "I agree and understand that Management reserves the right of discretion to impose the necessary penalty than the standard disciplinary action (e.g., CAP 2), depending upon the existence of any aggravating or mitigating circumstance(s) specific to each case. These considerations may include performance-related issues that form part of my employee record, as well as whether I have previous offenses.",
+      "I agree and understand that Management reserves the right of discretion to impose the necessary penalty than the standard disciplinary action (e.g., CAP 2), depending upon the existence of any aggravating or mitigating circumstance(s) specific to each case.",
     ];
     discItems.forEach((item, i) => {
-      cwdChildren.push(new Paragraph({
-        children: [new TextRun({ text: `${i + 1}. ${item}`, size: 22, font: "Calibri" })],
-        indent: { left: 360 },
-        spacing: { after: 80 },
-      }));
+      cwdChildren.push(para([txt(`${i + 1}. ${item}`)], { indent: 360, after: 80 }));
     });
 
     // Policy Changes and Reporting Obligation
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Policy Changes and Reporting Obligation", bold: true, size: 22, font: "Calibri", underline: { type: UnderlineType.SINGLE } })],
-      spacing: { before: 200, after: 100 },
-    }));
-
+    cwdChildren.push(para([txt("Policy Changes and Reporting Obligation", { bold: true, underline: true })], { before: 200, after: 100 }));
     const polItems = [
       "I further agree that Genpact management may amend or revise the CWD Policy, or the associated memorandum, at any time upon notice to all concerned employees. I likewise pledge compliance with any revised rules or policies that may be promulgated henceforth.",
       "I understand that if I have a concern about a possible violation of this Policy by myself or others, I will promptly report the concern to my line Manager, Human Resources representative, the Legal & Compliance Team, or the Ombudsman.",
     ];
     polItems.forEach((item, i) => {
-      cwdChildren.push(new Paragraph({
-        children: [new TextRun({ text: `${i + 1}. ${item}`, size: 22, font: "Calibri" })],
-        indent: { left: 360 },
-        spacing: { after: 80 },
-      }));
+      cwdChildren.push(para([txt(`${i + 1}. ${item}`)], { indent: 360, after: 80 }));
     });
 
     // Signed by
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Signed by:", size: 22, font: "Calibri" })],
-      spacing: { before: 400, after: 400 },
-    }));
-    cwdChildren.push(new Paragraph({
-      children: [new TextRun({ text: "Name of Employee | Date", size: 22, font: "Calibri" })],
-      spacing: { after: 200 },
-    }));
+    cwdChildren.push(para([txt("Signed by:")], { before: 400, after: 400 }));
+    cwdChildren.push(para([txt("Name of Employee | Date")], { after: 200 }));
 
     sections.push({
-      properties: {
-        page: {
-          margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
-        },
-      },
+      properties: pageProps(),
+      headers: { default: buildHeader() },
+      footers: { default: buildFooter() },
       children: cwdChildren,
     });
   }
 
-  // ── Build the Annexure A table and insert before the page break ──
-  // We need to add the table to section 1 children
-  const annexureTable = buildAnnexureTable(input.employee.full_name, input.attendance);
-  section1Children.push(annexureTable);
-
-  // ── Create the document ──
+  // ── Create document ───────────────────────────────────────────
   const doc = new Document({
     creator: "Playbook - NTE Build Assist",
     title: `NTE - ${input.employee.full_name}`,
@@ -496,7 +448,6 @@ export async function generateNTEDocx(input: NTEInput): Promise<Buffer> {
     sections,
   });
 
-  // ── Generate buffer ──
   const buffer = await Packer.toBuffer(doc);
   return buffer as Buffer;
 }

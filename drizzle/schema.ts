@@ -70,6 +70,7 @@ export const ioEmployees = mysqlTable("io_employees", {
   relieving_date: varchar("relieving_date", { length: 30 }),
   exit_date: varchar("exit_date", { length: 30 }),
   exit_reason: varchar("exit_reason", { length: 255 }),
+  department: varchar("department", { length: 128 }),
 });
 
 export type IoEmployee = typeof ioEmployees.$inferSelect;

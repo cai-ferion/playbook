@@ -3621,8 +3621,8 @@ router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
   try {
     const { generateNTEDocx } = await import("./nte-docx-generator.js");
     const {
-      date, employee, narrative, policy_text, cap_level,
-      violation, attendance, flm_name, flm_email, hr_name,
+      date, employee, narrative, policy_sections, cap_level,
+      violation, flm_name, hr_name,
       include_cwd_page
     } = req.body;
 
@@ -3641,18 +3641,15 @@ router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
         last_name: lastName,
         ohr_id: employee.ohr_id || "",
         actual_role: employee.actual_role || "Process Associate",
-        planning_group: employee.planning_group || "",
+        department: employee.department || "Operations",
         supervisor_name: employee.supervisor_name || "",
-        supervisor_email: employee.supervisor_email || "",
         gender: employee.gender || "Male",
       },
       narrative: narrative || "",
-      policy_text: policy_text || "",
+      policy_sections: Array.isArray(policy_sections) ? policy_sections : (policy_sections ? [policy_sections] : []),
       cap_level: cap_level || "CAP 0",
       violation: violation || { code: "", type: "", category: "" },
-      attendance: attendance || [],
       flm_name: flm_name || employee.supervisor_name || "",
-      flm_email: flm_email || employee.supervisor_email || "",
       hr_name: hr_name || "Jocelyn Ramos",
       include_cwd_page: include_cwd_page || false,
     });

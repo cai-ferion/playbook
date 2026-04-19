@@ -1,0 +1,1 @@
+ALTER TABLE `io_employees` ADD `department` varchar(128);

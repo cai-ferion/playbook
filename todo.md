@@ -2113,3 +2113,16 @@
 - [x] NTE document includes: title, employee details, incident narrative, policy violated, mandate paragraph, Article 282, boilerplate legal paragraphs, signature blocks, Annexure A (color-coded attendance table)
 - [x] Optional CWD acknowledgment page (checkbox in Step 4)
 - [x] DOCX generated using `docx` library with Calibri font, proper formatting, and tag color-coding
+
+## NTE DOCX Generator — Match Exact SampleNTE7 Template
+- [x] Rewrite NTE DOCX generator to match exact SampleNTE7 format
+- [x] Genpact logo in top-right header on every page
+- [x] Horizontal rule under "Notice to Explain" title
+- [x] Mandate: always 120 hours to HR (Jocelyn Ramos)
+- [x] ALL CAPS BOLD "failure to submit" paragraph with termination language
+- [x] Article 282 includes item (e) "Other causes analogous"
+- [x] Supervisor title: "Supervisor, {Department}" (uses new department column)
+- [x] "Classification: Genpact Confidential" centered footer on every page
+- [x] Annexure A: blank page (user attaches evidence after generation)
+- [x] Add "department" column to io_employees table (migration applied)
+- [x] Fix Regimen table supervisor column showing blank (key mismatch: 'supervisor' vs 'supervisor_name')

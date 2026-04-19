@@ -30,7 +30,7 @@ const ALL_COLUMNS = [
   { key: 'province', label: 'Province', group: 'identity' },
   { key: 'employement_status', label: 'Status', group: 'role' },
   { key: 'actual_role', label: 'Role', group: 'role' },
-  { key: 'supervisor', label: 'Supervisor', group: 'role' },
+  { key: 'supervisor_name', label: 'Supervisor', group: 'role' },
   { key: 'supervisor_email', label: 'Supervisor Email', group: 'role' },
   { key: 'shift_time', label: 'Shift Time', group: 'role' },
   { key: 'work_off', label: 'Work Off', group: 'role' },
@@ -61,7 +61,7 @@ const ALL_COLUMNS = [
 // Limited columns for non-admin tiers
 const LIMITED_COLUMNS = [
   'ohr_id','full_name','last_name','given_name','middle_name','suffix',
-  'employement_status','actual_role','supervisor','shift_time','work_off',
+  'employement_status','actual_role','supervisor_name','shift_time','work_off',
   'planning_group','related_planning_group','srt_status','platform',
   'srt_id','workday_id','meta_email','hire_date','regular_date',
   'meta_onboarding_date','go_live_date'
