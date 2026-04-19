@@ -2172,3 +2172,8 @@
 - [x] Fix subsection showing "N/A" in DOCX — fixed operator precedence bug in LLM prompt interpolation + added subsection fields to API payload
 - [x] Add type-ahead search filter to the NTE violation picker for 100+ sub-subsections
 - [ ] CWD Sign-off Sheet option explained to user — keeping for now (adds extra page for Critical Workday acknowledgment)
+
+## NTE Wizard — CWD Removal & Keyboard Navigation
+- [x] Remove CWD Sign-off Sheet checkbox from NTE wizard Step 4
+- [x] Remove CWD page generation from DOCX generator (hardcoded include_cwd_page: false)
+- [x] Add keyboard navigation (arrow keys + Enter + Escape) to violation search dropdown

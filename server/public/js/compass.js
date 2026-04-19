@@ -4731,8 +4731,10 @@ function _nteWizSelectEmployee(ohrId) {
   _nteWizardRender();
 }
 
-// ---- Searchable Violation Picker ----
+// ---- Searchable Violation Picker with Keyboard Navigation ----
 var _nteWizViolationFilterTimer = null;
+var _nteWizViolationActiveIdx = -1;  // tracks highlighted option index
+var _nteWizViolationMatchCodes = []; // ordered codes of current visible options
 
 // Build a flat list of all violation items for search
 function _nteWizGetAllViolationItems() {
@@ -4749,7 +4751,6 @@ function _nteWizGetAllViolationItems() {
           subsectionCode: sub.code,
           subsectionTitle: sub.title,
           subsection: sub.code + ' ' + sub.title,
-          // Searchable string: code + text + category + subsection title
           _search: (item.code + ' ' + item.text + ' ' + cat.category + ' ' + sub.title).toLowerCase()
         });
       });
@@ -4768,20 +4769,21 @@ function _nteWizFilterViolations() {
     var allItems = _nteWizGetAllViolationItems();
     var matches;
     if (!search) {
-      // Show all items grouped by section when empty
       matches = allItems;
     } else {
-      // Filter by search terms (all terms must match)
       var terms = search.split(/\s+/);
       matches = allItems.filter(function(item) {
         return terms.every(function(t) { return item._search.includes(t); });
       });
     }
 
+    // Reset keyboard index
+    _nteWizViolationActiveIdx = -1;
+    _nteWizViolationMatchCodes = [];
+
     if (matches.length === 0) {
       dropdown.innerHTML = '<div style="padding:10px 14px; color:var(--fg-muted); font-size:12px;">No violations found</div>';
     } else {
-      // Group by category + subsection for display
       var grouped = {};
       matches.forEach(function(item) {
         var key = item.category + ' \u203a ' + item.subsection;
@@ -4790,15 +4792,18 @@ function _nteWizFilterViolations() {
       });
 
       var html = '';
+      var idx = 0;
       Object.keys(grouped).forEach(function(groupLabel) {
         html += '<div style="padding:4px 12px; font-size:10px; font-weight:600; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.3px; background:var(--bg-inset); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:1;">' + escapeHtml(groupLabel) + '</div>';
         grouped[groupLabel].forEach(function(item) {
+          _nteWizViolationMatchCodes.push(item.code);
           var isSelected = NTE_WIZARD.violationType && NTE_WIZARD.violationType.code === item.code;
-          html += '<div class="searchable-select-option" onclick="_nteWizSelectViolation(\'' + escapeAttr(item.code) + '\')" style="padding:6px 12px; cursor:pointer; font-size:12px; line-height:1.4; border-bottom:1px solid var(--border);' + (isSelected ? ' background:#6366F110;' : '') + '">';
+          html += '<div class="searchable-select-option" data-viol-idx="' + idx + '" data-viol-code="' + escapeAttr(item.code) + '" onclick="_nteWizSelectViolation(\'' + escapeAttr(item.code) + '\')" onmouseenter="_nteWizViolationHighlight(' + idx + ')" style="padding:6px 12px; cursor:pointer; font-size:12px; line-height:1.4; border-bottom:1px solid var(--border); transition:background 0.1s;' + (isSelected ? ' background:#6366F110;' : '') + '">';
           html += '<strong style="color:#6366F1;">' + escapeHtml(item.code) + '</strong> ';
           html += '<span>' + escapeHtml(item.text) + '</span> ';
           html += '<span style="color:var(--fg-subtle); font-size:10px;">(' + escapeHtml(item.penalty) + ')</span>';
           html += '</div>';
+          idx++;
         });
       });
       dropdown.innerHTML = html;
@@ -4807,16 +4812,36 @@ function _nteWizFilterViolations() {
   }, 100);
 }
 
+function _nteWizViolationHighlight(idx) {
+  var dropdown = document.getElementById('nte-wiz-violation-dropdown');
+  if (!dropdown) return;
+  // Clear previous highlight
+  var prev = dropdown.querySelector('[data-viol-idx="' + _nteWizViolationActiveIdx + '"]');
+  if (prev) prev.style.background = '';
+  _nteWizViolationActiveIdx = idx;
+  var el = dropdown.querySelector('[data-viol-idx="' + idx + '"]');
+  if (el) {
+    el.style.background = '#6366F118';
+    // Scroll into view if needed
+    var dropRect = dropdown.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    if (elRect.bottom > dropRect.bottom) el.scrollIntoView({ block: 'nearest' });
+    if (elRect.top < dropRect.top) el.scrollIntoView({ block: 'nearest' });
+  }
+}
+
 function _nteWizToggleViolationDropdown(show) {
   var dropdown = document.getElementById('nte-wiz-violation-dropdown');
   if (dropdown) {
     dropdown.style.display = show ? '' : 'none';
-    if (show) _nteWizFilterViolations();
+    if (show) {
+      _nteWizViolationActiveIdx = -1;
+      _nteWizFilterViolations();
+    }
   }
 }
 
 function _nteWizSelectViolation(code) {
-  // Find the item in HR_VIOLATIONS
   for (var ci = 0; ci < HR_VIOLATIONS.length; ci++) {
     var cat = HR_VIOLATIONS[ci];
     for (var si = 0; si < cat.subsections.length; si++) {
@@ -4843,12 +4868,44 @@ function _nteWizSelectViolation(code) {
   }
 }
 
+// Keyboard navigation for violation search
+document.addEventListener('keydown', function(e) {
+  var input = document.getElementById('nte-wiz-violation-search');
+  if (!input || document.activeElement !== input) return;
+  var dropdown = document.getElementById('nte-wiz-violation-dropdown');
+  if (!dropdown || dropdown.style.display === 'none') return;
+
+  var total = _nteWizViolationMatchCodes.length;
+  if (total === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    var next = _nteWizViolationActiveIdx + 1;
+    if (next >= total) next = 0;
+    _nteWizViolationHighlight(next);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    var prev = _nteWizViolationActiveIdx - 1;
+    if (prev < 0) prev = total - 1;
+    _nteWizViolationHighlight(prev);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_nteWizViolationActiveIdx >= 0 && _nteWizViolationActiveIdx < total) {
+      _nteWizSelectViolation(_nteWizViolationMatchCodes[_nteWizViolationActiveIdx]);
+    }
+  } else if (e.key === 'Escape') {
+    dropdown.style.display = 'none';
+    _nteWizViolationActiveIdx = -1;
+  }
+});
+
 // Close violation dropdown when clicking outside
 document.addEventListener('click', function(e) {
   var wrapper = document.getElementById('nte-wiz-violation-wrapper');
   var dropdown = document.getElementById('nte-wiz-violation-dropdown');
   if (wrapper && dropdown && !wrapper.contains(e.target)) {
     dropdown.style.display = 'none';
+    _nteWizViolationActiveIdx = -1;
   }
 });
 
@@ -5218,14 +5275,7 @@ function _nteWizardStep4(formBody, formFooter, progressHtml) {
       </div>
     </div>
 
-    <div class="form-section">
-      <div class="form-field">
-        <label class="form-label">Include Critical Workday Acknowledgment Page?</label>
-        <div style="display:flex; gap:12px; margin-top:4px;">
-          <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;"><input type="checkbox" id="nte-wiz-cwd-page" style="accent-color:#6366F1;"> Yes, include CWD Sign-off Sheet</label>
-        </div>
-      </div>
-    </div>
+
   `;
 
   formFooter.innerHTML = `
@@ -5244,7 +5294,6 @@ async function _nteWizSubmit() {
   }
 
   const deadline = document.getElementById('nte-wiz-deadline')?.value || '';
-  const includeCwd = document.getElementById('nte-wiz-cwd-page')?.checked || false;
   const coach = typeof currentUser !== 'undefined' ? currentUser : null;
 
   const submitBtn = document.getElementById('nte-wiz-submit-btn');
@@ -5325,7 +5374,7 @@ async function _nteWizSubmit() {
       violation: NTE_WIZARD.violationType,
       flm_name: NTE_WIZARD.employee.supervisor_name || '',
       hr_name: 'Jocelyn Ramos',
-      include_cwd_page: includeCwd,
+      include_cwd_page: false,
     };
 
     const docxResp = await fetch(`${IO_API_BASE}/nte-build-assist/docx`, {
