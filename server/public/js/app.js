@@ -582,7 +582,7 @@ async function handleLogin() {
       complete_planning_group: '',
       actualPlanningGroup: '',
       supervisor_name: '',
-      permissions: { 'nav.regimen': true }
+      permissions: { 'nav.anchor': true }
     };
     sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
     document.getElementById('auth-page').style.display = 'none';
@@ -594,9 +594,8 @@ async function handleLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', details: 'WFM shared-credential login' })
     }).catch(() => {});
-    // Route directly to Regimen (sync page)
-    if (typeof initRoster === 'function') initRoster();
-    switchView('roster');
+    // Route directly to Input Portal
+    switchView('input-portal');
     return;
   }
 
@@ -788,13 +787,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
 
-      // ── WFM session restore: skip heavy data loading, route to Regimen ──
+      // ── WFM session restore: skip heavy data loading, route to Input Portal ──
       if (currentUser.ohr_id === '00000' && currentUser.actual_role === 'WFM') {
-        currentUser.permissions = { 'nav.regimen': true };
+        currentUser.permissions = { 'nav.anchor': true };
         sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
         applyNavPermissions(currentUser);
-        if (typeof initRoster === 'function') initRoster();
-        switchView('roster');
+        switchView('input-portal');
       } else {
         // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
         try {

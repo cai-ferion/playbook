@@ -2059,3 +2059,7 @@
 - [x] Add Sync to Sheet button in Regimen toolbar (visible to WFM users)
 - [x] WFM session restore skips heavy data loading, routes directly to Regimen
 - [x] Backend wfm-session-log endpoint logs login + sync actions for audit trail
+
+## WFM User — Change Visible Page to Input Portal
+- [x] Change WFM permissions from nav.regimen to nav.anchor (Input Portal)
+- [x] Update WFM session routing to land on Input Portal instead of Regimen
