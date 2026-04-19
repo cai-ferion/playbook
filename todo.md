@@ -2063,3 +2063,7 @@
 ## WFM User — Change Visible Page to Input Portal
 - [x] Change WFM permissions from nav.regimen to nav.anchor (Input Portal)
 - [x] Update WFM session routing to land on Input Portal instead of Regimen
+
+## WFM Credential Update
+- [x] Change WFM username from 00000 to WFM (case-insensitive match)
+- [x] Change WFM password from 00000 to wfm2026

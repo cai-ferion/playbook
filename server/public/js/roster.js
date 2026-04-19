@@ -1216,7 +1216,7 @@ window.rosterSyncToSheet = async function() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-actor-ohr': user.ohr_id || '00000'
+        'x-actor-ohr': user.ohr_id || 'WFM'
       }
     });
     const result = await resp.json();

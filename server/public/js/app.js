@@ -570,11 +570,11 @@ async function handleLogin() {
   if (!pw) { errorEl.textContent = 'Please enter your password.'; return; }
 
   // ── WFM Temporary User Intercept ──
-  // Shared credential: username=00000, password=00000
-  // Bypasses employee lookup entirely, restricted to sync pages only
-  if (ohr === '00000' && pw === '00000') {
+  // Shared credential: username=WFM, password=wfm2026
+  // Bypasses employee lookup entirely, restricted to Input Portal only
+  if (ohr.toUpperCase() === 'WFM' && pw === 'wfm2026') {
     currentUser = {
-      ohr_id: '00000',
+      ohr_id: 'WFM',
       full_name: 'WFM Team',
       actual_role: 'WFM',
       employement_status: 'Active',
@@ -788,7 +788,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('app-container').style.display = 'flex';
 
       // ── WFM session restore: skip heavy data loading, route to Input Portal ──
-      if (currentUser.ohr_id === '00000' && currentUser.actual_role === 'WFM') {
+      if (currentUser.ohr_id === 'WFM' && currentUser.actual_role === 'WFM') {
         currentUser.permissions = { 'nav.anchor': true };
         sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
         applyNavPermissions(currentUser);
