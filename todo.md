@@ -2199,3 +2199,9 @@
 
 ## Bug Fix — NTE Creation Error
 - [x] Fix "Failed to create coaching log" error when filing NTE via NTE Build Assist (cap_level VARCHAR(20) too short for 'Review for Termination' — widened to VARCHAR(50))
+
+## Cleanup & NTE Log Styling
+- [x] Delete 12 test coaching logs from database (12 coaching logs + 10 NTE records deleted)
+- [x] Also delete associated NTE records for those coaching logs
+- [x] Add NTE Log styling (indigo gradient badge) to match other coaching types in the table
+- [x] Add Incident Report styling (amber gradient badge) to match other coaching types in the table

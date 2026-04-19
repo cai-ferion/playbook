@@ -385,6 +385,8 @@
 #view-compass-input .module-type-badge.type-ztp-coaching { background: linear-gradient(135deg, #FEE2E2, #FEF2F2) !important; color: #DC2626 !important; border: 1px solid rgba(220, 38, 38, 0.15) !important; }
 #view-compass-input .module-type-badge.type-new-session { background: linear-gradient(135deg, #E0E7FF, #EEF2FF) !important; color: #4338CA !important; border: 1px solid rgba(67, 56, 202, 0.15) !important; }
 #view-compass-input .module-type-badge.type-general-coaching { background: linear-gradient(135deg, #CFFAFE, #ECFEFF) !important; color: #0E7490 !important; border: 1px solid rgba(14, 116, 144, 0.15) !important; }
+#view-compass-input .module-type-badge.type-nte-log { background: linear-gradient(135deg, #E0E7FF, #EEF2FF) !important; color: #4338CA !important; border: 1px solid rgba(67, 56, 202, 0.15) !important; }
+#view-compass-input .module-type-badge.type-incident-report { background: linear-gradient(135deg, #FEF3C7, #FEF9C3) !important; color: #D97706 !important; border: 1px solid rgba(217, 119, 6, 0.15) !important; }
 
 /* ---- Pagination ---- */
 #view-compass-input .compass-table-panel .module-pagination {
