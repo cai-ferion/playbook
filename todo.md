@@ -2209,3 +2209,6 @@
 ## Regimen — Add Employee Visibility Restriction
 - [x] Restrict "Add Employee" button in Regimen to only owner (740045023) and assistant (740044909)
 - [x] Set this restriction as the default permission in the Permissions tab for all employees (new regimen.add_employee key)
+
+## Regimen — Edit Employee Visibility Restriction
+- [x] Restrict "Edit Employee" (regimen.edit_employee) to only owner (740045023) and assistant (740044909) by default — removed 703212987 default grant

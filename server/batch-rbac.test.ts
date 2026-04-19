@@ -44,7 +44,7 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
   }
-  if (ohrId === '703212987') b['regimen.edit_employee'] = true;
+  // 703212987 no longer gets edit_employee by default — only owner + assistant
   return b;
 }
 
@@ -140,7 +140,7 @@ describe('RBAC Permission System', () => {
 
     describe('OHR 703212987', () => {
       const perms = getPermissionDefaults('Team Lead', '703212987');
-      it('has regimen.edit_employee = true', () => expect(perms['regimen.edit_employee']).toBe(true));
+      it('has regimen.edit_employee = false (no longer default)', () => expect(perms['regimen.edit_employee']).toBe(false));
       it('has anchor.edit_attendance = true (Team Lead default)', () => expect(perms['anchor.edit_attendance']).toBe(true));
     });
   });

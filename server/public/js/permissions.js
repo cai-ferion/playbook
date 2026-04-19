@@ -370,6 +370,6 @@ function computeRoleDefaults(role, ohrId) {
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
   }
-  if (ohrId === '703212987') b['regimen.edit_employee'] = true;
+  // 703212987 no longer gets edit_employee by default — only owner + assistant
   return b;
 }
