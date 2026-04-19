@@ -5122,13 +5122,22 @@ function _nteWizardStep4(formBody, formFooter, progressHtml) {
         <input type="date" class="form-input" id="nte-wiz-deadline" value="">
       </div>
     </div>
+
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Include Critical Workday Acknowledgment Page?</label>
+        <div style="display:flex; gap:12px; margin-top:4px;">
+          <label style="display:flex; align-items:center; gap:4px; font-size:12px; cursor:pointer;"><input type="checkbox" id="nte-wiz-cwd-page" style="accent-color:#6366F1;"> Yes, include CWD Sign-off Sheet</label>
+        </div>
+      </div>
+    </div>
   `;
 
   formFooter.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="NTE_WIZARD.step = 3; _nteWizardRender();">← Back</button>
-    <button class="btn btn-primary btn-sm" id="nte-wiz-submit-btn" onclick="_nteWizSubmit()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15l2 2 4-4"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
-      Create NTE
+    <button class="btn btn-primary btn-sm" id="nte-wiz-submit-btn" onclick="_nteWizSubmit()" style="display:flex; align-items:center; gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Generate NTE Document
     </button>
   `;
 }
@@ -5140,10 +5149,11 @@ async function _nteWizSubmit() {
   }
 
   const deadline = document.getElementById('nte-wiz-deadline')?.value || '';
+  const includeCwd = document.getElementById('nte-wiz-cwd-page')?.checked || false;
   const coach = typeof currentUser !== 'undefined' ? currentUser : null;
 
   const submitBtn = document.getElementById('nte-wiz-submit-btn');
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating...'; }
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-sm"></span> Generating Document...'; }
 
   try {
     // 1. Create the coaching log first
@@ -5200,13 +5210,61 @@ async function _nteWizSubmit() {
     });
     if (!nteResp.ok) throw new Error('Failed to save NTE');
 
-    showToast('NTE created successfully! Coaching log: ' + coachingId, 'success');
+    // 3. Generate the NTE DOCX document
+    if (submitBtn) { submitBtn.innerHTML = '<span class="spinner-sm"></span> Generating DOCX...'; }
+
+    const docxPayload = {
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      employee: {
+        full_name: NTE_WIZARD.employee.full_name,
+        ohr_id: NTE_WIZARD.employee.ohr_id,
+        actual_role: NTE_WIZARD.employee.actual_role || 'Process Associate',
+        planning_group: NTE_WIZARD.employee.planning_group || '',
+        supervisor_name: NTE_WIZARD.employee.supervisor_name || '',
+        supervisor_email: NTE_WIZARD.employee.supervisor_email || '',
+        gender: NTE_WIZARD.employee.gender || 'Male',
+      },
+      narrative: NTE_WIZARD.narrative,
+      policy_text: NTE_WIZARD.policyText,
+      cap_level: NTE_WIZARD.capLevel,
+      violation: NTE_WIZARD.violationType,
+      attendance: NTE_WIZARD.attendance || [],
+      flm_name: NTE_WIZARD.employee.supervisor_name || '',
+      flm_email: NTE_WIZARD.employee.supervisor_email || '',
+      hr_name: 'Jocelyn Ramos',
+      include_cwd_page: includeCwd,
+    };
+
+    const docxResp = await fetch(`${IO_API_BASE}/nte-build-assist/docx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(docxPayload)
+    });
+
+    if (!docxResp.ok) {
+      const errData = await docxResp.json().catch(() => ({}));
+      throw new Error('DOCX generation failed: ' + (errData.error || docxResp.statusText));
+    }
+
+    // Download the DOCX file
+    const blob = await docxResp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = NTE_WIZARD.employee.full_name.replace(/[^a-zA-Z0-9 ,]/g, '').replace(/\s+/g, '_');
+    a.href = url;
+    a.download = `NTE_${safeName}_${new Date().toISOString().slice(0, 10)}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('NTE document generated and downloaded! Coaching log: ' + coachingId, 'success');
     compassCloseForm();
     await compassFetchLogs();
   } catch (e) {
     console.error('NTE submission error:', e);
     showToast('Failed to create NTE: ' + e.message, 'error');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create NTE'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Generate NTE Document'; }
   }
 }
 

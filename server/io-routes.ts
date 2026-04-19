@@ -3613,6 +3613,63 @@ Format your response as JSON with two keys: "narrative" (HTML string) and "polic
   }
 });
 
+// ============================================================
+// NTE BUILD ASSIST — DOCX Document Generation
+// ============================================================
+
+router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
+  try {
+    const { generateNTEDocx } = await import("./nte-docx-generator.js");
+    const {
+      date, employee, narrative, policy_text, cap_level,
+      violation, attendance, flm_name, flm_email, hr_name,
+      include_cwd_page
+    } = req.body;
+
+    if (!employee || !narrative) {
+      return res.status(400).json({ error: "Employee and narrative are required" });
+    }
+
+    // Extract last name from full_name ("Last, First Middle" format)
+    const nameParts = (employee.full_name || "").split(",");
+    const lastName = nameParts[0]?.trim() || employee.full_name;
+
+    const buffer = await generateNTEDocx({
+      date: date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      employee: {
+        full_name: employee.full_name,
+        last_name: lastName,
+        ohr_id: employee.ohr_id || "",
+        actual_role: employee.actual_role || "Process Associate",
+        planning_group: employee.planning_group || "",
+        supervisor_name: employee.supervisor_name || "",
+        supervisor_email: employee.supervisor_email || "",
+        gender: employee.gender || "Male",
+      },
+      narrative: narrative || "",
+      policy_text: policy_text || "",
+      cap_level: cap_level || "CAP 0",
+      violation: violation || { code: "", type: "", category: "" },
+      attendance: attendance || [],
+      flm_name: flm_name || employee.supervisor_name || "",
+      flm_email: flm_email || employee.supervisor_email || "",
+      hr_name: hr_name || "Jocelyn Ramos",
+      include_cwd_page: include_cwd_page || false,
+    });
+
+    // Sanitize filename
+    const safeName = (employee.full_name || "Employee").replace(/[^a-zA-Z0-9 ,]/g, "").replace(/\s+/g, "_");
+    const filename = `NTE_${safeName}_${new Date().toISOString().slice(0, 10)}.docx`;
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (err: any) {
+    console.error("[IO API] NTE DOCX generation error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");

@@ -2101,7 +2101,15 @@
 - [x] Build NTE Build Assist wizard: Step 4 — Review & confirm + expected behavior + deadline + submit
 - [x] Backend: /api/io/nte-build-assist/generate endpoint with LLM integration
 - [x] Backend: Attendance data pull for Annexure A (from io_attendance via existing API)
-- [ ] Backend: DOCX generation from NTE template (future enhancement)
+- [x] Backend: DOCX generation from NTE template (nte-docx-generator.ts)
 - [x] Backend: Auto-determine CAP level from violation history (progressive escalation)
 - [x] Integration: Auto-create coaching log + NTE record on submission
 - [x] Tests: vitest updated for type-first selector pattern
+
+## NTE Build Assist — Document Draft Output (not coaching log tag)
+- [x] Analyze sample NTE documents to map exact document structure (header, body, annexure)
+- [x] Build server-side DOCX generation endpoint matching sample NTE format (/api/io/nte-build-assist/docx)
+- [x] Update wizard Step 4 to generate and download NTE document draft ("Generate NTE Document" button)
+- [x] NTE document includes: title, employee details, incident narrative, policy violated, mandate paragraph, Article 282, boilerplate legal paragraphs, signature blocks, Annexure A (color-coded attendance table)
+- [x] Optional CWD acknowledgment page (checkbox in Step 4)
+- [x] DOCX generated using `docx` library with Calibri font, proper formatting, and tag color-coding
