@@ -2205,3 +2205,7 @@
 - [x] Also delete associated NTE records for those coaching logs
 - [x] Add NTE Log styling (indigo gradient badge) to match other coaching types in the table
 - [x] Add Incident Report styling (amber gradient badge) to match other coaching types in the table
+
+## Regimen — Add Employee Visibility Restriction
+- [x] Restrict "Add Employee" button in Regimen to only owner (740045023) and assistant (740044909)
+- [x] Set this restriction as the default permission in the Permissions tab for all employees (new regimen.add_employee key)

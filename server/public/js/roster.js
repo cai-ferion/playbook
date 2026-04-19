@@ -1191,9 +1191,10 @@ async function rosterFetchEmployees() {
     ROSTER.isOwner = u.open_id === '740045023' || u.ohr_id === '740045023';
   } catch(e) { ROSTER.isOwner = false; }
 
-  // Show/hide add button
+  // Show/hide add button — separate permission from edit
+  ROSTER.canAdd = !!perms['regimen.add_employee'];
   const addBtn = document.getElementById('roster-add-btn');
-  if (addBtn) addBtn.style.display = ROSTER.canEdit ? '' : 'none';
+  if (addBtn) addBtn.style.display = ROSTER.canAdd ? '' : 'none';
 
   // Show/hide Sync to Sheet button (WFM users + admins with sync permission)
   const syncSheetBtn = document.getElementById('roster-sync-sheet-btn');

@@ -53,6 +53,7 @@ const PERM_GROUPS = [
       { key: 'nav.regimen', label: 'Regimen (Roster view)' },
       { key: 'regimen.onboarding_tab', label: 'Onboarding Tab' },
       { key: 'regimen.permissions_tab', label: 'Permissions Tab' },
+      { key: 'regimen.add_employee', label: 'Add Employee' },
       { key: 'regimen.edit_employee', label: 'Edit Employee Records' },
       { key: 'regimen.export_csv', label: 'Export CSV' },
       { key: 'regimen.full_columns', label: 'Full Column Access' },
@@ -367,6 +368,7 @@ function computeRoleDefaults(role, ohrId) {
     b['nav.compass'] = true;
     b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
+    b['regimen.add_employee'] = true;
   }
   if (ohrId === '703212987') b['regimen.edit_employee'] = true;
   return b;

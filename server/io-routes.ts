@@ -3233,7 +3233,7 @@ const ALL_PERMISSION_KEYS = [
   'anchor.risk_intelligence',
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
   'helm.analytics',
-  'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.edit_employee', 'regimen.export_csv', 'regimen.full_columns',
+  'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee', 'regimen.export_csv', 'regimen.full_columns',
 ];
 
 // Role-based defaults — used as fallback when no DB row exists
@@ -3261,6 +3261,7 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
     b['nav.compass'] = true;
     b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
+    b['regimen.add_employee'] = true;
   }
   if (ohrId === '703212987') b['regimen.edit_employee'] = true;
   return b;
