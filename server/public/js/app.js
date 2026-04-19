@@ -594,9 +594,14 @@ async function handleLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', details: 'WFM shared-credential login' })
     }).catch(() => {});
-    // Hide Alerts tab for WFM
+    // Hide Alerts tab and force Menu mode for WFM
     var alertsToggle = document.getElementById('sidebar-toggle-notif');
     if (alertsToggle) alertsToggle.style.display = 'none';
+    // Switch sidebar to Menu (nav) mode — hides notification panel, shows nav
+    if (typeof setSidebarMode === 'function') setSidebarMode('nav');
+    // Also hide the entire mode toggle bar since WFM only has Menu
+    var modeToggle = document.getElementById('sidebar-mode-toggle');
+    if (modeToggle) modeToggle.style.display = 'none';
     // Load data, init filter bar, and route to Input Portal
     if (typeof forceSync === 'function') await forceSync();
     if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
@@ -797,9 +802,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentUser.permissions = { 'nav.anchor': true, 'anchor.download_csv': true };
         sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
         applyNavPermissions(currentUser);
-        // Hide Alerts tab for WFM
+        // Hide Alerts tab and force Menu mode for WFM
         var alertsToggle2 = document.getElementById('sidebar-toggle-notif');
         if (alertsToggle2) alertsToggle2.style.display = 'none';
+        if (typeof setSidebarMode === 'function') setSidebarMode('nav');
+        var modeToggle2 = document.getElementById('sidebar-mode-toggle');
+        if (modeToggle2) modeToggle2.style.display = 'none';
         if (typeof forceSync === 'function') await forceSync();
         if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
         switchView('input');

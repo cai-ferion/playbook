@@ -2083,3 +2083,7 @@
 ## WFM Session Log — DB Fix
 - [x] Fix wfm_session_log table: recreated via MySQL wire protocol (was originally created via Supabase SQL editor in PostgreSQL syntax, invisible to MySQL wire protocol)
 - [x] Drizzle ORM insert/select now works correctly for wfm_session_log
+
+## WFM User — Force Menu Tab & Hide Alerts Panel
+- [x] WFM login: force sidebar to Menu tab (not Alerts) and hide entire Alerts panel/toggle
+- [x] WFM session restore: same — default to Menu tab, hide Alerts
