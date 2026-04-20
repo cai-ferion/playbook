@@ -732,6 +732,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         startIdleTimer();
         switchView('input');
       } else {
+        // ── Prospective cascade: Re-fetch employee profile from DB on session restore ──
+        // This ensures currentUser always has the latest supervisor, planning group, role, etc.
+        try {
+          const profileRes = await fetch(`${IO_API_BASE}/employees?ohr_id=${encodeURIComponent(currentUser.ohr_id)}`);
+          const profileData = await profileRes.json();
+          if (Array.isArray(profileData) && profileData.length > 0) {
+            const emp = profileData[0];
+            currentUser.full_name = emp.full_name || currentUser.full_name;
+            currentUser.actual_role = emp.actual_role || currentUser.actual_role;
+            currentUser.planning_group = emp.planning_group || '';
+            currentUser.complete_planning_group = emp.complete_planning_group || '';
+            currentUser.actualPlanningGroup = emp.planning_group || '';
+            currentUser.supervisor_name = emp.supervisor_name || '';
+            currentUser.employement_status = emp.employement_status || currentUser.employement_status;
+          }
+        } catch (profileErr) {
+          console.warn('[Session] Failed to refresh employee profile on restore:', profileErr);
+        }
+
         // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
         try {
           const permRes2 = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
@@ -1143,6 +1162,28 @@ async function loadAllDataForAlerts() {
 async function forceSync() {
   showProgressBar('Refreshing Data...');
   try {
+    // Prospective cascade: refresh employee profile from DB on every data sync
+    // Ensures currentUser has latest supervisor, planning group, role, etc.
+    if (currentUser && currentUser.ohr_id && currentUser.ohr_id !== 'WFM') {
+      try {
+        const profRes = await fetch(`${IO_API_BASE}/employees?ohr_id=${encodeURIComponent(currentUser.ohr_id)}`);
+        const profData = await profRes.json();
+        if (Array.isArray(profData) && profData.length > 0) {
+          const emp = profData[0];
+          currentUser.full_name = emp.full_name || currentUser.full_name;
+          currentUser.actual_role = emp.actual_role || currentUser.actual_role;
+          currentUser.planning_group = emp.planning_group || '';
+          currentUser.complete_planning_group = emp.complete_planning_group || '';
+          currentUser.actualPlanningGroup = emp.planning_group || '';
+          currentUser.supervisor_name = emp.supervisor_name || '';
+          currentUser.employement_status = emp.employement_status || currentUser.employement_status;
+          sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+        }
+      } catch (profErr) {
+        console.warn('[Session] Failed to refresh employee profile on sync:', profErr);
+      }
+    }
+
     // Smart refresh: only re-fetch the currently loaded date ranges
     // and update changed rows instead of reloading everything
     const loadedRanges = appState.loadedRanges;

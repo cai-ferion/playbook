@@ -184,7 +184,9 @@ function renderCompactRow(item) {
   var idx = item.originalIndex;
   var locked = isRowLocked(r);
   var isEdited = appState.pendingEdits[idx] !== undefined;
-  var isSelected = bulkState.selected.has(idx);
+  var isSelected = (typeof serverPagState !== 'undefined' && serverPagState.enabled)
+    ? bulkState.selected.has(r._id)
+    : bulkState.selected.has(idx);
   var isExpanded = compactState.expandedId === r._id;
 
   var rowClasses = 'compact-row';
@@ -484,13 +486,19 @@ window.toggleSelectionMode = function() {
 };
 
 window.compactToggleSelect = function(idx, rowEl) {
-  if (bulkState.selected.has(idx)) {
-    bulkState.selected.delete(idx);
+  // In server-side mode, resolve the _id for stable selection
+  var selKey = idx;
+  if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+    var rec = appState.records[idx];
+    if (rec && rec._id) selKey = rec._id;
+  }
+  if (bulkState.selected.has(selKey)) {
+    bulkState.selected.delete(selKey);
     rowEl.classList.remove('row-selected');
     var cb = rowEl.querySelector('.compact-checkbox');
     if (cb) cb.checked = false;
   } else {
-    bulkState.selected.add(idx);
+    bulkState.selected.add(selKey);
     rowEl.classList.add('row-selected');
     var cb2 = rowEl.querySelector('.compact-checkbox');
     if (cb2) cb2.checked = true;
@@ -500,20 +508,21 @@ window.compactToggleSelect = function(idx, rowEl) {
 
 window.compactSelectAll = function() {
   // Select all non-locked rows in current filtered data
-  var items;
-  if (serverPagState.enabled) {
-    items = (serverPagState.rows || []).map(function(r) {
-      for (var i = 0; i < appState.records.length; i++) {
-        if (appState.records[i]._id === r._id) return { record: r, originalIndex: i };
+  if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+    // Server-side mode: select by _id from current page rows
+    var rows = serverPagState.rows || [];
+    for (var si = 0; si < rows.length; si++) {
+      if (rows[si] && rows[si]._id && !isRowLocked(rows[si])) {
+        bulkState.selected.add(rows[si]._id);
       }
-      return null;
-    }).filter(Boolean);
+    }
   } else {
-    items = appState._filteredData || [];
-  }
-  for (var i = 0; i < items.length; i++) {
-    if (!isRowLocked(items[i].record)) {
-      bulkState.selected.add(items[i].originalIndex);
+    // Client-side mode: select by originalIndex
+    var items = appState._filteredData || [];
+    for (var i = 0; i < items.length; i++) {
+      if (!isRowLocked(items[i].record)) {
+        bulkState.selected.add(items[i].originalIndex);
+      }
     }
   }
   renderCompactTable();
@@ -543,10 +552,23 @@ window.fcbApplyTag = async function() {
   if (selectedIds.length > 50) { showToast('Bulk editing is limited to 50 rows at a time', 'error'); return; }
 
   var recordIds = [];
-  for (var si = 0; si < selectedIds.length; si++) {
-    var record = appState.records[selectedIds[si]];
-    if (record && record._id && !isRowLocked(record)) {
-      recordIds.push(record._id);
+  if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+    // Server-side mode: selectedIds are _id strings
+    for (var si = 0; si < selectedIds.length; si++) {
+      var rid = selectedIds[si];
+      var record = (serverPagState.rows || []).find(function(r) { return r._id === rid; })
+        || appState.records.find(function(r) { return r._id === rid; });
+      if (record && !isRowLocked(record)) {
+        recordIds.push(rid);
+      }
+    }
+  } else {
+    // Client-side mode: selectedIds are indices
+    for (var si = 0; si < selectedIds.length; si++) {
+      var record = appState.records[selectedIds[si]];
+      if (record && record._id && !isRowLocked(record)) {
+        recordIds.push(record._id);
+      }
     }
   }
   if (recordIds.length === 0) { showToast('No editable rows in selection', 'info'); return; }
@@ -568,11 +590,14 @@ window.fcbApplyTag = async function() {
     });
     var result = await resp.json();
     if (result.ok) {
-      for (var si2 = 0; si2 < selectedIds.length; si2++) {
-        if (appState.records[selectedIds[si2]] && !isRowLocked(appState.records[selectedIds[si2]])) {
-          appState.records[selectedIds[si2]].tag = tag;
+      // Update local state with new tag values
+      for (var ri2 = 0; ri2 < recordIds.length; ri2++) {
+        var taggedId = recordIds[ri2];
+        var localRec = appState.records.find(function(r) { return r._id === taggedId; });
+        if (localRec && !isRowLocked(localRec)) {
+          localRec.tag = tag;
           if (tag !== 'UPL' && tag !== 'LATE') {
-            appState.records[selectedIds[si2]].uplReason = '';
+            localRec.uplReason = '';
           }
         }
       }
