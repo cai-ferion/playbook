@@ -1066,6 +1066,10 @@
               <input type="text" id="disputes-search-input" placeholder="Search by name, ID, or session goal..." oninput="disputesFilterCards()">
             </div>
             <span class="disputes-filter-count" id="disputes-filter-count"></span>
+            <div id="disputes-qa-toggle" class="disputes-qa-toggle" style="display:none;">
+              <button class="disputes-toggle-btn active" data-mode="all" onclick="disputesSetQaMode('all')">All Disputes</button>
+              <button class="disputes-toggle-btn" data-mode="mine" onclick="disputesSetQaMode('mine')">My Disputes</button>
+            </div>
           </div>
           <div id="compass-kanban-board" class="kanban-board"></div>
           <!-- Disputes Detail Overlay -->

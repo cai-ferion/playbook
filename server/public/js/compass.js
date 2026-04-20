@@ -259,9 +259,10 @@ function compassApplyFilters() {
     COMPASS.filteredGiven = [];
     COMPASS.filteredReceived = allData.filter(l => l.coachee_ohr === currentUser.ohr_id);
   } else if (role === 'Team Lead') {
-    // Team Leaders — see logs filed to their team (anyone whose supervisor_name matches
-    // the TL's full_name) regardless of who the coach is, plus logs filed to them personally.
-    // Build set of OHRs in this TL's team
+    // Team Leaders — see logs where:
+    //   1. Coachee is one of their agents (supervisor_name === TL full_name)
+    //   2. They are the coach (logs they sent)
+    //   3. They are the coachee (logs sent to them)
     const myName = currentUser.full_name;
     const teamOhrs = new Set();
     if (COMPASS.employees && COMPASS.employees.length) {
@@ -270,12 +271,14 @@ function compassApplyFilters() {
       });
     }
     teamOhrs.add(currentUser.ohr_id); // include self
-    COMPASS.filteredGiven = allData.filter(l => teamOhrs.has(l.coachee_ohr));
+    // Given = logs where coachee is in team OR coach is me
+    COMPASS.filteredGiven = allData.filter(l =>
+      teamOhrs.has(l.coachee_ohr) || l.coach_ohr === currentUser.ohr_id
+    );
     COMPASS.filteredReceived = allData.filter(l => l.coachee_ohr === currentUser.ohr_id);
   } else if (role === 'Operational SME') {
-    // SMEs — see logs filed to their TL's team (supervisor_name of the SME is a TL;
-    // the TL's team = all employees whose supervisor_name matches that TL name),
-    // plus logs filed to them personally.
+    // SMEs — same as TL but "their agents" = agents under their supervisor's team.
+    // SME's supervisor_name points to a TL; team = all employees whose supervisor_name matches that TL.
     const myTlName = currentUser.supervisor_name || '';
     const teamOhrs = new Set();
     if (COMPASS.employees && COMPASS.employees.length && myTlName) {
@@ -284,7 +287,10 @@ function compassApplyFilters() {
       });
     }
     teamOhrs.add(currentUser.ohr_id); // include self
-    COMPASS.filteredGiven = allData.filter(l => teamOhrs.has(l.coachee_ohr));
+    // Given = logs where coachee is in team OR coach is me
+    COMPASS.filteredGiven = allData.filter(l =>
+      teamOhrs.has(l.coachee_ohr) || l.coach_ohr === currentUser.ohr_id
+    );
     COMPASS.filteredReceived = allData.filter(l => l.coachee_ohr === currentUser.ohr_id);
   } else if (role === 'Quality & Policy Expert' || role === 'Trainer') {
     // QAs & Trainers — see logs they filed + logs filed to them
@@ -602,6 +608,58 @@ function compassRenderKanban() {
   const searchTerm = (document.getElementById('disputes-search-input')?.value || '').toLowerCase().trim();
 
   let qaLogs = COMPASS.logs.filter(l => l.coaching_type === 'QA Feedback');
+
+  // ---- Role-based data scoping for Disputes Area ----
+  const role = currentUser ? currentUser.actual_role : '';
+  const isOwner = currentUser && currentUser.ohr_id === '740045023';
+  const qaMode = COMPASS._disputesQaMode || 'all';
+
+  if (isOwner || role === 'Manager') {
+    // Managers see all disputes — no filter
+  } else if (role === 'Quality & Policy Expert') {
+    // QAs: toggle between "All" and "Mine" (where they are the coach)
+    if (qaMode === 'mine') {
+      qaLogs = qaLogs.filter(l => l.coach_ohr === currentUser.ohr_id);
+    }
+    // 'all' mode = no additional filter
+  } else if (role === 'Team Lead') {
+    // TLs: coachee is their agent OR they are sme_joiner/sme_joiner_2 (matched by name)
+    const myName = currentUser.full_name;
+    const teamOhrs = new Set();
+    if (COMPASS.employees && COMPASS.employees.length) {
+      COMPASS.employees.forEach(e => {
+        if (e.supervisor_name === myName) teamOhrs.add(e.ohr_id);
+      });
+    }
+    qaLogs = qaLogs.filter(l =>
+      teamOhrs.has(l.coachee_ohr) ||
+      (l.sme_joiner || '') === myName ||
+      (l.sme_joiner_2 || '') === myName
+    );
+  } else if (role === 'Operational SME') {
+    // SMEs: same as TL but team = supervisor's team
+    const myTlName = currentUser.supervisor_name || '';
+    const myName = currentUser.full_name;
+    const teamOhrs = new Set();
+    if (COMPASS.employees && COMPASS.employees.length && myTlName) {
+      COMPASS.employees.forEach(e => {
+        if (e.supervisor_name === myTlName) teamOhrs.add(e.ohr_id);
+      });
+    }
+    qaLogs = qaLogs.filter(l =>
+      teamOhrs.has(l.coachee_ohr) ||
+      (l.sme_joiner || '') === myName ||
+      (l.sme_joiner_2 || '') === myName
+    );
+  } else if (currentUser) {
+    // Fallback for other non-agent roles: see disputes where they are involved
+    qaLogs = qaLogs.filter(l =>
+      l.coach_ohr === currentUser.ohr_id ||
+      l.coachee_ohr === currentUser.ohr_id ||
+      (l.sme_joiner || '') === currentUser.full_name ||
+      (l.sme_joiner_2 || '') === currentUser.full_name
+    );
+  }
 
   // Apply search filter
   if (searchTerm) {
@@ -1493,7 +1551,7 @@ function compassToggleAddMenu() {
     return;
   }
 
-  const types = [
+  const allTypes = [
     { id: 'General Coaching', icon: '\u{1F4AC}', label: 'General Coaching', desc: 'One-on-one coaching session', accent: '#3B82F6' },
     { id: 'Follow-Up Session', icon: '\u{1F504}', label: 'Follow-Up Session', desc: 'Continue a previous session', accent: '#8B5CF6' },
     { id: 'Group Coaching', icon: '\u{1F465}', label: 'Group Coaching', desc: 'Session with multiple coachees', accent: '#10B981' },
@@ -1503,6 +1561,28 @@ function compassToggleAddMenu() {
     { id: 'ZTP Coaching', icon: '\u{1F512}', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
     { id: 'NTE Build Assist', icon: '\u{1F4C4}', label: 'NTE Build Assist', desc: 'AI-powered NTE builder', accent: '#6366F1', special: true }
   ];
+
+  // Role-based coaching type restrictions
+  const role = currentUser ? currentUser.actual_role : '';
+  const isOwner = currentUser && currentUser.ohr_id === '740045023';
+  let types;
+  if (isOwner || role === 'Manager') {
+    types = allTypes; // Managers see all types
+  } else if (role === 'Quality & Policy Expert') {
+    // QAs: only QA Feedback, ZTP Coaching, Follow-Up Session (+ NTE Build Assist for NTE Log)
+    const qaAllowed = ['QA Feedback', 'ZTP Coaching', 'Follow-Up Session', 'NTE Build Assist'];
+    types = allTypes.filter(t => qaAllowed.includes(t.id));
+  } else if (role === 'Operational SME') {
+    // SMEs: all EXCEPT QA Feedback and Triad Coaching
+    const smeExcluded = ['QA Feedback', 'Triad Coaching'];
+    types = allTypes.filter(t => !smeExcluded.includes(t.id));
+  } else if (role === 'Team Lead') {
+    // TLs: all EXCEPT QA Feedback
+    types = allTypes.filter(t => t.id !== 'QA Feedback');
+  } else {
+    // Trainers, Content Reviewers, etc. — all except QA Feedback (safe default)
+    types = allTypes.filter(t => t.id !== 'QA Feedback');
+  }
 
   menu.innerHTML = types.map(t => `
     <div onclick="compassAddMenuSelect('${escapeAttr(t.id)}')" style="
@@ -2507,9 +2587,32 @@ async function initCompass() {
   compassApplyFilters();
 }
 
+// QA toggle handler for Disputes Area
+function disputesSetQaMode(mode) {
+  COMPASS._disputesQaMode = mode;
+  // Update toggle button active states
+  document.querySelectorAll('#disputes-qa-toggle .disputes-toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  // Reset pagination and re-render
+  COMPASS._kanbanPages = {};
+  compassRenderKanban();
+}
+
 async function initCompassDisputes() {
   await compassFetchEmployees();
   await compassFetchLogs();
+
+  // Show QA toggle only for QA role
+  const role = currentUser ? currentUser.actual_role : '';
+  const isOwner = currentUser && currentUser.ohr_id === '740045023';
+  const qaToggle = document.getElementById('disputes-qa-toggle');
+  if (qaToggle) {
+    qaToggle.style.display = (role === 'Quality & Policy Expert') ? 'inline-flex' : 'none';
+  }
+  // Default QA mode
+  COMPASS._disputesQaMode = 'all';
+
   compassRenderKanban();
 }
 

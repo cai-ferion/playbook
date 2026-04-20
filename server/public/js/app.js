@@ -1097,6 +1097,9 @@ function applyNavPermissions(user) {
   // Regimen
   vis('nav-regimen', 'nav.regimen');
 
+  // Compass sub-sections
+  vis('nav-compass-disputes', 'compass.disputes');
+
   // Anchor sub-sections
   vis('nav-dashboard', 'anchor.dashboard');
   vis('nav-alerts', 'anchor.risk_intelligence');

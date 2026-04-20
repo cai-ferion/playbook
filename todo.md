@@ -2236,3 +2236,28 @@
 - [x] Polish dispute trail — better visual differentiation between actors
 - [x] Keep and polish FLIP animations for card movement
 - [x] Clean up inline styles throughout disputes code (overlay.style.display → classList.add/remove('active'))
+
+## Role-Based Visibility & Data Scoping — Compass
+### Navigation Visibility
+- [x] Coaching Profile: visible to ALL employees (agents included)
+- [x] Disputes Area: visible to all NON-agents (TL, SME, QA, Manager)
+
+### Coaching Profile — Data Scoping
+- [x] Agent: only see coaching logs where they are the coachee
+- [x] TL: see logs where they are coachee, coach, or coachee is one of their agents
+- [x] SME: same as TL but "their agents" = agents under their supervisor's team
+- [x] QA: see logs where they are coachee or coach
+- [x] Manager: see all coaching logs
+
+### Coaching Profile — Add Button Type Restrictions
+- [x] Agent: no Add button at all
+- [x] TL: all types EXCEPT QA Feedback
+- [x] SME: all types EXCEPT QA Feedback and Triad Coaching
+- [x] QA: only QA Feedback, ZTP Infraction, and Follow Up Session
+- [x] Manager: all types
+
+### Disputes Area — Data Scoping
+- [x] TL: only cards where coachee is their agent OR they are Support Joiner 1/2
+- [x] SME: same as TL (coachee under supervisor's team OR Support Joiner 1/2)
+- [x] QA: segmented toggle "All Disputes" (default) vs "My Disputes" (where they are the coach)
+- [x] Manager: see all disputes

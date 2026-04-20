@@ -1387,3 +1387,32 @@
   50% { box-shadow: 0 0 16px 4px rgba(99,102,241,0.2); }
   100% { box-shadow: none; }
 }
+
+/* ===== QA Toggle for Disputes Area ===== */
+.disputes-qa-toggle {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+.disputes-toggle-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted, #64748b);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.disputes-toggle-btn:hover {
+  background: var(--bg-hover, #f1f5f9);
+}
+.disputes-toggle-btn.active {
+  background: var(--accent, #3B82F6);
+  color: #fff;
+}

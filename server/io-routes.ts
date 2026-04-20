@@ -3234,13 +3234,14 @@ const ALL_PERMISSION_KEYS = [
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
   'helm.analytics',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee', 'regimen.export_csv', 'regimen.full_columns',
+  'compass.disputes',
 ];
 
 // Role-based defaults — used as fallback when no DB row exists
 function getPermissionDefaults(role: string, ohrId: string): Record<string, boolean> {
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
-  if (role === 'Agent') { b['nav.helm'] = true; return b; }
+  if (role === 'Agent') { b['nav.helm'] = true; b['nav.compass'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
   b['anchor.dashboard'] = true;
@@ -3250,10 +3251,11 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   b['nav.helm'] = true;
   b['nav.regimen'] = true;
   b['regimen.export_csv'] = true;
+  b['nav.compass'] = true;
+  b['compass.disputes'] = true;
   if (role === 'Team Lead') b['anchor.edit_attendance'] = true;
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
-    b['nav.compass'] = true;
     b['helm.analytics'] = true;
   }
   if (ohrId === '740044909') {
