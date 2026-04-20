@@ -960,6 +960,7 @@ function renderTableRow(item) {
 
 function pageToggleAll(checked) {
   // Select/deselect ALL tickable (non-locked) rows on the current page
+  bulkState.selectAllMatching = false; // reset cross-page flag
   if (checked) {
     if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
       // Server-side mode: select by _id from current page rows
@@ -969,6 +970,8 @@ function pageToggleAll(checked) {
           bulkState.selected.add(r._id);
         }
       }
+      // Show "Select all X matching" banner if total exceeds current page
+      showSelectAllBanner(serverPagState.total, serverPagState.rows.length);
     } else {
       // Client-side mode: select by originalIndex from filtered data
       var allFiltered = appState._filteredData || [];
@@ -977,12 +980,65 @@ function pageToggleAll(checked) {
           bulkState.selected.add(allFiltered[fi].originalIndex);
         }
       }
+      hideSelectAllBanner();
     }
   } else {
     bulkState.selected.clear();
+    hideSelectAllBanner();
   }
   window.renderInputTable();
 }
+
+// ===== Cross-Page Select All Banner =====
+
+function showSelectAllBanner(totalMatching, pageCount) {
+  var banner = document.getElementById('select-all-banner');
+  if (!banner) return;
+  if (totalMatching <= pageCount) {
+    // All matching records fit on one page, no banner needed
+    banner.style.display = 'none';
+    return;
+  }
+  var bannerText = document.getElementById('select-all-banner-text');
+  var bannerLink = document.getElementById('select-all-banner-link');
+  var bannerUndo = document.getElementById('select-all-banner-undo');
+  var bannerTotal = document.getElementById('select-all-banner-total');
+  if (bannerText) bannerText.innerHTML = 'All <strong>' + pageCount + '</strong> records on this page are selected.';
+  if (bannerTotal) bannerTotal.textContent = formatNumber(totalMatching);
+  if (bannerLink) bannerLink.style.display = '';
+  if (bannerUndo) bannerUndo.style.display = 'none';
+  banner.classList.remove('banner-active');
+  banner.style.display = 'flex';
+}
+
+function hideSelectAllBanner() {
+  var banner = document.getElementById('select-all-banner');
+  if (banner) banner.style.display = 'none';
+  bulkState.selectAllMatching = false;
+}
+
+window.selectAllMatchingRecords = function() {
+  bulkState.selectAllMatching = true;
+  var banner = document.getElementById('select-all-banner');
+  var bannerText = document.getElementById('select-all-banner-text');
+  var bannerLink = document.getElementById('select-all-banner-link');
+  var bannerUndo = document.getElementById('select-all-banner-undo');
+  var total = serverPagState.total || 0;
+  if (bannerText) bannerText.innerHTML = 'All <strong>' + formatNumber(total) + '</strong> matching records are selected.';
+  if (bannerLink) bannerLink.style.display = 'none';
+  if (bannerUndo) bannerUndo.style.display = '';
+  if (banner) banner.classList.add('banner-active');
+  updateBulkToolbar();
+  if (typeof updateFloatingCommandBar === 'function') updateFloatingCommandBar();
+};
+
+window.undoSelectAllMatching = function() {
+  bulkState.selectAllMatching = false;
+  // Re-show the "select all" link
+  showSelectAllBanner(serverPagState.total, (serverPagState.rows || []).length);
+  updateBulkToolbar();
+  if (typeof updateFloatingCommandBar === 'function') updateFloatingCommandBar();
+};
 
 // ============================================================
 // 4. BULK SELECTION & TAGGING
@@ -990,6 +1046,7 @@ function pageToggleAll(checked) {
 
 const bulkState = {
   selected: new Set(),
+  selectAllMatching: false,  // true when user wants to tag ALL matching records across pages
 };
 
 function bulkToggleRow(idx, checked) {
@@ -1012,6 +1069,8 @@ function bulkToggleRow(idx, checked) {
 
 function bulkDeselectAll() {
   bulkState.selected.clear();
+  bulkState.selectAllMatching = false;
+  hideSelectAllBanner();
   // Uncheck header checkbox (may not exist in compact mode)
   var pageSelectAll = document.getElementById('page-select-all');
   if (pageSelectAll) pageSelectAll.checked = false;
@@ -1021,12 +1080,12 @@ function bulkDeselectAll() {
 function updateBulkToolbar() {
   var toolbar = document.getElementById('bulk-toolbar');
   var countEl = document.getElementById('bulk-count');
-  var count = bulkState.selected.size;
+  var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
 
   if (toolbar) {
     if (count > 0) {
       toolbar.style.display = 'flex';
-      if (countEl) countEl.textContent = count + ' selected';
+      if (countEl) countEl.textContent = formatNumber(count) + ' selected' + (bulkState.selectAllMatching ? ' (all matching)' : '');
     } else {
       toolbar.style.display = 'none';
     }
@@ -1049,6 +1108,67 @@ async function bulkApplyTag() {
   if (tag === '_select') { showToast('Please select a tag first', 'info'); return; }
   // tag === '' means blank/clear
 
+  // ===== Cross-page bulk tag: use filtered endpoint =====
+  if (bulkState.selectAllMatching && typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+    var totalMatching = serverPagState.total || 0;
+    if (!confirm('Apply tag to all ' + formatNumber(totalMatching) + ' matching records? This cannot be undone.')) return;
+    var applyBtn2 = document.getElementById('bulk-apply-tag-btn');
+    if (applyBtn2) { applyBtn2.disabled = true; applyBtn2.innerHTML = '<span class="btn-spinner"></span> Applying to ' + formatNumber(totalMatching) + '...'; }
+    try {
+      var user2 = typeof currentUser !== 'undefined' ? currentUser : null;
+      var dateFilter2 = omnibarState.filters['date_range'];
+      var today2 = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+      var filterPayload = {
+        log_date_gte: dateFilter2 ? dateFilter2.startDate : today2,
+        log_date_lte: dateFilter2 ? dateFilter2.endDate : today2,
+      };
+      // Build multi-value filters from omnibar state
+      var fkeys = Object.keys(omnibarState.filters);
+      for (var fki = 0; fki < fkeys.length; fki++) {
+        var ff = omnibarState.filters[fkeys[fki]];
+        if (ff.type === 'multi' && ff.values && ff.values.length > 0) {
+          var fkMap = { tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
+            actualPlanningGroup: 'planning_group_in', status: 'status_in',
+            shiftTime: 'shift_time_in', role: 'role_in' };
+          var fpk = fkMap[ff.key];
+          if (fpk) filterPayload[fpk] = ff.values.join('|');
+        }
+        if (ff.type === 'toggle' && ff.key === 'blanks') filterPayload.blanks_only = true;
+      }
+      var resp2 = await fetch(IO_API_BASE + '/attendance/bulk-tag-filtered', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tag: tag,
+          actor_ohr: user2 ? user2.ohr_id || '' : '',
+          actor_name: user2 ? user2.full_name || '' : '',
+          filters: filterPayload,
+        }),
+      });
+      var result2 = await resp2.json();
+      if (result2.ok) {
+        var tagLabel2 = tag === '' ? 'blank' : '"' + tag + '"';
+        var msg2 = 'Bulk tagged ' + result2.updated + ' of ' + result2.total + ' record(s) as ' + tagLabel2
+          + (result2.locked > 0 ? ' (' + result2.locked + ' locked rows skipped)' : '')
+          + (result2.skipped > 0 ? ' (' + result2.skipped + ' already tagged)' : '');
+        showToast(msg2, 'success');
+        bulkDeselectAll();
+        // Re-fetch current page
+        if (typeof serverPageChange === 'function') {
+          try { await serverPageChange(appState.inputPage); } catch (e) { window.renderInputTable(); }
+        } else { window.renderInputTable(); }
+      } else {
+        showToast('Bulk tag failed: ' + (result2.error || 'Unknown error'), 'error');
+      }
+    } catch (err2) {
+      showToast('Bulk tag failed: ' + err2.message, 'error');
+    } finally {
+      if (applyBtn2) { applyBtn2.disabled = false; applyBtn2.innerHTML = 'Apply Tag'; }
+    }
+    return;
+  }
+
+  // ===== Standard per-ID bulk tag =====
   var selectedIds = [...bulkState.selected];
   if (selectedIds.length === 0) { showToast('No rows selected', 'info'); return; }
   if (selectedIds.length > 50) { showToast('Bulk editing is limited to 50 rows at a time', 'error'); return; }

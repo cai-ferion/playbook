@@ -3844,6 +3844,38 @@ body {
    BULK SELECTION TOOLBAR
    ============================================================ */
 
+/* Select All Matching Banner */
+.select-all-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary-bg);
+  border: 1px solid rgba(0, 181, 226, 0.3);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  animation: chipFadeIn 200ms ease;
+}
+
+.select-all-banner a {
+  color: var(--primary-dark);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.select-all-banner a:hover {
+  color: var(--primary);
+}
+
+.select-all-banner.banner-active {
+  background: rgba(0, 181, 226, 0.15);
+  border-color: var(--primary);
+}
+
 .bulk-toolbar {
   display: flex;
   align-items: center;

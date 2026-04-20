@@ -1217,6 +1217,96 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/io/attendance/bulk-tag-filtered - bulk tag ALL records matching current filters
+router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { tag, actor_ohr, actor_name, filters } = req.body;
+    if (tag === undefined || tag === null) return res.status(400).json({ error: "tag is required" });
+    if (!filters) return res.status(400).json({ error: "filters object is required" });
+
+    const { log_date_gte, log_date_lte, tag_in, agent_in, flm_in,
+            planning_group_in, status_in, shift_time_in, role_in, blanks_only } = filters;
+
+    const conditions: any[] = [];
+    // Exclude Managers
+    conditions.push(sql`${ioAttendance.ohr_id} NOT IN (SELECT ohr_id FROM io_employees WHERE actual_role = 'Manager')`);
+    if (log_date_gte) conditions.push(gte(ioAttendance.log_date, String(log_date_gte)));
+    if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
+    if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
+    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
+    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
+    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
+    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
+    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (blanks_only) {
+      conditions.push(or(
+        sql`${ioAttendance.tag} IS NULL`,
+        eq(ioAttendance.tag, ""),
+        eq(ioAttendance.tag, "\u2014")
+      ));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Fetch all matching record IDs and their current tags + dates
+    let q = db.select({
+      id: ioAttendance.id,
+      tag: ioAttendance.tag,
+      log_date: ioAttendance.log_date,
+    }).from(ioAttendance);
+    if (where) q = q.where(where) as any;
+    const allRecords = await q;
+
+    const now = new Date().toISOString();
+    let updated = 0;
+    let locked = 0;
+    let skipped = 0;
+
+    for (const record of allRecords) {
+      // Date-based lock (except admin)
+      if (actor_ohr !== "740045023") {
+        const nowD = new Date();
+        const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
+        const phtHourD = phtD.getUTCHours();
+        const yesterdayBulk = new Date(phtD);
+        yesterdayBulk.setUTCDate(yesterdayBulk.getUTCDate() - 1);
+        const yesterdayStr = yesterdayBulk.toISOString().slice(0, 10);
+        const recDate = record.log_date || '';
+        if (recDate < yesterdayStr) { locked++; continue; }
+        if (recDate === yesterdayStr && phtHourD >= 11) { locked++; continue; }
+      }
+
+      const oldTag = record.tag || "";
+      if (oldTag === tag) { skipped++; continue; }
+
+      await db.update(ioAttendance).set({ tag }).where(eq(ioAttendance.id, record.id));
+
+      // Audit log
+      await db.insert(ioAuditLog).values({
+        record_type: "attendance",
+        record_id: record.id,
+        action: "bulk_tag_filtered",
+        field_name: "tag",
+        old_value: oldTag,
+        new_value: tag,
+        actor_ohr: actor_ohr || "",
+        actor_name: actor_name || "",
+        timestamp: now,
+      });
+      updated++;
+    }
+
+    res.json({ ok: true, updated, locked, skipped, total: allRecords.length });
+  } catch (err: any) {
+    console.error("[IO API] attendance bulk-tag-filtered error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // Helm — Tasks CRUD
 // ============================================================

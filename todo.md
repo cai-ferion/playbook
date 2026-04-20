@@ -2321,3 +2321,5 @@
 ## Prospective Cascade
 - [x] Audit and ensure all new rows and displays pull employee data from live io_employees, not stale copies
 - [x] Fix bulk tagging bug — "Bulk tagged 0 record(s)" when employees do bulk changes in Input Portal
+## Bulk Tag Across Pages
+- [x] Add "Select all X matching records" banner when all rows on current page are selected, to extend bulk tag across all filtered pages

@@ -507,6 +507,7 @@ window.compactToggleSelect = function(idx, rowEl) {
 };
 
 window.compactSelectAll = function() {
+  bulkState.selectAllMatching = false; // reset cross-page flag
   // Select all non-locked rows in current filtered data
   if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
     // Server-side mode: select by _id from current page rows
@@ -516,6 +517,10 @@ window.compactSelectAll = function() {
         bulkState.selected.add(rows[si]._id);
       }
     }
+    // Show cross-page banner if total exceeds current page
+    if (typeof showSelectAllBanner === 'function') {
+      showSelectAllBanner(serverPagState.total, rows.length);
+    }
   } else {
     // Client-side mode: select by originalIndex
     var items = appState._filteredData || [];
@@ -524,6 +529,7 @@ window.compactSelectAll = function() {
         bulkState.selected.add(items[i].originalIndex);
       }
     }
+    if (typeof hideSelectAllBanner === 'function') hideSelectAllBanner();
   }
   renderCompactTable();
 };
@@ -531,11 +537,11 @@ window.compactSelectAll = function() {
 function updateFloatingCommandBar() {
   var bar = document.getElementById('floating-command-bar');
   if (!bar) return;
-  var count = bulkState.selected.size;
+  var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
   if (count > 0 && compactState.selectionMode) {
     bar.classList.add('visible');
     var countEl = document.getElementById('fcb-count');
-    if (countEl) countEl.textContent = count + ' selected';
+    if (countEl) countEl.textContent = formatNumber(count) + ' selected' + (bulkState.selectAllMatching ? ' (all matching)' : '');
   } else {
     bar.classList.remove('visible');
   }
@@ -547,6 +553,66 @@ window.fcbApplyTag = async function() {
   var tag = sel ? sel.value : '';
   if (tag === '_select') { showToast('Please select a tag first', 'info'); return; }
 
+  // ===== Cross-page bulk tag: use filtered endpoint =====
+  if (bulkState.selectAllMatching && typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+    var totalMatching = serverPagState.total || 0;
+    if (!confirm('Apply tag to all ' + formatNumber(totalMatching) + ' matching records? This cannot be undone.')) return;
+    var applyBtn2 = document.getElementById('fcb-apply-btn');
+    if (applyBtn2) { applyBtn2.disabled = true; applyBtn2.textContent = 'Applying...'; }
+    try {
+      var user2 = typeof currentUser !== 'undefined' ? currentUser : null;
+      var dateFilter2 = omnibarState.filters['date_range'];
+      var today2 = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+      var filterPayload = {
+        log_date_gte: dateFilter2 ? dateFilter2.startDate : today2,
+        log_date_lte: dateFilter2 ? dateFilter2.endDate : today2,
+      };
+      var fkeys = Object.keys(omnibarState.filters);
+      for (var fki = 0; fki < fkeys.length; fki++) {
+        var ff = omnibarState.filters[fkeys[fki]];
+        if (ff.type === 'multi' && ff.values && ff.values.length > 0) {
+          var fkMap = { tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
+            actualPlanningGroup: 'planning_group_in', status: 'status_in',
+            shiftTime: 'shift_time_in', role: 'role_in' };
+          var fpk = fkMap[ff.key];
+          if (fpk) filterPayload[fpk] = ff.values.join('|');
+        }
+        if (ff.type === 'toggle' && ff.key === 'blanks') filterPayload.blanks_only = true;
+      }
+      var resp2 = await fetch(IO_API_BASE + '/attendance/bulk-tag-filtered', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tag: tag,
+          actor_ohr: user2 ? user2.ohr_id || '' : '',
+          actor_name: user2 ? user2.full_name || '' : '',
+          filters: filterPayload,
+        }),
+      });
+      var result2 = await resp2.json();
+      if (result2.ok) {
+        var tagLabel2 = tag === '' ? 'blank' : '"' + tag + '"';
+        var msg2 = 'Bulk tagged ' + result2.updated + ' of ' + result2.total + ' record(s) as ' + tagLabel2
+          + (result2.locked > 0 ? ' (' + result2.locked + ' locked rows skipped)' : '')
+          + (result2.skipped > 0 ? ' (' + result2.skipped + ' already tagged)' : '');
+        showToast(msg2, 'success');
+        compactState.selectionMode = false;
+        bulkDeselectAll();
+        if (typeof serverPageChange === 'function') {
+          try { await serverPageChange(appState.inputPage); } catch (e) { renderCompactTable(); }
+        } else { renderCompactTable(); }
+      } else {
+        showToast('Bulk tag failed: ' + (result2.error || 'Unknown error'), 'error');
+      }
+    } catch (err2) {
+      showToast('Bulk tag failed: ' + err2.message, 'error');
+    } finally {
+      if (applyBtn2) { applyBtn2.disabled = false; applyBtn2.textContent = 'Apply'; }
+    }
+    return;
+  }
+
+  // ===== Standard per-ID bulk tag =====
   var selectedIds = [...bulkState.selected];
   if (selectedIds.length === 0) { showToast('No rows selected', 'info'); return; }
   if (selectedIds.length > 50) { showToast('Bulk editing is limited to 50 rows at a time', 'error'); return; }

@@ -384,6 +384,13 @@
           </div>
         </div>
 
+        <!-- Select All Matching Banner (cross-page bulk selection) -->
+        <div class="select-all-banner" id="select-all-banner" style="display:none;">
+          <span id="select-all-banner-text">All <strong>50</strong> records on this page are selected.</span>
+          <a href="#" id="select-all-banner-link" onclick="event.preventDefault(); selectAllMatchingRecords();">Select all <strong id="select-all-banner-total">0</strong> matching records</a>
+          <a href="#" id="select-all-banner-undo" style="display:none;" onclick="event.preventDefault(); undoSelectAllMatching();">Undo — select only this page</a>
+        </div>
+
         <!-- Toolbar: edit count, undo, save -->
         <div class="input-toolbar">
           <div class="input-toolbar-left">
