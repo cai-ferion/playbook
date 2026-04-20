@@ -283,7 +283,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked || isWFM) {
     tagField = '<span class="detail-readonly">' + escapeHtml(r.tag || '\u2014') + '</span>';
   } else {
-    tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
+    tagField = '<select class="detail-select" data-idx="' + idx + '" data-key="tag" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + tagOpts.map(function(t) { return '<option value="' + t + '" ' + (r.tag === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
       + '</select>';
@@ -293,7 +293,7 @@ function renderDetailPanel(r, idx, locked) {
   var reasonField;
   var canEditReason = !locked && !isWFM && (r.tag === 'UPL' || r.tag === 'LATE');
   if (canEditReason) {
-    reasonField = '<select class="detail-select" data-idx="' + idx + '" data-key="uplReason" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
+    reasonField = '<select class="detail-select" data-idx="' + idx + '" data-key="uplReason" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + UPL_REASONS.map(function(rr) { return '<option value="' + rr + '" ' + (r.uplReason === rr ? 'selected' : '') + '>' + rr + '</option>'; }).join('')
       + '</select>';
@@ -310,7 +310,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked || isWFM || (isOtMechAgent && isAfterCutoff)) {
     otField = '<span class="detail-readonly">' + escapeHtml(r.ot || '\u2014') + '</span>';
   } else {
-    otField = '<input type="number" step="0.5" min="0" class="detail-input" value="' + escapeAttr(r.ot || '') + '" data-idx="' + idx + '" data-key="ot" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">';
+    otField = '<input type="number" step="0.5" min="0" class="detail-input" value="' + escapeAttr(r.ot || '') + '" data-idx="' + idx + '" data-key="ot" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">';
   }
 
   // Remarks
@@ -318,7 +318,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked || isWFM) {
     remarksField = '<span class="detail-readonly">' + escapeHtml(r.remarks || '\u2014') + '</span>';
   } else {
-    remarksField = '<textarea class="detail-textarea" data-idx="' + idx + '" data-key="remarks" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">' + escapeHtml(r.remarks || '') + '</textarea>';
+    remarksField = '<textarea class="detail-textarea" data-idx="' + idx + '" data-key="remarks" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">' + escapeHtml(r.remarks || '') + '</textarea>';
   }
 
   // Role dropdown (per-day editable)
@@ -327,7 +327,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked || isWFM) {
     roleField = '<span class="detail-readonly">' + escapeHtml(r.role || '\u2014') + '</span>';
   } else {
-    roleField = '<select class="detail-select" data-idx="' + idx + '" data-key="role" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
+    roleField = '<select class="detail-select" data-idx="' + idx + '" data-key="role" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + ROLE_OPTIONS.map(function(ro) { return '<option value="' + ro + '" ' + (r.role === ro ? 'selected' : '') + '>' + ro + '</option>'; }).join('')
       + '</select>';
@@ -339,7 +339,7 @@ function renderDetailPanel(r, idx, locked) {
   if (locked || isWFM) {
     pgField = '<span class="detail-readonly">' + escapeHtml(r.actualPlanningGroup || '\u2014') + '</span>';
   } else {
-    pgField = '<select class="detail-select" data-idx="' + idx + '" data-key="actualPlanningGroup" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
+    pgField = '<select class="detail-select" data-idx="' + idx + '" data-key="actualPlanningGroup" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + PG_OPTIONS.map(function(pg) { return '<option value="' + pg + '" ' + (r.actualPlanningGroup === pg ? 'selected' : '') + '>' + pg + '</option>'; }).join('')
       + '</select>';

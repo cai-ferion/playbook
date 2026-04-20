@@ -1544,7 +1544,7 @@ function renderInputTable() {
     tbody.innerHTML = pageItems.map(item => {
       const record = item.record;
       const globalIdx = item.originalIndex;
-      const isEdited = appState.pendingEdits[globalIdx] !== undefined;
+      const isEdited = appState.pendingEdits[record._id] !== undefined || appState.pendingEdits[globalIdx] !== undefined;
       const locked = isRowLocked(record);
       const rowClass = (isEdited ? 'row-edited' : '') + (locked ? ' row-locked' : '');
 
@@ -1578,7 +1578,7 @@ function renderInputTable() {
               return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
             }
             // OT editable even on locked row (within current week)
-            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="—"></td>`;
+            return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" data-record-id="${escapeAttr(record._id || '')}" onchange="handleCellEdit(this)" placeholder="—"></td>`;
           }
           // Outside current week and row is locked: show as readonly
           return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)}</td>`;
@@ -1596,7 +1596,7 @@ function renderInputTable() {
         }
 
         if (col.key === 'tag') {
-          return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="tag" onchange="handleCellEdit(this)">
+          return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="tag" data-record-id="${escapeAttr(record._id || '')}" onchange="handleCellEdit(this)">
             <option value="" ${!val ? 'selected' : ''}>&mdash;</option>
             ${TAG_OPTIONS.map(t => `<option value="${t}" ${val === t ? 'selected' : ''}>${t}</option>`).join('')}
           </select></td>`;
@@ -1604,7 +1604,7 @@ function renderInputTable() {
         if (col.key === 'uplReason') {
           const canEdit = record.tag === 'UPL' || record.tag === 'LATE';
           if (!canEdit) return `<td class="cell-readonly cell-na ${widthClass}">&mdash;</td>`;
-          return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="uplReason" onchange="handleCellEdit(this)">
+          return `<td class="cell-editable ${widthClass}"><select class="cell-select" data-idx="${globalIdx}" data-key="uplReason" data-record-id="${escapeAttr(record._id || '')}" onchange="handleCellEdit(this)">
             <option value="">&mdash;</option>
             ${UPL_REASONS.map(r => `<option value="${r}" ${val === r ? 'selected' : ''}>${r}</option>`).join('')}
           </select></td>`;
@@ -1621,10 +1621,10 @@ function renderInputTable() {
           if (isOtFieldLocked) {
             return `<td class="cell-readonly cell-locked ${widthClass}">${escapeHtml(val)} <span class="lock-icon" title="OT managed via OT Dashboard">&#128274;</span></td>`;
           }
-          return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
+          return `<td class="cell-editable ${widthClass}"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="${escapeAttr(val)}" data-idx="${globalIdx}" data-key="ot" data-record-id="${escapeAttr(record._id || '')}" onchange="handleCellEdit(this)" placeholder="\u2014"></td>`;
         }
         if (col.key === 'remarks') {
-          return `<td class="cell-editable ${widthClass}"><textarea class="cell-input cell-textarea-remarks" data-idx="${globalIdx}" data-key="remarks" onchange="handleCellEdit(this)" placeholder="\u2014">${escapeHtml(val)}</textarea></td>`;
+          return `<td class="cell-editable ${widthClass}"><textarea class="cell-input cell-textarea-remarks" data-idx="${globalIdx}" data-key="remarks" data-record-id="${escapeAttr(record._id || '')}" onchange="handleCellEdit(this)" placeholder="\u2014">${escapeHtml(val)}</textarea></td>`;
         }
 
         return `<td class="cell-readonly ${widthClass}">${escapeHtml(val)}</td>`;
@@ -1736,32 +1736,44 @@ function handleCellEdit(el) {
   const idx = parseInt(el.dataset.idx);
   const key = el.dataset.key;
   let value = el.value;
+  // Resolve the record: prefer _id from data-record-id attribute, fallback to index lookup
+  var recordId = el.dataset.recordId || '';
+  var record = null;
+  if (recordId) {
+    // Direct _id lookup — stable across array mutations
+    record = appState.records.find(function(r) { return r._id === recordId; });
+    if (!record && typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
+      record = serverPagState.rows.find(function(r) { return r._id === recordId; });
+    }
+  }
+  if (!record && idx >= 0 && idx < appState.records.length) {
+    record = appState.records[idx];
+    recordId = record ? record._id : '';
+  }
 
   if (key === 'ot') {
     if (value !== '' && isNaN(parseFloat(value))) {
       showToast('OT must be a number', 'error');
-      el.value = appState.records[idx][key] || '';
+      el.value = (record && record[key]) || '';
       return;
     }
   }
 
-  if (idx >= 0 && idx < appState.records.length) {
-    appState.records[idx][key] = value;
-    if (!appState.pendingEdits[idx]) appState.pendingEdits[idx] = {};
-    appState.pendingEdits[idx][key] = value;
+  if (record && recordId) {
+    record[key] = value;
+    if (!appState.pendingEdits[recordId]) appState.pendingEdits[recordId] = {};
+    appState.pendingEdits[recordId][key] = value;
 
     if (key === 'tag' && value !== 'UPL' && value !== 'LATE') {
-      appState.records[idx].uplReason = '';
-      if (!appState.pendingEdits[idx]) appState.pendingEdits[idx] = {};
-      appState.pendingEdits[idx].uplReason = '';
+      record.uplReason = '';
+      if (!appState.pendingEdits[recordId]) appState.pendingEdits[recordId] = {};
+      appState.pendingEdits[recordId].uplReason = '';
     }
 
     // Sync serverPagState.rows so compact view re-renders show edited values
     if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
-      var editedRecId = appState.records[idx]._id;
-      var spRow = serverPagState.rows.find(function(r) { return r._id === editedRecId; });
+      var spRow = serverPagState.rows.find(function(r) { return r._id === recordId; });
       if (spRow) {
-        // Map frontend keys to both frontend and DB column names
         var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'] };
         var targets = keyMap[key] || [key];
         for (var ti = 0; ti < targets.length; ti++) { spRow[targets[ti]] = value; }
@@ -1780,18 +1792,15 @@ function handleCellEdit(el) {
     if (saveBtn) saveBtn.disabled = false;
     if (undoBtn) undoBtn.disabled = false;
 
-    // Invalidate audit cache for this record (will re-fetch on next expand)
-    var editedRec = appState.records[idx];
-    if (editedRec && typeof invalidateAuditCache === 'function') {
-      invalidateAuditCache(editedRec._id);
+    // Invalidate audit cache for this record
+    if (typeof invalidateAuditCache === 'function') {
+      invalidateAuditCache(recordId);
     }
 
     if (key === 'tag') {
-      // In compact mode, just refresh the tag chip + detail panel without full re-render
-      if (editedRec && typeof compactRefreshRow === 'function') {
-        compactRefreshRow(editedRec._id);
-        // Also refresh the detail panel reason field (UPL reason becomes editable/readonly based on tag)
-        compactRefreshDetailPanel(editedRec._id, idx);
+      if (typeof compactRefreshRow === 'function') {
+        compactRefreshRow(recordId);
+        compactRefreshDetailPanel(recordId, idx);
       } else {
         window.renderInputTable();
       }
@@ -1848,9 +1857,9 @@ async function confirmSave() {
 
   try {
     const edits = [];
-    for (const [idx, changes] of Object.entries(appState.pendingEdits)) {
-      const record = appState.records[parseInt(idx)];
-      const edit = { _id: record._id || '' };
+    for (const [recId, changes] of Object.entries(appState.pendingEdits)) {
+      // recId is now the record _id directly (not a numeric index)
+      const edit = { _id: recId };
       const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', role: 'role', actualPlanningGroup: 'planning_group' };
       for (const [field, value] of Object.entries(changes)) {
         const dbCol = fieldMap[field] || field;

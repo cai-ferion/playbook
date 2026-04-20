@@ -869,7 +869,7 @@ function renderInputTable() {
 function renderTableRow(item) {
   var record = item.record;
   var globalIdx = item.originalIndex;
-  var isEdited = appState.pendingEdits[globalIdx] !== undefined;
+  var isEdited = appState.pendingEdits[record._id] !== undefined || appState.pendingEdits[globalIdx] !== undefined;
   var locked = isRowLocked(record);
   var isSelected = (typeof serverPagState !== 'undefined' && serverPagState.enabled)
     ? bulkState.selected.has(record._id)
@@ -915,7 +915,7 @@ function renderTableRow(item) {
       // PL restricted to Managers and OHR 740045023 only
       var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
       var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
-      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" onchange="handleCellEdit(this)">' 
+      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="tag" data-record-id="' + escapeAttr(record._id || '') + '" onchange="handleCellEdit(this)">' 
         + '<option value="" ' + (!val ? 'selected' : '') + '>\u2014</option>'
         + tagOpts.map(function(t) { return '<option value="' + t + '" ' + (val === t ? 'selected' : '') + '>' + t + '</option>'; }).join('')
         + '</select></td>';
@@ -927,7 +927,7 @@ function renderTableRow(item) {
       }
       var canEdit = record.tag === 'UPL' || record.tag === 'LATE';
       if (!canEdit) return '<td class="cell-readonly cell-na ' + widthClass + '">&mdash;</td>';
-      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="uplReason" onchange="handleCellEdit(this)">'
+      return '<td class="cell-editable ' + widthClass + '"><select class="cell-select" data-idx="' + globalIdx + '" data-key="uplReason" data-record-id="' + escapeAttr(record._id || '') + '" onchange="handleCellEdit(this)">'
         + '<option value="">&mdash;</option>'
         + UPL_REASONS.map(function(r) { return '<option value="' + r + '" ' + (val === r ? 'selected' : '') + '>' + r + '</option>'; }).join('')
         + '</select></td>';
@@ -946,14 +946,14 @@ function renderTableRow(item) {
       if (isOtMechAgent && isAfterCutoff) {
         return '<td class="cell-readonly cell-locked ' + widthClass + '">' + escapeHtml(val) + '</td>';
       }
-      return '<td class="cell-editable ' + widthClass + '"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="' + escapeAttr(val) + '" data-idx="' + globalIdx + '" data-key="ot" onchange="handleCellEdit(this)" placeholder="\u2014"></td>';
+      return '<td class="cell-editable ' + widthClass + '"><input type="number" step="0.5" min="0" class="cell-input cell-input-ot" value="' + escapeAttr(val) + '" data-idx="' + globalIdx + '" data-key="ot" data-record-id="' + escapeAttr(record._id || '') + '" onchange="handleCellEdit(this)" placeholder="\u2014"></td>';
     }
     if (col.key === 'remarks') {
       // WFM users: read-only
       if (typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM') {
         return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val || '\u2014') + '</td>';
       }
-      return '<td class="cell-editable ' + widthClass + '"><textarea class="cell-input cell-textarea-remarks" data-idx="' + globalIdx + '" data-key="remarks" onchange="handleCellEdit(this)" placeholder="\u2014">' + escapeHtml(val) + '</textarea></td>';
+      return '<td class="cell-editable ' + widthClass + '"><textarea class="cell-input cell-textarea-remarks" data-idx="' + globalIdx + '" data-key="remarks" data-record-id="' + escapeAttr(record._id || '') + '" onchange="handleCellEdit(this)" placeholder="\u2014">' + escapeHtml(val) + '</textarea></td>';
     }
 
     return '<td class="cell-readonly ' + widthClass + '">' + escapeHtml(val) + '</td>';

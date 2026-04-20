@@ -2327,3 +2327,5 @@
 - [x] Fix persistent "Bulk tagged 0 record(s)" in compact view for assistant OHR 740044909
 ## Bug Fix — Input Portal Empty After Refresh
 - [x] Fix Input Portal showing empty/no records after refresh for assistant OHR 740044909
+## Bug Fix — Input Portal Save Failed
+- [x] Comprehensive fix for Input Portal save failures (individual and bulk) for assistant and all users
