@@ -429,14 +429,16 @@
 
 /* ---- Detail/Form Overlay ---- */
 #view-compass-input .module-form-overlay,
-#compass-form-overlay {
+#compass-form-overlay,
+#ca-form-overlay {
   background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
 
 #view-compass-input .module-form-panel,
-#compass-form-overlay .module-form-panel {
+#compass-form-overlay .module-form-panel,
+#ca-form-overlay .module-form-panel {
   background: var(--compass-surface);
   border-radius: 16px;
   max-width: 640px;
@@ -446,21 +448,24 @@
 }
 
 #view-compass-input .module-form-header,
-#compass-form-overlay .module-form-header {
+#compass-form-overlay .module-form-header,
+#ca-form-overlay .module-form-header {
   padding: 18px 24px;
   border-bottom: 1px solid var(--compass-border);
   background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
   border-radius: 16px 16px 0 0;
 }
 #view-compass-input .module-form-header h3,
-#compass-form-overlay .module-form-header h3 {
+#compass-form-overlay .module-form-header h3,
+#ca-form-overlay .module-form-header h3 {
   font-size: 16px;
   font-weight: 700;
   color: var(--compass-text);
   letter-spacing: -0.3px;
 }
 #view-compass-input .module-form-close,
-#compass-form-overlay .module-form-close {
+#compass-form-overlay .module-form-close,
+#ca-form-overlay .module-form-close {
   width: 32px;
   height: 32px;
   display: flex;
@@ -474,19 +479,22 @@
   transition: all 0.15s ease;
 }
 #view-compass-input .module-form-close:hover,
-#compass-form-overlay .module-form-close:hover {
+#compass-form-overlay .module-form-close:hover,
+#ca-form-overlay .module-form-close:hover {
   background: #FEE2E2;
   color: #EF4444;
 }
 
 #view-compass-input .module-form-body,
-#compass-form-overlay .module-form-body {
+#compass-form-overlay .module-form-body,
+#ca-form-overlay .module-form-body {
   padding: 24px;
   overflow-y: auto;
 }
 
 #view-compass-input .module-form-footer,
-#compass-form-overlay .module-form-footer {
+#compass-form-overlay .module-form-footer,
+#ca-form-overlay .module-form-footer {
   padding: 16px 24px;
   border-top: 1px solid var(--compass-border);
   background: var(--compass-surface-alt);
@@ -497,7 +505,8 @@
 }
 
 /* ---- Detail View Sections ---- */
-#compass-form-overlay .detail-section-title {
+#compass-form-overlay .detail-section-title,
+#ca-form-overlay .detail-section-title {
   font-size: 12px !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
@@ -511,23 +520,27 @@
   gap: 8px;
 }
 
-#compass-form-overlay .detail-row {
+#compass-form-overlay .detail-row,
+#ca-form-overlay .detail-row {
   display: flex;
   gap: 14px;
   padding: 8px 0;
   border-bottom: 1px solid var(--compass-border-subtle);
   transition: background 0.15s ease;
 }
-#compass-form-overlay .detail-row:hover {
+#compass-form-overlay .detail-row,
+#ca-form-overlay .detail-row:hover {
   background: rgba(99, 102, 241, 0.02);
   border-radius: 6px;
   margin: 0 -6px;
   padding: 8px 6px;
 }
-#compass-form-overlay .detail-row:last-child {
+#compass-form-overlay .detail-row,
+#ca-form-overlay .detail-row:last-child {
   border-bottom: none;
 }
-#compass-form-overlay .detail-label {
+#compass-form-overlay .detail-label,
+#ca-form-overlay .detail-label {
   min-width: 160px;
   font-size: 11px;
   font-weight: 700;
@@ -536,7 +549,8 @@
   letter-spacing: 0.5px;
   flex-shrink: 0;
 }
-#compass-form-overlay .detail-value {
+#compass-form-overlay .detail-value,
+#ca-form-overlay .detail-value {
   font-size: 13px;
   color: var(--compass-text);
   flex: 1;
@@ -545,10 +559,12 @@
 }
 
 /* ---- Form Fields (New/Edit) ---- */
-#compass-form-overlay .form-section {
+#compass-form-overlay .form-section,
+#ca-form-overlay .form-section {
   margin-bottom: 24px;
 }
-#compass-form-overlay .form-section-title {
+#compass-form-overlay .form-section-title,
+#ca-form-overlay .form-section-title {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -558,7 +574,8 @@
   padding-bottom: 6px;
   border-bottom: 2px solid rgba(99, 102, 241, 0.15);
 }
-#compass-form-overlay .form-label {
+#compass-form-overlay .form-label,
+#ca-form-overlay .form-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--compass-text-muted);
@@ -566,8 +583,11 @@
   display: block;
 }
 #compass-form-overlay .form-input,
+#ca-form-overlay .form-input,
 #compass-form-overlay .form-select,
-#compass-form-overlay .form-textarea {
+#ca-form-overlay .form-select,
+#compass-form-overlay .form-textarea,
+#ca-form-overlay .form-textarea {
   border: 1px solid var(--compass-border);
   border-radius: var(--compass-radius-sm);
   background: var(--compass-surface);
@@ -578,15 +598,19 @@
   width: 100%;
 }
 #compass-form-overlay .form-input:focus,
+#ca-form-overlay .form-input:focus,
 #compass-form-overlay .form-select:focus,
-#compass-form-overlay .form-textarea:focus {
+#ca-form-overlay .form-select:focus,
+#compass-form-overlay .form-textarea:focus,
+#ca-form-overlay .form-textarea:focus {
   border-color: #6366F1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
   outline: none;
 }
 
 /* ---- Footer Buttons ---- */
-#compass-form-overlay .btn-primary {
+#compass-form-overlay .btn-primary,
+#ca-form-overlay .btn-primary {
   background: linear-gradient(135deg, #6366F1, #4F46E5);
   border: none;
   border-radius: var(--compass-radius-sm);
@@ -595,12 +619,14 @@
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
   transition: all 0.2s ease;
 }
-#compass-form-overlay .btn-primary:hover {
+#compass-form-overlay .btn-primary:hover,
+#ca-form-overlay .btn-primary:hover {
   background: linear-gradient(135deg, #4F46E5, #4338CA);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
   transform: translateY(-1px);
 }
-#compass-form-overlay .btn-outline {
+#compass-form-overlay .btn-outline,
+#ca-form-overlay .btn-outline {
   border-radius: var(--compass-radius-sm);
   border: 1px solid var(--compass-border);
   font-weight: 600;
@@ -608,12 +634,14 @@
   color: var(--compass-text-muted);
   transition: all 0.2s ease;
 }
-#compass-form-overlay .btn-outline:hover {
+#compass-form-overlay .btn-outline:hover,
+#ca-form-overlay .btn-outline:hover {
   border-color: var(--compass-text-muted);
   color: var(--compass-text);
   background: var(--compass-surface-alt);
 }
-#compass-form-overlay .btn-success {
+#compass-form-overlay .btn-success,
+#ca-form-overlay .btn-success {
   background: linear-gradient(135deg, #10B981, #059669);
   border: none;
   border-radius: var(--compass-radius-sm);
@@ -623,12 +651,14 @@
   transition: all 0.2s ease;
   color: #fff;
 }
-#compass-form-overlay .btn-success:hover {
+#compass-form-overlay .btn-success:hover,
+#ca-form-overlay .btn-success:hover {
   background: linear-gradient(135deg, #059669, #047857);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
   transform: translateY(-1px);
 }
-#compass-form-overlay .btn-danger {
+#compass-form-overlay .btn-danger,
+#ca-form-overlay .btn-danger {
   background: linear-gradient(135deg, #EF4444, #DC2626);
   border: none;
   border-radius: var(--compass-radius-sm);
@@ -638,36 +668,43 @@
   transition: all 0.2s ease;
   color: #fff;
 }
-#compass-form-overlay .btn-danger:hover {
+#compass-form-overlay .btn-danger:hover,
+#ca-form-overlay .btn-danger:hover {
   background: linear-gradient(135deg, #DC2626, #B91C1C);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
   transform: translateY(-1px);
 }
 
 /* ---- RTE (Rich Text Editor) inside overlay ---- */
-#compass-form-overlay .rte-container {
+#compass-form-overlay .rte-container,
+#ca-form-overlay .rte-container {
   border: 1px solid var(--compass-border);
   border-radius: var(--compass-radius-sm);
   overflow: hidden;
 }
-#compass-form-overlay .rte-toolbar {
+#compass-form-overlay .rte-toolbar,
+#ca-form-overlay .rte-toolbar {
   background: var(--compass-surface-alt);
   border-bottom: 1px solid var(--compass-border);
   padding: 5px 8px;
 }
-#compass-form-overlay .rte-btn {
+#compass-form-overlay .rte-btn,
+#ca-form-overlay .rte-btn {
   border-radius: 6px;
   width: 30px;
   height: 30px;
 }
-#compass-form-overlay .rte-btn:hover {
+#compass-form-overlay .rte-btn:hover,
+#ca-form-overlay .rte-btn:hover {
   background: rgba(99, 102, 241, 0.08);
 }
-#compass-form-overlay .rte-btn.rte-active {
+#compass-form-overlay .rte-btn.rte-active,
+#ca-form-overlay .rte-btn.rte-active {
   background: rgba(99, 102, 241, 0.12);
   color: #6366F1;
 }
-#compass-form-overlay .rte-editor {
+#compass-form-overlay .rte-editor,
+#ca-form-overlay .rte-editor {
   min-height: 100px;
   padding: 10px 14px;
   font-size: 13px;
@@ -676,12 +713,14 @@
 }
 
 /* ---- CAP Radio Group Styling ---- */
-#compass-form-overlay .cap-radio-group {
+#compass-form-overlay .cap-radio-group,
+#ca-form-overlay .cap-radio-group {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-#compass-form-overlay .cap-radio-group label {
+#compass-form-overlay .cap-radio-group label,
+#ca-form-overlay .cap-radio-group label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -695,11 +734,13 @@
   transition: all 0.2s ease;
   background: var(--compass-surface);
 }
-#compass-form-overlay .cap-radio-group label:hover {
+#compass-form-overlay .cap-radio-group label:hover,
+#ca-form-overlay .cap-radio-group label:hover {
   border-color: #6366F1;
   background: rgba(99, 102, 241, 0.04);
 }
-#compass-form-overlay .cap-radio-group input[type="radio"] {
+#compass-form-overlay .cap-radio-group input[type="radio"],
+#ca-form-overlay .cap-radio-group input[type="radio"] {
   accent-color: #6366F1;
 }
 
@@ -753,50 +794,60 @@
 }
 
 /* ---- Coachee dropdown inside Compass ---- */
-#compass-form-overlay .searchable-select-dropdown {
+#compass-form-overlay .searchable-select-dropdown,
+#ca-form-overlay .searchable-select-dropdown {
   border-radius: var(--compass-radius-sm);
   box-shadow: var(--compass-shadow-lg);
   border: 1px solid var(--compass-border);
 }
-#compass-form-overlay .searchable-select-option {
+#compass-form-overlay .searchable-select-option,
+#ca-form-overlay .searchable-select-option {
   padding: 8px 12px;
   font-size: 12px;
   transition: background 0.15s ease;
 }
-#compass-form-overlay .searchable-select-option:hover {
+#compass-form-overlay .searchable-select-option:hover,
+#ca-form-overlay .searchable-select-option:hover {
   background: rgba(99, 102, 241, 0.08);
   color: #4F46E5;
 }
 
 /* ---- Multi-select inside Compass ---- */
-#compass-form-overlay .multi-select-trigger {
+#compass-form-overlay .multi-select-trigger,
+#ca-form-overlay .multi-select-trigger {
   border-radius: var(--compass-radius-sm);
   border: 1px solid var(--compass-border);
   transition: all 0.2s ease;
 }
-#compass-form-overlay .multi-select-trigger:hover {
+#compass-form-overlay .multi-select-trigger:hover,
+#ca-form-overlay .multi-select-trigger:hover {
   border-color: #6366F1;
 }
-#compass-form-overlay .multi-select-dropdown {
+#compass-form-overlay .multi-select-dropdown,
+#ca-form-overlay .multi-select-dropdown {
   border-radius: var(--compass-radius-sm);
   box-shadow: var(--compass-shadow-lg);
   border: 1px solid var(--compass-border);
 }
-#compass-form-overlay .multi-select-option:hover {
+#compass-form-overlay .multi-select-option:hover,
+#ca-form-overlay .multi-select-option:hover {
   background: rgba(99, 102, 241, 0.06);
 }
-#compass-form-overlay .multi-select-option input[type="checkbox"] {
+#compass-form-overlay .multi-select-option input[type="checkbox"],
+#ca-form-overlay .multi-select-option input[type="checkbox"] {
   accent-color: #6366F1;
 }
 
 /* ---- Acknowledgement Stars ---- */
-#compass-form-overlay .star-rating-display {
+#compass-form-overlay .star-rating-display,
+#ca-form-overlay .star-rating-display {
   display: inline-flex;
   gap: 2px;
 }
 
 /* ---- NTE Previous Warnings Cards ---- */
-#compass-form-overlay .nte-warning-card {
+#compass-form-overlay .nte-warning-card,
+#ca-form-overlay .nte-warning-card {
   padding: 10px 14px;
   background: var(--compass-surface-alt);
   border: 1px solid var(--compass-border);
@@ -804,7 +855,8 @@
   margin-bottom: 8px;
   transition: all 0.15s ease;
 }
-#compass-form-overlay .nte-warning-card:hover {
+#compass-form-overlay .nte-warning-card:hover,
+#ca-form-overlay .nte-warning-card:hover {
   border-color: rgba(99, 102, 241, 0.3);
   box-shadow: var(--compass-shadow-sm);
 }

@@ -1084,16 +1084,17 @@
             </div>
           </div>
           <!-- Create NTE Modal -->
-          <div class="ca-modal-overlay" id="ca-create-overlay">
-            <div class="ca-modal">
-              <div class="ca-modal-header">
-                <h3 id="ca-create-title">Issue Notice to Explain</h3>
-                <button class="disputes-modal-close" onclick="caCloseCreate()">
+          <!-- NTE Build Assist Wizard Overlay -->
+          <div class="module-form-overlay" id="ca-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="ca-form-title">NTE Build Assist</h3>
+                <button class="module-form-close" onclick="caCloseWizard()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="ca-modal-body" id="ca-create-body"></div>
-              <div class="ca-modal-footer" id="ca-create-footer"></div>
+              <div class="module-form-body" id="ca-form-body"></div>
+              <div class="module-form-footer" id="ca-form-footer"></div>
             </div>
           </div>
           <!-- CAP Decision Modal -->

@@ -136,7 +136,7 @@ function caRenderFilterBar() {
       ${CA_CAP_LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
     </select>
     <span class="ca-filter-count" id="ca-filter-count"></span>
-    ${canCreate ? `<button class="ca-btn-create" onclick="caOpenCreate()">
+    ${canCreate ? `<button class="ca-btn-create" onclick="caOpenNteWizard()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Issue NTE
     </button>` : ''}
@@ -427,229 +427,803 @@ function caOpenLinkedCoaching(coachingId) {
   }, 500);
 }
 
-// ===== Create NTE Modal =====
-function caOpenCreate(linkedCoachingId) {
-  const overlay = document.getElementById('ca-create-overlay');
-  if (!overlay) return;
 
-  const body = document.getElementById('ca-create-body');
-  const footer = document.getElementById('ca-create-footer');
+// ===== NTE Build Assist Wizard (relocated from Coaching Profile) =====
+// Multi-step wizard: 1) Employee + Violation Type  2) Date range + Attendance  3) AI Narrative + Review  4) Confirm & Save
+var CA_NTE_WIZARD = {
+  step: 1,
+  employee: null,
+  violationType: null,
+  violations: [],
+  violationSubtype: '',
+  dateRange: { start: '', end: '' },
+  attendance: [],
+  previousCAs: [],
+  capLevel: '',
+  narrative: '',
+  policyText: '',
+  isGenerating: false
+};
 
-  // Build employee dropdown
-  const empOptions = CA.employees
-    .filter(e => e.employement_status === 'Active')
-    .map(e => `<option value="${escapeHtml(e.ohr_id)}" data-name="${escapeHtml(e.full_name)}" data-email="${escapeHtml(e.meta_email || '')}" data-role="${escapeHtml(e.actual_role || '')}" data-pg="${escapeHtml(e.planning_group || '')}" data-sup="${escapeHtml(e.supervisor_name || '')}">${escapeHtml(e.full_name)} (${escapeHtml(e.ohr_id)})</option>`)
-    .join('');
+function caOpenNteWizard() {
+  CA_NTE_WIZARD = { step: 1, employee: null, violationType: null, violations: [], violationSubtype: '', dateRange: { start: '', end: '' }, attendance: [], previousCAs: [], capLevel: '', narrative: '', policyText: '', isGenerating: false };
+  _caWizRender();
+}
 
-  // Build violations category dropdown
-  let violationCatOptions = '<option value="">— Select Category —</option>';
-  if (typeof HR_VIOLATIONS !== 'undefined') {
-    HR_VIOLATIONS.forEach((cat, i) => {
-      violationCatOptions += `<option value="${i}">${escapeHtml(cat.category)}</option>`;
-    });
-  }
+function caCloseWizard() {
+  const overlay = document.getElementById('ca-form-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
 
-  body.innerHTML = `
-    <div class="ca-form-group">
-      <label>Employee *</label>
-      <select id="ca-create-employee" onchange="caOnEmployeeSelect()">
-        <option value="">— Select Employee —</option>
-        ${empOptions}
-      </select>
-    </div>
-    <div class="ca-form-row">
-      <div class="ca-form-group">
-        <label>NTE Type *</label>
-        <select id="ca-create-nte-type">
-          <option value="">— Select —</option>
-          ${CA_NTE_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
-        </select>
-      </div>
-      <div class="ca-form-group">
-        <label>Date of Incident *</label>
-        <input type="date" id="ca-create-incident-date" max="${new Date().toISOString().slice(0,10)}">
-      </div>
-    </div>
-    <div class="ca-form-group">
-      <label>Incident Description *</label>
-      <textarea id="ca-create-description" placeholder="Describe the incident in detail..."></textarea>
-    </div>
-    <div class="ca-form-group">
-      <label>Violation Category</label>
-      <select id="ca-create-violation-cat" onchange="caOnViolationCatChange()">
-        ${violationCatOptions}
-      </select>
-    </div>
-    <div class="ca-form-group" id="ca-create-violation-type-group" style="display:none;">
-      <label>Violation</label>
-      <select id="ca-create-violation-type" onchange="caOnViolationTypeChange()">
-        <option value="">— Select Violation —</option>
-      </select>
-    </div>
-    <div class="ca-form-group" id="ca-create-violation-item-group" style="display:none;">
-      <label>Specific Violation</label>
-      <select id="ca-create-violation-item">
-        <option value="">— Select —</option>
-      </select>
-    </div>
-    <div id="ca-create-violation-penalty" style="display:none;margin-bottom:14px;padding:8px 12px;background:var(--compass-warning-bg);border-radius:8px;font-size:12px;color:var(--compass-warning);">
-    </div>
-    <div class="ca-form-group">
-      <label>Policy Violated (summary)</label>
-      <input type="text" id="ca-create-policy" placeholder="e.g., GP HR Policy 3.0 — Section 7.1">
-    </div>
-    ${linkedCoachingId ? `<input type="hidden" id="ca-create-linked-coaching" value="${linkedCoachingId}">` : ''}
-  `;
+// ---- Rich text exec helper ----
+function caRteExec(command) {
+  document.execCommand(command, false, null);
+}
 
-  footer.innerHTML = `
-    <button class="ca-btn ghost" onclick="caCloseCreate()">Cancel</button>
-    <button class="ca-btn primary" id="ca-create-submit-btn" onclick="caSubmitCreate()">Issue NTE</button>
-  `;
+function _caWizRender() {
+  const overlay = document.getElementById('ca-form-overlay');
+  const formTitle = document.getElementById('ca-form-title');
+  const formBody = document.getElementById('ca-form-body');
+  const formFooter = document.getElementById('ca-form-footer');
+  const stepLabels = ['Employee & Violation', 'Date Range & Attendance', 'AI Narrative & Review', 'Confirm & Save'];
 
+  formTitle.innerHTML = `<span style="display:flex;align-items:center;gap:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+    NTE Build Assist
+    <span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Step ${CA_NTE_WIZARD.step} of 4 — ${stepLabels[CA_NTE_WIZARD.step - 1]}</span>
+  </span>`;
+
+  const progressHtml = `<div style="display:flex;gap:4px;margin-bottom:16px;">
+    ${[1,2,3,4].map(s => `<div style="flex:1;height:3px;border-radius:2px;background:${s <= CA_NTE_WIZARD.step ? '#6366F1' : 'var(--border)'};transition:background 0.2s;"></div>`).join('')}
+  </div>`;
+
+  if (CA_NTE_WIZARD.step === 1) _caWizStep1(formBody, formFooter, progressHtml);
+  else if (CA_NTE_WIZARD.step === 2) _caWizStep2(formBody, formFooter, progressHtml);
+  else if (CA_NTE_WIZARD.step === 3) _caWizStep3(formBody, formFooter, progressHtml);
+  else if (CA_NTE_WIZARD.step === 4) _caWizStep4(formBody, formFooter, progressHtml);
+
+  overlay.style.display = '';
   overlay.classList.add('active');
 }
 
-function caCloseCreate() {
-  const overlay = document.getElementById('ca-create-overlay');
-  if (overlay) overlay.classList.remove('active');
+// ---- Step 1: Employee + Violation Type (Multi-select) ----
+function _caWizStep1(formBody, formFooter, progressHtml) {
+  const empVal = CA_NTE_WIZARD.employee ? CA_NTE_WIZARD.employee.full_name + ' (' + CA_NTE_WIZARD.employee.ohr_id + ')' : '';
+  const chipsHtml = CA_NTE_WIZARD.violations.length > 0
+    ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">' +
+      CA_NTE_WIZARD.violations.map(function(v, i) {
+        return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#6366F110;border:1px solid #6366F130;border-radius:12px;font-size:11px;">' +
+          '<strong>' + escapeHtml(v.code) + '</strong> ' + escapeHtml(v.text.substring(0, 40)) + (v.text.length > 40 ? '...' : '') +
+          ' <span style="cursor:pointer;color:#EF4444;font-weight:700;margin-left:4px;" onclick="_caWizRemoveViolation(' + i + ')">&times;</span>' +
+          '</span>';
+      }).join('') + '</div>'
+    : '';
+
+  formBody.innerHTML = `${progressHtml}
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Employee <span class="required">*</span></label>
+        <div class="searchable-select" id="ca-wiz-employee-wrapper">
+          <input type="text" class="form-input" id="ca-wiz-employee-search" placeholder="Search by name or OHR..."
+            autocomplete="off" value="${escapeAttr(empVal)}"
+            oninput="_caWizFilterEmployees()" onclick="_caWizToggleEmployeeDropdown(true)" onfocus="_caWizToggleEmployeeDropdown(true)">
+          <input type="hidden" id="ca-wiz-employee-ohr" value="${CA_NTE_WIZARD.employee ? escapeAttr(CA_NTE_WIZARD.employee.ohr_id) : ''}">
+          <div class="searchable-select-dropdown" id="ca-wiz-employee-dropdown" style="display:none; max-height:200px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-section">
+      <div class="form-field">
+        <label class="form-label">Violation(s) <span class="required">*</span> <span style="font-size:10px; color:var(--fg-muted); font-weight:400;">— select one or more</span></label>
+        <div class="searchable-select" id="ca-wiz-violation-wrapper">
+          <input type="text" class="form-input" id="ca-wiz-violation-search" placeholder="Search violations by code, keyword, or section..."
+            autocomplete="off" value=""
+            oninput="_caWizFilterViolations()" onclick="_caWizToggleViolationDropdown(true)" onfocus="_caWizToggleViolationDropdown(true)">
+          <div class="searchable-select-dropdown" id="ca-wiz-violation-dropdown" style="display:none; max-height:280px; overflow-y:auto;"></div>
+        </div>
+        ${chipsHtml}
+      </div>
+    </div>
+    ${CA_NTE_WIZARD.employee ? `
+    <div class="form-section" style="background:var(--bg-inset); padding:12px 16px; border-radius:var(--radius); border:1px solid var(--border);">
+      <div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Employee Details</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:12px;">
+        <div><strong>Name:</strong> ${escapeHtml(CA_NTE_WIZARD.employee.full_name)}</div>
+        <div><strong>OHR:</strong> ${escapeHtml(CA_NTE_WIZARD.employee.ohr_id)}</div>
+        <div><strong>Role:</strong> ${escapeHtml(CA_NTE_WIZARD.employee.actual_role || '—')}</div>
+        <div><strong>PG:</strong> ${escapeHtml(CA_NTE_WIZARD.employee.planning_group || '—')}</div>
+        <div><strong>Supervisor:</strong> ${escapeHtml(CA_NTE_WIZARD.employee.supervisor_name || '—')}</div>
+        <div><strong>Email:</strong> ${escapeHtml(CA_NTE_WIZARD.employee.meta_email || '—')}</div>
+      </div>
+    </div>` : ''}
+  `;
+
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="caCloseWizard()">← Cancel</button>
+    <button class="btn btn-primary btn-sm" onclick="_caWizGoStep2()">Next →</button>
+  `;
 }
 
-function caOnEmployeeSelect() {
-  // Auto-fill is handled by the data attributes on the option
+function _caWizRemoveViolation(idx) {
+  CA_NTE_WIZARD.violations.splice(idx, 1);
+  CA_NTE_WIZARD.violationType = CA_NTE_WIZARD.violations.length > 0 ? CA_NTE_WIZARD.violations[0] : null;
+  _caWizRender();
 }
 
-function caOnViolationCatChange() {
-  const catSelect = document.getElementById('ca-create-violation-cat');
-  const typeGroup = document.getElementById('ca-create-violation-type-group');
-  const typeSelect = document.getElementById('ca-create-violation-type');
-  const itemGroup = document.getElementById('ca-create-violation-item-group');
-  const penaltyDiv = document.getElementById('ca-create-violation-penalty');
+// ---- Searchable Employee Picker ----
+var _caWizEmpFilterTimer = null;
+function _caWizFilterEmployees() {
+  clearTimeout(_caWizEmpFilterTimer);
+  _caWizEmpFilterTimer = setTimeout(function() {
+    var search = (document.getElementById('ca-wiz-employee-search')?.value || '').toLowerCase();
+    var dropdown = document.getElementById('ca-wiz-employee-dropdown');
+    if (!dropdown || !search) { if (dropdown) dropdown.style.display = 'none'; return; }
+    var matches = CA.employees
+      .filter(function(e) { return e.actual_role !== 'Manager' && (
+        (e.full_name || '').toLowerCase().includes(search) ||
+        (e.ohr_id || '').toLowerCase().includes(search)
+      ); })
+      .slice(0, 30);
+    if (matches.length === 0) {
+      dropdown.innerHTML = '<div style="padding:8px 12px; color:var(--fg-muted); font-size:12px;">No matches found</div>';
+    } else {
+      dropdown.innerHTML = matches.map(function(e) {
+        return '<div class="searchable-select-option" onclick="_caWizSelectEmployee(\'' + escapeAttr(e.ohr_id) + '\')" style="padding:6px 12px; cursor:pointer; font-size:12px;">' +
+          '<strong>' + escapeHtml(e.full_name) + '</strong> <span style="color:var(--fg-muted);">(' + escapeHtml(e.ohr_id) + ')</span>' +
+          '<span style="color:var(--fg-subtle); font-size:11px; margin-left:4px;">' + escapeHtml(e.planning_group || '') + '</span>' +
+          '</div>';
+      }).join('');
+    }
+    dropdown.style.display = '';
+  }, 120);
+}
 
-  if (!catSelect || !typeSelect) return;
-  const catIdx = catSelect.value;
-  if (catIdx === '' || typeof HR_VIOLATIONS === 'undefined') {
-    if (typeGroup) typeGroup.style.display = 'none';
-    if (itemGroup) itemGroup.style.display = 'none';
-    if (penaltyDiv) penaltyDiv.style.display = 'none';
+function _caWizToggleEmployeeDropdown(show) {
+  var dropdown = document.getElementById('ca-wiz-employee-dropdown');
+  if (dropdown) dropdown.style.display = show ? '' : 'none';
+  if (show) _caWizFilterEmployees();
+}
+
+function _caWizSelectEmployee(ohrId) {
+  var emp = CA.employees.find(function(e) { return e.ohr_id === ohrId; });
+  if (!emp) return;
+  CA_NTE_WIZARD.employee = emp;
+  document.getElementById('ca-wiz-employee-ohr').value = ohrId;
+  document.getElementById('ca-wiz-employee-search').value = emp.full_name + ' (' + emp.ohr_id + ')';
+  document.getElementById('ca-wiz-employee-dropdown').style.display = 'none';
+  _caWizRender();
+}
+
+// ---- Searchable Violation Picker with Keyboard Navigation ----
+var _caWizViolFilterTimer = null;
+var _caWizViolActiveIdx = -1;
+var _caWizViolMatchCodes = [];
+
+function _caWizGetAllViolationItems() {
+  if (typeof HR_VIOLATIONS === 'undefined') return [];
+  var items = [];
+  for (var ci = 0; ci < HR_VIOLATIONS.length; ci++) {
+    var cat = HR_VIOLATIONS[ci];
+    for (var si = 0; si < cat.subsections.length; si++) {
+      var sub = cat.subsections[si];
+      for (var ii = 0; ii < sub.items.length; ii++) {
+        var item = sub.items[ii];
+        items.push({
+          code: item.code, text: item.text, penalty: item.penalty,
+          category: cat.category, subsection: sub.code + ' ' + sub.title,
+          subsectionCode: sub.code, subsectionTitle: sub.title,
+          searchText: (item.code + ' ' + item.text + ' ' + cat.category + ' ' + sub.title).toLowerCase()
+        });
+      }
+    }
+  }
+  return items;
+}
+
+function _caWizFilterViolations() {
+  clearTimeout(_caWizViolFilterTimer);
+  _caWizViolFilterTimer = setTimeout(function() {
+    var search = (document.getElementById('ca-wiz-violation-search')?.value || '').toLowerCase().trim();
+    var dropdown = document.getElementById('ca-wiz-violation-dropdown');
+    if (!dropdown) return;
+    var allItems = _caWizGetAllViolationItems();
+    _caWizViolMatchCodes = [];
+    _caWizViolActiveIdx = -1;
+    if (!search) {
+      // Show all grouped by category
+      var grouped = {};
+      allItems.forEach(function(item) {
+        var key = item.category + ' > ' + item.subsection;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(item);
+      });
+      var html = '';
+      var idx = 0;
+      Object.keys(grouped).forEach(function(groupLabel) {
+        html += '<div style="padding:4px 12px; font-size:10px; font-weight:700; color:var(--fg-muted); text-transform:uppercase; background:var(--bg-inset); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:1;">' + escapeHtml(groupLabel) + '</div>';
+        grouped[groupLabel].forEach(function(item) {
+          _caWizViolMatchCodes.push(item.code);
+          var isSelected = CA_NTE_WIZARD.violations.some(function(v) { return v.code === item.code; });
+          html += '<div class="searchable-select-option" data-viol-idx="' + idx + '" data-viol-code="' + escapeAttr(item.code) + '" onclick="_caWizSelectViolation(\'' + escapeAttr(item.code) + '\')" onmouseenter="_caWizViolHighlight(' + idx + ')" style="padding:6px 12px; cursor:pointer; font-size:12px; line-height:1.4; border-bottom:1px solid var(--border); transition:background 0.1s;' + (isSelected ? ' background:#6366F110;' : '') + '">';
+          html += '<strong style="color:#6366F1;">' + escapeHtml(item.code) + '</strong> ';
+          html += '<span>' + escapeHtml(item.text) + '</span> ';
+          html += '<span style="color:var(--fg-subtle); font-size:10px;">(' + escapeHtml(item.penalty) + ')</span>';
+          html += '</div>';
+          idx++;
+        });
+      });
+      dropdown.innerHTML = html;
+    } else {
+      var matches = allItems.filter(function(item) { return item.searchText.includes(search); });
+      if (matches.length === 0) {
+        dropdown.innerHTML = '<div style="padding:8px 12px; color:var(--fg-muted); font-size:12px;">No violations match "' + escapeHtml(search) + '"</div>';
+      } else {
+        var grouped = {};
+        matches.forEach(function(item) {
+          var key = item.category + ' > ' + item.subsection;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(item);
+        });
+        var html = '';
+        var idx = 0;
+        Object.keys(grouped).forEach(function(groupLabel) {
+          html += '<div style="padding:4px 12px; font-size:10px; font-weight:700; color:var(--fg-muted); text-transform:uppercase; background:var(--bg-inset); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:1;">' + escapeHtml(groupLabel) + '</div>';
+          grouped[groupLabel].forEach(function(item) {
+            _caWizViolMatchCodes.push(item.code);
+            var isSelected = CA_NTE_WIZARD.violations.some(function(v) { return v.code === item.code; });
+            html += '<div class="searchable-select-option" data-viol-idx="' + idx + '" data-viol-code="' + escapeAttr(item.code) + '" onclick="_caWizSelectViolation(\'' + escapeAttr(item.code) + '\')" onmouseenter="_caWizViolHighlight(' + idx + ')" style="padding:6px 12px; cursor:pointer; font-size:12px; line-height:1.4; border-bottom:1px solid var(--border); transition:background 0.1s;' + (isSelected ? ' background:#6366F110;' : '') + '">';
+            html += '<strong style="color:#6366F1;">' + escapeHtml(item.code) + '</strong> ';
+            html += '<span>' + escapeHtml(item.text) + '</span> ';
+            html += '<span style="color:var(--fg-subtle); font-size:10px;">(' + escapeHtml(item.penalty) + ')</span>';
+            html += '</div>';
+            idx++;
+          });
+        });
+        dropdown.innerHTML = html;
+      }
+    }
+    dropdown.style.display = '';
+  }, 100);
+}
+
+function _caWizViolHighlight(idx) {
+  var dropdown = document.getElementById('ca-wiz-violation-dropdown');
+  if (!dropdown) return;
+  var prev = dropdown.querySelector('[data-viol-idx="' + _caWizViolActiveIdx + '"]');
+  if (prev) prev.style.background = '';
+  _caWizViolActiveIdx = idx;
+  var el = dropdown.querySelector('[data-viol-idx="' + idx + '"]');
+  if (el) {
+    el.style.background = '#6366F118';
+    var dropRect = dropdown.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    if (elRect.bottom > dropRect.bottom) el.scrollIntoView({ block: 'nearest' });
+    if (elRect.top < dropRect.top) el.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function _caWizToggleViolationDropdown(show) {
+  var dropdown = document.getElementById('ca-wiz-violation-dropdown');
+  if (dropdown) {
+    dropdown.style.display = show ? '' : 'none';
+    if (show) {
+      _caWizViolActiveIdx = -1;
+      _caWizFilterViolations();
+    }
+  }
+}
+
+function _caWizSelectViolation(code) {
+  if (CA_NTE_WIZARD.violations.some(function(v) { return v.code === code; })) {
+    showToast('Violation already selected', 'error');
     return;
   }
-
-  const cat = HR_VIOLATIONS[parseInt(catIdx)];
-  if (!cat) return;
-
-  typeSelect.innerHTML = '<option value="">— Select Violation —</option>';
-  cat.subsections.forEach((sub, i) => {
-    typeSelect.innerHTML += `<option value="${i}">${escapeHtml(sub.code)} — ${escapeHtml(sub.title)}</option>`;
-  });
-  if (typeGroup) typeGroup.style.display = '';
-  if (itemGroup) itemGroup.style.display = 'none';
-  if (penaltyDiv) penaltyDiv.style.display = 'none';
-}
-
-function caOnViolationTypeChange() {
-  const catSelect = document.getElementById('ca-create-violation-cat');
-  const typeSelect = document.getElementById('ca-create-violation-type');
-  const itemGroup = document.getElementById('ca-create-violation-item-group');
-  const itemSelect = document.getElementById('ca-create-violation-item');
-  const penaltyDiv = document.getElementById('ca-create-violation-penalty');
-
-  if (!catSelect || !typeSelect || !itemSelect) return;
-  const catIdx = catSelect.value;
-  const typeIdx = typeSelect.value;
-  if (catIdx === '' || typeIdx === '' || typeof HR_VIOLATIONS === 'undefined') {
-    if (itemGroup) itemGroup.style.display = 'none';
-    if (penaltyDiv) penaltyDiv.style.display = 'none';
-    return;
-  }
-
-  const sub = HR_VIOLATIONS[parseInt(catIdx)].subsections[parseInt(typeIdx)];
-  if (!sub || !sub.items) return;
-
-  itemSelect.innerHTML = '<option value="">— Select —</option>';
-  sub.items.forEach((item, i) => {
-    itemSelect.innerHTML += `<option value="${i}" data-penalty="${escapeHtml(item.penalty)}">${escapeHtml(item.code)} — ${escapeHtml(item.text)}</option>`;
-  });
-  if (itemGroup) itemGroup.style.display = '';
-
-  // Show penalty on item select
-  itemSelect.onchange = function() {
-    const opt = itemSelect.options[itemSelect.selectedIndex];
-    const penalty = opt ? opt.dataset.penalty : '';
-    if (penalty && penaltyDiv) {
-      penaltyDiv.textContent = `Recommended penalty: ${penalty}`;
-      penaltyDiv.style.display = '';
-    } else if (penaltyDiv) {
-      penaltyDiv.style.display = 'none';
-    }
-  };
-}
-
-async function caSubmitCreate() {
-  const empSelect = document.getElementById('ca-create-employee');
-  const nteType = document.getElementById('ca-create-nte-type');
-  const incidentDate = document.getElementById('ca-create-incident-date');
-  const description = document.getElementById('ca-create-description');
-  const policy = document.getElementById('ca-create-policy');
-  const linkedCoaching = document.getElementById('ca-create-linked-coaching');
-  const submitBtn = document.getElementById('ca-create-submit-btn');
-
-  if (!empSelect || !empSelect.value) { showToast('Please select an employee', 'error'); return; }
-  if (!nteType || !nteType.value) { showToast('Please select NTE type', 'error'); return; }
-  if (!incidentDate || !incidentDate.value) { showToast('Please enter incident date', 'error'); return; }
-  if (!description || !description.value.trim()) { showToast('Please describe the incident', 'error'); return; }
-
-  const selectedOpt = empSelect.options[empSelect.selectedIndex];
-
-  // Build violations array from selected violation
-  const violations = [];
-  const itemSelect = document.getElementById('ca-create-violation-item');
-  if (itemSelect && itemSelect.value !== '') {
-    const catIdx = document.getElementById('ca-create-violation-cat').value;
-    const typeIdx = document.getElementById('ca-create-violation-type').value;
-    if (catIdx !== '' && typeIdx !== '' && typeof HR_VIOLATIONS !== 'undefined') {
-      const item = HR_VIOLATIONS[parseInt(catIdx)].subsections[parseInt(typeIdx)].items[parseInt(itemSelect.value)];
-      if (item) violations.push({ code: item.code, text: item.text, penalty: item.penalty });
+  for (var ci = 0; ci < HR_VIOLATIONS.length; ci++) {
+    var cat = HR_VIOLATIONS[ci];
+    for (var si = 0; si < cat.subsections.length; si++) {
+      var sub = cat.subsections[si];
+      for (var ii = 0; ii < sub.items.length; ii++) {
+        var item = sub.items[ii];
+        if (item.code === code) {
+          var violationObj = {
+            code: item.code, type: item.text, text: item.text, penalty: item.penalty,
+            category: cat.category, subsection: sub.code + ' ' + sub.title,
+            subsectionCode: sub.code, subsectionTitle: sub.title
+          };
+          CA_NTE_WIZARD.violations.push(violationObj);
+          if (!CA_NTE_WIZARD.violationType) CA_NTE_WIZARD.violationType = violationObj;
+          CA_NTE_WIZARD.violationSubtype = '';
+          _caWizRender();
+          return;
+        }
+      }
     }
   }
+}
 
-  const payload = {
-    employee_name: selectedOpt.dataset.name,
-    ohr_id: empSelect.value,
-    employee_email: selectedOpt.dataset.email || null,
-    supervisor_name: selectedOpt.dataset.sup || currentUser.full_name,
-    supervisor_ohr: currentUser.ohr_id,
-    planning_group: selectedOpt.dataset.pg || null,
-    actual_role: selectedOpt.dataset.role || null,
-    nte_type: nteType.value,
-    date_of_incident: incidentDate.value,
-    incident_description: description.value.trim(),
-    policy_violated: policy ? policy.value.trim() : null,
-    violations: violations.length > 0 ? violations : null,
-    linked_coaching_id: linkedCoaching ? linkedCoaching.value : null,
-    created_by: currentUser.full_name,
-    created_by_ohr: currentUser.ohr_id,
-  };
+// Keyboard navigation for violation search
+document.addEventListener('keydown', function(e) {
+  var input = document.getElementById('ca-wiz-violation-search');
+  if (!input || document.activeElement !== input) return;
+  var dropdown = document.getElementById('ca-wiz-violation-dropdown');
+  if (!dropdown || dropdown.style.display === 'none') return;
+  var total = _caWizViolMatchCodes.length;
+  if (total === 0) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    var next = _caWizViolActiveIdx + 1;
+    if (next >= total) next = 0;
+    _caWizViolHighlight(next);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    var prev = _caWizViolActiveIdx - 1;
+    if (prev < 0) prev = total - 1;
+    _caWizViolHighlight(prev);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_caWizViolActiveIdx >= 0 && _caWizViolActiveIdx < total) {
+      _caWizSelectViolation(_caWizViolMatchCodes[_caWizViolActiveIdx]);
+    }
+  } else if (e.key === 'Escape') {
+    dropdown.style.display = 'none';
+    _caWizViolActiveIdx = -1;
+  }
+});
 
-  if (submitBtn) submitBtn.disabled = true;
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+  var empWrapper = document.getElementById('ca-wiz-employee-wrapper');
+  if (empWrapper && !empWrapper.contains(e.target)) {
+    _caWizToggleEmployeeDropdown(false);
+  }
+  var violWrapper = document.getElementById('ca-wiz-violation-wrapper');
+  var violDropdown = document.getElementById('ca-wiz-violation-dropdown');
+  if (violWrapper && violDropdown && !violWrapper.contains(e.target)) {
+    violDropdown.style.display = 'none';
+    _caWizViolActiveIdx = -1;
+  }
+});
+
+// ---- Step 2: Date Range & Attendance ----
+async function _caWizGoStep2() {
+  if (!CA_NTE_WIZARD.employee) { showToast('Please select an employee', 'error'); return; }
+  if (CA_NTE_WIZARD.violations.length === 0) { showToast('Please select at least one violation', 'error'); return; }
+  CA_NTE_WIZARD.step = 2;
+  var today = new Date();
+  var twoWeeksAgo = new Date(today);
+  twoWeeksAgo.setDate(today.getDate() - 14);
+  if (!CA_NTE_WIZARD.dateRange.start) CA_NTE_WIZARD.dateRange.start = twoWeeksAgo.toISOString().split('T')[0];
+  if (!CA_NTE_WIZARD.dateRange.end) CA_NTE_WIZARD.dateRange.end = today.toISOString().split('T')[0];
+  _caWizRender();
+  await _caWizFetchAttendanceAndHistory();
+}
+
+async function _caWizFetchAttendanceAndHistory() {
+  var loadingEl = document.getElementById('ca-wiz-attendance-loading');
+  if (loadingEl) loadingEl.style.display = '';
   try {
-    const resp = await fetch(`${IO_API_BASE}/corrective-actions`, {
+    var [attResp, histResp] = await Promise.all([
+      fetch(IO_API_BASE + '/attendance?ohr_id=' + encodeURIComponent(CA_NTE_WIZARD.employee.ohr_id) + '&log_date_gte=' + CA_NTE_WIZARD.dateRange.start + '&log_date_lte=' + CA_NTE_WIZARD.dateRange.end + '&limit=100'),
+      fetch(IO_API_BASE + '/corrective-actions/employee/' + encodeURIComponent(CA_NTE_WIZARD.employee.ohr_id) + '/history')
+    ]);
+    CA_NTE_WIZARD.attendance = attResp.ok ? await attResp.json() : [];
+    if (CA_NTE_WIZARD.attendance.data) CA_NTE_WIZARD.attendance = CA_NTE_WIZARD.attendance.data;
+    CA_NTE_WIZARD.previousCAs = histResp.ok ? await histResp.json() : [];
+    _caWizDetermineCapLevel();
+  } catch (e) {
+    console.error('CA Wizard fetch error:', e);
+    showToast('Failed to load data: ' + e.message, 'error');
+  }
+  _caWizRender();
+}
+
+function _caWizDetermineCapLevel() {
+  var capLevels = ['CAP 0', 'CAP 1', 'CAP 2', 'CAP 3', 'Review for Termination'];
+  var highestIdx = 0;
+  CA_NTE_WIZARD.violations.forEach(function(v) {
+    // Handle range-style penalties like "CAP 1 up to Review for Termination"
+    var penalty = v.penalty || 'CAP 0';
+    var idx = capLevels.indexOf(penalty);
+    if (idx < 0) {
+      // Try extracting the base level from range strings
+      for (var i = capLevels.length - 1; i >= 0; i--) {
+        if (penalty.includes(capLevels[i])) { idx = i; break; }
+      }
+      if (idx < 0) idx = 0;
+    }
+    if (idx > highestIdx) highestIdx = idx;
+  });
+  // Count active/recent CAs for escalation
+  var activeCount = CA_NTE_WIZARD.previousCAs.filter(function(ca) {
+    return ca.status === 'CAP Issued' || ca.status === 'Served';
+  }).length;
+  var escalatedIdx = Math.min(highestIdx + activeCount, capLevels.length - 1);
+  CA_NTE_WIZARD.capLevel = capLevels[Math.max(highestIdx, escalatedIdx)];
+}
+
+function _caWizStep2(formBody, formFooter, progressHtml) {
+  var attHtml = '';
+  if (CA_NTE_WIZARD.attendance.length > 0) {
+    attHtml = '<div style="max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius);">' +
+      '<table style="width:100%; border-collapse:collapse; font-size:11px;">' +
+      '<thead><tr style="background:var(--bg-inset); position:sticky; top:0;">' +
+      '<th style="padding:4px 8px; text-align:left; font-weight:600;">Date</th>' +
+      '<th style="padding:4px 8px; text-align:left; font-weight:600;">Tag</th>' +
+      '<th style="padding:4px 8px; text-align:left; font-weight:600;">Reason</th>' +
+      '<th style="padding:4px 8px; text-align:left; font-weight:600;">OT Hrs</th>' +
+      '</tr></thead><tbody>';
+    CA_NTE_WIZARD.attendance.forEach(function(a) {
+      var tagColor = a.tag === 'Absent' ? '#EF4444' : a.tag === 'Tardy' ? '#F59E0B' : a.tag === 'UPL' ? '#F97316' : 'var(--fg)';
+      attHtml += '<tr style="border-bottom:1px solid var(--border);">' +
+        '<td style="padding:4px 8px;">' + escapeHtml(a.log_date || '') + '</td>' +
+        '<td style="padding:4px 8px; color:' + tagColor + '; font-weight:600;">' + escapeHtml(a.tag || '') + '</td>' +
+        '<td style="padding:4px 8px; color:var(--fg-muted);">' + escapeHtml(a.upl_reason || a.notes || '—') + '</td>' +
+        '<td style="padding:4px 8px;">' + escapeHtml(a.ot_hours || '—') + '</td>' +
+        '</tr>';
+    });
+    attHtml += '</tbody></table></div>';
+  } else {
+    attHtml = '<div id="ca-wiz-attendance-loading" style="text-align:center; padding:20px; color:var(--fg-muted); font-size:12px;">Loading attendance data...</div>';
+  }
+
+  // Previous CAs summary
+  var prevHtml = CA_NTE_WIZARD.previousCAs.length > 0
+    ? '<div style="margin-top:12px;">' +
+      '<div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Previous Corrective Actions (' + CA_NTE_WIZARD.previousCAs.length + ')</div>' +
+      CA_NTE_WIZARD.previousCAs.map(function(ca) {
+        return '<div style="padding:6px 10px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:4px; font-size:11px;">' +
+          '<strong style="color:' + (ca.cap_level === 'CAP 3' ? '#EF4444' : ca.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6') + ';">' + escapeHtml(ca.cap_level || ca.status) + '</strong>' +
+          '<span style="color:var(--fg-muted); margin-left:8px;">' + (ca.date_of_incident ? new Date(ca.date_of_incident).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '') + '</span>' +
+          '<span style="color:var(--fg-subtle); margin-left:8px;">' + escapeHtml(((ca.incident_description || '').replace(/<[^>]*>/g, '')).substring(0, 80)) + ((ca.incident_description || '').length > 80 ? '...' : '') + '</span>' +
+          '</div>';
+      }).join('') + '</div>'
+    : '<div style="margin-top:12px; font-size:12px; color:var(--fg-muted); font-style:italic;">No previous corrective actions on record.</div>';
+
+  var capColor = CA_NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : CA_NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : CA_NTE_WIZARD.capLevel === 'CAP 1' ? '#3B82F6' : CA_NTE_WIZARD.capLevel === 'Review for Termination' ? '#DC2626' : '#6B7280';
+
+  formBody.innerHTML = progressHtml +
+    '<div class="form-section">' +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
+        '<div class="form-field"><label class="form-label">Start Date</label>' +
+          '<input type="date" class="form-input" id="ca-wiz-start" value="' + escapeAttr(CA_NTE_WIZARD.dateRange.start) + '" onchange="_caWizDateChange()"></div>' +
+        '<div class="form-field"><label class="form-label">End Date</label>' +
+          '<input type="date" class="form-input" id="ca-wiz-end" value="' + escapeAttr(CA_NTE_WIZARD.dateRange.end) + '" onchange="_caWizDateChange()"></div>' +
+      '</div>' +
+      '<button class="btn btn-outline btn-xs" style="margin-top:8px;" onclick="_caWizRefreshAttendance()">↻ Refresh Attendance</button>' +
+    '</div>' +
+    '<div class="form-section">' +
+      '<div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Attendance Snapshot (Annexure A)</div>' +
+      attHtml +
+    '</div>' +
+    '<div class="form-section">' +
+      '<div style="display:flex; align-items:center; justify-content:space-between;">' +
+        '<div>' +
+          '<div style="font-size:11px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px;">Recommended CAP Level</div>' +
+          '<div style="margin-top:4px;"><span style="display:inline-block; padding:4px 14px; border-radius:12px; font-size:13px; font-weight:700; background:' + capColor + '15; color:' + capColor + ';">' + escapeHtml(CA_NTE_WIZARD.capLevel) + '</span></div>' +
+        '</div>' +
+        '<div class="form-field" style="width:160px;">' +
+          '<label class="form-label" style="font-size:11px;">Override CAP Level</label>' +
+          '<select class="form-select" id="ca-wiz-cap-override" onchange="CA_NTE_WIZARD.capLevel = this.value; _caWizRender();" style="font-size:12px;">' +
+            '<option value="CAP 0"' + (CA_NTE_WIZARD.capLevel === 'CAP 0' ? ' selected' : '') + '>CAP 0</option>' +
+            '<option value="CAP 1"' + (CA_NTE_WIZARD.capLevel === 'CAP 1' ? ' selected' : '') + '>CAP 1</option>' +
+            '<option value="CAP 2"' + (CA_NTE_WIZARD.capLevel === 'CAP 2' ? ' selected' : '') + '>CAP 2</option>' +
+            '<option value="CAP 3"' + (CA_NTE_WIZARD.capLevel === 'CAP 3' ? ' selected' : '') + '>CAP 3</option>' +
+            '<option value="Review for Termination"' + (CA_NTE_WIZARD.capLevel === 'Review for Termination' ? ' selected' : '') + '>Review for Termination</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      prevHtml +
+    '</div>';
+
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="CA_NTE_WIZARD.step = 1; _caWizRender();">← Back</button>' +
+    '<button class="btn btn-primary btn-sm" onclick="_caWizGoStep3()">Generate Narrative →</button>';
+}
+
+function _caWizDateChange() {
+  CA_NTE_WIZARD.dateRange.start = document.getElementById('ca-wiz-start')?.value || '';
+  CA_NTE_WIZARD.dateRange.end = document.getElementById('ca-wiz-end')?.value || '';
+}
+
+async function _caWizRefreshAttendance() {
+  _caWizDateChange();
+  CA_NTE_WIZARD.attendance = [];
+  _caWizRender();
+  await _caWizFetchAttendanceAndHistory();
+}
+
+// ---- Step 3: AI Narrative & Review ----
+async function _caWizGoStep3() {
+  _caWizDateChange();
+  if (!CA_NTE_WIZARD.dateRange.start || !CA_NTE_WIZARD.dateRange.end) {
+    showToast('Please select a date range', 'error'); return;
+  }
+  CA_NTE_WIZARD.step = 3;
+  CA_NTE_WIZARD.isGenerating = true;
+  _caWizRender();
+  try {
+    var resp = await fetch(IO_API_BASE + '/nte-build-assist/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        employee: {
+          full_name: CA_NTE_WIZARD.employee.full_name,
+          ohr_id: CA_NTE_WIZARD.employee.ohr_id,
+          actual_role: CA_NTE_WIZARD.employee.actual_role,
+          planning_group: CA_NTE_WIZARD.employee.planning_group,
+          supervisor_name: CA_NTE_WIZARD.employee.supervisor_name,
+          supervisor_email: CA_NTE_WIZARD.employee.supervisor_email,
+          meta_email: CA_NTE_WIZARD.employee.meta_email
+        },
+        violation: CA_NTE_WIZARD.violations[0] ? {
+          code: CA_NTE_WIZARD.violations[0].code, type: CA_NTE_WIZARD.violations[0].type,
+          text: CA_NTE_WIZARD.violations[0].text, penalty: CA_NTE_WIZARD.violations[0].penalty,
+          category: CA_NTE_WIZARD.violations[0].category,
+          subsection: CA_NTE_WIZARD.violations[0].subsection || '',
+          subsectionCode: CA_NTE_WIZARD.violations[0].subsectionCode || '',
+          subsectionTitle: CA_NTE_WIZARD.violations[0].subsectionTitle || ''
+        } : {},
+        violations: CA_NTE_WIZARD.violations.map(function(v) {
+          return { code: v.code, type: v.type, text: v.text, penalty: v.penalty, category: v.category, subsection: v.subsection || '', subsectionCode: v.subsectionCode || '', subsectionTitle: v.subsectionTitle || '' };
+        }),
+        cap_level: CA_NTE_WIZARD.capLevel,
+        date_range: CA_NTE_WIZARD.dateRange,
+        attendance: CA_NTE_WIZARD.attendance.map(function(a) { return { log_date: a.log_date, tag: a.tag, upl_reason: a.upl_reason, ot_hours: a.ot_hours }; }),
+        previous_ntes: CA_NTE_WIZARD.previousCAs.map(function(ca) { return { cap_level: ca.cap_level, date_of_incident: ca.date_of_incident, incident_description: ((ca.incident_description || '').replace(/<[^>]*>/g, '')).substring(0, 200) }; })
+      })
     });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to create NTE');
+    if (!resp.ok) throw new Error('AI generation failed');
+    var result = await resp.json();
+    CA_NTE_WIZARD.narrative = result.narrative || '';
+    CA_NTE_WIZARD.policyText = result.policy_text || '';
+  } catch (e) {
+    console.error('CA NTE narrative generation error:', e);
+    showToast('AI generation failed. You can write the narrative manually.', 'error');
+    CA_NTE_WIZARD.narrative = '';
+    CA_NTE_WIZARD.policyText = '';
+  }
+  CA_NTE_WIZARD.isGenerating = false;
+  _caWizRender();
+}
+
+function _caWizStep3(formBody, formFooter, progressHtml) {
+  if (CA_NTE_WIZARD.isGenerating) {
+    formBody.innerHTML = progressHtml +
+      '<div style="text-align:center; padding:60px 20px;">' +
+        '<div style="display:inline-block; width:32px; height:32px; border:3px solid var(--border); border-top-color:#6366F1; border-radius:50%; animation:spin 0.8s linear infinite;"></div>' +
+        '<div style="margin-top:16px; color:var(--fg-muted); font-size:13px;">Generating NTE narrative with AI...</div>' +
+        '<div style="margin-top:8px; color:var(--fg-subtle); font-size:11px;">Analyzing attendance data, violation history, and policy references</div>' +
+      '</div>' +
+      '<style>@keyframes spin { to { transform: rotate(360deg); } }</style>';
+    formFooter.innerHTML = '';
+    return;
+  }
+
+  formBody.innerHTML = progressHtml +
+    '<div class="form-section">' +
+      '<div class="form-field">' +
+        '<label class="form-label">Incident Narrative <span class="required">*</span></label>' +
+        '<div style="font-size:11px; color:var(--fg-muted); margin-bottom:4px;">AI-generated — review and edit as needed</div>' +
+        '<div class="rte-container">' +
+          '<div class="rte-toolbar">' +
+            '<button type="button" class="rte-btn" onclick="caRteExec(\'bold\')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>' +
+            '<button type="button" class="rte-btn" onclick="caRteExec(\'italic\')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>' +
+          '</div>' +
+          '<div class="rte-editor" id="ca-wiz-narrative" contenteditable="true" data-placeholder="Describe the incident..." style="min-height:100px;">' + CA_NTE_WIZARD.narrative + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-section">' +
+      '<div class="form-field">' +
+        '<label class="form-label">Policy / Standard Violated <span class="required">*</span></label>' +
+        '<div style="font-size:11px; color:var(--fg-muted); margin-bottom:4px;">AI-generated policy citations — review and edit</div>' +
+        '<div class="rte-container">' +
+          '<div class="rte-toolbar">' +
+            '<button type="button" class="rte-btn" onclick="caRteExec(\'bold\')" title="Bold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg></button>' +
+            '<button type="button" class="rte-btn" onclick="caRteExec(\'italic\')" title="Italic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg></button>' +
+          '</div>' +
+          '<div class="rte-editor" id="ca-wiz-policy" contenteditable="true" data-placeholder="Specify the policy violated..." style="min-height:80px;">' + CA_NTE_WIZARD.policyText + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-section" style="background:var(--bg-inset); padding:12px 16px; border-radius:var(--radius); border:1px solid var(--border);">' +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">' +
+        '<div><strong>Employee:</strong> ' + escapeHtml(CA_NTE_WIZARD.employee.full_name) + '</div>' +
+        '<div><strong>CAP Level:</strong> <span style="color:' + (CA_NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : CA_NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : '#3B82F6') + '; font-weight:600;">' + escapeHtml(CA_NTE_WIZARD.capLevel) + '</span></div>' +
+      '</div>' +
+      '<div style="margin-top:8px; font-size:11px;"><strong>Violation(s):</strong></div>' +
+      '<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px;">' +
+        CA_NTE_WIZARD.violations.map(function(v) {
+          return '<span style="padding:2px 8px; background:#6366F110; border:1px solid #6366F130; border-radius:12px; font-size:10px;"><strong>' + escapeHtml(v.code) + '</strong> ' + escapeHtml(v.text.substring(0, 50)) + (v.text.length > 50 ? '...' : '') + '</span>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="CA_NTE_WIZARD.step = 2; _caWizRender();">← Back</button>' +
+    '<button class="btn btn-outline btn-sm" onclick="_caWizRegenerate()">↻ Regenerate</button>' +
+    '<button class="btn btn-primary btn-sm" onclick="_caWizGoStep4()">Review & Confirm →</button>';
+}
+
+async function _caWizRegenerate() {
+  CA_NTE_WIZARD.isGenerating = true;
+  _caWizRender();
+  await _caWizGoStep3();
+}
+
+function _caWizGoStep4() {
+  CA_NTE_WIZARD.narrative = document.getElementById('ca-wiz-narrative')?.innerHTML?.trim() || '';
+  CA_NTE_WIZARD.policyText = document.getElementById('ca-wiz-policy')?.innerHTML?.trim() || '';
+  if (!CA_NTE_WIZARD.narrative || CA_NTE_WIZARD.narrative === '<br>') {
+    showToast('Please provide an incident narrative', 'error'); return;
+  }
+  if (!CA_NTE_WIZARD.policyText || CA_NTE_WIZARD.policyText === '<br>') {
+    showToast('Please specify the policy violated', 'error'); return;
+  }
+  CA_NTE_WIZARD.step = 4;
+  _caWizRender();
+}
+
+// ---- Step 4: Confirm & Save ----
+function _caWizStep4(formBody, formFooter, progressHtml) {
+  var capColor = CA_NTE_WIZARD.capLevel === 'CAP 3' ? '#EF4444' : CA_NTE_WIZARD.capLevel === 'CAP 2' ? '#F59E0B' : CA_NTE_WIZARD.capLevel === 'CAP 1' ? '#3B82F6' : CA_NTE_WIZARD.capLevel === 'Review for Termination' ? '#DC2626' : '#6B7280';
+  var coach = typeof currentUser !== 'undefined' ? currentUser : null;
+
+  formBody.innerHTML = progressHtml +
+    '<div style="padding:12px 16px; background:#6366F108; border:1px solid #6366F130; border-radius:var(--radius); margin-bottom:16px;">' +
+      '<div style="font-size:13px; font-weight:600; color:#6366F1; margin-bottom:4px;">NTE Summary — Ready to Submit</div>' +
+      '<div style="font-size:11px; color:var(--fg-muted);">Review all details below. This will create a corrective action record and generate the NTE document.</div>' +
+    '</div>' +
+    '<div class="form-section">' +
+      '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">' +
+        '<div class="detail-row"><span class="detail-label">EMPLOYEE</span><span class="detail-value">' + escapeHtml(CA_NTE_WIZARD.employee.full_name) + ' (' + escapeHtml(CA_NTE_WIZARD.employee.ohr_id) + ')</span></div>' +
+        '<div class="detail-row"><span class="detail-label">ROLE</span><span class="detail-value">' + escapeHtml(CA_NTE_WIZARD.employee.actual_role || '—') + '</span></div>' +
+        '<div class="detail-row"><span class="detail-label">SUPERVISOR</span><span class="detail-value">' + escapeHtml(CA_NTE_WIZARD.employee.supervisor_name || '—') + '</span></div>' +
+        '<div class="detail-row"><span class="detail-label">PLANNING GROUP</span><span class="detail-value">' + escapeHtml(CA_NTE_WIZARD.employee.planning_group || '—') + '</span></div>' +
+        '<div class="detail-row"><span class="detail-label">VIOLATION(S)</span><span class="detail-value">' + CA_NTE_WIZARD.violations.map(function(v) { return escapeHtml(v.code + ' — ' + v.type); }).join('<br>') + '</span></div>' +
+        '<div class="detail-row"><span class="detail-label">CAP LEVEL</span><span class="detail-value"><span style="padding:2px 10px; border-radius:12px; font-size:11px; font-weight:600; background:' + capColor + '15; color:' + capColor + ';">' + escapeHtml(CA_NTE_WIZARD.capLevel) + '</span></span></div>' +
+        '<div class="detail-row"><span class="detail-label">DATE RANGE</span><span class="detail-value">' + escapeHtml(CA_NTE_WIZARD.dateRange.start) + ' to ' + escapeHtml(CA_NTE_WIZARD.dateRange.end) + '</span></div>' +
+        '<div class="detail-row"><span class="detail-label">ISSUED BY</span><span class="detail-value">' + escapeHtml(coach ? coach.full_name : '—') + (coach ? ' (' + escapeHtml(coach.ohr_id) + ')' : '') + '</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="form-section">' +
+      '<h4 class="form-section-title">Incident Narrative</h4>' +
+      '<div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6;">' + CA_NTE_WIZARD.narrative + '</div>' +
+    '</div>' +
+    '<div class="form-section">' +
+      '<h4 class="form-section-title">Policy Violated</h4>' +
+      '<div style="padding:10px 14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:var(--radius); font-size:13px; line-height:1.6;">' + CA_NTE_WIZARD.policyText + '</div>' +
+    '</div>';
+
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="CA_NTE_WIZARD.step = 3; _caWizRender();">← Back</button>' +
+    '<button class="btn btn-primary btn-sm" id="ca-wiz-submit-btn" onclick="_caWizSubmit()" style="display:flex; align-items:center; gap:6px;">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+      'Generate NTE Document' +
+    '</button>';
+}
+
+async function _caWizSubmit() {
+  var coach = typeof currentUser !== 'undefined' ? currentUser : null;
+  var submitBtn = document.getElementById('ca-wiz-submit-btn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-sm"></span> Creating Record...'; }
+
+  try {
+    // 1. Create the corrective action record
+    var caPayload = {
+      employee_name: CA_NTE_WIZARD.employee.full_name,
+      ohr_id: CA_NTE_WIZARD.employee.ohr_id,
+      employee_email: CA_NTE_WIZARD.employee.meta_email || null,
+      supervisor_name: CA_NTE_WIZARD.employee.supervisor_name || (coach ? coach.full_name : ''),
+      supervisor_ohr: CA_NTE_WIZARD.employee.supervisor_ohr || (coach ? coach.ohr_id : ''),
+      supervisor_email: CA_NTE_WIZARD.employee.supervisor_email || null,
+      planning_group: CA_NTE_WIZARD.employee.planning_group || null,
+      actual_role: CA_NTE_WIZARD.employee.actual_role || null,
+      nte_type: 'Attendance & Tardiness',
+      date_of_incident: CA_NTE_WIZARD.dateRange.start,
+      incident_description: CA_NTE_WIZARD.narrative,
+      policy_violated: CA_NTE_WIZARD.policyText,
+      violations: CA_NTE_WIZARD.violations.map(function(v) {
+        return { code: v.code, text: v.text, penalty: v.penalty, category: v.category, subsection: v.subsection };
+      }),
+      indicated_cap_level: CA_NTE_WIZARD.capLevel,
+      created_by: coach ? coach.full_name : '',
+      created_by_ohr: coach ? coach.ohr_id : '',
+    };
+
+    var caResp = await fetch(IO_API_BASE + '/corrective-actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(caPayload)
+    });
+    if (!caResp.ok) throw new Error('Failed to create corrective action record');
+    var caCreated = await caResp.json();
+
+    // 2. Also create a coaching log for audit trail (NTE Log type, awareness-only)
+    if (submitBtn) { submitBtn.innerHTML = '<span class="spinner-sm"></span> Creating Coaching Log...'; }
+    var coachingRecord = {
+      coaching_type: 'NTE Log',
+      coach: coach ? coach.full_name : '',
+      coach_ohr: coach ? coach.ohr_id : '',
+      coach_meta_email: coach ? (coach.meta_email || '') : '',
+      coach_sup: coach ? (coach.supervisor_name || '') : '',
+      coach_sup_email: coach ? (coach.supervisor_email || '') : '',
+      coach_pg: coach ? coach.planning_group : '',
+      coaching_date: new Date().toISOString(),
+      coachee: CA_NTE_WIZARD.employee.full_name,
+      coachee_ohr: CA_NTE_WIZARD.employee.ohr_id,
+      coachee_meta_email: CA_NTE_WIZARD.employee.meta_email || '',
+      coachee_sup: CA_NTE_WIZARD.employee.supervisor_name || '',
+      coachee_sup_email: CA_NTE_WIZARD.employee.supervisor_email || '',
+      coachee_pg: CA_NTE_WIZARD.employee.planning_group || '',
+      session_goal: 'Attendance & Tardiness',
+      coaching_details: CA_NTE_WIZARD.narrative,
+      status: 'Issued',
+      cap_level: CA_NTE_WIZARD.capLevel,
+      coachee_list: []
+    };
+    var coachResp = await fetch(IO_API_BASE + '/coaching', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(coachingRecord)
+    });
+    var coachingId = null;
+    if (coachResp.ok) {
+      var created = await coachResp.json();
+      coachingId = created?.coaching_id || (Array.isArray(created) ? created[0]?.coaching_id : null) || created?.id;
     }
-    showToast('NTE issued successfully', 'success');
-    caCloseCreate();
+
+    // 3. Generate the NTE DOCX document
+    if (submitBtn) { submitBtn.innerHTML = '<span class="spinner-sm"></span> Generating DOCX...'; }
+    var docxPayload = {
+      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      employee: {
+        full_name: CA_NTE_WIZARD.employee.full_name,
+        ohr_id: CA_NTE_WIZARD.employee.ohr_id,
+        actual_role: CA_NTE_WIZARD.employee.actual_role || 'Process Associate',
+        department: CA_NTE_WIZARD.employee.department || 'Operations',
+        supervisor_name: CA_NTE_WIZARD.employee.supervisor_name || '',
+        gender: CA_NTE_WIZARD.employee.gender || 'Male',
+        sex: CA_NTE_WIZARD.employee.sex || '',
+      },
+      narrative: CA_NTE_WIZARD.narrative,
+      policy_sections: CA_NTE_WIZARD.policyText ? [CA_NTE_WIZARD.policyText] : [],
+      cap_level: CA_NTE_WIZARD.capLevel,
+      violation: CA_NTE_WIZARD.violations[0] || CA_NTE_WIZARD.violationType,
+      violations: CA_NTE_WIZARD.violations,
+      flm_name: CA_NTE_WIZARD.employee.supervisor_name || '',
+      hr_name: 'Jocelyn Ramos',
+      include_cwd_page: false,
+    };
+    var docxResp = await fetch(IO_API_BASE + '/nte-build-assist/docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(docxPayload)
+    });
+    if (!docxResp.ok) {
+      var errData = await docxResp.json().catch(function() { return {}; });
+      throw new Error('DOCX generation failed: ' + (errData.error || docxResp.statusText));
+    }
+
+    // Download the DOCX file
+    var blob = await docxResp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var safeName = CA_NTE_WIZARD.employee.full_name.replace(/[^a-zA-Z0-9 ,]/g, '').replace(/\s+/g, '_');
+    a.href = url;
+    a.download = 'NTE_' + safeName + '_' + new Date().toISOString().slice(0, 10) + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('NTE document generated and downloaded! CA record created.', 'success');
+    caCloseWizard();
+    // Refresh the corrective actions list
     await Promise.all([caFetchRecords(), caFetchStats()]);
     caRenderSummaryCards();
     caApplyFilters();
-  } catch (err) {
-    showToast(err.message || 'Failed to create NTE', 'error');
-  } finally {
-    if (submitBtn) submitBtn.disabled = false;
+  } catch (e) {
+    console.error('CA NTE submission error:', e);
+    showToast('Failed to create NTE: ' + e.message, 'error');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Generate NTE Document'; }
   }
 }
 

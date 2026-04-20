@@ -1705,7 +1705,6 @@ function compassToggleAddMenu() {
     { id: 'QA Feedback', icon: '\u{1F4CB}', label: 'QA Feedback', desc: 'Quality error findings & RCA', accent: '#EC4899' },
     { id: 'Incident Report', icon: '\u26A0\uFE0F', label: 'Incident Report', desc: 'Violation tracker & incident log', accent: '#EF4444' },
     { id: 'ZTP Coaching', icon: '\u{1F512}', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
-    { id: 'NTE Build Assist', icon: '\u{1F4C4}', label: 'NTE Build Assist', desc: 'AI-powered NTE builder', accent: '#6366F1', special: true }
   ];
 
   // Role-based coaching type restrictions
@@ -1715,8 +1714,8 @@ function compassToggleAddMenu() {
   if (isOwner || role === 'Manager') {
     types = allTypes; // Managers see all types
   } else if (role === 'Quality & Policy Expert') {
-    // QAs: only QA Feedback, ZTP Coaching, Follow-Up Session (+ NTE Build Assist for NTE Log)
-    const qaAllowed = ['QA Feedback', 'ZTP Coaching', 'Follow-Up Session', 'NTE Build Assist'];
+    // QAs: only QA Feedback, ZTP Coaching, Follow-Up Session
+    const qaAllowed = ['QA Feedback', 'ZTP Coaching', 'Follow-Up Session'];
     types = allTypes.filter(t => qaAllowed.includes(t.id));
   } else if (role === 'Operational SME') {
     // SMEs: all EXCEPT QA Feedback and Triad Coaching
@@ -1763,10 +1762,7 @@ async function compassAddMenuSelect(type) {
   const menu = document.getElementById('compass-add-menu');
   if (menu) menu.style.display = 'none';
 
-  if (type === 'NTE Build Assist') {
-    compassShowNteBuildAssist();
-    return;
-  }
+  // NTE Build Assist relocated to Corrective Actions page
   // Store the selected type and open the form directly
   COMPASS._selectedType = type;
   await compassShowNewFormForType(type);

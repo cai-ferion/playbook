@@ -2368,3 +2368,11 @@
 - [ ] NTE Build Assist bridge: Track in Corrective Actions button after wizard (deferred)
 - [x] CAP expiry: auto-transition to Expired on stats fetch
 - [ ] Tests for corrective actions endpoints (deferred)
+
+## NTE Build Assist Relocation — Corrective Actions
+- [x] Review current NTE Build Assist wizard in compass.js
+- [x] Move NTE Build Assist code to corrective-actions.js
+- [x] Wire wizard to "Issue NTE" button in Corrective Actions page
+- [x] Route wizard output to io_corrective_actions table (POST /api/io/corrective-actions)
+- [x] Remove NTE Build Assist button/code from Coaching Profile
+- [x] Test end-to-end: wizard opens from CA page, creates record in CA table
