@@ -2261,3 +2261,7 @@
 - [x] SME: same as TL (coachee under supervisor's team OR Support Joiner 1/2)
 - [x] QA: segmented toggle "All Disputes" (default) vs "My Disputes" (where they are the coach)
 - [x] Manager: see all disputes
+
+## Coaching Profile & Disputes Area — Detail View Revisions
+- [x] Hide "Coaching Rating" and "Coaching Sentiments" fields from everyone except the coach's 1-up supervisor
+- [x] Refactor Disputes Area card detail overlay to match Coaching Profile detail layout/design

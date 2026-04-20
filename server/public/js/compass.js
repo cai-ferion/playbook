@@ -940,7 +940,7 @@ async function compassOpenDetail(coachingId) {
     }
   }
   const isAdmin = cu && cu.ohr_id === '740045023';
-  const canSeeAckDetails = isCoachee || isCoachSup || isAdmin; // Rating & Sentiments visible to Coachee, Coach's Supervisor, and admin only
+  const canSeeAckDetails = isCoachSup || isAdmin; // Rating & Sentiments visible ONLY to Coach's 1-up Supervisor and admin
   const isAcknowledged = compassIsAcknowledged(log);
 
   // ===== SECTION 1: SESSION DETAILS =====
@@ -2985,25 +2985,30 @@ async function disputesOpenDetail(coachingId) {
   const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
   const statusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--compass-text-muted)';
 
-  // ===== SECTION 1: SESSION DETAILS =====
-  let html = '<div class="disputes-section"><div class="disputes-section-title">Session Details</div>';
-  html += '<div class="disputes-detail-grid">';
-  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Status</span><span class="disputes-detail-value" style="font-weight:600;color:${statusColor};">${escapeHtml(log.status || '—')}</span></div>`;
-  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Level</span><span class="disputes-detail-value" style="font-weight:600;">${levelLabel}</span></div>`;
-  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coaching Date</span><span class="disputes-detail-value">${date}</span></div>`;
-  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coachee</span><span class="disputes-detail-value">${escapeHtml(log.coachee || '—')}</span></div>`;
+  // ===== SECTION 1: SESSION DETAILS (Coaching Profile layout) =====
+  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
+  html += `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="font-weight:600;color:${statusColor};">${escapeHtml(log.status || '—')}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Level</span><span class="detail-value" style="font-weight:600;">${levelLabel}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '—')} (${escapeHtml(log.coachee_ohr || '')})</span></div>`;
   if (log.coaching_type === 'QA Feedback' && log.job_id) {
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Job ID</span><span class="disputes-detail-value">${escapeHtml(log.job_id)}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Job ID</span><span class="detail-value">${escapeHtml(log.job_id)}</span></div>`;
   }
   if (log.coachee_sup && log.coach !== log.coachee_sup) {
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coachee Supervisor</span><span class="disputes-detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Coachee Supervisor</span><span class="detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
   }
-  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coach</span><span class="disputes-detail-value">${escapeHtml(log.coach || '—')}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${escapeHtml(log.coach || '—')}</span></div>`;
   if (log.session_goal) {
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Session Goal</span><span class="disputes-detail-value">${escapeHtml(log.session_goal)}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Session Goal</span><span class="detail-value">${escapeHtml(log.session_goal)}</span></div>`;
   }
-  html += '</div>'; // close grid
-  html += `<div class="disputes-detail-item full-width" style="margin-top:10px;"><span class="disputes-detail-label">Coaching Details</span><span class="disputes-detail-value">${log.coaching_details || '—'}</span></div>`;
+  // Support Joiners
+  if (log.sme_joiner) {
+    html += `<div class="detail-row"><span class="detail-label">Support Joiner 1</span><span class="detail-value">${escapeHtml(log.sme_joiner)}</span></div>`;
+  }
+  if (log.sme_joiner_2) {
+    html += `<div class="detail-row"><span class="detail-label">Support Joiner 2</span><span class="detail-value">${escapeHtml(log.sme_joiner_2)}</span></div>`;
+  }
+  html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '—'}</span></div>`;
 
   // Attachments
   html += compassRenderAttachmentsDetail(log);
@@ -3012,15 +3017,17 @@ async function disputesOpenDetail(coachingId) {
 
   // ===== SECTION 2: ROOT CAUSE ANALYSIS (QA Feedback only) =====
   if (log.coaching_type === 'QA Feedback') {
-    html += '<div class="disputes-section"><div class="disputes-section-title">Root Cause Analysis</div>';
-    html += '<div class="disputes-detail-grid">';
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L1 Category</span><span class="disputes-detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L2 Direct Cause</span><span class="disputes-detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L3 Contributing</span><span class="disputes-detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L4 Deficiency</span><span class="disputes-detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>`;
-    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L5 Root Cause</span><span class="disputes-detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>`;
-    html += `<div class="disputes-detail-item full-width"><span class="disputes-detail-label">RCA Description</span><span class="disputes-detail-value">${escapeHtml(log.guidelines || '—')}</span></div>`;
-    html += '</div></div>';
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
+    html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L3 Contributing</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value detail-multiline">${escapeHtml(log.guidelines || '—')}</span></div>`;
+    // Markdown Status
+    const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
+    html += `<div class="detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span class="detail-label">Markdown Status</span><span class="detail-value" style="font-weight:600;color:${mdStatusColor};">${escapeHtml(log.status || '—')}</span></div>`;
+    html += '</div>';
   }
 
   // ===== SECTION 3: DISPUTE TRAIL =====
@@ -3031,7 +3038,7 @@ async function disputesOpenDetail(coachingId) {
     ];
     const hasDispute = commentFields.some(c => c && c.trim());
     if (hasDispute) {
-      html += '<div class="disputes-section"><div class="disputes-section-title">Dispute Trail</div>';
+      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
       html += disputesRenderTrailEntries(log);
       html += '</div>';
     }
