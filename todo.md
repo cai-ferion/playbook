@@ -2311,3 +2311,5 @@
 ## Sign Up / Login UX Improvements
 - [x] Auto-login after onboarding — skip redirect to login form, log user in directly
 - [x] Login nudge — when OHR exists but profile incomplete, offer link to sign up/onboarding
+## Session Management
+- [x] 30-minute inactivity timeout — clears sessionStorage and returns to login screen

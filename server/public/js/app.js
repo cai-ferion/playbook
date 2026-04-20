@@ -458,6 +458,9 @@ async function loginAsEmployee(emp) {
   // Default sidebar to Alerts (notifications) for all users
   if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
   if (typeof initNotifications === 'function') initNotifications();
+  // Start inactivity session timeout
+  startIdleTimer();
+
   // Route to Helm Task Board for Agents with no anchor access, Risk Intelligence for others
   if (!currentUser.permissions['nav.anchor']) {
     switchView('helm-board');
@@ -505,6 +508,7 @@ async function handleLogin() {
     if (modeToggle) modeToggle.style.display = 'none';
     if (typeof forceSync === 'function') await forceSync();
     if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
+    startIdleTimer();
     switchView('input');
     return;
   }
@@ -563,7 +567,78 @@ async function handleLogin() {
 
 
 
-function handleLogout() {
+// ===== Inactivity Session Timeout =====
+// 30-minute idle timeout — warns at 25 min, auto-logout at 30 min.
+// Resets on mouse, keyboard, touch, or scroll activity.
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;   // 30 minutes
+const SESSION_WARN_MS   = 25 * 60 * 1000;    // warn at 25 minutes
+let _idleTimer = null;
+let _idleWarnTimer = null;
+let _idleToastEl = null;
+
+function _resetIdleTimers() {
+  // Only run when a user is logged in
+  if (!currentUser) return;
+  clearTimeout(_idleTimer);
+  clearTimeout(_idleWarnTimer);
+  _dismissIdleToast();
+
+  // Warning toast at 25 min
+  _idleWarnTimer = setTimeout(() => {
+    _showIdleToast();
+  }, SESSION_WARN_MS);
+
+  // Hard logout at 30 min
+  _idleTimer = setTimeout(() => {
+    _dismissIdleToast();
+    handleLogout('timeout');
+  }, SESSION_TIMEOUT_MS);
+}
+
+function _showIdleToast() {
+  if (_idleToastEl) return; // already visible
+  _idleToastEl = document.createElement('div');
+  _idleToastEl.id = 'idle-timeout-toast';
+  _idleToastEl.style.cssText =
+    'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);' +
+    'background:var(--warning, #f59e0b);color:#1a1a1a;padding:12px 24px;' +
+    'border-radius:8px;font-size:14px;font-weight:600;z-index:99999;' +
+    'box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;gap:12px;';
+  _idleToastEl.innerHTML =
+    '<span>You\'ve been idle for a while. You\'ll be logged out in 5 minutes.</span>' +
+    '<button onclick="_resetIdleTimers()" style="background:#1a1a1a;color:#fff;border:none;' +
+    'padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Stay Logged In</button>';
+  document.body.appendChild(_idleToastEl);
+}
+
+function _dismissIdleToast() {
+  if (_idleToastEl) {
+    _idleToastEl.remove();
+    _idleToastEl = null;
+  }
+}
+
+function startIdleTimer() {
+  // Attach activity listeners (passive, low overhead)
+  const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+  events.forEach(evt => {
+    document.addEventListener(evt, _resetIdleTimers, { passive: true });
+  });
+  _resetIdleTimers();
+}
+
+function stopIdleTimer() {
+  clearTimeout(_idleTimer);
+  clearTimeout(_idleWarnTimer);
+  _dismissIdleToast();
+  const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+  events.forEach(evt => {
+    document.removeEventListener(evt, _resetIdleTimers);
+  });
+}
+
+function handleLogout(reason) {
+  stopIdleTimer();
   currentUser = null;
   sessionStorage.removeItem('playbook_user');
   appState.records = [];
@@ -573,6 +648,15 @@ function handleLogout() {
   document.getElementById('app-container').style.display = 'none';
   document.getElementById('auth-page').style.display = 'flex';
   showAuthButtons();
+  // Show timeout message on the login form if auto-logged out
+  if (reason === 'timeout') {
+    showAuthForm('login');
+    const errorEl = document.getElementById('login-error');
+    if (errorEl) {
+      errorEl.style.color = 'var(--warning, #f59e0b)';
+      errorEl.textContent = 'You were logged out due to inactivity.';
+    }
+  }
 }
 
 // ===== Progress Bar =====
@@ -645,6 +729,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (modeToggle2) modeToggle2.style.display = 'none';
         if (typeof forceSync === 'function') await forceSync();
         if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
+        startIdleTimer();
         switchView('input');
       } else {
         // ── RBAC: Re-fetch permissions on session restore (may have changed) ──
@@ -673,6 +758,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Default sidebar to Alerts (notifications) for all users
         if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
         if (typeof initNotifications === 'function') initNotifications();
+        // Start inactivity session timeout
+        startIdleTimer();
         // Route based on permissions
         if (!currentUser.permissions['nav.anchor']) {
           switchView('helm-board');
