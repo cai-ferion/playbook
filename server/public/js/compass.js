@@ -1500,6 +1500,40 @@ async function compassSubmitAcknowledge() {
     if (!resp.ok) throw new Error('Failed to acknowledge');
 
     showToast('Coaching log acknowledged', 'success');
+
+    // #2 Notification: coaching_ack → notify coach
+    try {
+      const coacheeName = log.coachee || 'Coachee';
+      const cid = log.coaching_id || log.id;
+      createNotification({
+        type: 'coaching_ack',
+        title: 'Coaching Acknowledged',
+        message: `${coacheeName} acknowledged your coaching log ${cid}`,
+        target_ohr: log.coach_ohr,
+        metadata: { coaching_id: cid, coachee: coacheeName, coach: log.coach }
+      });
+    } catch (notifErr) { console.error('[Notif] coaching_ack error:', notifErr); }
+
+    // #3 Notification: coaching_rated → notify coach's 1-up supervisor
+    try {
+      const coacheeName = log.coachee || 'Coachee';
+      const coachName = log.coach || 'Coach';
+      const cid = log.coaching_id || log.id;
+      // Find coach's supervisor OHR from employees list
+      const coachEmp = COMPASS.employees.find(e => e.ohr_id === log.coach_ohr);
+      const supName = coachEmp ? coachEmp.supervisor_name : (log.coach_sup || '');
+      const supEmp = supName ? COMPASS.employees.find(e => e.full_name === supName) : null;
+      if (supEmp) {
+        createNotification({
+          type: 'coaching_rated',
+          title: 'Coaching Rating Submitted',
+          message: `${coacheeName} rated a coaching session by ${coachName} — ${compassAckRating}/5 stars`,
+          target_ohr: supEmp.ohr_id,
+          metadata: { coaching_id: cid, rating: compassAckRating, coachee: coacheeName, coach: coachName }
+        });
+      }
+    } catch (notifErr) { console.error('[Notif] coaching_rated error:', notifErr); }
+
     compassCloseForm();
     await compassFetchLogs();
   } catch (e) {
@@ -2491,8 +2525,19 @@ async function compassSubmitNew() {
         });
         if (!resp.ok) throw new Error('Failed');
         const created = await resp.json();
-        createdIds.push(created?.coaching_id || created?.id);
+        const gId = created?.coaching_id || created?.id;
+        createdIds.push(gId);
         successCount++;
+        // #1 Notification: coaching_issued → notify each group coachee
+        try {
+          createNotification({
+            type: 'coaching_issued',
+            title: 'New Coaching Log',
+            message: `You received a General Coaching from ${coach ? coach.full_name : 'Coach'} — ${sessionGoal}`,
+            target_ohr: item.ohr,
+            metadata: { coaching_id: gId, coaching_type: 'General Coaching', coach: coach ? coach.full_name : '', coachee: item.name }
+          });
+        } catch (notifErr) { console.error('[Notif] group coaching_issued error:', notifErr); }
       } catch (e) {
         failCount++;
         console.error(`Failed to create log for ${item.name}:`, e);
@@ -2530,6 +2575,40 @@ async function compassSubmitNew() {
     const newId = created?.coaching_id || (Array.isArray(created) ? created[0]?.coaching_id : null) || created?.id;
 
     showToast('Coaching log created successfully', 'success');
+
+    // #1 Notification: coaching_issued → notify coachee (+ supervisor for ZTP/Incident)
+    try {
+      const coacheeName = record.coachee || 'Coachee';
+      const coachName = record.coach || 'Coach';
+      const goalTag = record.session_goal ? ` — ${record.session_goal}` : '';
+      const isHighWeight = (record.coaching_type === 'ZTP Coaching' || record.coaching_type === 'Incident Report');
+      const notifTitle = isHighWeight
+        ? (record.coaching_type === 'ZTP Coaching' ? 'ZTP Infraction Issued' : 'Incident Report Filed')
+        : 'New Coaching Log';
+      const notifMsg = isHighWeight
+        ? `[HIGH PRIORITY] You received a ${record.coaching_type} from ${coachName}${goalTag}`
+        : `You received a ${record.coaching_type} from ${coachName}${goalTag}`;
+      createNotification({
+        type: 'coaching_issued',
+        title: notifTitle,
+        message: notifMsg,
+        target_ohr: record.coachee_ohr,
+        metadata: { coaching_id: newId, coaching_type: record.coaching_type, coach: coachName, coachee: coacheeName, high_weight: isHighWeight }
+      });
+      // For ZTP/Incident: also notify coachee's supervisor
+      if (isHighWeight && record.coachee_sup) {
+        const supEmp = COMPASS.employees.find(e => e.full_name === record.coachee_sup);
+        if (supEmp) {
+          createNotification({
+            type: 'coaching_issued',
+            title: notifTitle,
+            message: `[HIGH PRIORITY] ${coacheeName} received a ${record.coaching_type} from ${coachName}${goalTag}`,
+            target_ohr: supEmp.ohr_id,
+            metadata: { coaching_id: newId, coaching_type: record.coaching_type, coach: coachName, coachee: coacheeName, high_weight: true }
+          });
+        }
+      }
+    } catch (notifErr) { console.error('[Notif] coaching_issued error:', notifErr); }
 
     compassCloseForm();
     await compassFetchLogs();
@@ -3269,6 +3348,35 @@ function disputesCloseAction() {
 
 // ===== LV1: Dispute Markdown Popout =====
 
+// ===== Dispute Notification Helper =====
+// Centralised function to fire dispute notifications based on level and action.
+// Recipients are determined by the dispute level and the action taken.
+function disputeNotify(log, notifType, message, recipients) {
+  const cid = log.coaching_id || log.id;
+  const isHighWeight = (log.coaching_type === 'ZTP Coaching' || log.coaching_type === 'Incident Report');
+  const prefix = isHighWeight ? '[HIGH PRIORITY] ' : '';
+  const title = isHighWeight ? 'Dispute Update — ' + log.coaching_type : 'Dispute Update';
+  for (const ohr of recipients) {
+    if (!ohr) continue;
+    try {
+      createNotification({
+        type: notifType,
+        title: title,
+        message: prefix + message,
+        target_ohr: ohr,
+        metadata: { coaching_id: cid, coachee: log.coachee, coach: log.coach, status: log.status, coaching_type: log.coaching_type, high_weight: isHighWeight }
+      });
+    } catch (e) { console.error('[Notif] dispute notify error:', e); }
+  }
+}
+
+// Resolve OHR from name using COMPASS.employees
+function resolveOhr(name) {
+  if (!name) return null;
+  const emp = COMPASS.employees.find(e => e.full_name === name);
+  return emp ? emp.ohr_id : null;
+}
+
 var _disputeAttachedFiles = [];
 
 function disputesShowDisputeMarkdown() {
@@ -3396,6 +3504,15 @@ async function disputesSubmitDisputeMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown disputed successfully. Card moved to LV2.', 'success');
+
+    // #4 Notification: dispute_initiated → notify coach + coach's supervisor
+    const cid = log.coaching_id || log.id;
+    const coacheeName = log.coachee || 'Coachee';
+    disputeNotify(log, 'dispute_initiated', `${coacheeName} disputed coaching ${cid}`, [
+      log.coach_ohr,
+      resolveOhr(log.coach_sup)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3453,6 +3570,13 @@ async function disputesSubmitAcceptMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown accepted.', 'success');
+
+    // #5 Notification: L2 accept → notify coachee (markdown accepted, sent for ack)
+    const cid = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l2_decision', `Your coaching ${cid} was accepted by the SME. Please acknowledge.`, [
+      log.coachee_ohr
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3701,6 +3825,14 @@ async function disputesSubmitRetainMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown retained. Card moved to LV3.', 'success');
+
+    // #7 Notification: L2 retain → notify coachee + coach (escalated to LV3)
+    const cid7 = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l3_decision', `Dispute on ${cid7} was retained by the SME. Escalated to LV3.`, [
+      log.coachee_ohr,
+      log.coach_ohr
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3758,6 +3890,13 @@ async function disputesSubmitReverseMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown reversed by QA.', 'success');
+
+    // #6 Notification: L2 reverse → notify coachee (markdown reversed)
+    const cid6 = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l2_decision', `Your dispute on ${cid6} was reversed by the coach. Sent for acknowledgement.`, [
+      log.coachee_ohr
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3815,6 +3954,14 @@ async function disputesSubmitQADecisionAccepted() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('QA decision accepted.', 'success');
+
+    // #8 Notification: L3 QA decision accepted → notify coachee + coach
+    const cid8 = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l3_decision', `QA decision on ${cid8} was accepted by the SME. Sent for acknowledgement.`, [
+      log.coachee_ohr,
+      log.coach_ohr
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3929,6 +4076,15 @@ async function disputesSubmitQADecisionRejected() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('QA decision rejected. Card moved to LV4 — Pending Trainer Decision.', 'success');
+
+    // #9 Notification: L3 QA decision rejected → notify coachee + coach + SME joiner (escalated to LV4)
+    const cid9 = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l4_decision', `QA decision on ${cid9} was rejected. Escalated to LV4 — Pending Trainer Decision.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -3987,6 +4143,16 @@ async function disputesSubmitLV5AcceptDecision() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Trainer decision accepted.', 'success');
+
+    // #10 Notification: L5 trainer decision accepted → notify coachee + coach + SME joiner + QA
+    const cid10 = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l5_decision', `Trainer decision on ${cid10} was accepted. Sent for acknowledgement.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner),
+      resolveOhr(log.sme_joiner_2)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -4086,6 +4252,16 @@ async function disputesSubmitLV5RejectDecision() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Trainer decision rejected. Card moved to LV6 — Pending QTP Manager Decision.', 'success');
+
+    // #10b Notification: L5 trainer decision rejected → notify coachee + coach + SME joiner + QA (escalated to LV6)
+    const cid10b = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l5_decision', `Trainer decision on ${cid10b} was rejected. Escalated to LV6 — Pending QTP Manager Decision.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner),
+      resolveOhr(log.sme_joiner_2)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -4194,6 +4370,15 @@ async function disputesSubmitLV4RetainMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown retained by Trainer. Card moved to LV5.', 'success');
+
+    // #9b Notification: L4 trainer retains → notify coachee + coach + SME joiner (escalated to LV5)
+    const cid9b = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l4_decision', `Trainer retained markdown on ${cid9b}. Escalated to LV5 — Pending SME-Trainer Decision.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -4251,6 +4436,15 @@ async function disputesSubmitLV4ReverseMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown reversed by Trainer.', 'success');
+
+    // #9c Notification: L4 trainer reverses → notify coachee + coach + SME joiner
+    const cid9c = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l4_decision', `Trainer reversed markdown on ${cid9c}. Sent for acknowledgement.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -4350,6 +4544,16 @@ async function disputesSubmitLV6ReverseMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown reversed by QTP Manager. Sent to coachee for acknowledgement.', 'success');
+
+    // #11a Notification: L6 QTP Manager reverses → notify all parties
+    const cid11a = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l6_decision', `QTP Manager reversed markdown on ${cid11a}. Final decision: Reversed. Sent for acknowledgement.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner),
+      resolveOhr(log.sme_joiner_2)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -4449,6 +4653,16 @@ async function disputesSubmitLV6RetainMarkdown() {
     if (!resp.ok) throw new Error('Failed to update');
 
     showToast('Markdown retained by QTP Manager. Sent to coachee for acknowledgement.', 'success');
+
+    // #11b Notification: L6 QTP Manager retains → notify all parties
+    const cid11b = log.coaching_id || log.id;
+    disputeNotify(log, 'dispute_l6_decision', `QTP Manager retained markdown on ${cid11b}. Final decision: Retained. Sent for acknowledgement.`, [
+      log.coachee_ohr,
+      log.coach_ohr,
+      resolveOhr(log.sme_joiner),
+      resolveOhr(log.sme_joiner_2)
+    ]);
+
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();

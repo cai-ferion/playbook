@@ -8,8 +8,8 @@
 import { Express } from "express";
 import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
-import { eq, and, inArray, sql, gte, lte, asc } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig } from "../drizzle/schema";
+import { eq, and, inArray, sql, gte, lte, asc, ne, isNotNull } from "drizzle-orm";
+import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig, ioCoaching } from "../drizzle/schema";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -702,5 +702,172 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
-  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/ot-forfeiture-check, POST /api/io/ot-auto-open");
+  // ============================================================
+  // Dispute Aging Alert
+  // Runs every 4 hours PHT. Checks active disputes that have been
+  // sitting at their current level beyond the SLA threshold:
+  //   - Standard disputes: 48 hours
+  //   - ZTP Infraction / Incident Report: 24 hours (compliance-critical)
+  // Sends dispute_overdue notification to the person who needs to act next.
+  // ============================================================
+
+  async function checkDisputeAging(db: ReturnType<typeof drizzle>): Promise<{ alerts: number; errors: number }> {
+    let alerts = 0, errors = 0;
+    const now = new Date();
+
+    // Active dispute statuses and who needs to act next
+    const DISPUTE_STATUS_MAP: Record<string, { level: string; nextActorField: 'coach_ohr' | 'sme_joiner' | 'sme_joiner_2' | 'coachee_ohr' }> = {
+      'Markdown Disputed - SME': { level: 'LV1', nextActorField: 'coach_ohr' },
+      'Pending SME Review': { level: 'LV2', nextActorField: 'sme_joiner' },
+      'Markdown Retained - SME': { level: 'LV3', nextActorField: 'sme_joiner' },
+      'QA Decision Rejected': { level: 'LV4', nextActorField: 'sme_joiner_2' },
+      'Markdown Retained - Trainer': { level: 'LV5', nextActorField: 'sme_joiner' },
+      'Trainer Decision Rejected - SME': { level: 'LV6', nextActorField: 'coach_ohr' },
+    };
+
+    const activeStatuses = Object.keys(DISPUTE_STATUS_MAP);
+
+    try {
+      const disputes = await db.select({
+        id: ioCoaching.id,
+        coaching_id: ioCoaching.coaching_id,
+        coaching_type: ioCoaching.coaching_type,
+        status: ioCoaching.status,
+        coach_ohr: ioCoaching.coach_ohr,
+        coachee_ohr: ioCoaching.coachee_ohr,
+        coachee: ioCoaching.coachee,
+        sme_joiner: ioCoaching.sme_joiner,
+        sme_joiner_2: ioCoaching.sme_joiner_2,
+        updated_at: ioCoaching.updated_at,
+        created_at: ioCoaching.created_at,
+      }).from(ioCoaching)
+        .where(inArray(ioCoaching.status, activeStatuses));
+
+      if (disputes.length === 0) {
+        console.log('[Dispute-Aging] No active disputes found.');
+        return { alerts: 0, errors: 0 };
+      }
+
+      console.log(`[Dispute-Aging] Found ${disputes.length} active disputes to check.`);
+
+      // Build name → OHR lookup for sme_joiner fields (stored as names)
+      const allEmployees = await db.select({ ohr_id: ioEmployees.ohr_id, full_name: ioEmployees.full_name }).from(ioEmployees);
+      const nameToOhr = new Map<string, string>();
+      for (const e of allEmployees) {
+        if (e.full_name && e.ohr_id) nameToOhr.set(e.full_name, e.ohr_id);
+      }
+
+      // Check for existing overdue notifications to avoid duplicates (within last 12 hours)
+      const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString();
+      const recentOverdueNotifs = await db.select({
+        metadata: ioNotifications.metadata,
+      }).from(ioNotifications)
+        .where(and(
+          eq(ioNotifications.type, 'dispute_overdue'),
+          gte(ioNotifications.created_at, twelveHoursAgo)
+        ));
+
+      const recentlyNotifiedIds = new Set<string>();
+      for (const n of recentOverdueNotifs) {
+        try {
+          const meta = JSON.parse(n.metadata || '{}');
+          if (meta.coaching_id) recentlyNotifiedIds.add(meta.coaching_id);
+        } catch { /* skip */ }
+      }
+
+      for (const dispute of disputes) {
+        try {
+          const cid = dispute.coaching_id || String(dispute.id);
+          if (recentlyNotifiedIds.has(cid)) continue; // Already notified recently
+
+          const statusInfo = DISPUTE_STATUS_MAP[dispute.status || ''];
+          if (!statusInfo) continue;
+
+          // Determine timestamp of last status change
+          const lastChangeStr = dispute.updated_at || dispute.created_at;
+          if (!lastChangeStr) continue;
+          const lastChange = new Date(lastChangeStr);
+          const hoursElapsed = (now.getTime() - lastChange.getTime()) / (1000 * 60 * 60);
+
+          // Determine SLA threshold based on coaching type
+          const isHighPriority = ['ZTP Infraction', 'Incident Report'].includes(dispute.coaching_type || '');
+          const slaHours = isHighPriority ? 24 : 48;
+
+          if (hoursElapsed < slaHours) continue; // Not overdue yet
+
+          // Resolve the next actor's OHR
+          let targetOhr: string | null = null;
+          const field = statusInfo.nextActorField;
+          if (field === 'coach_ohr' || field === 'coachee_ohr') {
+            targetOhr = (dispute as any)[field] || null;
+          } else {
+            // sme_joiner / sme_joiner_2 are stored as names
+            const joinerName = (dispute as any)[field] || '';
+            targetOhr = nameToOhr.get(joinerName) || null;
+          }
+
+          if (!targetOhr) continue;
+
+          const priorityTag = isHighPriority ? '[HIGH PRIORITY] ' : '';
+          const hoursStr = Math.round(hoursElapsed);
+
+          await createNotification(db, {
+            type: 'dispute_overdue',
+            title: `${priorityTag}Dispute Overdue — ${statusInfo.level}`,
+            message: `Dispute ${cid} (${dispute.coachee || 'Unknown'}) has been pending your action at ${statusInfo.level} for ${hoursStr} hours. SLA is ${slaHours} hours.`,
+            actor_name: 'Playbook System',
+            target_ohr: targetOhr,
+            metadata: JSON.stringify({
+              coaching_id: cid,
+              level: statusInfo.level,
+              hours_elapsed: hoursStr,
+              sla_hours: slaHours,
+              coaching_type: dispute.coaching_type,
+              is_high_priority: isHighPriority,
+            }),
+          });
+
+          alerts++;
+          console.log(`[Dispute-Aging] Alert sent for ${cid} at ${statusInfo.level} (${hoursStr}h elapsed, SLA ${slaHours}h) → ${targetOhr}`);
+        } catch (err: any) {
+          console.error(`[Dispute-Aging] Error processing dispute ${dispute.coaching_id}: ${err.message}`);
+          errors++;
+        }
+      }
+    } catch (err: any) {
+      console.error('[Dispute-Aging] Fatal error:', err.message);
+      errors++;
+    }
+
+    console.log(`[Dispute-Aging] Completed: ${alerts} alerts sent, ${errors} errors.`);
+    return { alerts, errors };
+  }
+
+  // Schedule: every 4 hours PHT (0:00, 4:00, 8:00, 12:00, 16:00, 20:00)
+  cron.schedule("0 */4 * * *", async () => {
+    try {
+      await checkDisputeAging(db);
+    } catch (err) {
+      console.error("[Dispute-Aging] Cron error:", err);
+    }
+  });
+
+  console.log("[AutoNotifier] Scheduled: Every 4 hours (Dispute Aging Alert)");
+
+  // Manual trigger for dispute aging check
+  app.post("/api/io/dispute-aging-check", async (req, res) => {
+    try {
+      const result = await checkDisputeAging(db);
+      res.json({
+        success: true,
+        message: `Alerts: ${result.alerts}, Errors: ${result.errors}`,
+        ...result,
+      });
+    } catch (err: any) {
+      console.error("[Dispute-Aging] Manual trigger error:", err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/ot-forfeiture-check, POST /api/io/ot-auto-open, POST /api/io/dispute-aging-check");
 }

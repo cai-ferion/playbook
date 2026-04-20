@@ -2273,3 +2273,24 @@
 - [x] Managers get dropdown toggle: "Export Filtered" vs "Export All" (bypasses role filter)
 - [x] Non-managers get simple "Export CSV" button (filtered only)
 - [x] Export covers all pages (not just current pagination)
+
+## Compass Notification System
+- [x] Register new notification types in notifications.js (icons, colors, labels, briefs)
+- [x] #1 New coaching log created → notify coachee
+- [x] #2 Coaching log acknowledged → notify coach
+- [x] #3 Coaching rating submitted → notify coach's 1-up supervisor
+- [x] #4 Dispute initiated (L1) → notify coach + coach's supervisor
+- [x] #5 L2 Coach accepts/retains → notify coachee
+- [x] #6 L2 Coach reverses → notify coachee
+- [x] #7 L3 SME retains → notify coachee + coach
+- [x] #8 L3 SME reverses → notify coachee + coach
+- [x] #9 L4 QA accepts/rejects → notify coachee + coach + SME joiner
+- [x] #10 L5 Trainer accepts/rejects → notify coachee + coach + SME joiner + QA
+- [x] #11 L6 QTP Manager retains/reverses → notify all parties
+- [x] #12 Dispute aging > 48 hours → notify next actor
+
+## ZTP/Incident Report Elevated Notifications
+- [x] Elevated titles for ZTP ("ZTP Infraction Issued") and Incident Report ("Incident Report Filed")
+- [x] Broader recipient on creation — also notify coachee's supervisor (TL)
+- [x] Dispute notifications include [HIGH PRIORITY] tag for ZTP/Incident
+- [x] Aging alerts at 24 hours instead of 48 for ZTP/Incident disputes

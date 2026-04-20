@@ -730,11 +730,12 @@ router.patch("/coaching/:id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     const paramId = req.params.id;
+    const updates = { ...req.body, updated_at: new Date().toISOString() };
     // If param starts with "CL-", match by coaching_id; otherwise by numeric id
     if (paramId.startsWith("CL-")) {
-      await db.update(ioCoaching).set(req.body).where(eq(ioCoaching.coaching_id, paramId));
+      await db.update(ioCoaching).set(updates).where(eq(ioCoaching.coaching_id, paramId));
     } else {
-      await db.update(ioCoaching).set(req.body).where(eq(ioCoaching.id, Number(paramId)));
+      await db.update(ioCoaching).set(updates).where(eq(ioCoaching.id, Number(paramId)));
     }
     res.json({ ok: true });
   } catch (err: any) {
