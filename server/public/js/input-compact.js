@@ -228,7 +228,7 @@ function renderCompactRow(item) {
   // Selection cell — in server-side mode, pass _id string directly for stable selection
   var selectCell;
   var selArg = (typeof serverPagState !== 'undefined' && serverPagState.enabled && r._id)
-    ? '\'' + r._id.replace(/'/g, '\\'') + '\''
+    ? "'" + r._id.replace(/'/g, "\\'") + "'"
     : idx;
   if (compactState.selectionMode) {
     if (locked) {

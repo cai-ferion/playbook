@@ -881,7 +881,7 @@ function renderTableRow(item) {
   var lockTitle = 'Locked (older than 2-day edit window)';
   // In server-side mode, pass _id string directly for stable selection
   var selArg = (typeof serverPagState !== 'undefined' && serverPagState.enabled && record._id)
-    ? '\'' + record._id.replace(/'/g, '\\'') + '\''
+    ? "'" + record._id.replace(/'/g, "\\'") + "'"
     : globalIdx;
   var checkboxCell = isWFM
     ? ''
