@@ -61,8 +61,7 @@ export const ioEmployees = mysqlTable("io_employees", {
   badge_id: varchar("badge_id", { length: 50 }),
   badge_serial: varchar("badge_serial", { length: 50 }),
   platform: varchar("platform", { length: 100 }),
-  password: varchar("password", { length: 255 }),
-  is_locked: boolean("is_locked").default(false),
+  // password and is_locked columns removed — OHR-only login
   gchat_space_id: varchar("gchat_space_id", { length: 100 }),
   // Attrition tracking columns
   offboarding_date: varchar("offboarding_date", { length: 30 }),

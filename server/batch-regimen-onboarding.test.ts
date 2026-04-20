@@ -301,10 +301,16 @@ describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", (
 
   // ===== Onboarding Signup Flow =====
   describe("Onboarding Signup Flow", () => {
-    it("should have signup choice screen with Trainee and Non-Trainee options", () => {
-      expect(indexHtml).toContain("signup-choice");
-      expect(indexHtml).toContain("I am a Trainee");
-      expect(indexHtml).toContain("I am not a Trainee");
+    it("should have unified signup form with OHR ID field", () => {
+      expect(indexHtml).toContain("auth-form-signup");
+      expect(indexHtml).toContain("signup-ohr");
+      expect(indexHtml).toContain("handleSignUp()");
+    });
+
+    it("should NOT have old trainee/production choice screen", () => {
+      expect(indexHtml).not.toContain("signup-choice");
+      expect(indexHtml).not.toContain("I am a Trainee");
+      expect(indexHtml).not.toContain("I am not a Trainee");
     });
 
     it("should have onboarding form in HTML", () => {

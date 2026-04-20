@@ -120,8 +120,9 @@ describe("Database Schema", () => {
     expect(columns).toContain("shift_time");
     expect(columns).toContain("supervisor_name");
     expect(columns).toContain("employement_status");
-    expect(columns).toContain("is_locked");
-    expect(columns).toContain("password");
+    // password and is_locked columns removed (post-password cleanup)
+    expect(columns).not.toContain("is_locked");
+    expect(columns).not.toContain("password");
   });
 
   it("ioAttendance has all required columns including snapshots", async () => {

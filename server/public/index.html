@@ -26,40 +26,20 @@
         <h1>Playbook</h1>
       </div>
       <div class="auth-buttons" id="auth-buttons">
-        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup-choice')">Sign Up</button>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup')">Sign Up</button>
         <button class="btn btn-outline btn-lg auth-btn" onclick="showAuthForm('login')">Login</button>
       </div>
-      <!-- Sign Up Choice: Trainee vs Non-Trainee -->
-      <div class="auth-form" id="auth-form-signup-choice" style="display:none;">
+      <!-- Unified Sign Up Form -->
+      <div class="auth-form" id="auth-form-signup" style="display:none;">
         <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Sign Up</h3>
-        <p style="text-align:center;font-size:13px;color:var(--fg-muted);margin-bottom:20px;">Please select which applies to you:</p>
-        <button class="btn btn-primary btn-lg auth-btn" onclick="showAuthForm('signup-trainee')" style="margin-bottom:10px;">I am a Trainee for IO</button>
-        <button class="btn btn-outline btn-lg auth-btn" onclick="showAuthForm('signup-production')" style="margin-bottom:10px;">I am not a Trainee for IO</button>
-        <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
-      </div>
-      <!-- Sign Up Form: Trainee (OHR + Password, then onboarding form) -->
-      <div class="auth-form" id="auth-form-signup-trainee" style="display:none;">
-        <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Trainee Sign Up</h3>
-        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID to get started. You will then fill in your profile details.</p>
+        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID to get started. You'll complete your profile on the next step.</p>
         <div class="auth-field">
           <label>OHR ID</label>
           <input type="text" class="form-input" id="signup-ohr" placeholder="Enter your OHR ID" autocomplete="off">
         </div>
         <div class="auth-error" id="signup-error"></div>
-        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUpTrainee()">Next</button>
-        <button class="btn btn-ghost auth-back" onclick="showAuthForm('signup-choice')">Back</button>
-      </div>
-      <!-- Sign Up Form: Production (OHR + Password only) -->
-      <div class="auth-form" id="auth-form-signup-production" style="display:none;">
-        <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Production Sign Up</h3>
-        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID to create your account.</p>
-        <div class="auth-field">
-          <label>OHR ID</label>
-          <input type="text" class="form-input" id="signup-prod-ohr" placeholder="Enter your OHR ID" autocomplete="off">
-        </div>
-        <div class="auth-error" id="signup-prod-error"></div>
-        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUpProduction()">Create Account</button>
-        <button class="btn btn-ghost auth-back" onclick="showAuthForm('signup-choice')">Back</button>
+        <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUp()">Next</button>
+        <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
       </div>
       <!-- Login Form -->
       <div class="auth-form" id="auth-form-login" style="display:none;">
@@ -67,6 +47,10 @@
         <div class="auth-field">
           <label>OHR ID</label>
           <input type="text" class="form-input" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;">
+          <input type="checkbox" id="login-remember" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
+          <label for="login-remember" style="font-size:13px;color:var(--fg-muted);cursor:pointer;user-select:none;">Remember my OHR ID</label>
         </div>
         <div class="auth-error" id="login-error"></div>
         <button class="btn btn-primary btn-lg auth-btn" onclick="handleLogin()">Login</button>

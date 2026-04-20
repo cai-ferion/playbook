@@ -197,7 +197,7 @@ let currentUser = null;
 function showAuthForm(type) {
   document.getElementById('auth-buttons').style.display = 'none';
   // All form panels
-  const panels = ['auth-form-signup-choice', 'auth-form-signup-trainee', 'auth-form-signup-production', 'auth-form-login', 'auth-form-onboarding'];
+  const panels = ['auth-form-signup', 'auth-form-login', 'auth-form-onboarding'];
   panels.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -206,31 +206,31 @@ function showAuthForm(type) {
   const target = document.getElementById('auth-form-' + type);
   if (target) target.style.display = 'block';
   // Clear errors
-  const errIds = ['signup-error', 'login-error', 'signup-prod-error'];
+  const errIds = ['signup-error', 'login-error'];
   errIds.forEach(id => { const el = document.getElementById(id); if (el) { el.textContent = ''; el.style.color = ''; } });
   // Clear fields when not in onboarding flow
   if (type !== 'onboarding') {
-    const clearIds = ['signup-ohr', 'signup-prod-ohr', 'login-ohr'];
+    const clearIds = ['signup-ohr', 'login-ohr'];
     clearIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
 }
 
 function showAuthButtons() {
   document.getElementById('auth-buttons').style.display = 'flex';
-  const panels = ['auth-form-signup-choice', 'auth-form-signup-trainee', 'auth-form-signup-production', 'auth-form-login', 'auth-form-onboarding'];
+  const panels = ['auth-form-signup', 'auth-form-login', 'auth-form-onboarding'];
   panels.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
   window._onboardOhr = null;
-  window._signupType = null;
 }
 
 // Temporary storage for onboarding flow
 window._onboardOhr = null;
+window._signupType = null; // kept for backward compat if referenced elsewhere
 
-// Trainee Sign Up: validate OHR, then route to onboarding form
-async function handleSignUpTrainee() {
+// Unified Sign Up: validate OHR exists and is active, then route to onboarding form
+async function handleSignUp() {
   const ohr = document.getElementById('signup-ohr').value.trim();
   const errorEl = document.getElementById('signup-error');
   errorEl.textContent = '';
@@ -253,83 +253,10 @@ async function handleSignUpTrainee() {
       return;
     }
 
-    // OHR is valid — route to onboarding form
+    // OHR is valid — route to onboarding form to complete profile
     window._onboardOhr = ohr;
-    window._signupType = 'trainee';
     showAuthForm('onboarding');
 
-  } catch (err) {
-    errorEl.textContent = 'Network error. Please try again.';
-  }
-}
-
-// Production Sign Up: validate OHR, mark as registered (no onboarding form)
-async function handleSignUpProduction() {
-  const ohr = document.getElementById('signup-prod-ohr').value.trim();
-  const errorEl = document.getElementById('signup-prod-error');
-  errorEl.textContent = '';
-  errorEl.style.color = '';
-
-  if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
-
-  try {
-    const empResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
-    const empData = await empResp.json();
-
-    if (!Array.isArray(empData) || empData.length === 0) {
-      errorEl.textContent = 'OHR ID not found. Please check your ID.';
-      return;
-    }
-
-    const emp = empData[0];
-    if (emp.employement_status !== 'Active') {
-      errorEl.textContent = 'OHR ID not found. Please check your ID.';
-      return;
-    }
-
-    // Mark as registered
-    const updateResp = await fetch(`${IO_API_BASE}/employees/${ohr}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        _actor_ohr: ohr,
-        _actor_name: emp.full_name || ohr,
-      })
-    });
-
-    if (!updateResp.ok) {
-      errorEl.textContent = 'Failed to create account. Please try again.';
-      return;
-    }
-
-    // Notify admins
-    const notifTargets = ['740045023', '740044909'];
-    for (const targetOhr of notifTargets) {
-      fetch(`${IO_API_BASE}/notifications`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'signup',
-          title: 'Production Agent Sign Up',
-          message: `${emp.full_name || ohr} (OHR: ${ohr}) has registered via Production Sign Up.`,
-          actor_ohr: ohr,
-          actor_name: emp.full_name || ohr,
-          target_ohr: targetOhr,
-          target_role: 'admin',
-          metadata: JSON.stringify({ ohr_id: ohr, full_name: emp.full_name }),
-          is_read: false,
-          created_at: new Date().toISOString(),
-        })
-      }).catch(() => {});
-    }
-
-    errorEl.style.color = 'var(--success)';
-    errorEl.textContent = 'Account created! You can now login.';
-    setTimeout(() => {
-      errorEl.style.color = '';
-      showAuthForm('login');
-      document.getElementById('login-ohr').value = ohr;
-    }, 2000);
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
   }
@@ -544,6 +471,14 @@ async function handleLogin() {
       supervisor_name: emp.supervisor_name || ''
     };
 
+    // Remember Me: save or clear OHR in localStorage
+    const rememberCb = document.getElementById('login-remember');
+    if (rememberCb && rememberCb.checked) {
+      localStorage.setItem('playbook_remembered_ohr', ohr);
+    } else {
+      localStorage.removeItem('playbook_remembered_ohr');
+    }
+
     sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
     document.getElementById('auth-page').style.display = 'none';
@@ -642,6 +577,15 @@ function hideProgressBar() {
 // ===== Initialization =====
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Remember Me: pre-fill OHR ID from localStorage
+  const rememberedOhr = localStorage.getItem('playbook_remembered_ohr');
+  if (rememberedOhr) {
+    const loginOhrEl = document.getElementById('login-ohr');
+    if (loginOhrEl) loginOhrEl.value = rememberedOhr;
+    const rememberCb = document.getElementById('login-remember');
+    if (rememberCb) rememberCb.checked = true;
+  }
+
   const stored = sessionStorage.getItem('playbook_user');
   if (stored) {
     try {
@@ -706,15 +650,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginOhr = document.getElementById('login-ohr');
   if (loginOhr) loginOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
 
-  // Enter key support for trainee signup
+  // Enter key support for signup
   const signupOhr = document.getElementById('signup-ohr');
-  if (signupOhr) signupOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpTrainee(); });
-  if (signupPw) signupPw.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpTrainee(); });
-
-  // Enter key support for production signup
-  const signupProdOhr = document.getElementById('signup-prod-ohr');
-  if (signupProdOhr) signupProdOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpProduction(); });
-  if (signupProdPw) signupProdPw.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUpProduction(); });
+  if (signupOhr) signupOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUp(); });
 });
 
 function initMultiSelects() {

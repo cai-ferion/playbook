@@ -127,6 +127,13 @@
       "when": 1776631694846,
       "tag": "0017_curved_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1776698366664,
+      "tag": "0018_complete_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

@@ -2303,3 +2303,8 @@
 - [x] Remove failed login attempt counter and lock mechanism
 - [x] Clean up lock/unlock UI elements (admin panel, employee management)
 - [x] Remove password management UI (change password, reset password)
+
+## Post-Password Cleanup & UX Improvements
+- [x] Remove `password` and `is_locked` columns from io_employees schema + migration
+- [x] Add "Remember Me" toggle with localStorage to pre-fill OHR ID
+- [x] Simplify Sign Up flow — unified single form, no trainee/production split
