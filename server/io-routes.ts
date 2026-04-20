@@ -121,14 +121,13 @@ router.get("/employees", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    const { select: selectCols, limit, offset, order, ohr_id, employement_status, is_locked, srt_id_not_null } = req.query;
+    const { select: selectCols, limit, offset, order, ohr_id, employement_status, srt_id_not_null } = req.query;
 
     let query = db.select().from(ioEmployees);
     const conditions: any[] = [];
 
     if (ohr_id) conditions.push(eq(ioEmployees.ohr_id, String(ohr_id)));
     if (employement_status) conditions.push(eq(ioEmployees.employement_status, String(employement_status)));
-    if (is_locked === "true") conditions.push(eq(ioEmployees.is_locked, true));
     if (srt_id_not_null === "true") conditions.push(sql`${ioEmployees.srt_id} IS NOT NULL`);
 
     const q = conditions.length > 0 ? query.where(and(...conditions)) : query;

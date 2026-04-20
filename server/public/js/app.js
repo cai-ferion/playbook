@@ -210,7 +210,7 @@ function showAuthForm(type) {
   errIds.forEach(id => { const el = document.getElementById(id); if (el) { el.textContent = ''; el.style.color = ''; } });
   // Clear fields when not in onboarding flow
   if (type !== 'onboarding') {
-    const clearIds = ['signup-ohr', 'signup-password', 'signup-prod-ohr', 'signup-prod-password', 'login-ohr', 'login-password'];
+    const clearIds = ['signup-ohr', 'signup-prod-ohr', 'login-ohr'];
     clearIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   }
 }
@@ -223,55 +223,20 @@ function showAuthButtons() {
     if (el) el.style.display = 'none';
   });
   window._onboardOhr = null;
-  window._onboardPw = null;
   window._signupType = null;
-}
-
-function unmaskPassword(inputId) {
-  document.getElementById(inputId).type = 'text';
-}
-
-function maskPassword(inputId) {
-  document.getElementById(inputId).type = 'password';
-}
-
-function validatePassword(pw) {
-  return {
-    length: pw.length >= 8,
-    capital: /[A-Z]/.test(pw),
-    alphanum: /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw),
-    special: !/[^a-zA-Z0-9!@#$%]/.test(pw),
-  };
-}
-
-function updatePasswordRules(pw) {
-  const rules = validatePassword(pw);
-  const setClass = (id, pass) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.className = pass ? 'rule-pass' : (pw.length > 0 ? 'rule-fail' : '');
-  };
-  setClass('rule-length', rules.length);
-  setClass('rule-capital', rules.capital);
-  setClass('rule-alphanum', rules.alphanum);
-  setClass('rule-special', rules.special);
-  return rules.length && rules.capital && rules.alphanum && rules.special;
 }
 
 // Temporary storage for onboarding flow
 window._onboardOhr = null;
-window._onboardPw = null;
 
 // Trainee Sign Up: validate OHR, then route to onboarding form
 async function handleSignUpTrainee() {
   const ohr = document.getElementById('signup-ohr').value.trim();
-  const pw = document.getElementById('signup-password').value;
   const errorEl = document.getElementById('signup-error');
   errorEl.textContent = '';
   errorEl.style.color = '';
 
   if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
-  if (!updatePasswordRules(pw)) { errorEl.textContent = 'Password does not meet all requirements.'; return; }
 
   try {
     const empResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
@@ -288,14 +253,8 @@ async function handleSignUpTrainee() {
       return;
     }
 
-    if (emp.password) {
-      errorEl.textContent = 'OHR ID not found. Please check your ID.';
-      return;
-    }
-
-    // OHR is valid and has no password — route to onboarding form
+    // OHR is valid — route to onboarding form
     window._onboardOhr = ohr;
-    window._onboardPw = pw;
     window._signupType = 'trainee';
     showAuthForm('onboarding');
 
@@ -304,16 +263,14 @@ async function handleSignUpTrainee() {
   }
 }
 
-// Production Sign Up: validate OHR, set password only (no onboarding form)
+// Production Sign Up: validate OHR, mark as registered (no onboarding form)
 async function handleSignUpProduction() {
   const ohr = document.getElementById('signup-prod-ohr').value.trim();
-  const pw = document.getElementById('signup-prod-password').value;
   const errorEl = document.getElementById('signup-prod-error');
   errorEl.textContent = '';
   errorEl.style.color = '';
 
   if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
-  if (!updateProdPasswordRules(pw)) { errorEl.textContent = 'Password does not meet all requirements.'; return; }
 
   try {
     const empResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
@@ -330,17 +287,11 @@ async function handleSignUpProduction() {
       return;
     }
 
-    if (emp.password) {
-      errorEl.textContent = 'OHR ID not found. Please check your ID.';
-      return;
-    }
-
-    // Set password directly — no onboarding form needed
+    // Mark as registered
     const updateResp = await fetch(`${IO_API_BASE}/employees/${ohr}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        password: pw,
         _actor_ohr: ohr,
         _actor_name: emp.full_name || ohr,
       })
@@ -360,7 +311,7 @@ async function handleSignUpProduction() {
         body: JSON.stringify({
           type: 'signup',
           title: 'Production Agent Sign Up',
-          message: `${emp.full_name || ohr} (OHR: ${ohr}) has created an account via Production Sign Up.`,
+          message: `${emp.full_name || ohr} (OHR: ${ohr}) has registered via Production Sign Up.`,
           actor_ohr: ohr,
           actor_name: emp.full_name || ohr,
           target_ohr: targetOhr,
@@ -384,20 +335,7 @@ async function handleSignUpProduction() {
   }
 }
 
-// Password rules for the production signup form
-function updateProdPasswordRules(pw) {
-  const rules = validatePassword(pw);
-  const setClass = (id, pass) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.className = pass ? 'rule-pass' : (pw.length > 0 ? 'rule-fail' : '');
-  };
-  setClass('rule-prod-length', rules.length);
-  setClass('rule-prod-capital', rules.capital);
-  setClass('rule-prod-alphanum', rules.alphanum);
-  setClass('rule-prod-special', rules.special);
-  return rules.length && rules.capital && rules.alphanum && rules.special;
-}
+
 
 // Onboarding form validation and submission
 async function handleOnboardingSubmit() {
@@ -406,8 +344,7 @@ async function handleOnboardingSubmit() {
   errorEl.style.color = '';
 
   const ohr = window._onboardOhr;
-  const pw = window._onboardPw;
-  if (!ohr || !pw) { errorEl.textContent = 'Session expired. Please start over.'; return; }
+  if (!ohr) { errorEl.textContent = 'Session expired. Please start over.'; return; }
 
   // Collect fields
   const lastName = document.getElementById('onboard-last-name').value.trim();
@@ -472,7 +409,6 @@ async function handleOnboardingSubmit() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          password: pw,
           last_name: lastName,
           given_name: givenName,
           middle_name: middleName || null,
@@ -526,7 +462,6 @@ async function handleOnboardingSubmit() {
     errorEl.style.color = 'var(--success)';
     errorEl.textContent = 'Account created! You can now login.';
     window._onboardOhr = null;
-    window._onboardPw = null;
     setTimeout(() => {
       errorEl.style.color = '';
       showAuthForm('login');
@@ -537,42 +472,16 @@ async function handleOnboardingSubmit() {
   }
 }
 
-// Track failed login attempts per OHR (synced with DB to prevent desync)
-const failedAttempts = {};
-
-// Persist lock to DB with retry — ensures admin locked list stays in sync
-async function persistLockToDb(ohr) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const resp = await fetch(
-        `${IO_API_BASE}/employees/${ohr}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_locked: true })
-        }
-      );
-      if (resp.ok) return true;
-    } catch (e) { /* retry */ }
-    // Brief pause before retry
-    await new Promise(r => setTimeout(r, 500));
-  }
-  return false;
-}
-
 async function handleLogin() {
   const ohr = document.getElementById('login-ohr').value.trim();
-  const pw = document.getElementById('login-password').value;
   const errorEl = document.getElementById('login-error');
   errorEl.textContent = '';
 
   if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
-  if (!pw) { errorEl.textContent = 'Please enter your password.'; return; }
 
   // ── WFM Temporary User Intercept ──
-  // Shared credential: username=WFM, password=wfm2026
-  // Bypasses employee lookup entirely, restricted to Input Portal only
-  if (ohr.toUpperCase() === 'WFM' && pw === 'wfm2026') {
+  // Shared credential: username=WFM — restricted to Input Portal only
+  if (ohr.toUpperCase() === 'WFM') {
     currentUser = {
       ohr_id: 'WFM',
       full_name: 'WFM Team',
@@ -597,21 +506,12 @@ async function handleLogin() {
     // Hide Alerts tab and force Menu mode for WFM
     var alertsToggle = document.getElementById('sidebar-toggle-notif');
     if (alertsToggle) alertsToggle.style.display = 'none';
-    // Switch sidebar to Menu (nav) mode — hides notification panel, shows nav
     if (typeof setSidebarMode === 'function') setSidebarMode('nav');
-    // Also hide the entire mode toggle bar since WFM only has Menu
     var modeToggle = document.getElementById('sidebar-mode-toggle');
     if (modeToggle) modeToggle.style.display = 'none';
-    // Load data, init filter bar, and route to Input Portal
     if (typeof forceSync === 'function') await forceSync();
     if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
     switchView('input');
-    return;
-  }
-
-  // Check if locally locked out (3 failed attempts)
-  if (failedAttempts[ohr] >= 3) {
-    errorEl.innerHTML = 'Your account has been locked due to multiple failed login attempts.<br>Please contact <strong>Arvin Bantasan</strong> for assistance.';
     return;
   }
 
@@ -622,45 +522,11 @@ async function handleLogin() {
     const empData = await empResp.json();
 
     if (!Array.isArray(empData) || empData.length === 0) {
-      errorEl.textContent = 'OHR ID not found.';
+      errorEl.textContent = 'OHR ID not found. Please check and try again.';
       return;
     }
 
     const emp = empData[0];
-
-    // Check if account is locked in database (authoritative source of truth)
-    if (emp.is_locked === true || emp.is_locked === 'true' || emp.is_locked === 1) {
-      // Sync local state with DB to prevent bypass via page refresh
-      failedAttempts[ohr] = 3;
-      errorEl.innerHTML = 'Your account has been locked.<br>Please contact <strong>Arvin Bantasan</strong> for assistance.';
-      return;
-    }
-
-    if (!emp.password) {
-      errorEl.textContent = 'No account found. Please sign up first.';
-      return;
-    }
-
-    if (emp.password !== pw) {
-      // Increment failed attempts
-      failedAttempts[ohr] = (failedAttempts[ohr] || 0) + 1;
-      const remaining = 3 - failedAttempts[ohr];
-
-      if (failedAttempts[ohr] >= 3) {
-        // Lock the account in the database with retry to prevent desync
-        const locked = await persistLockToDb(ohr);
-        if (!locked) {
-          console.error('[Login] Failed to persist lock to DB for', ohr);
-        }
-        errorEl.innerHTML = 'Your account has been locked due to multiple failed login attempts.<br>Please contact <strong>Arvin Bantasan</strong> for assistance.';
-      } else {
-        errorEl.textContent = `Incorrect password. ${remaining} attempt(s) remaining.`;
-      }
-      return;
-    }
-
-    // Successful login — reset failed attempts
-    delete failedAttempts[ohr];
 
     if (emp.employement_status !== 'Active') {
       errorEl.textContent = 'Access denied. Only active employees can access the platform.';
@@ -721,21 +587,7 @@ async function handleLogin() {
   }
 }
 
-function showForgotPassword() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
-  const box = document.createElement('div');
-  box.style.cssText = 'background:var(--container);border:1px solid var(--border);border-radius:12px;padding:32px;max-width:400px;text-align:center;color:var(--text);box-shadow:0 8px 32px rgba(0,0,0,0.15);';
-  box.innerHTML = `
-    <h3 style="margin:0 0 12px;font-size:18px;color:var(--text);">Forgot Password</h3>
-    <p style="margin:0 0 20px;color:var(--text-secondary);line-height:1.5;">Please contact <strong>Arvin Bantasan</strong> for password management.</p>
-    <button onclick="this.closest('div').parentElement.remove()" style="background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">OK</button>
-  `;
-  overlay.appendChild(box);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-}
+
 
 function handleLogout() {
   currentUser = null;
@@ -850,22 +702,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  const signupPw = document.getElementById('signup-password');
-  if (signupPw) {
-    signupPw.addEventListener('input', () => updatePasswordRules(signupPw.value));
-  }
-
-  // Production signup password rules listener
-  const signupProdPw = document.getElementById('signup-prod-password');
-  if (signupProdPw) {
-    signupProdPw.addEventListener('input', () => updateProdPasswordRules(signupProdPw.value));
-  }
-
   // Enter key support for login form
   const loginOhr = document.getElementById('login-ohr');
-  const loginPw = document.getElementById('login-password');
   if (loginOhr) loginOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
-  if (loginPw) loginPw.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
 
   // Enter key support for trainee signup
   const signupOhr = document.getElementById('signup-ohr');

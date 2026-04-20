@@ -2294,3 +2294,12 @@
 - [x] Broader recipient on creation — also notify coachee's supervisor (TL)
 - [x] Dispute notifications include [HIGH PRIORITY] tag for ZTP/Incident
 - [x] Aging alerts at 24 hours instead of 48 for ZTP/Incident disputes
+
+## Remove Password System — OHR ID Only Login
+- [x] Remove password field from login form (OHR ID only)
+- [x] Remove is_locked checks from login flow
+- [x] Update server-side auth to validate OHR ID existence only
+- [x] Remove password comparison logic
+- [x] Remove failed login attempt counter and lock mechanism
+- [x] Clean up lock/unlock UI elements (admin panel, employee management)
+- [x] Remove password management UI (change password, reset password)

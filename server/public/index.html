@@ -40,25 +40,10 @@
       <!-- Sign Up Form: Trainee (OHR + Password, then onboarding form) -->
       <div class="auth-form" id="auth-form-signup-trainee" style="display:none;">
         <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Trainee Sign Up</h3>
-        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID and create a password. You will then fill in your profile details.</p>
+        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID to get started. You will then fill in your profile details.</p>
         <div class="auth-field">
           <label>OHR ID</label>
           <input type="text" class="form-input" id="signup-ohr" placeholder="Enter your OHR ID" autocomplete="off">
-        </div>
-        <div class="auth-field">
-          <label>Password</label>
-          <div class="password-wrapper">
-            <input type="password" class="form-input" id="signup-password" placeholder="Create a password" autocomplete="new-password">
-            <button class="password-toggle" id="signup-toggle" onmousedown="unmaskPassword('signup-password')" onmouseup="maskPassword('signup-password')" onmouseleave="maskPassword('signup-password')" ontouchstart="unmaskPassword('signup-password')" ontouchend="maskPassword('signup-password')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-          <div class="password-rules" id="signup-rules">
-            <span id="rule-length">At least 8 characters</span>
-            <span id="rule-capital">1 capital letter</span>
-            <span id="rule-alphanum">Alphanumeric characters</span>
-            <span id="rule-special">Only !, @, #, $, % allowed as special chars</span>
-          </div>
         </div>
         <div class="auth-error" id="signup-error"></div>
         <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUpTrainee()">Next</button>
@@ -67,25 +52,10 @@
       <!-- Sign Up Form: Production (OHR + Password only) -->
       <div class="auth-form" id="auth-form-signup-production" style="display:none;">
         <h3 style="text-align:center;margin-bottom:8px;font-size:16px;font-weight:600;color:var(--text);">Production Sign Up</h3>
-        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID and create a password.</p>
+        <p style="text-align:center;font-size:12px;color:var(--fg-muted);margin-bottom:16px;">Enter your OHR ID to create your account.</p>
         <div class="auth-field">
           <label>OHR ID</label>
           <input type="text" class="form-input" id="signup-prod-ohr" placeholder="Enter your OHR ID" autocomplete="off">
-        </div>
-        <div class="auth-field">
-          <label>Password</label>
-          <div class="password-wrapper">
-            <input type="password" class="form-input" id="signup-prod-password" placeholder="Create a password" autocomplete="new-password">
-            <button class="password-toggle" onmousedown="unmaskPassword('signup-prod-password')" onmouseup="maskPassword('signup-prod-password')" onmouseleave="maskPassword('signup-prod-password')" ontouchstart="unmaskPassword('signup-prod-password')" ontouchend="maskPassword('signup-prod-password')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-          <div class="password-rules" id="signup-prod-rules">
-            <span id="rule-prod-length">At least 8 characters</span>
-            <span id="rule-prod-capital">1 capital letter</span>
-            <span id="rule-prod-alphanum">Alphanumeric characters</span>
-            <span id="rule-prod-special">Only !, @, #, $, % allowed as special chars</span>
-          </div>
         </div>
         <div class="auth-error" id="signup-prod-error"></div>
         <button class="btn btn-primary btn-lg auth-btn" onclick="handleSignUpProduction()">Create Account</button>
@@ -98,19 +68,9 @@
           <label>OHR ID</label>
           <input type="text" class="form-input" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
         </div>
-        <div class="auth-field">
-          <label>Password</label>
-          <div class="password-wrapper">
-            <input type="password" class="form-input" id="login-password" placeholder="Enter your password" autocomplete="current-password">
-            <button class="password-toggle" id="login-toggle" onmousedown="unmaskPassword('login-password')" onmouseup="maskPassword('login-password')" onmouseleave="maskPassword('login-password')" ontouchstart="unmaskPassword('login-password')" ontouchend="maskPassword('login-password')">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
         <div class="auth-error" id="login-error"></div>
         <button class="btn btn-primary btn-lg auth-btn" onclick="handleLogin()">Login</button>
         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
-          <button class="btn btn-ghost auth-link" onclick="showForgotPassword()">Forgot Password?</button>
           <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>
         </div>
       </div>
@@ -758,22 +718,7 @@
           </div>
 
           <!-- Locked Out Accounts -->
-          <div class="card admin-card" style="margin-bottom:20px;">
-            <div class="card-header">
-              <span class="card-title">LOCKED OUT ACCOUNTS</span>
-              <button class="btn btn-outline btn-sm" onclick="loadLockedAccounts()" style="margin-left:auto;font-size:12px;">Refresh</button>
-            </div>
-            <div class="admin-card-body">
-              <div id="lockout-loading" style="display:none;color:var(--text-secondary);font-size:13px;padding:8px 0;">Loading...</div>
-              <div id="lockout-empty" style="color:var(--text-secondary);font-size:13px;padding:8px 0;">No locked accounts found.</div>
-              <div class="admin-preview-table-wrapper" id="lockout-table-wrapper" style="display:none;">
-                <table class="data-table admin-preview-table" id="lockout-table">
-                  <thead><tr><th>OHR</th><th>Name</th><th>Password</th><th>Action</th></tr></thead>
-                  <tbody id="lockout-body"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <!-- Locked Out Accounts card removed — password system removed -->
 
           <!-- Sync Billing Data from Google Sheet -->
           <div class="card admin-card" style="margin-bottom:20px;">

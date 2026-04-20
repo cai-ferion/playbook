@@ -2318,56 +2318,7 @@ body {
   font-size: 14px;
 }
 
-.password-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.password-wrapper .form-input {
-  padding-right: 44px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 8px;
-  background: transparent;
-  border: none;
-  color: var(--fg-subtle);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color var(--transition);
-}
-
-.password-toggle:hover {
-  color: var(--fg-muted);
-}
-
-.password-rules {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-.password-rules span {
-  font-size: 11px;
-  color: var(--fg-subtle);
-  padding-left: 4px;
-}
-
-.password-rules span.rule-pass {
-  color: var(--fg-subtle);
-  opacity: 0.45;
-  text-decoration: line-through;
-}
-
-.password-rules span.rule-fail {
-  color: var(--error);
-}
+/* Password CSS removed — password system removed */
 
 .auth-error {
   font-size: 13px;
