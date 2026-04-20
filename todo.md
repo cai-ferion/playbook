@@ -2313,3 +2313,5 @@
 - [x] Login nudge — when OHR exists but profile incomplete, offer link to sign up/onboarding
 ## Session Management
 - [x] 30-minute inactivity timeout — clears sessionStorage and returns to login screen
+## Regimen UI
+- [x] Relocate Refresh Data and Logout buttons beside Regimen page title (not far right)

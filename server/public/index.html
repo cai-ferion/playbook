@@ -1378,10 +1378,20 @@
       <div class="view-container view-hidden" id="view-regimen">
         <div class="module-page">
           <!-- Regimen Tab Bar -->
-          <div class="regimen-tabs" id="regimen-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;">
+          <div class="regimen-tabs" id="regimen-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;align-items:center;">
             <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Roster</button>
             <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Incomplete Rostering</button>
-
+            <!-- Refresh Data + Logout inline with tabs -->
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:4px;">
+              <button class="btn btn-outline btn-sm" onclick="forceSync()" style="white-space:nowrap;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Refresh Data
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="handleLogout()" title="Logout" style="white-space:nowrap;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Logout
+              </button>
+            </div>
           </div>
           <!-- Roster Tab Content -->
           <div id="regimen-panel-roster">
