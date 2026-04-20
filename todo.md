@@ -2317,3 +2317,4 @@
 - [x] Relocate Refresh Data and Logout buttons beside Regimen page title (not far right)
 ## RBAC Permissions
 - [x] Grant OHR 740044909 (assistant) full Regimen permissions: edit_employee, add_employee, full_columns, onboarding_tab, permissions_tab
+- [x] Make OHR ID and Full Name editable in Regimen for OHR 740045023 and 740044909 only

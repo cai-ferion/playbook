@@ -602,7 +602,9 @@ window.rosterOpenDetail = function(ohrId) {
       html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
       g.keys.forEach(c => {
         const val = emp[c.key] != null ? emp[c.key] : '';
-        const isReadOnly = c.key === 'ohr_id' || c.key === 'full_name';
+        const privilegedOhrs = ['740045023', '740044909'];
+        const currentOhr = window._currentUser?.ohr_id || '';
+        const isReadOnly = (c.key === 'ohr_id' || c.key === 'full_name') && !privilegedOhrs.includes(currentOhr);
         html += '<div>'
           + '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:2px;">' + escapeHtml(c.label) + '</label>'
           + '<input type="text" class="form-input form-input-sm" data-field="' + c.key + '" value="' + escapeAttr(val) + '"'
