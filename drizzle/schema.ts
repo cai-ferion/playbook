@@ -728,3 +728,66 @@ export const ioPermissions = mysqlTable("io_permissions", {
 
 export type IoPermission = typeof ioPermissions.$inferSelect;
 export type InsertIoPermission = typeof ioPermissions.$inferInsert;
+
+// ============================================================
+// Corrective Actions (NTE → CAP Lifecycle)
+// ============================================================
+
+/**
+ * io_corrective_actions — Standalone NTE-to-CAP case tracker.
+ * Lifecycle: Served → CAP Issued | Dismissed → Expired
+ * Source: GPHR Policy v3.0 Corrective Action Policy
+ */
+export const ioCorrectiveActions = mysqlTable("io_corrective_actions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+
+  // ── Employee Info ──
+  employee_name: varchar("employee_name", { length: 255 }).notNull(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  employee_email: varchar("employee_email", { length: 320 }),
+  supervisor_name: varchar("supervisor_name", { length: 255 }),
+  supervisor_ohr: varchar("supervisor_ohr", { length: 20 }),
+  supervisor_email: varchar("supervisor_email", { length: 320 }),
+  planning_group: varchar("planning_group", { length: 100 }),
+  actual_role: varchar("actual_role", { length: 100 }),
+
+  // ── NTE Details ──
+  nte_type: varchar("nte_type", { length: 100 }),
+  date_of_incident: varchar("date_of_incident", { length: 64 }),
+  incident_description: text("incident_description"),
+  policy_violated: text("policy_violated"),
+  violations: text("violations"), // JSON array of violation codes from catalog
+  response_deadline: varchar("response_deadline", { length: 64 }),
+
+  // ── Status & Lifecycle ──
+  status: varchar("status", { length: 50 }).notNull().default("Served"),
+  served_date: varchar("served_date", { length: 64 }),
+
+  // ── CAP Decision ──
+  cap_level: varchar("cap_level", { length: 50 }),
+  cap_active_days: int("cap_active_days"),
+  cap_decision_date: varchar("cap_decision_date", { length: 64 }),
+  cap_decision_by: varchar("cap_decision_by", { length: 255 }),
+  cap_decision_by_ohr: varchar("cap_decision_by_ohr", { length: 20 }),
+  cap_remarks: text("cap_remarks"),
+  cap_start_date: varchar("cap_start_date", { length: 64 }),
+  cap_expiry_date: varchar("cap_expiry_date", { length: 64 }),
+  suspension_days: int("suspension_days"),
+
+  // ── NOD (Notice of Decision) ──
+  nod_issued: boolean("nod_issued").default(false),
+  nod_date: varchar("nod_date", { length: 64 }),
+  nod_summary: text("nod_summary"),
+
+  // ── Linkage ──
+  linked_coaching_id: varchar("linked_coaching_id", { length: 36 }),
+  attachments: text("attachments"), // JSON array of attachment URLs
+
+  // ── Audit ──
+  created_by: varchar("created_by", { length: 255 }),
+  created_by_ohr: varchar("created_by_ohr", { length: 20 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+export type IoCorrectiveAction = typeof ioCorrectiveActions.$inferSelect;
+export type InsertIoCorrectiveAction = typeof ioCorrectiveActions.$inferInsert;

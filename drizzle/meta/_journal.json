@@ -134,6 +134,13 @@
       "when": 1776698366664,
       "tag": "0018_complete_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1776717294539,
+      "tag": "0019_real_lizard",
+      "breakpoints": true
     }
   ]
 }

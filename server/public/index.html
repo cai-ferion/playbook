@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/compass-redesign.css?v=100">
+  <link rel="stylesheet" href="css/corrective-actions.css?v=1">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
@@ -211,6 +212,10 @@
             <button class="nav-item" data-view="compass-disputes" onclick="switchView('compass-disputes')" id="nav-compass-disputes">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               Disputes Area
+            </button>
+            <button class="nav-item" data-view="compass-corrective" onclick="switchView('compass-corrective')" id="nav-compass-corrective">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Corrective Actions
             </button>
           </div>
         </div>
@@ -1052,6 +1057,61 @@
         </div>
       </div>
 
+      <!-- ===== View 6c: Compass Corrective Actions ===== -->
+      <div class="view-container view-hidden" id="view-compass-corrective">
+        <div class="module-page">
+          <div class="loading-overlay" id="ca-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Corrective Actions...</div>
+          </div>
+          <!-- Summary Cards -->
+          <div class="ca-summary-cards" id="ca-summary-cards"></div>
+          <!-- Filter Bar -->
+          <div class="ca-filter-bar" id="ca-filter-bar"></div>
+          <!-- Table -->
+          <div class="ca-table-container" id="ca-table-container"></div>
+          <!-- Detail Overlay -->
+          <div class="ca-detail-overlay" id="ca-detail-overlay">
+            <div class="ca-detail-panel">
+              <div class="ca-detail-header">
+                <h3 id="ca-detail-title">Corrective Action</h3>
+                <button class="disputes-modal-close" onclick="caCloseDetail()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="ca-detail-body" id="ca-detail-body"></div>
+              <div class="ca-detail-actions" id="ca-detail-footer"></div>
+            </div>
+          </div>
+          <!-- Create NTE Modal -->
+          <div class="ca-modal-overlay" id="ca-create-overlay">
+            <div class="ca-modal">
+              <div class="ca-modal-header">
+                <h3 id="ca-create-title">Issue Notice to Explain</h3>
+                <button class="disputes-modal-close" onclick="caCloseCreate()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="ca-modal-body" id="ca-create-body"></div>
+              <div class="ca-modal-footer" id="ca-create-footer"></div>
+            </div>
+          </div>
+          <!-- CAP Decision Modal -->
+          <div class="ca-modal-overlay" id="ca-cap-overlay">
+            <div class="ca-modal">
+              <div class="ca-modal-header">
+                <h3 id="ca-cap-title">Assign Corrective Action</h3>
+                <button class="disputes-modal-close" onclick="caCloseCapModal()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="ca-modal-body" id="ca-cap-body"></div>
+              <div class="ca-modal-footer" id="ca-cap-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== View 7a: Sandbox — Input Portal ===== -->
       <div class="view-container view-hidden" id="view-sandbox-input">
         <div class="module-page">
@@ -1568,6 +1628,7 @@
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
   <script src="js/compass.js?v=102g" defer></script>
+  <script src="js/corrective-actions.js?v=1" defer></script>
   <script src="js/compass-omnibar.js?v=102g" defer></script>
   <script src="js/sandbox.js?v=102g" defer></script>
   <script src="js/haven.js?v=102g" defer></script>

@@ -30,6 +30,7 @@ import {
   compassViolationCatalog,
   ioPermissions,
   wfmSessionLog,
+  ioCorrectiveActions,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
 import crypto from "crypto";
@@ -3327,6 +3328,7 @@ const ALL_PERMISSION_KEYS = [
   'helm.analytics',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee', 'regimen.export_csv', 'regimen.full_columns',
   'compass.disputes',
+  'compass.corrective_actions',
 ];
 
 // Role-based defaults — used as fallback when no DB row exists
@@ -3345,6 +3347,7 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   b['regimen.export_csv'] = true;
   b['nav.compass'] = true;
   b['compass.disputes'] = true;
+  b['compass.corrective_actions'] = true;
   if (role === 'Team Lead') b['anchor.edit_attendance'] = true;
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
@@ -3353,6 +3356,7 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   if (ohrId === '740044909') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
+    b['compass.corrective_actions'] = true;
     b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
@@ -3764,6 +3768,305 @@ router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
     res.send(buffer);
   } catch (err: any) {
     console.error("[IO API] NTE DOCX generation error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Corrective Actions (NTE → CAP Lifecycle)
+// ============================================================
+
+// CAP level → active period in days (from GPHR Policy v3.0)
+const CAP_ACTIVE_DAYS: Record<string, number> = {
+  'CAP 0': 0,
+  'CAP 1': 60,
+  'CAP 2': 90,
+  'CAP 3': 180,
+  'Corrective Suspension': 0,
+  'Review for Termination': 0,
+};
+
+// GET /api/io/corrective-actions — list with filters
+router.get("/corrective-actions", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { ohr_id, status, nte_type, planning_group, supervisor_ohr, start_date, end_date, limit: lim, offset: off } = req.query;
+    const conditions: any[] = [];
+
+    if (ohr_id) conditions.push(eq(ioCorrectiveActions.ohr_id, String(ohr_id)));
+    if (status) conditions.push(eq(ioCorrectiveActions.status, String(status)));
+    if (nte_type) conditions.push(eq(ioCorrectiveActions.nte_type, String(nte_type)));
+    if (planning_group) conditions.push(eq(ioCorrectiveActions.planning_group, String(planning_group)));
+    if (supervisor_ohr) conditions.push(eq(ioCorrectiveActions.supervisor_ohr, String(supervisor_ohr)));
+    if (start_date) conditions.push(gte(ioCorrectiveActions.date_of_incident, String(start_date)));
+    if (end_date) conditions.push(lte(ioCorrectiveActions.date_of_incident, String(end_date)));
+
+    let q = db.select().from(ioCorrectiveActions);
+    if (conditions.length > 0) q = q.where(and(...conditions)) as any;
+    q = q.orderBy(desc(ioCorrectiveActions.created_at)) as any;
+    if (lim) q = q.limit(Number(lim)) as any;
+    if (off) q = q.offset(Number(off)) as any;
+
+    const rows = await q;
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] corrective-actions GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/corrective-actions/stats — summary card counts
+router.get("/corrective-actions/stats", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const all = await db.select().from(ioCorrectiveActions);
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+
+    // Auto-expire CAPs past their expiry date
+    const toExpire = all.filter(r => r.status === 'CAP Issued' && r.cap_expiry_date && r.cap_expiry_date < today);
+    for (const r of toExpire) {
+      await db.update(ioCorrectiveActions)
+        .set({ status: 'Expired', updated_at: now.toISOString() })
+        .where(eq(ioCorrectiveActions.id, r.id));
+      r.status = 'Expired'; // update in-memory too
+    }
+
+    const pending = all.filter(r => r.status === 'Served').length;
+    const activeCaps = all.filter(r => r.status === 'CAP Issued').length;
+    const expiringSoon = all.filter(r => r.status === 'CAP Issued' && r.cap_expiry_date && r.cap_expiry_date >= today && r.cap_expiry_date <= thirtyDaysFromNow).length;
+    // Dismissed this quarter
+    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1).toISOString().slice(0, 10);
+    const dismissed = all.filter(r => r.status === 'Dismissed' && r.cap_decision_date && r.cap_decision_date >= qStart).length;
+
+    res.json({ pending, activeCaps, expiringSoon, dismissed });
+  } catch (err: any) {
+    console.error("[IO API] corrective-actions/stats GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/corrective-actions/employee/:ohr_id/history — CAP history for an employee
+router.get("/corrective-actions/employee/:ohr_id/history", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const rows = await db.select().from(ioCorrectiveActions)
+      .where(eq(ioCorrectiveActions.ohr_id, req.params.ohr_id))
+      .orderBy(desc(ioCorrectiveActions.created_at));
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] corrective-actions/history GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/corrective-actions/:id — single record
+router.get("/corrective-actions/:id", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const [row] = await db.select().from(ioCorrectiveActions)
+      .where(eq(ioCorrectiveActions.id, req.params.id));
+    if (!row) return res.status(404).json({ error: "Not found" });
+    res.json(row);
+  } catch (err: any) {
+    console.error("[IO API] corrective-actions/:id GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/corrective-actions — create new NTE
+router.post("/corrective-actions", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const body = req.body;
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    // Calculate response deadline: 48hrs for CAP ≤ 2, 5 days for CAP 3+
+    let deadlineHours = 48;
+    const indicatedCap = body.indicated_cap_level || '';
+    if (['CAP 3', 'Corrective Suspension', 'Review for Termination'].includes(indicatedCap)) {
+      deadlineHours = 120; // 5 days
+    }
+    const deadlineDate = new Date(Date.now() + deadlineHours * 3600000).toISOString();
+
+    const record = {
+      id,
+      employee_name: body.employee_name,
+      ohr_id: body.ohr_id,
+      employee_email: body.employee_email || null,
+      supervisor_name: body.supervisor_name || null,
+      supervisor_ohr: body.supervisor_ohr || null,
+      supervisor_email: body.supervisor_email || null,
+      planning_group: body.planning_group || null,
+      actual_role: body.actual_role || null,
+      nte_type: body.nte_type || null,
+      date_of_incident: body.date_of_incident || null,
+      incident_description: body.incident_description || null,
+      policy_violated: body.policy_violated || null,
+      violations: body.violations ? JSON.stringify(body.violations) : null,
+      response_deadline: deadlineDate,
+      status: 'Served',
+      served_date: now,
+      linked_coaching_id: body.linked_coaching_id || null,
+      attachments: body.attachments ? JSON.stringify(body.attachments) : null,
+      created_by: body.created_by || null,
+      created_by_ohr: body.created_by_ohr || null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    await db.insert(ioCorrectiveActions).values(record);
+
+    // Create notification for the agent
+    try {
+      await db.insert(ioNotifications).values({
+        type: 'nte_issued',
+        title: 'Notice to Explain Issued',
+        message: `An NTE has been issued to you regarding: ${body.nte_type || 'Policy Violation'}. Please respond within ${deadlineHours} hours.`,
+        actor_ohr: body.created_by_ohr || null,
+        actor_name: body.created_by || 'System',
+        target_ohr: body.ohr_id,
+        target_role: 'agent',
+        metadata: JSON.stringify({ ca_id: id, nte_type: body.nte_type }),
+        is_read: false,
+        created_at: now,
+      });
+    } catch (notifErr: any) {
+      console.error('[IO API] NTE notification error:', notifErr.message);
+    }
+
+    res.status(201).json({ ...record, id });
+  } catch (err: any) {
+    console.error("[IO API] corrective-actions POST error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/io/corrective-actions/:id — update (assign CAP, dismiss)
+router.patch("/corrective-actions/:id", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { id } = req.params;
+    const body = req.body;
+    const now = new Date().toISOString();
+
+    const [existing] = await db.select().from(ioCorrectiveActions)
+      .where(eq(ioCorrectiveActions.id, id));
+    if (!existing) return res.status(404).json({ error: "Not found" });
+
+    const updates: any = { updated_at: now };
+
+    // Assign CAP
+    if (body.action === 'assign_cap') {
+      if (existing.status !== 'Served') {
+        return res.status(400).json({ error: "Can only assign CAP to NTEs with 'Served' status" });
+      }
+      updates.status = 'CAP Issued';
+      updates.cap_level = body.cap_level;
+      updates.cap_active_days = CAP_ACTIVE_DAYS[body.cap_level] ?? 0;
+      updates.cap_decision_date = now;
+      updates.cap_decision_by = body.decision_by || null;
+      updates.cap_decision_by_ohr = body.decision_by_ohr || null;
+      updates.cap_remarks = body.remarks || null;
+      updates.cap_start_date = body.cap_start_date || now.slice(0, 10);
+      const activeDays = updates.cap_active_days;
+      if (activeDays > 0) {
+        const start = new Date(updates.cap_start_date + 'T00:00:00Z');
+        start.setUTCDate(start.getUTCDate() + activeDays);
+        updates.cap_expiry_date = start.toISOString().slice(0, 10);
+      }
+      updates.suspension_days = body.suspension_days || null;
+      if (body.nod_issued) {
+        updates.nod_issued = true;
+        updates.nod_date = now;
+        updates.nod_summary = body.nod_summary || null;
+      }
+
+      // Notification: CAP Issued
+      try {
+        await db.insert(ioNotifications).values({
+          type: 'cap_issued',
+          title: `Corrective Action Issued — ${body.cap_level}`,
+          message: `A ${body.cap_level} corrective action has been issued to you. ${activeDays > 0 ? `Active period: ${activeDays} days.` : ''}`,
+          actor_ohr: body.decision_by_ohr || null,
+          actor_name: body.decision_by || 'System',
+          target_ohr: existing.ohr_id,
+          target_role: 'agent',
+          metadata: JSON.stringify({ ca_id: id, cap_level: body.cap_level }),
+          is_read: false,
+          created_at: now,
+        });
+      } catch (notifErr: any) {
+        console.error('[IO API] CAP notification error:', notifErr.message);
+      }
+    }
+
+    // Dismiss
+    if (body.action === 'dismiss') {
+      if (existing.status !== 'Served') {
+        return res.status(400).json({ error: "Can only dismiss NTEs with 'Served' status" });
+      }
+      updates.status = 'Dismissed';
+      updates.cap_decision_date = now;
+      updates.cap_decision_by = body.decision_by || null;
+      updates.cap_decision_by_ohr = body.decision_by_ohr || null;
+      updates.cap_remarks = body.remarks || null;
+      if (body.nod_issued) {
+        updates.nod_issued = true;
+        updates.nod_date = now;
+        updates.nod_summary = body.nod_summary || null;
+      }
+
+      // Notification: NTE Dismissed
+      try {
+        await db.insert(ioNotifications).values({
+          type: 'nte_dismissed',
+          title: 'NTE Dismissed — No Further Action',
+          message: 'Your Notice to Explain has been reviewed and dismissed. No further action is required.',
+          actor_ohr: body.decision_by_ohr || null,
+          actor_name: body.decision_by || 'System',
+          target_ohr: existing.ohr_id,
+          target_role: 'agent',
+          metadata: JSON.stringify({ ca_id: id }),
+          is_read: false,
+          created_at: now,
+        });
+      } catch (notifErr: any) {
+        console.error('[IO API] Dismiss notification error:', notifErr.message);
+      }
+    }
+
+    // Generic field updates (for editing NTE details before CAP decision)
+    if (!body.action) {
+      const allowedFields = ['nte_type', 'date_of_incident', 'incident_description', 'policy_violated', 'violations', 'attachments'];
+      for (const f of allowedFields) {
+        if (body[f] !== undefined) {
+          updates[f] = f === 'violations' || f === 'attachments' ? JSON.stringify(body[f]) : body[f];
+        }
+      }
+    }
+
+    await db.update(ioCorrectiveActions).set(updates).where(eq(ioCorrectiveActions.id, id));
+
+    const [updated] = await db.select().from(ioCorrectiveActions)
+      .where(eq(ioCorrectiveActions.id, id));
+    res.json(updated);
+  } catch (err: any) {
+    console.error("[IO API] corrective-actions PATCH error:", err);
     res.status(500).json({ error: err.message });
   }
 });

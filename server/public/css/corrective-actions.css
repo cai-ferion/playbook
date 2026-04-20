@@ -1,0 +1,553 @@
+/* ============================================================
+   CORRECTIVE ACTIONS — NTE → CAP Lifecycle UI
+   Reuses compass-redesign.css variables and patterns
+   ============================================================ */
+
+/* ---- Summary Cards ---- */
+.ca-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+  animation: compassFadeUp 0.4s ease;
+}
+.ca-stat-card {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--compass-shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: default;
+}
+.ca-stat-card:hover {
+  box-shadow: var(--compass-shadow);
+  border-color: var(--compass-accent);
+}
+.ca-stat-card .ca-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--compass-text-muted);
+}
+.ca-stat-card .ca-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--compass-text);
+  line-height: 1;
+}
+.ca-stat-card .ca-stat-sub {
+  font-size: 11px;
+  color: var(--compass-text-subtle);
+}
+.ca-stat-card.pending .ca-stat-value { color: var(--compass-warning); }
+.ca-stat-card.active .ca-stat-value { color: var(--compass-danger); }
+.ca-stat-card.expiring .ca-stat-value { color: var(--compass-info); }
+.ca-stat-card.dismissed .ca-stat-value { color: var(--compass-success); }
+
+@media (max-width: 768px) {
+  .ca-summary-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---- Filter Bar ---- */
+.ca-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  animation: compassFadeUp 0.45s ease;
+}
+.ca-filter-bar .ca-search-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+.ca-filter-bar .ca-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--compass-text-subtle);
+  pointer-events: none;
+}
+.ca-filter-bar input[type="text"] {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface);
+  color: var(--compass-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ca-filter-bar input[type="text"]:focus {
+  border-color: var(--compass-accent);
+  box-shadow: 0 0 0 3px var(--compass-accent-dim);
+}
+.ca-filter-bar select {
+  padding: 8px 28px 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface);
+  color: var(--compass-text);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.ca-filter-bar select:focus {
+  border-color: var(--compass-accent);
+  box-shadow: 0 0 0 3px var(--compass-accent-dim);
+}
+.ca-filter-count {
+  font-size: 12px;
+  color: var(--compass-text-muted);
+  white-space: nowrap;
+}
+.ca-btn-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+.ca-btn-create:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* ---- Table ---- */
+.ca-table-container {
+  animation: compassFadeUp 0.5s ease;
+}
+.ca-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.ca-table thead th {
+  background: var(--compass-surface-alt);
+  color: var(--compass-text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--compass-border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.ca-table tbody tr {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.ca-table tbody tr:hover {
+  background: var(--compass-surface-alt);
+}
+.ca-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+  color: var(--compass-text);
+  vertical-align: middle;
+}
+.ca-table .ca-name-cell {
+  font-weight: 600;
+}
+.ca-table .ca-ohr-cell {
+  font-size: 11px;
+  color: var(--compass-text-muted);
+}
+
+/* Status badges */
+.ca-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.ca-status-badge.served { background: var(--compass-warning-bg); color: var(--compass-warning); }
+.ca-status-badge.cap-issued { background: var(--compass-danger-bg); color: var(--compass-danger); }
+.ca-status-badge.dismissed { background: var(--compass-success-bg); color: var(--compass-success); }
+.ca-status-badge.expired { background: rgba(148, 163, 184, 0.1); color: var(--compass-text-muted); }
+
+/* CAP level badges */
+.ca-cap-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.ca-cap-badge.cap-0 { background: rgba(16, 185, 129, 0.08); color: #10B981; }
+.ca-cap-badge.cap-1 { background: rgba(245, 158, 11, 0.08); color: #F59E0B; }
+.ca-cap-badge.cap-2 { background: rgba(249, 115, 22, 0.08); color: #F97316; }
+.ca-cap-badge.cap-3 { background: rgba(239, 68, 68, 0.08); color: #EF4444; }
+.ca-cap-badge.suspension { background: rgba(139, 92, 246, 0.08); color: #8B5CF6; }
+.ca-cap-badge.termination { background: rgba(239, 68, 68, 0.15); color: #DC2626; }
+
+/* Aging indicator */
+.ca-aging-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.ca-aging-dot.overdue { background: var(--compass-danger); animation: compassPulse 1.5s infinite; }
+.ca-aging-dot.warning { background: var(--compass-warning); }
+.ca-aging-dot.ok { background: var(--compass-success); }
+
+/* Empty state */
+.ca-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--compass-text-muted);
+}
+.ca-empty-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+.ca-empty-state h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--compass-text);
+  margin: 0 0 6px;
+}
+.ca-empty-state p {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* ---- Detail Overlay ---- */
+.ca-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1050;
+  padding-top: 5vh;
+  overflow-y: auto;
+}
+.ca-detail-overlay.active { display: flex; }
+
+.ca-detail-panel {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--compass-shadow-xl);
+  animation: disputes-modal-slide 0.25s ease;
+  margin-bottom: 5vh;
+}
+
+.ca-detail-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--compass-surface);
+  z-index: 2;
+  border-radius: 14px 14px 0 0;
+}
+.ca-detail-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0;
+}
+
+.ca-detail-body {
+  padding: 20px;
+}
+
+.ca-detail-actions {
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Detail sections */
+.ca-detail-section {
+  margin-bottom: 20px;
+}
+.ca-detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--compass-text-muted);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+}
+.ca-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+.ca-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ca-detail-field.full-width {
+  grid-column: 1 / -1;
+}
+.ca-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.ca-detail-value {
+  font-size: 13px;
+  color: var(--compass-text);
+  line-height: 1.5;
+}
+.ca-detail-value.muted {
+  color: var(--compass-text-subtle);
+  font-style: italic;
+}
+
+/* CAP History timeline */
+.ca-history-timeline {
+  position: relative;
+  padding-left: 20px;
+}
+.ca-history-timeline::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--compass-border);
+}
+.ca-history-item {
+  position: relative;
+  padding: 8px 0 12px 12px;
+}
+.ca-history-item::before {
+  content: '';
+  position: absolute;
+  left: -17px;
+  top: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--compass-border);
+  background: var(--compass-surface);
+}
+.ca-history-item.active::before {
+  border-color: var(--compass-danger);
+  background: var(--compass-danger);
+}
+.ca-history-item.dismissed::before {
+  border-color: var(--compass-success);
+  background: var(--compass-success);
+}
+.ca-history-item.expired::before {
+  border-color: var(--compass-text-subtle);
+  background: var(--compass-text-subtle);
+}
+.ca-history-date {
+  font-size: 11px;
+  color: var(--compass-text-subtle);
+  margin-bottom: 2px;
+}
+.ca-history-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--compass-text);
+}
+.ca-history-sub {
+  font-size: 12px;
+  color: var(--compass-text-muted);
+}
+
+/* ---- Modal Overlay (Create NTE / Assign CAP) ---- */
+.ca-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: disputes-fade-in 0.2s ease;
+}
+.ca-modal-overlay.active { display: flex; }
+
+.ca-modal {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--compass-shadow-xl);
+  animation: disputes-modal-slide 0.25s ease;
+}
+
+.ca-modal-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ca-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0;
+}
+
+.ca-modal-body {
+  padding: 18px 20px;
+}
+
+.ca-modal-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Form fields in modals */
+.ca-form-group {
+  margin-bottom: 14px;
+}
+.ca-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  margin-bottom: 4px;
+}
+.ca-form-group input,
+.ca-form-group select,
+.ca-form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface-alt);
+  color: var(--compass-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+.ca-form-group input:focus,
+.ca-form-group select:focus,
+.ca-form-group textarea:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.ca-form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.ca-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Action buttons */
+.ca-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+}
+.ca-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ca-btn.primary {
+  color: #fff;
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+}
+.ca-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+.ca-btn.danger {
+  color: #fff;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+.ca-btn.danger:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+.ca-btn.success {
+  color: #fff;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+.ca-btn.success:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+.ca-btn.ghost {
+  color: var(--compass-text-muted);
+  background: transparent;
+  border: 1px solid var(--compass-border);
+}
+.ca-btn.ghost:hover:not(:disabled) {
+  background: var(--compass-surface-alt);
+}

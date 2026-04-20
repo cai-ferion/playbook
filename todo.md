@@ -2341,3 +2341,30 @@
 - [x] Replace sync-log/latest admin gate with ADMIN_OHRS.includes()
 - [x] Replace billing-sheet-sync admin gate with ADMIN_OHRS.includes()
 - [x] All 569 tests pass after migration
+## Compass — NTE & CAP Module (Corrective Actions)
+### Change A: Remove Acknowledgement for Awareness-Only Types
+- [x] Define AWARENESS_ONLY_TYPES constant (ZTP Coaching, Incident Report, NTE Log)
+- [x] Set status to 'Issued' on creation for awareness-only types
+- [x] Hide Acknowledge button and ack section in detail view for awareness-only types
+- [x] Exclude awareness-only types from Unacknowledged/Acknowledged sub-tabs
+### Change B: Corrective Actions Tab
+- [x] Create io_corrective_actions database table and migration
+- [x] Backend: GET /api/io/corrective-actions (list with filters)
+- [x] Backend: POST /api/io/corrective-actions (create NTE)
+- [x] Backend: GET /api/io/corrective-actions/:id (single record)
+- [x] Backend: PATCH /api/io/corrective-actions/:id (assign CAP, dismiss)
+- [x] Backend: GET /api/io/corrective-actions/stats (summary card counts)
+- [x] Backend: GET /api/io/corrective-actions/employee/:ohr_id/history (CAP history)
+- [x] Frontend: Corrective Actions tab in Compass navigation
+- [x] Frontend: Summary cards (Pending NTEs, Active CAPs, Expiring Soon, Dismissed)
+- [x] Frontend: Filterable table with sort/filter
+- [x] Frontend: Create NTE form
+- [x] Frontend: Assign CAP form
+- [x] Frontend: Dismiss form
+- [x] Frontend: Detail overlay with employee info, NTE details, action panel
+- [x] Frontend: Employee CAP history timeline in detail overlay
+- [x] Notifications: NTE Created, CAP Issued, NTE Dismissed
+- [x] Aging alerts: overdue badge for NTEs past response deadline
+- [ ] NTE Build Assist bridge: Track in Corrective Actions button after wizard (deferred)
+- [x] CAP expiry: auto-transition to Expired on stats fetch
+- [ ] Tests for corrective actions endpoints (deferred)

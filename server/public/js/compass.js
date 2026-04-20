@@ -94,10 +94,13 @@ const COMPASS = {
   ],
 
   SIMPLE_STATUSES: ['Pending Acknowledgement', 'Acknowledged'],
+  // Awareness-only types: no acknowledgement workflow, status goes straight to 'Issued'
+  AWARENESS_ONLY_TYPES: ['ZTP Coaching', 'Incident Report', 'NTE Log'],
 
   STATUS_COLORS: {
     'Pending Acknowledgement': '#F59E0B',
     'Acknowledged': '#22C55E',
+    'Issued': '#6366F1',
     'Pending SME Review': '#3B82F6',
     'Markdown Accepted': '#22C55E',
     'Markdown Disputed': '#EF4444',
@@ -381,6 +384,9 @@ function compassApplyFilters() {
  * Acknowledged = coachee_ack, coachee_commitments, coaching_rating, coachee_sentiments all filled.
  */
 function compassIsAcknowledged(log) {
+  // Awareness-only types (ZTP, Incident Report, NTE Log) are always considered "acknowledged"
+  // so they don't appear in the Unacknowledged tab
+  if (COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type)) return true;
   return !!(log.coachee_ack && log.coachee_ack.trim() &&
             log.coachee_commitments && log.coachee_commitments.trim() &&
             log.coaching_rating && String(log.coaching_rating).trim() &&
@@ -1150,7 +1156,8 @@ async function compassOpenDetail(coachingId) {
   // ===== SECTION 2: ACKNOWLEDGEMENT =====
   // For QA Feedback logs, only show Acknowledgement section when status is acknowledgement-related
   const ACK_ELIGIBLE_STATUSES = ['Pending Acknowledgement', 'Acknowledged'];
-  const showAckSection = log.coaching_type !== 'QA Feedback' || ACK_ELIGIBLE_STATUSES.includes(log.status);
+  const isAwarenessOnly = COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type);
+  const showAckSection = !isAwarenessOnly && (log.coaching_type !== 'QA Feedback' || ACK_ELIGIBLE_STATUSES.includes(log.status));
 
   if (showAckSection) {
   html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Acknowledgement</h4>';
@@ -1212,8 +1219,9 @@ async function compassOpenDetail(coachingId) {
     const role = cu.actual_role;
     const ohr = cu.ohr_id;
 
-    // Acknowledge button — show if user is the coachee AND log is unacknowledged
-    if (isCoachee && !isAcknowledged) {
+    // Acknowledge button — show if user is the coachee AND log is unacknowledged AND not awareness-only
+    const _isAwarenessOnly = COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type);
+    if (isCoachee && !isAcknowledged && !_isAwarenessOnly) {
       footerHtml += ' <button class="btn btn-primary btn-sm" id="compass-ack-trigger-btn" onclick="compassShowAckForm()">Acknowledge</button>';
     }
 
@@ -2430,7 +2438,7 @@ async function compassSubmitNew() {
     coachee_pg: coachee ? coachee.planning_group : (parentLog ? (parentLog.coachee_pg || '') : ''),
     session_goal: sessionGoal,
     coaching_details: document.getElementById('compass-new-details')?.innerHTML || '',
-    status: type === 'QA Feedback' ? 'Pending SME Review' : 'Pending Acknowledgement',
+    status: type === 'QA Feedback' ? 'Pending SME Review' : (COMPASS.AWARENESS_ONLY_TYPES.includes(type) ? 'Issued' : 'Pending Acknowledgement'),
     cap_level: capLevel || null,
     coachee_list: coacheeList.length > 0 ? coacheeList : []
   };
@@ -5825,7 +5833,7 @@ async function _nteWizSubmit() {
       coachee_pg: NTE_WIZARD.employee.planning_group || '',
       session_goal: 'Attendance & Tardiness',
       coaching_details: NTE_WIZARD.narrative,
-      status: 'Pending Acknowledgement',
+      status: 'Issued',  // NTE Log is awareness-only — no acknowledgement
       cap_level: NTE_WIZARD.capLevel,
       coachee_list: []
     };
