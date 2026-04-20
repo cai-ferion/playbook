@@ -205,9 +205,11 @@ function showAuthForm(type) {
   // Show the requested panel
   const target = document.getElementById('auth-form-' + type);
   if (target) target.style.display = 'block';
-  // Clear errors
+  // Clear errors and nudge
   const errIds = ['signup-error', 'login-error'];
   errIds.forEach(id => { const el = document.getElementById(id); if (el) { el.textContent = ''; el.style.color = ''; } });
+  const nudge = document.getElementById('login-nudge');
+  if (nudge) nudge.style.display = 'none';
   // Clear fields when not in onboarding flow
   if (type !== 'onboarding') {
     const clearIds = ['signup-ohr', 'login-ohr'];
@@ -386,16 +388,81 @@ async function handleOnboardingSubmit() {
       }).catch(() => {});
     }
 
-    errorEl.style.color = 'var(--success)';
-    errorEl.textContent = 'Account created! You can now login.';
+    // Auto-login: fetch fresh employee data and enter the app directly
     window._onboardOhr = null;
-    setTimeout(() => {
-      errorEl.style.color = '';
-      showAuthForm('login');
-      document.getElementById('login-ohr').value = ohr;
-    }, 2000);
+    errorEl.style.color = 'var(--success)';
+    errorEl.textContent = 'Profile complete! Logging you in\u2026';
+
+    try {
+      const freshResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
+      const freshData = await freshResp.json();
+      const freshEmp = Array.isArray(freshData) && freshData[0];
+      if (!freshEmp) throw new Error('Employee not found after onboarding');
+
+      await loginAsEmployee(freshEmp);
+    } catch (loginErr) {
+      // Fallback: redirect to login form if auto-login fails
+      console.warn('[Onboarding] Auto-login failed, falling back to login form:', loginErr);
+      errorEl.textContent = 'Profile saved! Please login with your OHR ID.';
+      setTimeout(() => {
+        errorEl.style.color = '';
+        showAuthForm('login');
+        document.getElementById('login-ohr').value = ohr;
+      }, 1500);
+    }
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
+  }
+}
+
+// Shared login initialization — sets currentUser, fetches permissions, boots the app
+async function loginAsEmployee(emp) {
+  currentUser = {
+    ohr_id: emp.ohr_id,
+    full_name: emp.full_name,
+    actual_role: emp.actual_role,
+    employement_status: emp.employement_status,
+    planning_group: emp.planning_group || '',
+    complete_planning_group: emp.complete_planning_group || '',
+    actualPlanningGroup: emp.planning_group || '',
+    supervisor_name: emp.supervisor_name || ''
+  };
+
+  sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+
+  document.getElementById('auth-page').style.display = 'none';
+  document.getElementById('app-container').style.display = 'flex';
+
+  // RBAC: Fetch permissions from DB and apply nav visibility
+  try {
+    const permRes = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
+    const permData = await permRes.json();
+    currentUser.permissions = permData.permissions || {};
+  } catch (permErr) {
+    console.warn('[RBAC] Failed to fetch permissions, using empty:', permErr);
+    currentUser.permissions = {};
+  }
+  sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+
+  applyNavPermissions(currentUser);
+
+  initMultiSelects();
+  initDashboardMultiSelects();
+  await loadDataOptimized();
+  startRefreshTimer();
+  // Auto-expand Anchor and Helm nav groups
+  const anchorGroup = document.getElementById('nav-group-anchor');
+  if (anchorGroup) anchorGroup.classList.add('expanded');
+  const helmGroup = document.getElementById('nav-group-helm');
+  if (helmGroup) helmGroup.classList.add('expanded');
+  // Default sidebar to Alerts (notifications) for all users
+  if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
+  if (typeof initNotifications === 'function') initNotifications();
+  // Route to Helm Task Board for Agents with no anchor access, Risk Intelligence for others
+  if (!currentUser.permissions['nav.anchor']) {
+    switchView('helm-board');
+  } else {
+    switchView('alerts');
   }
 }
 
@@ -460,16 +527,25 @@ async function handleLogin() {
       return;
     }
 
-    currentUser = {
-      ohr_id: emp.ohr_id,
-      full_name: emp.full_name,
-      actual_role: emp.actual_role,
-      employement_status: emp.employement_status,
-      planning_group: emp.planning_group || '',
-      complete_planning_group: emp.complete_planning_group || '',
-      actualPlanningGroup: emp.planning_group || '',
-      supervisor_name: emp.supervisor_name || ''
-    };
+    // Incomplete profile nudge: if key onboarding fields are missing, offer to complete profile
+    const nudgeEl = document.getElementById('login-nudge');
+    if (nudgeEl) nudgeEl.style.display = 'none'; // reset on each attempt
+    if (!emp.full_name || !emp.last_name || !emp.given_name) {
+      errorEl.textContent = 'Your profile is not yet complete. Please finish onboarding first.';
+      if (nudgeEl) {
+        nudgeEl.style.display = 'block';
+        const nudgeLink = document.getElementById('login-nudge-link');
+        if (nudgeLink) {
+          nudgeLink.onclick = (e) => {
+            e.preventDefault();
+            window._onboardOhr = ohr;
+            nudgeEl.style.display = 'none';
+            showAuthForm('onboarding');
+          };
+        }
+      }
+      return;
+    }
 
     // Remember Me: save or clear OHR in localStorage
     const rememberCb = document.getElementById('login-remember');
@@ -479,44 +555,7 @@ async function handleLogin() {
       localStorage.removeItem('playbook_remembered_ohr');
     }
 
-    sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
-
-    document.getElementById('auth-page').style.display = 'none';
-    document.getElementById('app-container').style.display = 'flex';
-
-    // ── RBAC: Fetch permissions from DB and apply nav visibility ──
-    try {
-      const permRes = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
-      const permData = await permRes.json();
-      currentUser.permissions = permData.permissions || {};
-    } catch (permErr) {
-      console.warn('[RBAC] Failed to fetch permissions, using empty:', permErr);
-      currentUser.permissions = {};
-    }
-    // Store updated user with permissions
-    sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
-
-    // Apply DB-driven nav visibility
-    applyNavPermissions(currentUser);
-
-    initMultiSelects();
-    initDashboardMultiSelects();
-    await loadDataOptimized();
-    startRefreshTimer();
-    // Auto-expand Anchor and Helm nav groups
-    const anchorGroup = document.getElementById('nav-group-anchor');
-    if (anchorGroup) anchorGroup.classList.add('expanded');
-    const helmGroup = document.getElementById('nav-group-helm');
-    if (helmGroup) helmGroup.classList.add('expanded');
-    // Default sidebar to Alerts (notifications) for all users
-    if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
-    if (typeof initNotifications === 'function') initNotifications();
-    // Route to Helm Task Board for Agents with no anchor access, Risk Intelligence for others
-    if (!currentUser.permissions['nav.anchor']) {
-      switchView('helm-board');
-    } else {
-      switchView('alerts');
-    }
+    await loginAsEmployee(emp);
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
   }

@@ -53,6 +53,10 @@
           <label for="login-remember" style="font-size:13px;color:var(--fg-muted);cursor:pointer;user-select:none;">Remember my OHR ID</label>
         </div>
         <div class="auth-error" id="login-error"></div>
+        <div id="login-nudge" style="display:none;text-align:center;margin:8px 0;">
+          <span style="font-size:13px;color:var(--fg-muted);">Profile incomplete.</span>
+          <a href="#" id="login-nudge-link" style="font-size:13px;color:var(--accent);text-decoration:underline;cursor:pointer;">Complete your profile</a>
+        </div>
         <button class="btn btn-primary btn-lg auth-btn" onclick="handleLogin()">Login</button>
         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
           <button class="btn btn-ghost auth-back" onclick="showAuthButtons()">Back</button>

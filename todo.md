@@ -2308,3 +2308,6 @@
 - [x] Remove `password` and `is_locked` columns from io_employees schema + migration
 - [x] Add "Remember Me" toggle with localStorage to pre-fill OHR ID
 - [x] Simplify Sign Up flow — unified single form, no trainee/production split
+## Sign Up / Login UX Improvements
+- [x] Auto-login after onboarding — skip redirect to login form, log user in directly
+- [x] Login nudge — when OHR exists but profile incomplete, offer link to sign up/onboarding
