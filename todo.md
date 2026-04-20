@@ -2265,3 +2265,11 @@
 ## Coaching Profile & Disputes Area — Detail View Revisions
 - [x] Hide "Coaching Rating" and "Coaching Sentiments" fields from everyone except the coach's 1-up supervisor
 - [x] Refactor Disputes Area card detail overlay to match Coaching Profile detail layout/design
+
+## Export CSV — Coaching Profile
+- [x] Add Export CSV button to Coaching Profile page (near the "Coaching Given" table)
+- [x] Export respects role-based data scoping (same filter as the table view)
+- [x] Export includes ALL possible fields from coaching log records
+- [x] Managers get dropdown toggle: "Export Filtered" vs "Export All" (bypasses role filter)
+- [x] Non-managers get simple "Export CSV" button (filtered only)
+- [x] Export covers all pages (not just current pagination)

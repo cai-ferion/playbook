@@ -1416,3 +1416,66 @@
   background: var(--accent, #3B82F6);
   color: #fff;
 }
+
+/* ===== Export CSV Button & Dropdown ===== */
+.compass-export-wrapper {
+  position: relative;
+  margin-left: auto;
+}
+.compass-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #1f2937);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.compass-export-btn:hover {
+  background: var(--bg-secondary, #f3f4f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+.compass-export-btn.has-dropdown {
+  padding-right: 8px;
+}
+.compass-export-btn .dropdown-arrow {
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.compass-export-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+.compass-export-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 13px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary, #1f2937);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.compass-export-dropdown-item:hover {
+  background: var(--bg-secondary, #f3f4f6);
+}
+.compass-export-dropdown-item:first-child {
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}

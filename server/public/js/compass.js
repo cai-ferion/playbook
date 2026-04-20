@@ -570,6 +570,110 @@ function compassRenderPagination(which) {
   `;
 }
 
+// ===== Export CSV =====
+
+/**
+ * Export coaching logs as CSV.
+ * mode = 'filtered' → exports COMPASS.filteredGiven (role-scoped + search/filter applied)
+ * mode = 'all'      → fetches ALL logs from server (Manager-only, bypasses role filter)
+ */
+async function compassExportCSV(mode) {
+  const btn = document.getElementById('compass-export-btn');
+  const origText = btn ? btn.innerHTML : '';
+  try {
+    if (btn) btn.innerHTML = '<span style="opacity:0.7">Exporting...</span>';
+    if (btn) btn.disabled = true;
+
+    let data;
+    if (mode === 'all') {
+      // Manager-only: fetch full dataset from server (non-lean)
+      const resp = await fetch(`${IO_API_BASE}/coaching?limit=10000&lean=1`);
+      if (!resp.ok) throw new Error('Failed to fetch data for export');
+      data = await resp.json();
+    } else {
+      // Filtered: use the already-scoped filteredGiven array
+      data = [...(COMPASS.filteredGiven || [])];
+    }
+
+    if (!data || data.length === 0) {
+      showToast('No data to export', 'warning');
+      return;
+    }
+
+    // Define CSV columns in a logical order with human-readable headers
+    const columns = [
+      { key: 'coaching_id', header: 'Coaching ID' },
+      { key: 'coaching_type', header: 'Coaching Type' },
+      { key: 'status', header: 'Status' },
+      { key: 'cap_level', header: 'CAP Level' },
+      { key: 'coaching_date', header: 'Coaching Date' },
+      { key: 'coach', header: 'Coach' },
+      { key: 'coach_ohr', header: 'Coach OHR' },
+      { key: 'coach_meta_email', header: 'Coach Meta Email' },
+      { key: 'coach_sup', header: 'Coach Supervisor' },
+      { key: 'coach_sup_email', header: 'Coach Supervisor Email' },
+      { key: 'coach_pg', header: 'Coach Planning Group' },
+      { key: 'coachee', header: 'Coachee' },
+      { key: 'coachee_ohr', header: 'Coachee OHR' },
+      { key: 'coachee_meta_email', header: 'Coachee Meta Email' },
+      { key: 'coachee_sup', header: 'Coachee Supervisor' },
+      { key: 'coachee_sup_email', header: 'Coachee Supervisor Email' },
+      { key: 'coachee_pg', header: 'Coachee Planning Group' },
+      { key: 'session_goal', header: 'Session Goal' },
+      { key: 'job_id', header: 'Job ID' },
+      { key: 'sme_joiner', header: 'Support Joiner 1' },
+      { key: 'sme_meta_email', header: 'Support Joiner 1 Email' },
+      { key: 'sme_joiner_2', header: 'Support Joiner 2' },
+      { key: 'sme_joiner_2_email', header: 'Support Joiner 2 Email' },
+      { key: 'coachee_list', header: 'Coachee List (Group)' },
+      { key: 'created_at', header: 'Created At' },
+      { key: 'updated_at', header: 'Updated At' },
+    ];
+
+    // Build CSV string
+    const escCSV = (val) => {
+      if (val == null) return '';
+      let s = String(val);
+      // Flatten arrays
+      if (Array.isArray(val)) s = val.map(v => typeof v === 'object' ? (v.name || v.coachee || JSON.stringify(v)) : v).join('; ');
+      // Escape quotes and wrap if needed
+      if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+        s = '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    };
+
+    const headerRow = columns.map(c => escCSV(c.header)).join(',');
+    const rows = data.map(log => columns.map(c => escCSV(log[c.key])).join(','));
+    const csv = [headerRow, ...rows].join('\n');
+
+    // Trigger download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const timestamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `coaching_given_${mode === 'all' ? 'all' : 'filtered'}_${timestamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`Exported ${data.length} records`, 'success');
+  } catch (err) {
+    console.error('Export CSV error:', err);
+    showToast('Export failed: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = origText;
+      btn.disabled = false;
+    }
+    // Close dropdown if open
+    const dd = document.getElementById('compass-export-dropdown');
+    if (dd) dd.style.display = 'none';
+  }
+}
+
 // ===== Disputes Area: Kanban Board =====
 
 // Per-column pagination state for kanban
@@ -2582,6 +2686,33 @@ async function initCompass() {
   const viewToggle = document.getElementById('compass-view-toggle');
   if (viewToggle) {
     viewToggle.style.display = isAdmin740 ? 'flex' : 'none';
+  }
+
+  // Export CSV button: Managers get dropdown (Filtered / All), others get simple button
+  const exportWrapper = document.getElementById('compass-export-wrapper');
+  const exportBtn = document.getElementById('compass-export-btn');
+  const exportDropdown = document.getElementById('compass-export-dropdown');
+  const isManager = isAdmin740 || (currentUser && currentUser.actual_role === 'Manager');
+  if (exportWrapper && exportBtn) {
+    if (isAgent) {
+      // Agents don't see the export button
+      exportWrapper.style.display = 'none';
+    } else if (isManager) {
+      // Managers: show dropdown toggle
+      exportBtn.classList.add('has-dropdown');
+      exportBtn.removeAttribute('onclick');
+      exportBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export CSV <span class="dropdown-arrow">▾</span>`;
+      exportBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const dd = document.getElementById('compass-export-dropdown');
+        dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+      });
+      // Close dropdown on outside click
+      document.addEventListener('click', function() {
+        if (exportDropdown) exportDropdown.style.display = 'none';
+      });
+    }
+    // Non-managers: default simple button (onclick already set in HTML)
   }
 
   compassApplyFilters();
