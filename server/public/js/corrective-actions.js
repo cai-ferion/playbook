@@ -30,8 +30,16 @@ async function initCorrectiveActions() {
   if (loading) loading.style.display = 'flex';
 
   // Lazy-load violations catalog if not already loaded
-  if (typeof HR_VIOLATIONS === 'undefined' && typeof _compassLazyLoadViolations === 'function') {
-    _compassLazyLoadViolations();
+  if (typeof HR_VIOLATIONS === 'undefined') {
+    if (typeof _compassLazyLoadViolations === 'function') {
+      _compassLazyLoadViolations();
+    } else {
+      // Compass hasn't been opened yet — load violations directly
+      const script = document.createElement('script');
+      script.src = 'js/compass-violations.js?v=102g';
+      script.onerror = () => console.error('CA: Failed to lazy-load compass-violations.js');
+      document.head.appendChild(script);
+    }
   }
 
   try {
@@ -138,7 +146,7 @@ function caRenderFilterBar() {
     <span class="ca-filter-count" id="ca-filter-count"></span>
     ${canCreate ? `<button class="ca-btn-create" onclick="caOpenNteWizard()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Issue NTE
+      NTE Build Assist
     </button>` : ''}
   `;
 }
@@ -482,8 +490,7 @@ function _caWizRender() {
   else if (CA_NTE_WIZARD.step === 3) _caWizStep3(formBody, formFooter, progressHtml);
   else if (CA_NTE_WIZARD.step === 4) _caWizStep4(formBody, formFooter, progressHtml);
 
-  overlay.style.display = '';
-  overlay.classList.add('active');
+  overlay.style.display = 'flex';
 }
 
 // ---- Step 1: Employee + Violation Type (Multi-select) ----

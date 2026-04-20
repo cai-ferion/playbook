@@ -2376,3 +2376,7 @@
 - [x] Route wizard output to io_corrective_actions table (POST /api/io/corrective-actions)
 - [x] Remove NTE Build Assist button/code from Coaching Profile
 - [x] Test end-to-end: wizard opens from CA page, creates record in CA table
+
+## Bug Fix — NTE Build Assist Button Not Working
+- [x] Rename "Issue NTE" button to "NTE Build Assist"
+- [x] Fix wizard not showing when button is clicked (overlay.style.display='flex' instead of classList.add('active'), plus fallback HR_VIOLATIONS lazy-load)
