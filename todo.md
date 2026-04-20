@@ -2380,3 +2380,14 @@
 ## Bug Fix — NTE Build Assist Button Not Working
 - [x] Rename "Issue NTE" button to "NTE Build Assist"
 - [x] Fix wizard not showing when button is clicked (overlay.style.display='flex' instead of classList.add('active'), plus fallback HR_VIOLATIONS lazy-load)
+
+## Document Build Assist — CAP 1 Integration
+- [x] Rename "NTE Build Assist" button to "Document Build Assist"
+- [x] Add document type picker (NTE vs CAP 1) as first step
+- [x] CAP 1 wizard Step 1: Employee picker + linked NTE selector
+- [x] CAP 1 wizard Step 2: Explanation date + summary + AI deliberation generation
+- [x] CAP 1 wizard Step 3: Confirm + generate DOCX + auto-assign CAP
+- [x] Backend: POST /cap-build-assist/docx (DOCX generation using template)
+- [x] Backend: POST /cap-build-assist/generate (AI deliberation generation)
+- [x] NTE wizard Step 1 back button returns to type picker
+- [x] All 569 tests pass

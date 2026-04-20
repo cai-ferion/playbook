@@ -4071,6 +4071,185 @@ router.patch("/corrective-actions/:id", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/io/cap-build-assist/docx — Generate CAP 1/2/3 DOCX from CDN template
+router.post("/cap-build-assist/docx", async (req: Request, res: Response) => {
+  try {
+    const {
+      cap_level, employee, explanation_date, explanation_summary,
+      violation_section, violation_subsection, violations,
+      flm_name, issuance_date, nte_response_text
+    } = req.body;
+
+    if (!employee || !cap_level) {
+      return res.status(400).json({ error: "Employee and CAP level are required" });
+    }
+
+    const TEMPLATE_URLS: Record<string, string> = {
+      'CAP 1': 'https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/Template-CAP1_bfdc8261.docx',
+      'CAP 2': 'https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/Template-CAP2_fbec4ea4.docx',
+      'CAP 3': 'https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/Template-CAP3_bbb57f1f.docx',
+    };
+
+    const templateUrl = TEMPLATE_URLS[cap_level];
+    if (!templateUrl) {
+      return res.status(400).json({ error: `No template available for ${cap_level}` });
+    }
+
+    const templateResp = await fetch(templateUrl);
+    if (!templateResp.ok) throw new Error(`Failed to fetch template: ${templateResp.status}`);
+    const templateBuffer = Buffer.from(await templateResp.arrayBuffer());
+
+    const PizZip = (await import("pizzip")).default;
+    const zip = new PizZip(templateBuffer);
+
+    const activeDays = CAP_ACTIVE_DAYS[cap_level] || 60;
+    const startDate = issuance_date ? new Date(issuance_date) : new Date();
+    const endDate = new Date(startDate.getTime() + activeDays * 24 * 60 * 60 * 1000);
+    const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const issuanceDateStr = fmtDate(startDate);
+    const activeEndDateStr = fmtDate(endDate);
+
+    const employeeName = employee.full_name || 'Employee';
+    const lastName = employeeName.split(',')[0]?.trim() || employeeName.split(' ').pop() || 'Employee';
+    const supervisorName = flm_name || employee.supervisor_name || 'Supervisor';
+    const violSection = violation_section || 'Section';
+    const violSubsection = violation_subsection || 'Sub Section';
+    const deliberationText = nte_response_text || explanation_summary || 'the administrative charge leveled against you has been reviewed.';
+
+    const capNum = cap_level.replace('CAP ', '');
+    const replacements: Record<string, string> = {
+      'December 22, 2023': issuanceDateStr,
+      'Name of Employee': employeeName,
+      'Dear Mr./Ms. Last Name,': `Dear Mr./Ms. ${lastName},`,
+      'This is to inform you that after due deliberation on the administrative charge leveled against you, you have stated in your explanation letter dated 12th Dec 2023 that you waited in the zoom session for your M and G , but , did not receive any explanation for the M and G with and the declined post for.': `This is to inform you that after due deliberation on the administrative charge leveled against you, ${deliberationText}`,
+      'Section 3 Misconduct and Acts of Negligence': violSection,
+      'Sub Section D Insubordination or serious misconduct or willful disobedience by the employee of the lawful orders of his employer or representative in connection with his work.': violSubsection,
+      'Name of FLM': supervisorName,
+    };
+
+    if (capNum === '1') {
+      replacements['This violation merits First Formal Corrective Action (CAP 1) which will remain active for one (1) month  = 30 days and shall become effective until 19th Feb 2024.'] =
+        `This violation merits First Formal Corrective Action (CAP 1) which will remain active for ${activeDays} days and shall become effective until ${activeEndDateStr}.`;
+    } else if (capNum === '2') {
+      replacements['This violation merits Second Formal Corrective Action (CAP 2) which will remain active for two (2) month2  = 60 days and shall become effective until <60 days from issuance date>'] =
+        `This violation merits Second Formal Corrective Action (CAP 2) which will remain active for ${activeDays} days and shall become effective until ${activeEndDateStr}.`;
+    } else if (capNum === '3') {
+      replacements['This violation merits Third Formal Corrective Action (CAP 3) which will remain active for three (3) months = 90 days and shall become effective until <90 days from issuance date>'] =
+        `This violation merits Third Formal Corrective Action (CAP 3) which will remain active for ${activeDays} days and shall become effective until ${activeEndDateStr}.`;
+    }
+
+    const xmlFiles = Object.keys(zip.files).filter(f => f.endsWith('.xml') && !f.startsWith('_rels/'));
+    for (const xmlFile of xmlFiles) {
+      let content = zip.file(xmlFile)?.asText();
+      if (!content) continue;
+      for (const [search, replace] of Object.entries(replacements)) {
+        content = content.split(search).join(replace);
+      }
+      zip.file(xmlFile, content);
+    }
+
+    const docxBuffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
+    const safeName = employeeName.replace(/[^a-zA-Z0-9 ,]/g, '').replace(/\s+/g, '_');
+    const filename = `${cap_level.replace(' ', '')}_${safeName}_${new Date().toISOString().slice(0, 10)}.docx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(docxBuffer);
+  } catch (err: any) {
+    console.error('[IO API] CAP DOCX generation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/cap-build-assist/generate — AI-generate CAP deliberation narrative
+router.post("/cap-build-assist/generate", async (req: Request, res: Response) => {
+  try {
+    const { invokeLLM } = await import("./_core/llm.js");
+    const { employee, violation, violations, cap_level, explanation_date, explanation_summary, nte_narrative, previous_caps } = req.body;
+
+    if (!employee || !cap_level) {
+      return res.status(400).json({ error: 'Employee and CAP level are required' });
+    }
+
+    const violationsList = (violations || (violation ? [violation] : [])).map((v: any) =>
+      `${v.code || ''}: ${v.text || ''} (${v.category || ''} — ${v.subsection || ''})`
+    ).join('\n');
+
+    const previousCapsText = (previous_caps || []).map((ca: any) =>
+      `- ${ca.cap_level}: ${ca.date_of_incident || 'N/A'} — ${(ca.incident_description || '').replace(/<[^>]*>/g, '').substring(0, 150)}`
+    ).join('\n');
+
+    const capNum = cap_level.replace('CAP ', '');
+    const capLabels: Record<string, string> = { '1': 'First', '2': 'Second', '3': 'Third' };
+
+    const systemPrompt = `You are an HR document specialist for Genpact Philippines. Generate a formal Corrective Action deliberation paragraph for a ${cap_level} (${capLabels[capNum] || capNum} Formal Corrective Action).
+
+The paragraph should:
+1. Reference the employee's explanation (date: ${explanation_date || 'N/A'}, summary: ${explanation_summary || 'N/A'})
+2. State that after due deliberation, the explanation does not excuse the charge
+3. Be written in formal HR language, third person
+4. Be 2-3 sentences maximum
+5. NOT include the violation section or CAP level — those are in separate template sections
+
+Return JSON with:
+- "deliberation": the deliberation paragraph text
+- "violation_section": the primary policy section violated
+- "violation_subsection": the specific sub-section`;
+
+    const userPrompt = `Employee: ${employee.full_name} (${employee.ohr_id})
+Role: ${employee.actual_role || 'Process Associate'}
+CAP Level: ${cap_level}
+
+Violation(s):
+${violationsList}
+
+Explanation Letter Date: ${explanation_date || 'Not provided'}
+Explanation Summary: ${explanation_summary || 'Not provided'}
+
+Original NTE Narrative:
+${(nte_narrative || '').replace(/<[^>]*>/g, '').substring(0, 500)}
+
+Previous Corrective Actions:
+${previousCapsText || 'None'}`;
+
+    const llmResp = await invokeLLM({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'cap_deliberation',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              deliberation: { type: 'string', description: 'The deliberation paragraph for the CAP letter' },
+              violation_section: { type: 'string', description: 'Primary policy section violated' },
+              violation_subsection: { type: 'string', description: 'Specific sub-section violated' },
+            },
+            required: ['deliberation', 'violation_section', 'violation_subsection'],
+            additionalProperties: false,
+          },
+        },
+      },
+    });
+
+    const content = llmResp?.choices?.[0]?.message?.content || '{}';
+    const parsed = JSON.parse(String(content));
+
+    res.json({
+      deliberation: parsed.deliberation || '',
+      violation_section: parsed.violation_section || '',
+      violation_subsection: parsed.violation_subsection || '',
+    });
+  } catch (err: any) {
+    console.error('[IO API] CAP AI generation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");
