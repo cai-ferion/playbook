@@ -43,6 +43,9 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
     b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
+    b['regimen.full_columns'] = true;
+    b['regimen.onboarding_tab'] = true;
+    b['regimen.permissions_tab'] = true;
   }
   // 703212987 no longer gets edit_employee by default — only owner + assistant
   return b;
@@ -136,6 +139,9 @@ describe('RBAC Permission System', () => {
       it('has helm.analytics = true', () => expect(perms['helm.analytics']).toBe(true));
       it('has regimen.edit_employee = true', () => expect(perms['regimen.edit_employee']).toBe(true));
       it('has regimen.add_employee = true', () => expect(perms['regimen.add_employee']).toBe(true));
+      it('has regimen.full_columns = true', () => expect(perms['regimen.full_columns']).toBe(true));
+      it('has regimen.onboarding_tab = true', () => expect(perms['regimen.onboarding_tab']).toBe(true));
+      it('has regimen.permissions_tab = true', () => expect(perms['regimen.permissions_tab']).toBe(true));
     });
 
     describe('OHR 703212987', () => {

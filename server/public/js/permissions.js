@@ -369,6 +369,9 @@ function computeRoleDefaults(role, ohrId) {
     b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
+    b['regimen.full_columns'] = true;
+    b['regimen.onboarding_tab'] = true;
+    b['regimen.permissions_tab'] = true;
   }
   // 703212987 no longer gets edit_employee by default — only owner + assistant
   return b;

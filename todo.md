@@ -2315,3 +2315,5 @@
 - [x] 30-minute inactivity timeout — clears sessionStorage and returns to login screen
 ## Regimen UI
 - [x] Relocate Refresh Data and Logout buttons beside Regimen page title (not far right)
+## RBAC Permissions
+- [x] Grant OHR 740044909 (assistant) full Regimen permissions: edit_employee, add_employee, full_columns, onboarding_tab, permissions_tab
