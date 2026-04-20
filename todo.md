@@ -2329,3 +2329,15 @@
 - [x] Fix Input Portal showing empty/no records after refresh for assistant OHR 740044909
 ## Bug Fix — Input Portal Save Failed
 - [x] Comprehensive fix for Input Portal save failures (individual and bulk) for assistant and all users
+## Bug Fix — Save Failed for Specific Record
+- [x] Fix save failure for Cardona, Karlyn Peña (04/09/26) by assistant 740044909
+## Admin OHR Centralization
+- [x] Add ADMIN_OHRS constant to io-routes.ts (replaces all hardcoded 740045023 checks)
+- [x] Replace date-lock exemption in PATCH /attendance/:id with ADMIN_OHRS.includes()
+- [x] Replace OT mechanism exemption with ADMIN_OHRS.includes()
+- [x] Replace bulk-tag date-lock checks (2 occurrences) with ADMIN_OHRS.includes()
+- [x] Replace OT cancel admin check with ADMIN_OHRS.includes()
+- [x] Replace sync-log admin gate with ADMIN_OHRS.includes()
+- [x] Replace sync-log/latest admin gate with ADMIN_OHRS.includes()
+- [x] Replace billing-sheet-sync admin gate with ADMIN_OHRS.includes()
+- [x] All 569 tests pass after migration

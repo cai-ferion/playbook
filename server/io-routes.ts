@@ -36,6 +36,9 @@ import crypto from "crypto";
 import { syncEmployeesToSupabase, deleteEmployeesFromSupabase } from "./supabase-sync.js";
 const router = Router();
 
+// Admin OHRs exempt from date-based locks and other restrictions
+const ADMIN_OHRS = ["740045023", "740044909"];
+
 // Normalize long PG codes from Google Sheet / SRT to short codes used in DB
 const PG_NORMALIZE: Record<string, string> = {
   'MASA_MAFSA_CTR_SCALED_REVIEW': 'S-ABF',
@@ -413,7 +416,7 @@ router.post("/attendance/bulk-import", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     const actorOhr = req.headers["x-actor-ohr"] as string || "";
-    if (actorOhr !== "740045023") {
+    if (!ADMIN_OHRS.includes(actorOhr)) {
       return res.status(403).json({ error: "Admin only" });
     }
 
@@ -505,7 +508,7 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin)
     // Note: is_locked field enforcement removed (Batch 124). Only date-based + OT mechanism locks remain.
     // Exception: OT-only edits are allowed on past dates within the current operational week (Sat-Fri)
-    if (actorOhr !== "740045023") {
+    if (!ADMIN_OHRS.includes(actorOhr)) {
       const now = new Date();
       const phtTime = new Date(now.getTime() + 8 * 60 * 60000);
       const phtHour = phtTime.getUTCHours();
@@ -546,7 +549,7 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     // Only self-service OT edits by S-ABF/CS-ABF Agents are blocked.
     // Managers/TLs editing on behalf of agents are exempt.
     const OT_MECHANISM_PGS = ['S-ABF', 'CS-ABF'];
-    if (actorOhr !== "740045023" && (updates.ot_hours !== undefined)) {
+    if (!ADMIN_OHRS.includes(actorOhr) && (updates.ot_hours !== undefined)) {
       const otLockDate = '2026-04-11';
       const recordDate = current.log_date || '';
       if (recordDate >= otLockDate) {
@@ -1172,7 +1175,7 @@ router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
 
       // Date-based lock: yesterday and earlier locked after 11 AM PHT (except admin)
       // Note: is_locked enforcement removed (Batch 124)
-      if (actor_ohr !== "740045023") {
+      if (!ADMIN_OHRS.includes(actor_ohr)) {
         const nowD = new Date();
         const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
         const phtHourD = phtD.getUTCHours();
@@ -1268,7 +1271,7 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
 
     for (const record of allRecords) {
       // Date-based lock (except admin)
-      if (actor_ohr !== "740045023") {
+      if (!ADMIN_OHRS.includes(actor_ohr)) {
         const nowD = new Date();
         const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
         const phtHourD = phtD.getUTCHours();
@@ -1992,7 +1995,7 @@ router.post("/ot-requests/:requestId/cancel", async (req: Request, res: Response
       return res.status(400).json({ error: `Cannot cancel — OT request status is '${otReq.status}', not 'approved'` });
     }
     // Only the requesting agent (or admin 740045023) can cancel
-    if (actorOhr !== otReq.ohr_id && actorOhr !== "740045023") {
+    if (actorOhr !== otReq.ohr_id && !ADMIN_OHRS.includes(actorOhr)) {
       return res.status(403).json({ error: "Only the requesting agent can cancel their own OT" });
     }
 
@@ -2978,7 +2981,7 @@ router.get("/billing-compliance/weeks", async (req: Request, res: Response) => {
 router.get("/sync-log", async (req: Request, res: Response) => {
   try {
     const actorOhr = req.headers["x-user-ohr"] as string || req.headers["x-actor-ohr"] as string;
-    if (actorOhr !== "740045023") {
+    if (!ADMIN_OHRS.includes(actorOhr)) {
       return res.status(403).json({ error: "Admin only" });
     }
     const db = await getDb();
@@ -3012,7 +3015,7 @@ router.get("/sync-log", async (req: Request, res: Response) => {
 router.get("/sync-log/latest", async (req: Request, res: Response) => {
   try {
     const actorOhr = req.headers["x-user-ohr"] as string || req.headers["x-actor-ohr"] as string;
-    if (actorOhr !== "740045023") {
+    if (!ADMIN_OHRS.includes(actorOhr)) {
       return res.status(403).json({ error: "Admin only" });
     }
     const db = await getDb();
@@ -3035,9 +3038,8 @@ router.get("/sync-log/latest", async (req: Request, res: Response) => {
  */
 router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
   console.log("[BILLING SYNC] Endpoint hit");
-  const ADMIN_OHR = "740045023";
   const actorOhr = String(req.headers["x-actor-ohr"] || req.headers["x-user-ohr"] || "").trim();
-  if (actorOhr !== ADMIN_OHR) {
+  if (!ADMIN_OHRS.includes(actorOhr)) {
     return res.status(403).json({ error: "Admin only" });
   }
 
