@@ -2323,3 +2323,5 @@
 - [x] Fix bulk tagging bug — "Bulk tagged 0 record(s)" when employees do bulk changes in Input Portal
 ## Bulk Tag Across Pages
 - [x] Add "Select all X matching records" banner when all rows on current page are selected, to extend bulk tag across all filtered pages
+## Bug Fix — Bulk Tag Still Showing 0 Records
+- [x] Fix persistent "Bulk tagged 0 record(s)" in compact view for assistant OHR 740044909

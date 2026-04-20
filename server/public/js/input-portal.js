@@ -879,11 +879,15 @@ function renderTableRow(item) {
   // Checkbox cell — hidden for WFM (read-only mode)
   var isWFM = typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role === 'WFM';
   var lockTitle = 'Locked (older than 2-day edit window)';
+  // In server-side mode, pass _id string directly for stable selection
+  var selArg = (typeof serverPagState !== 'undefined' && serverPagState.enabled && record._id)
+    ? '\'' + record._id.replace(/'/g, '\\'') + '\''
+    : globalIdx;
   var checkboxCell = isWFM
     ? ''
     : (locked
       ? '<td class="col-checkbox cell-readonly"><span class="lock-icon" title="' + lockTitle + '">&#128274;</span></td>'
-      : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + globalIdx + ', this.checked)"></td>');
+      : '<td class="col-checkbox"><input type="checkbox" class="row-checkbox" data-idx="' + globalIdx + '" ' + (isSelected ? 'checked' : '') + ' onchange="bulkToggleRow(' + selArg + ', this.checked)"></td>');
 
   // Audit icon cell
   var auditCell = '<td class="col-audit"><button class="audit-icon-btn" onclick="openAuditModal(\'' + record._id + '\')" title="View audit trail"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button></td>';
@@ -1050,10 +1054,17 @@ const bulkState = {
 };
 
 function bulkToggleRow(idx, checked) {
-  // In server-side mode, resolve the _id for stable selection
+  // In server-side mode, idx is the _id string (passed directly from renderTableRow/renderCompactRow)
   if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
-    var rec = appState.records[idx];
-    var id = rec ? rec._id : null;
+    var id;
+    if (typeof idx === 'string') {
+      // Direct _id string from the render function
+      id = idx;
+    } else {
+      // Fallback: numeric index — try serverPagState.rows first, then appState.records
+      var rec = (serverPagState.rows || [])[idx] || appState.records[idx];
+      id = rec ? rec._id : null;
+    }
     if (id) {
       if (checked) bulkState.selected.add(id);
       else bulkState.selected.delete(id);

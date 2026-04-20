@@ -225,15 +225,18 @@ function renderCompactRow(item) {
     + '<span class="date-full">' + escapeHtml(dateDisplay) + '</span>'
     + '</div></td>';
 
-  // Selection cell
+  // Selection cell — in server-side mode, pass _id string directly for stable selection
   var selectCell;
+  var selArg = (typeof serverPagState !== 'undefined' && serverPagState.enabled && r._id)
+    ? '\'' + r._id.replace(/'/g, '\\'') + '\''
+    : idx;
   if (compactState.selectionMode) {
     if (locked) {
       selectCell = '<td class="row-select-cell"><span class="compact-lock" title="Locked">&#128274;</span></td>';
     } else {
       selectCell = '<td class="row-select-cell"><input type="checkbox" class="compact-checkbox" data-idx="' + idx + '" '
         + (isSelected ? 'checked' : '')
-        + ' onclick="event.stopPropagation(); bulkToggleRow(' + idx + ', this.checked)" /></td>';
+        + ' onclick="event.stopPropagation(); bulkToggleRow(' + selArg + ', this.checked)" /></td>';
     }
   } else {
     if (locked) {
@@ -489,8 +492,14 @@ window.compactToggleSelect = function(idx, rowEl) {
   // In server-side mode, resolve the _id for stable selection
   var selKey = idx;
   if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
-    var rec = appState.records[idx];
-    if (rec && rec._id) selKey = rec._id;
+    if (typeof idx === 'string') {
+      // Direct _id string
+      selKey = idx;
+    } else {
+      // Numeric index fallback
+      var rec = (serverPagState.rows || [])[idx] || appState.records[idx];
+      if (rec && rec._id) selKey = rec._id;
+    }
   }
   if (bulkState.selected.has(selKey)) {
     bulkState.selected.delete(selKey);
