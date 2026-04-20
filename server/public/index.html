@@ -1059,31 +1059,40 @@
             <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
             <div class="loading-text">Loading Disputes...</div>
           </div>
+          <!-- Disputes Search/Filter Bar -->
+          <div class="disputes-filter-bar" id="disputes-filter-bar">
+            <div class="search-wrapper">
+              <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="disputes-search-input" placeholder="Search by name, ID, or session goal..." oninput="disputesFilterCards()">
+            </div>
+            <span class="disputes-filter-count" id="disputes-filter-count"></span>
+          </div>
           <div id="compass-kanban-board" class="kanban-board"></div>
-          <!-- Disputes Detail Overlay (opens within Disputes Area, not Coaching Profile) -->
-          <div class="module-form-overlay" id="disputes-detail-overlay" style="display:none;">
-            <div class="module-form-panel">
-              <div class="module-form-header">
+          <!-- Disputes Detail Overlay -->
+          <div class="disputes-detail-overlay" id="disputes-detail-overlay">
+            <div class="disputes-detail-panel">
+              <div class="disputes-detail-header">
                 <h3 id="disputes-detail-title">Coaching Log</h3>
-                <button class="module-form-close" onclick="disputesCloseDetail()">
+                <button class="disputes-modal-close" onclick="disputesCloseDetail()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="module-form-body" id="disputes-detail-body"></div>
-              <div class="module-form-footer" id="disputes-detail-footer"></div>
+              <div class="disputes-detail-body" id="disputes-detail-body"></div>
+              <div class="disputes-detail-actions" id="disputes-detail-footer"></div>
             </div>
           </div>
-          <!-- Disputes Action Popout (on top of detail overlay) -->
-          <div class="module-form-overlay" id="disputes-action-overlay" style="display:none;z-index:1100;">
-            <div class="module-form-panel" style="max-width:480px;">
-              <div class="module-form-header">
+          <!-- Disputes Detail Overlay (opens within Disputes Area, not Coaching Profile) -->
+          <!-- Disputes Action Modal -->
+          <div class="disputes-modal-overlay" id="disputes-action-overlay">
+            <div class="disputes-modal">
+              <div class="disputes-modal-header">
                 <h3 id="disputes-action-title">Action</h3>
-                <button class="module-form-close" onclick="disputesCloseAction()">
+                <button class="disputes-modal-close" onclick="disputesCloseAction()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              <div class="module-form-body" id="disputes-action-body"></div>
-              <div class="module-form-footer" id="disputes-action-footer"></div>
+              <div class="disputes-modal-body" id="disputes-action-body"></div>
+              <div class="disputes-modal-footer" id="disputes-action-footer"></div>
             </div>
           </div>
         </div>

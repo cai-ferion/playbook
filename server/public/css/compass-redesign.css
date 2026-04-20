@@ -857,3 +857,533 @@
 #view-compass-input .filter-action-link {
   color: #6366F1;
 }
+
+
+/* ===== Disputes Area — Full UI/UX Overhaul ===== */
+
+/* -- Search/Filter Bar -- */
+.disputes-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 0 2px;
+}
+.disputes-filter-bar .search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+}
+.disputes-filter-bar .search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--compass-text-subtle);
+  pointer-events: none;
+}
+.disputes-filter-bar input[type="text"] {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  font-size: 13px;
+  border: 1px solid var(--compass-border);
+  border-radius: 8px;
+  background: var(--compass-surface);
+  color: var(--compass-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.disputes-filter-bar input[type="text"]:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.disputes-filter-count {
+  font-size: 12px;
+  color: var(--compass-text-muted);
+  white-space: nowrap;
+}
+
+/* -- Column Level Accent Colors -- */
+.kanban-column[data-level="1"] { border-top: 3px solid #6366F1; }
+.kanban-column[data-level="2"] { border-top: 3px solid #F59E0B; }
+.kanban-column[data-level="3"] { border-top: 3px solid #F97316; }
+.kanban-column[data-level="4"] { border-top: 3px solid #EF4444; }
+.kanban-column[data-level="5"] { border-top: 3px solid #BE185D; }
+.kanban-column[data-level="6"] { border-top: 3px solid #7C3AED; }
+
+.kanban-column[data-level="1"] .kanban-column-count { background: rgba(99,102,241,0.1); color: #6366F1; }
+.kanban-column[data-level="2"] .kanban-column-count { background: rgba(245,158,11,0.1); color: #D97706; }
+.kanban-column[data-level="3"] .kanban-column-count { background: rgba(249,115,22,0.1); color: #EA580C; }
+.kanban-column[data-level="4"] .kanban-column-count { background: rgba(239,68,68,0.1); color: #DC2626; }
+.kanban-column[data-level="5"] .kanban-column-count { background: rgba(190,24,93,0.1); color: #BE185D; }
+.kanban-column[data-level="6"] .kanban-column-count { background: rgba(124,58,237,0.1); color: #7C3AED; }
+
+/* Column header level badge */
+.kanban-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.kanban-column[data-level="1"] .kanban-level-badge { background: rgba(99,102,241,0.12); color: #6366F1; }
+.kanban-column[data-level="2"] .kanban-level-badge { background: rgba(245,158,11,0.12); color: #D97706; }
+.kanban-column[data-level="3"] .kanban-level-badge { background: rgba(249,115,22,0.12); color: #EA580C; }
+.kanban-column[data-level="4"] .kanban-level-badge { background: rgba(239,68,68,0.12); color: #DC2626; }
+.kanban-column[data-level="5"] .kanban-level-badge { background: rgba(190,24,93,0.12); color: #BE185D; }
+.kanban-column[data-level="6"] .kanban-level-badge { background: rgba(124,58,237,0.12); color: #7C3AED; }
+
+/* -- Enriched Card Styles -- */
+.kanban-card-styled {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+.kanban-card-styled:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+  border-color: #6366F1;
+}
+.kanban-card-styled:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+/* Card aging indicator strip (left edge) */
+.kanban-card-styled::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+}
+.kanban-card-styled.aging-ok::before { background: #22C55E; }
+.kanban-card-styled.aging-warn::before { background: #F59E0B; }
+.kanban-card-styled.aging-critical::before { background: #EF4444; }
+
+/* Card header row */
+.kanban-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.kanban-card-header .kanban-card-id {
+  font-weight: 600;
+  font-size: 11px;
+  color: #6366F1;
+  letter-spacing: 0.3px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* Aging badge */
+.kanban-card-aging {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.kanban-card-aging.aging-ok { background: rgba(34,197,94,0.1); color: #16A34A; }
+.kanban-card-aging.aging-warn { background: rgba(245,158,11,0.1); color: #D97706; }
+.kanban-card-aging.aging-critical { background: rgba(239,68,68,0.1); color: #DC2626; }
+
+/* Coachee name row */
+.kanban-card-coachee-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--compass-text);
+  line-height: 1.3;
+}
+
+/* Session goal tag */
+.kanban-card-goal-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(99,102,241,0.08);
+  color: #6366F1;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Card footer (coach + date) */
+.kanban-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--compass-text-subtle);
+  padding-top: 4px;
+  border-top: 1px solid var(--compass-border-subtle);
+  margin-top: 2px;
+}
+.kanban-card-footer .coach-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kanban-card-footer .card-date {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Escalation progress dots */
+.kanban-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+.kanban-card-progress .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--compass-border);
+  transition: background 0.2s ease;
+}
+.kanban-card-progress .dot.active { background: #6366F1; }
+.kanban-card-progress .dot.passed { background: var(--compass-text-subtle); }
+
+/* -- Empty State -- */
+.kanban-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 10px;
+  flex: 1;
+}
+.kanban-empty-state svg {
+  opacity: 0.3;
+  color: var(--compass-text-subtle);
+}
+.kanban-empty-state p {
+  font-size: 12px;
+  color: var(--compass-text-subtle);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* -- Action Modal Overhaul -- */
+.disputes-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: disputes-fade-in 0.2s ease;
+}
+.disputes-modal-overlay.active { display: flex; }
+
+@keyframes disputes-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.disputes-modal {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--compass-shadow-xl);
+  animation: disputes-modal-slide 0.25s ease;
+}
+
+@keyframes disputes-modal-slide {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.disputes-modal-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.disputes-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0;
+}
+.disputes-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--compass-text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s ease;
+}
+.disputes-modal-close:hover {
+  background: var(--compass-surface-alt);
+}
+
+.disputes-modal-body {
+  padding: 18px 20px;
+}
+
+.disputes-modal-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Remarks textarea in modal */
+.disputes-remarks-field {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--compass-border);
+  border-radius: 8px;
+  background: var(--compass-surface-alt);
+  color: var(--compass-text);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.disputes-remarks-field:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.disputes-remarks-field::placeholder {
+  color: var(--compass-text-subtle);
+}
+
+/* Confirmation modal icon */
+.disputes-confirm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+}
+.disputes-confirm-icon.success { background: var(--compass-success-bg); color: var(--compass-success); }
+.disputes-confirm-icon.warning { background: var(--compass-warning-bg); color: var(--compass-warning); }
+.disputes-confirm-icon.danger { background: var(--compass-danger-bg); color: var(--compass-danger); }
+
+/* -- Detail Overlay Polish -- */
+.disputes-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1050;
+  padding-top: 5vh;
+  overflow-y: auto;
+}
+.disputes-detail-overlay.active { display: flex; }
+
+.disputes-detail-panel {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--compass-shadow-xl);
+  animation: disputes-modal-slide 0.25s ease;
+  margin-bottom: 5vh;
+}
+
+.disputes-detail-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--compass-surface);
+  z-index: 2;
+  border-radius: 14px 14px 0 0;
+}
+.disputes-detail-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disputes-detail-body {
+  padding: 20px;
+}
+
+/* Detail sections */
+.disputes-section {
+  margin-bottom: 20px;
+}
+.disputes-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--compass-text-muted);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+}
+.disputes-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.disputes-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.disputes-detail-item.full-width {
+  grid-column: 1 / -1;
+}
+.disputes-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.disputes-detail-value {
+  font-size: 13px;
+  color: var(--compass-text);
+  line-height: 1.5;
+}
+
+/* Detail action buttons */
+.disputes-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-top: 1px solid var(--compass-border);
+  background: var(--compass-surface-alt);
+  border-radius: 0 0 14px 14px;
+}
+
+/* -- Dispute Trail Polish -- */
+.dispute-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+.dispute-trail-entry {
+  position: relative;
+  padding-left: 24px;
+  padding-bottom: 16px;
+}
+.dispute-trail-entry:last-child {
+  padding-bottom: 4px;
+}
+.dispute-trail-entry::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 0;
+  width: 2px;
+  background: var(--compass-border);
+}
+.dispute-trail-entry:last-child::before {
+  display: none;
+}
+.dispute-trail-dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #6366F1;
+  border: 2px solid var(--compass-surface);
+  box-shadow: 0 0 0 2px #6366F1;
+}
+.dispute-trail-entry:first-child .dispute-trail-dot {
+  background: #6366F1;
+  box-shadow: 0 0 0 2px #6366F1, 0 0 8px rgba(99,102,241,0.3);
+}
+.dispute-trail-meta {
+  font-size: 11px;
+  color: var(--compass-text-muted);
+  margin-bottom: 3px;
+}
+.dispute-trail-meta strong {
+  color: var(--compass-text);
+}
+.dispute-trail-message {
+  font-size: 13px;
+  color: var(--compass-text);
+  line-height: 1.5;
+  background: var(--compass-surface-alt);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+/* -- FLIP Animation Enhancements -- */
+.kanban-card-styled.flip-entering {
+  animation: disputes-card-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes disputes-card-enter {
+  from { opacity: 0; transform: scale(0.9) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.kanban-card-styled.flip-moving {
+  animation: disputes-card-glow 0.6s ease;
+}
+@keyframes disputes-card-glow {
+  0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+  50% { box-shadow: 0 0 16px 4px rgba(99,102,241,0.2); }
+  100% { box-shadow: none; }
+}

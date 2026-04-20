@@ -2224,3 +2224,15 @@
 - [x] Remove compass-routes.ts (never imported/registered)
 - [x] compass_* schema definitions kept — actively used by server/routers/compass.ts and ca-cases.ts (tRPC module)
 - [x] No orphaned imports found — all compass_* references are in active tRPC routers
+
+## Disputes Area — Full UI/UX Overhaul
+- [x] Delete dead compass-disputes-v2.js (uses non-existent API)
+- [x] Rewrite kanban CSS — column accent colors per level (LV1 blue, LV2 amber, LV3 orange, LV4 red, LV5 deep red, LV6 purple)
+- [x] Richer cards — session goal tags, 48-hour aging indicator (green/amber/red), coach name, escalation progress dots
+- [x] Add search/filter bar — filter disputes by coachee name or session goal
+- [x] Add empty state for columns with no cards
+- [x] Replace all prompt() calls (LV3-LV6) with proper styled action modals (overlay.classList.add/remove('active'))
+- [x] Polish detail overlay — move inline styles to CSS classes, improve layout
+- [x] Polish dispute trail — better visual differentiation between actors
+- [x] Keep and polish FLIP animations for card movement
+- [x] Clean up inline styles throughout disputes code (overlay.style.display → classList.add/remove('active'))

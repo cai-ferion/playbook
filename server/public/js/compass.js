@@ -570,19 +570,64 @@ function compassRenderPagination(which) {
 if (!COMPASS._kanbanPages) COMPASS._kanbanPages = {};
 const KANBAN_PAGE_SIZE = 8;
 
+// Aging calculation: returns { cls, label, hours } based on 48-hour SLA
+function _disputesCalcAging(log) {
+  // Use updated_at (last status change) or coaching_date as fallback
+  const ref = log.updated_at || log.coaching_date;
+  if (!ref) return { cls: 'aging-ok', label: '—', hours: 0 };
+  const refDate = new Date(ref);
+  if (isNaN(refDate.getTime())) return { cls: 'aging-ok', label: '—', hours: 0 };
+  const now = new Date();
+  const diffMs = now - refDate;
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 24) return { cls: 'aging-ok', label: hours + 'h', hours };
+  if (hours < 48) return { cls: 'aging-warn', label: Math.floor(hours / 24) + 'd ' + (hours % 24) + 'h', hours };
+  const days = Math.floor(hours / 24);
+  return { cls: 'aging-critical', label: days + 'd', hours };
+}
+
+// Determine which level index (0-5) a log is currently at
+function _disputesGetLevelIndex(log) {
+  for (let i = 0; i < COMPASS.KANBAN_COLUMNS.length; i++) {
+    const col = COMPASS.KANBAN_COLUMNS[i];
+    if (col.statuses.includes(log.status) || (col.statuses.includes('') && !log.status)) return i;
+  }
+  return 0;
+}
+
 function compassRenderKanban() {
   const board = document.getElementById('compass-kanban-board');
   if (!board) return;
 
-  const qaLogs = COMPASS.logs.filter(l => l.coaching_type === 'QA Feedback');
+  const searchTerm = (document.getElementById('disputes-search-input')?.value || '').toLowerCase().trim();
+
+  let qaLogs = COMPASS.logs.filter(l => l.coaching_type === 'QA Feedback');
+
+  // Apply search filter
+  if (searchTerm) {
+    qaLogs = qaLogs.filter(l =>
+      (l.coachee || '').toLowerCase().includes(searchTerm) ||
+      (l.coach || '').toLowerCase().includes(searchTerm) ||
+      String(l.coaching_id || l.id || '').toLowerCase().includes(searchTerm) ||
+      (l.session_goal || '').toLowerCase().includes(searchTerm)
+    );
+  }
+
+  // Update filter count
+  const countEl = document.getElementById('disputes-filter-count');
+  if (countEl) {
+    const totalQA = COMPASS.logs.filter(l => l.coaching_type === 'QA Feedback').length;
+    countEl.textContent = searchTerm ? `${qaLogs.length} of ${totalQA} logs` : `${totalQA} logs`;
+  }
 
   let html = '';
-  COMPASS.KANBAN_COLUMNS.forEach(col => {
+  COMPASS.KANBAN_COLUMNS.forEach((col, colIdx) => {
     const cards = qaLogs.filter(l => col.statuses.includes(l.status) || (col.statuses.includes('') && !l.status));
     const page = COMPASS._kanbanPages[col.id] || 1;
     const totalPages = Math.ceil(cards.length / KANBAN_PAGE_SIZE) || 1;
     const start = (page - 1) * KANBAN_PAGE_SIZE;
     const pageCards = cards.slice(start, start + KANBAN_PAGE_SIZE);
+    const levelNum = colIdx + 1;
 
     // Build pagination HTML
     let paginationHtml = '';
@@ -595,32 +640,54 @@ function compassRenderKanban() {
     }
 
     html += `
-      <div class="kanban-column">
+      <div class="kanban-column" data-level="${levelNum}">
         <div class="kanban-column-header">
-          <span class="kanban-column-title">${escapeHtml(col.title)}</span>
+          <div style="display:flex;align-items:center;">
+            <span class="kanban-level-badge">L${levelNum}</span>
+            <span class="kanban-column-title">${escapeHtml(col.title.replace(/^LV\d+\s*-\s*/, ''))}</span>
+          </div>
           <span class="kanban-column-count">${cards.length}</span>
         </div>
         <div class="kanban-column-body">
         ${paginationHtml}`;
 
     if (cards.length === 0) {
-      html += '<div class="kanban-empty">No items</div>';
+      html += `<div class="kanban-empty-state">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <p>No disputes at this level</p>
+      </div>`;
     } else {
       pageCards.forEach(log => {
-        const date = log.coaching_date ? new Date(log.coaching_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
+        const date = log.coaching_date ? new Date(log.coaching_date).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' }) : '\u2014';
+        const aging = _disputesCalcAging(log);
+        const currentLevel = _disputesGetLevelIndex(log);
+        const goalText = log.session_goal || '';
+        const coachName = log.coach ? log.coach.split(',')[0].trim().split(' ').slice(-1)[0] : '\u2014';
+
+        // Build escalation progress dots (6 levels)
+        let dotsHtml = '<div class="kanban-card-progress">';
+        for (let d = 0; d < 6; d++) {
+          if (d < currentLevel) dotsHtml += '<div class="dot passed"></div>';
+          else if (d === currentLevel) dotsHtml += '<div class="dot active"></div>';
+          else dotsHtml += '<div class="dot"></div>';
+        }
+        dotsHtml += '</div>';
+
         html += `
-          <div class="kanban-card kanban-card-styled" onclick="disputesOpenDetail('${log.coaching_id || log.id}')">
-            <div class="kanban-card-id-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              <span class="kanban-card-id">${escapeHtml(log.coaching_id || log.id)}</span>
+          <div class="kanban-card kanban-card-styled ${aging.cls}" onclick="disputesOpenDetail('${log.coaching_id || log.id}')">
+            <div class="kanban-card-header">
+              <span class="kanban-card-id">${escapeHtml(log.coaching_id || String(log.id))}</span>
+              <span class="kanban-card-aging ${aging.cls}">${aging.label}</span>
             </div>
-            <div class="kanban-card-coachee-row">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <span>${escapeHtml(log.coachee || '\u2014')}</span>
-            </div>
-            <div class="kanban-card-date-row">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <span>${date}</span>
+            <div class="kanban-card-coachee-row">${escapeHtml(log.coachee || '\u2014')}</div>
+            ${goalText ? `<span class="kanban-card-goal-tag">${escapeHtml(goalText)}</span>` : ''}
+            ${dotsHtml}
+            <div class="kanban-card-footer">
+              <span class="coach-name">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                ${escapeHtml(coachName)}
+              </span>
+              <span class="card-date">${date}</span>
             </div>
           </div>`;
       });
@@ -629,6 +696,17 @@ function compassRenderKanban() {
     html += '</div></div>';
   });
   board.innerHTML = html;
+}
+
+// Search/filter handler for disputes
+var _disputesFilterDebounce = null;
+function disputesFilterCards() {
+  clearTimeout(_disputesFilterDebounce);
+  _disputesFilterDebounce = setTimeout(() => {
+    // Reset all column pages to 1 when searching
+    COMPASS._kanbanPages = {};
+    compassRenderKanban();
+  }, 150);
 }
 
 function compassKanbanPage(colId, page) {
@@ -2793,27 +2871,36 @@ async function disputesOpenDetail(coachingId) {
   const footerEl = document.getElementById('disputes-detail-footer');
   const overlay = document.getElementById('disputes-detail-overlay');
 
-  titleEl.innerHTML = `<span>${escapeHtml(log.coaching_id || '#' + log.id)}</span>`;
+  // Aging info for header
+  const aging = _disputesCalcAging(log);
+  const levelIdx = _disputesGetLevelIndex(log);
+  const levelLabel = `LV${levelIdx + 1}`;
+
+  titleEl.innerHTML = `<span style="font-family:'SF Mono','Fira Code',monospace;font-size:14px;">${escapeHtml(log.coaching_id || '#' + log.id)}</span>
+    <span class="kanban-card-aging ${aging.cls}" style="font-size:11px;">${aging.label}</span>`;
 
   const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
-  const statusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
+  const statusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--compass-text-muted)';
 
   // ===== SECTION 1: SESSION DETAILS =====
-  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
-
-  html += `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="font-weight:600;color:${statusColor};">${escapeHtml(log.status || '—')}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '—')}</span></div>`;
+  let html = '<div class="disputes-section"><div class="disputes-section-title">Session Details</div>';
+  html += '<div class="disputes-detail-grid">';
+  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Status</span><span class="disputes-detail-value" style="font-weight:600;color:${statusColor};">${escapeHtml(log.status || '—')}</span></div>`;
+  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Level</span><span class="disputes-detail-value" style="font-weight:600;">${levelLabel}</span></div>`;
+  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coaching Date</span><span class="disputes-detail-value">${date}</span></div>`;
+  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coachee</span><span class="disputes-detail-value">${escapeHtml(log.coachee || '—')}</span></div>`;
   if (log.coaching_type === 'QA Feedback' && log.job_id) {
-    html += `<div class="detail-row"><span class="detail-label">Job ID</span><span class="detail-value">${escapeHtml(log.job_id)}</span></div>`;
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Job ID</span><span class="disputes-detail-value">${escapeHtml(log.job_id)}</span></div>`;
   }
-
   if (log.coachee_sup && log.coach !== log.coachee_sup) {
-    html += `<div class="detail-row"><span class="detail-label">Coachee Supervisor</span><span class="detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coachee Supervisor</span><span class="disputes-detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
   }
-
-  html += `<div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${escapeHtml(log.coach || '—')}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '—'}</span></div>`;
+  html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Coach</span><span class="disputes-detail-value">${escapeHtml(log.coach || '—')}</span></div>`;
+  if (log.session_goal) {
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">Session Goal</span><span class="disputes-detail-value">${escapeHtml(log.session_goal)}</span></div>`;
+  }
+  html += '</div>'; // close grid
+  html += `<div class="disputes-detail-item full-width" style="margin-top:10px;"><span class="disputes-detail-label">Coaching Details</span><span class="disputes-detail-value">${log.coaching_details || '—'}</span></div>`;
 
   // Attachments
   html += compassRenderAttachmentsDetail(log);
@@ -2822,14 +2909,15 @@ async function disputesOpenDetail(coachingId) {
 
   // ===== SECTION 2: ROOT CAUSE ANALYSIS (QA Feedback only) =====
   if (log.coaching_type === 'QA Feedback') {
-    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
-    html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value">${escapeHtml(log.guidelines || '—')}</span></div>`;
-    html += '</div>';
+    html += '<div class="disputes-section"><div class="disputes-section-title">Root Cause Analysis</div>';
+    html += '<div class="disputes-detail-grid">';
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L1 Category</span><span class="disputes-detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L2 Direct Cause</span><span class="disputes-detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L3 Contributing</span><span class="disputes-detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L4 Deficiency</span><span class="disputes-detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>`;
+    html += `<div class="disputes-detail-item"><span class="disputes-detail-label">L5 Root Cause</span><span class="disputes-detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>`;
+    html += `<div class="disputes-detail-item full-width"><span class="disputes-detail-label">RCA Description</span><span class="disputes-detail-value">${escapeHtml(log.guidelines || '—')}</span></div>`;
+    html += '</div></div>';
   }
 
   // ===== SECTION 3: DISPUTE TRAIL =====
@@ -2840,7 +2928,7 @@ async function disputesOpenDetail(coachingId) {
     ];
     const hasDispute = commentFields.some(c => c && c.trim());
     if (hasDispute) {
-      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
+      html += '<div class="disputes-section"><div class="disputes-section-title">Dispute Trail</div>';
       html += disputesRenderTrailEntries(log);
       html += '</div>';
     }
@@ -2924,18 +3012,18 @@ async function disputesOpenDetail(coachingId) {
   }
 
   footerEl.innerHTML = footerHtml;
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 function disputesCloseDetail() {
   const overlay = document.getElementById('disputes-detail-overlay');
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) overlay.classList.remove('active');
   _disputesEditingId = null;
 }
 
 function disputesCloseAction() {
   const overlay = document.getElementById('disputes-action-overlay');
-  if (overlay) overlay.style.display = 'none';
+  if (overlay) overlay.classList.remove('active');
 }
 
 // ===== LV1: Dispute Markdown Popout =====
@@ -2973,7 +3061,7 @@ function disputesShowDisputeMarkdown() {
     <button class="btn btn-danger btn-sm" onclick="disputesSubmitDisputeMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 function disputeUpdateFiles() {
@@ -3098,7 +3186,7 @@ function disputesShowAcceptMarkdown() {
     <button class="btn btn-success btn-sm" onclick="disputesSubmitAcceptMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitAcceptMarkdown() {
@@ -3246,44 +3334,38 @@ function disputesRenderTrailEntries(log) {
   } catch (e) {}
 
   if (entries.length === 0) {
-    return '<p style="font-size:12px;color:var(--fg-subtle);padding:8px 0;">No dispute entries recorded.</p>';
+    return '<p class="disputes-trail-empty">No dispute entries recorded.</p>';
   }
 
-  let html = '';
+  let html = '<div class="disputes-trail">';
   entries.forEach((entry, idx) => {
     const isLast = idx === entries.length - 1;
-    html += `<div style="position:relative;padding-left:20px;padding-bottom:${isLast ? '4' : '16'}px;border-left:2px solid var(--border);margin-left:6px;">`;
-    // Timeline dot
-    html += `<div style="position:absolute;left:-5px;top:2px;width:8px;height:8px;border-radius:50%;background:var(--primary);"></div>`;
-    // Timestamp and actor
-    html += `<div style="font-size:11px;color:var(--fg-muted);margin-bottom:2px;">${escapeHtml(entry.timestamp)} — <strong style="color:var(--fg);">${escapeHtml(entry.actor)}</strong></div>`;
-    // Message
-    html += `<div style="font-size:13px;color:var(--fg);line-height:1.5;">${escapeHtml(entry.message)}</div>`;
-    // Attachments
+    html += `<div class="disputes-trail-entry${isLast ? ' last' : ''}">`;
+    html += '<div class="disputes-trail-dot"></div>';
+    html += `<div class="disputes-trail-meta">${escapeHtml(entry.timestamp)} \u2014 <strong>${escapeHtml(entry.actor)}</strong></div>`;
+    html += `<div class="disputes-trail-message">${escapeHtml(entry.message)}</div>`;
     if (entry.attachmentLine) {
-      // Try to match with disputeAttachments for download links
       const fileNames = entry.attachmentLine.split(',').map(f => f.trim());
-      html += '<div style="margin-top:4px;">';
+      html += '<div class="disputes-trail-attachments">';
       fileNames.forEach(fn => {
         const att = disputeAttachments.find(a => a.name === fn);
         if (att && att.url) {
-          html += `<a href="${escapeAttr(att.url)}" target="_blank" download="${escapeAttr(fn)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--primary);text-decoration:none;margin-right:8px;">
+          html += `<a href="${escapeAttr(att.url)}" target="_blank" download="${escapeAttr(fn)}" class="disputes-trail-file">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             ${escapeHtml(fn)}
           </a>`;
         } else {
-          html += `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--fg-muted);margin-right:8px;">
+          html += `<span class="disputes-trail-file muted">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             ${escapeHtml(fn)}
           </span>`;
         }
       });
       html += '</div>';
-    } else {
-      html += '<div style="font-size:11px;color:var(--fg-subtle);margin-top:2px;">No Attachment</div>';
     }
     html += '</div>';
   });
+  html += '</div>';
 
   return html;
 }
@@ -3321,7 +3403,7 @@ function disputesShowRetainMarkdown() {
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitRetainMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitRetainMarkdown() {
@@ -3409,7 +3491,7 @@ function disputesShowReverseMarkdown() {
     <button class="btn btn-success btn-sm" onclick="disputesSubmitReverseMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitReverseMarkdown() {
@@ -3466,7 +3548,7 @@ function disputesShowQADecisionAccepted() {
     <button class="btn btn-success btn-sm" onclick="disputesSubmitQADecisionAccepted()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitQADecisionAccepted() {
@@ -3534,7 +3616,7 @@ function disputesShowQADecisionRejected() {
     <button class="btn btn-danger btn-sm" onclick="disputesSubmitQADecisionRejected()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 function disputeHandleFileSelect(input) {
@@ -3638,7 +3720,7 @@ function disputesShowLV5AcceptDecision() {
     <button class="btn btn-success btn-sm" onclick="disputesSubmitLV5AcceptDecision()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV5AcceptDecision() {
@@ -3706,7 +3788,7 @@ function disputesShowLV5RejectDecision() {
     <button class="btn btn-danger btn-sm" onclick="disputesSubmitLV5RejectDecision()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV5RejectDecision() {
@@ -3806,7 +3888,7 @@ function disputesShowLV4RetainMarkdown() {
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV4RetainMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 function disputeLV4RetainFilesChanged(input) {
@@ -3902,7 +3984,7 @@ function disputesShowLV4ReverseMarkdown() {
     <button class="btn btn-success btn-sm" onclick="disputesSubmitLV4ReverseMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV4ReverseMarkdown() {
@@ -3971,7 +4053,7 @@ function disputesShowLV6ReverseMarkdown() {
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV6ReverseMarkdown() {
@@ -4070,7 +4152,7 @@ function disputesShowLV6RetainMarkdown() {
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV6RetainMarkdown()">Save</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV6RetainMarkdown() {
@@ -4154,7 +4236,7 @@ async function compassOpenNteForm(params) {
   // Show overlay immediately with loading state
   formBody.innerHTML = '<div style="text-align:center; padding:40px; color:var(--fg-muted);">Loading NTE form...</div>';
   formFooter.innerHTML = '';
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 
   // Fetch previous warnings for this employee
   let existingNtes = [];
@@ -4248,7 +4330,7 @@ async function compassOpenNteForm(params) {
       <button class="btn btn-primary btn-sm" onclick="compassSubmitNte()">Save NTE</button>
     `;
 
-    overlay.style.display = 'flex';
+    overlay.classList.add('active');
 }
 
 async function compassSubmitNte() {
@@ -4371,7 +4453,7 @@ function compassOpenNteDetail(nte) {
     <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Close</button>
   `;
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 
@@ -4586,7 +4668,7 @@ function _nteWizardRender() {
   else if (NTE_WIZARD.step === 3) _nteWizardStep3(formBody, formFooter, progressHtml);
   else if (NTE_WIZARD.step === 4) _nteWizardStep4(formBody, formFooter, progressHtml);
 
-  overlay.style.display = 'flex';
+  overlay.classList.add('active');
 }
 
 // ---- Step 1: Employee + Violation Type (Multi-select) ----
