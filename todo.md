@@ -2470,3 +2470,6 @@
 - [x] Update frontend to use slim endpoint for faster load times
 - [x] Bump cache versions
 - [x] Tests and checkpoint
+
+## Bug Fix — WFM Tag Not Visible in Attendance Table
+- [x] Investigate and fix WFM Tag column not appearing in the Input Portal attendance table

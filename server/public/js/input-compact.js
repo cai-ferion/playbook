@@ -125,7 +125,7 @@ function renderCompactTable() {
   thead.innerHTML = '<tr>'
     + '<th style="width:36px;"></th>'
     + '<th>Employee</th>'
-    + '<th style="width:80px;text-align:center;">Tag</th>'
+    + '<th style="width:140px;text-align:center;">Tag</th>'
     + '<th style="width:120px;text-align:right;">Date</th>'
     + '<th style="width:32px;"></th>'
     + '</tr>';
@@ -210,8 +210,9 @@ function renderCompactRow(item) {
     + '</div>'
     + '</div></td>';
 
-  // Tag cell
-  var tagCell = '<td style="text-align:center;">' + renderTagChip(r.tag) + '</td>';
+  // Tag cell + WFM Tag (side by side)
+  var wfmChip = r.wfm_tag ? '<span class="wfm-tag-chip">' + escapeHtml(r.wfm_tag) + '</span>' : '';
+  var tagCell = '<td style="text-align:center;"><div style="display:flex;align-items:center;justify-content:center;gap:4px;">' + renderTagChip(r.tag) + wfmChip + '</div></td>';
 
   // Date cell
   var dateDisplay = formatDateDisplay ? formatDateDisplay(r.date) : r.date;
@@ -350,8 +351,9 @@ function renderDetailPanel(r, idx, locked) {
     // LEFT COLUMN: Item details
     + '<div class="detail-panel-left">'
     + '<div class="detail-panel-grid">'
-    // Row 1: Tag, Reason, OT Hours
+    // Row 1: Tag, WFM Tag, Reason, OT Hours
     + '<div class="detail-section"><span class="detail-label">TAG</span>' + tagField + '</div>'
+    + '<div class="detail-section"><span class="detail-label">WFM TAG</span><span class="detail-readonly wfm-tag-detail">' + escapeHtml(r.wfm_tag || '\u2014') + '</span></div>'
     + '<div class="detail-section"><span class="detail-label">REASON</span>' + reasonField + '</div>'
     + '<div class="detail-section"><span class="detail-label">OT HOURS</span>' + otField + '</div>'
     + '<div class="detail-divider"></div>'
@@ -362,15 +364,18 @@ function renderDetailPanel(r, idx, locked) {
     + '<div class="detail-section"><span class="detail-label">STATUS</span><span class="detail-value">' + escapeHtml(r.status || '\u2014') + '</span></div>'
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
+    + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-divider"></div>'
     // Row 4: Billing Role and Billing Planning Group (editable dropdowns)
     + '<div class="detail-section"><span class="detail-label">BILLING ROLE</span>' + roleField + '</div>'
     + '<div class="detail-section"><span class="detail-label">BILLING PLANNING GROUP</span>' + pgField + '</div>'
     + '<div class="detail-section"></div>' /* spacer */
+    + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-divider"></div>'
     // Row 5: Internal Role and Internal Planning Group (read-only, from io_employees)
     + '<div class="detail-section"><span class="detail-label">INTERNAL ROLE</span><span class="detail-value">' + escapeHtml(r.internalRole || '\u2014') + '</span></div>'
     + '<div class="detail-section"><span class="detail-label">INTERNAL PLANNING GROUP</span><span class="detail-value">' + escapeHtml(r.internalPlanningGroup || '\u2014') + '</span></div>'
+    + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
     + '</div>'
     + '</div>'
@@ -451,7 +456,9 @@ window.compactRefreshRow = function(recordId) {
   // Find the record
   for (var i = 0; i < appState.records.length; i++) {
     if (appState.records[i]._id === recordId) {
-      tagTd.innerHTML = renderTagChip(appState.records[i].tag);
+      var rec = appState.records[i];
+      var wfmChip = rec.wfm_tag ? '<span class="wfm-tag-chip">' + escapeHtml(rec.wfm_tag) + '</span>' : '';
+      tagTd.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:4px;">' + renderTagChip(rec.tag) + wfmChip + '</div>';
       // Add pulse animation
       var chip = tagTd.querySelector('.tag-chip');
       if (chip) {

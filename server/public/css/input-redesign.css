@@ -422,8 +422,29 @@
 
 .detail-panel-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 18px;
+}
+
+/* WFM Tag chip — compact row inline badge */
+.wfm-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: var(--ip-radius-pill);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #c7d2fe, #e0e7ff);
+  color: #4338ca;
+  border: 1px solid #a5b4fc;
+  cursor: default;
+}
+.wfm-tag-detail {
+  font-weight: 600;
+  color: var(--ip-fg-secondary);
 }
 .detail-section {
   display: flex;
