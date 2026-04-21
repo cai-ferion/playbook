@@ -268,11 +268,11 @@ describe("WFM Tag — Cache Busting", () => {
   });
 
   it("admin.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("admin.js?v=104");
+    expect(indexHtmlContent).toContain("admin.js?v=105");
   });
 
   it("styles.css cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("styles.css?v=133");
+    expect(indexHtmlContent).toContain("styles.css?v=134");
   });
 });
 

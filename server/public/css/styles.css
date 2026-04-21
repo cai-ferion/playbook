@@ -2757,9 +2757,9 @@ body {
 .admin-preview-table th { position: sticky; top: 0; z-index: 1; }
 .admin-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 .admin-progress { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
-.admin-progress .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.admin-progress .progress-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
-.admin-progress .progress-text { font-size: 12px; color: var(--fg-muted); white-space: nowrap; }
+.admin-progress-bar { flex: 1; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.admin-progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: 5px; transition: width 0.4s ease; width: 0%; }
+.admin-progress-text { font-size: 13px; color: var(--fg); white-space: nowrap; font-weight: 600; }
 .admin-result { margin-top: 12px; padding: 12px; border-radius: 6px; font-size: 13px; }
 .admin-result.success { background: var(--success-bg); color: var(--success); border: 1px solid rgba(34,197,94,0.2); }
 .admin-result.error { background: var(--error-bg); color: var(--error); border: 1px solid rgba(239,68,68,0.2); }

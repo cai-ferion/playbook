@@ -2488,3 +2488,9 @@
 
 ## Bug Fix — WFM Schedule Upload Button Not Working (April 2026)
 - [x] Fix WFM Schedule "Upload Schedule" button doing nothing after file selection (root cause: DD-Mon date format parsed to year 2001 + affectedRows extraction bug in flushWfmRecords)
+
+## Upload UX — Loading Bars & Visual Feedback (April 2026)
+- [x] Debug and fix WFM Schedule upload button not working on published site (root cause: CSS class mismatch — HTML used admin-progress-bar but CSS targeted .progress-bar)
+- [x] Add loading bar / progress indicator to WFM Schedule upload
+- [x] Add loading bar / progress indicator to Billing CSV upload
+- [x] Bump cache versions and test
