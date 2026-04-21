@@ -2452,3 +2452,13 @@
 
 ## Regimen Filter Simplification
 - [x] Replace Last Name, Given Name, Middle Name, Suffix, Billing Name, SRT Name filters with single Full Name filter
+
+## WFM Tag Feature (April 2026)
+- [x] Create io_wfm_schedules table (ohr_id, schedule_date, wfm_value)
+- [x] Add wfm_tag column to io_attendance table
+- [x] Build CSV upload endpoint with OHR x Date matrix parser
+- [x] Backfill io_attendance.wfm_tag from io_wfm_schedules on upload
+- [x] Build WFM Schedule upload UI in Admin Tools
+- [x] Add read-only WFM Tag column to Input Portal table
+- [x] Add WFM Tag filter to Input Portal filter bar
+- [x] Test end-to-end: upload CSV → verify WFM Tag appears in Input Portal

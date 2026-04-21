@@ -141,6 +141,13 @@
       "when": 1776717294539,
       "tag": "0019_real_lizard",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1776801705745,
+      "tag": "0020_sweet_lyja",
+      "breakpoints": true
     }
   ]
 }

@@ -8,7 +8,7 @@
   <!-- Preconnect to CDN origins for faster script loading -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin>
-  <link rel="stylesheet" href="css/styles.css?v=132">
+  <link rel="stylesheet" href="css/styles.css?v=133">
   <link rel="stylesheet" href="css/input-redesign.css?v=120">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
@@ -811,6 +811,30 @@
                 <button class="btn btn-primary btn-sm" onclick="exportAllTables()">Export All Tables (JSON)</button>
               </div>
               <div class="admin-result" id="backup-result" style="display:none;margin-top:8px;"></div>
+            </div>
+          </div>
+
+          <!-- WFM Schedule Upload Card -->
+          <div class="card admin-card" style="margin-top:20px;">
+            <div class="card-header">
+              <span class="card-title">WFM SCHEDULE UPLOAD</span>
+            </div>
+            <div class="admin-card-body">
+              <p class="admin-help">Upload a WFM schedule CSV (OHR &times; Date matrix) to populate the <strong>WFM Tag</strong> column in the Input Portal. The first row must contain date headers; first two columns are OHR and Employee Name.</p>
+              <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="file" id="wfm-csv-input" accept=".csv" style="font-size:13px;" />
+                <button class="btn btn-primary btn-sm" id="wfm-upload-btn" onclick="wfmUploadSchedule()" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload Schedule
+                </button>
+              </div>
+              <div class="admin-progress" id="wfm-upload-progress" style="display:none;margin-top:12px;">
+                <div class="admin-progress-bar"><div class="admin-progress-fill" id="wfm-upload-progress-fill" style="width:0%;"></div></div>
+                <span class="admin-progress-text" id="wfm-upload-progress-text">Parsing CSV...</span>
+              </div>
+              <div class="admin-result" id="wfm-upload-result" style="display:none;margin-top:8px;"></div>
+              <!-- WFM Schedule Summary -->
+              <div id="wfm-schedule-summary" style="margin-top:16px;"></div>
             </div>
           </div>
 
@@ -1682,15 +1706,15 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
-  <script src="js/data.js?v=104"></script>
-  <script src="js/app.js?v=122"></script>
+  <script src="js/data.js?v=105"></script>
+  <script src="js/app.js?v=123"></script>
   <script src="js/dashboard-anim.js?v=121b"></script>
-  <script src="js/input-portal.js?v=120"></script>
+  <script src="js/input-portal.js?v=121"></script>
   <script src="js/input-compact.js?v=120"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
   <script src="js/notifications.js?v=102g"></script>
   <script src="js/maintenance.js?v=102g"></script>
-  <script src="js/admin.js?v=102g"></script>
+  <script src="js/admin.js?v=103"></script>
   <script src="js/billing.js?v=132"></script>
   <script src="js/billing-v2.js?v=122"></script>
 

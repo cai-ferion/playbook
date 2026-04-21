@@ -14,6 +14,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 // Table columns — reordered per user spec: Tag first, OHR removed, Billing Code last
 const TABLE_COLUMNS = [
   { key: 'tag', label: 'Tag', editable: true },
+  { key: 'wfm_tag', label: 'WFM Tag', editable: false },
   { key: 'uplReason', label: 'Reason', editable: true },
   { key: 'remarks', label: 'Remarks', editable: true },
   { key: 'ot', label: 'OT', editable: true },
@@ -574,6 +575,7 @@ function normalizeRecord(att) {
     weekEnding: dateStr ? getWeekEnding(dateStr) : '',
     month: dateStr ? getMonthName(dateStr) : '',
     concat: dateStr ? generateConcat(dateStr, (att.ohr_id || '').toString().trim()) : '',
+    wfm_tag: (att.wfm_tag || '').trim(),
     is_locked: att.is_locked === true || att.is_locked === 1,
   };
 }

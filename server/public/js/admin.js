@@ -254,6 +254,171 @@ async function exportSingleTable(tableName, btn) {
   }
 }
 
+// ============================================================
+// WFM Schedule Upload
+// ============================================================
+
+// Enable upload button when a file is selected
+document.addEventListener('DOMContentLoaded', () => {
+  const csvInput = document.getElementById('wfm-csv-input');
+  const uploadBtn = document.getElementById('wfm-upload-btn');
+  if (csvInput && uploadBtn) {
+    csvInput.addEventListener('change', () => {
+      uploadBtn.disabled = !csvInput.files || csvInput.files.length === 0;
+    });
+  }
+  // Load WFM summary on page load if admin
+  setTimeout(() => {
+    if (typeof isAdmin === 'function' && isAdmin()) {
+      wfmLoadScheduleSummary();
+    }
+  }, 2000);
+});
+
+function wfmParseCSV(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  let row = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < text.length && text[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = false; }
+      } else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(current.trim()); current = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n') i++;
+        row.push(current.trim());
+        if (row.some(c => c !== '')) rows.push(row);
+        row = []; current = '';
+      } else { current += ch; }
+    }
+  }
+  row.push(current.trim());
+  if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+
+async function wfmUploadSchedule() {
+  if (!isAdmin()) return;
+  const fileInput = document.getElementById('wfm-csv-input');
+  const btn = document.getElementById('wfm-upload-btn');
+  const progressEl = document.getElementById('wfm-upload-progress');
+  const progressFill = document.getElementById('wfm-upload-progress-fill');
+  const progressText = document.getElementById('wfm-upload-progress-text');
+  const resultEl = document.getElementById('wfm-upload-result');
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast('Please select a CSV file first.', 'warning'); return;
+  }
+  const file = fileInput.files[0];
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('Please select a .csv file.', 'warning'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;animation:spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Uploading...';
+  progressEl.style.display = 'flex';
+  progressFill.style.width = '20%';
+  progressText.textContent = 'Reading CSV file...';
+  resultEl.style.display = 'none';
+
+  try {
+    const text = await file.text();
+    progressFill.style.width = '40%';
+    progressText.textContent = 'Parsing CSV data...';
+    const rows = wfmParseCSV(text);
+    if (rows.length < 2) throw new Error('CSV must have at least a header row and one data row.');
+    const dateCount = rows[0].length - 2;
+    if (dateCount < 1) throw new Error('CSV header must have at least 3 columns: OHR, Name, and at least one date.');
+
+    progressFill.style.width = '60%';
+    progressText.textContent = `Uploading ${rows.length - 1} employees × ${dateCount} dates...`;
+
+    const resp = await fetch(`${IO_API_BASE}/wfm-schedule-upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Actor-Ohr': window.currentUserOhr },
+      body: JSON.stringify({ rows, uploadedBy: window.currentUserName || window.currentUserOhr })
+    });
+    progressFill.style.width = '100%';
+    const data = await resp.json();
+
+    if (resp.ok && data.success) {
+      progressText.textContent = 'Complete!';
+      resultEl.className = 'admin-result success';
+      resultEl.textContent = `Upload complete: ${data.totalInserted} schedule entries across ${data.datesProcessed} dates. ${data.attendanceBackfilled} attendance rows backfilled with WFM tags.`;
+      resultEl.style.display = 'block';
+      showToast('WFM schedule uploaded successfully.', 'success');
+      wfmLoadScheduleSummary();
+    } else {
+      progressText.textContent = 'Failed';
+      resultEl.className = 'admin-result warning';
+      resultEl.textContent = data.error || 'Upload failed.';
+      resultEl.style.display = 'block';
+      showToast('WFM upload failed: ' + (data.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    progressFill.style.width = '100%';
+    progressText.textContent = 'Error';
+    resultEl.className = 'admin-result warning';
+    resultEl.textContent = 'Error: ' + err.message;
+    resultEl.style.display = 'block';
+    showToast('WFM upload error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload Schedule';
+    fileInput.value = '';
+    setTimeout(() => { progressEl.style.display = 'none'; }, 3000);
+  }
+}
+
+async function wfmLoadScheduleSummary() {
+  const container = document.getElementById('wfm-schedule-summary');
+  if (!container) return;
+  try {
+    const resp = await fetch(`${IO_API_BASE}/wfm-schedule/dates`);
+    const dates = await resp.json();
+    if (!Array.isArray(dates) || dates.length === 0) {
+      container.innerHTML = '<p style="color:var(--fg-muted);font-size:13px;">No WFM schedule data uploaded yet.</p>';
+      return;
+    }
+    let html = '<p style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:8px;">Uploaded Schedule Data</p>';
+    html += '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">';
+    html += '<table class="data-table" style="font-size:12px;margin:0;"><thead><tr><th>Date</th><th>Entries</th><th>Last Upload</th><th>Uploaded By</th></tr></thead><tbody>';
+    for (const d of dates) {
+      const uploadTime = d.last_upload ? new Date(d.last_upload).toLocaleString() : '-';
+      html += `<tr><td>${escapeHtml(d.schedule_date)}</td><td>${d.count}</td><td>${uploadTime}</td><td>${escapeHtml(d.uploaded_by || '-')}</td></tr>`;
+    }
+    html += '</tbody></table></div>';
+    html += '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="wfmClearAllSchedules()" style="color:var(--danger);border-color:var(--danger);">Clear All WFM Data</button></div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<p style="color:var(--danger);font-size:13px;">Failed to load schedule summary: ${err.message}</p>`;
+  }
+}
+
+async function wfmClearAllSchedules() {
+  if (!confirm('Are you sure you want to clear ALL WFM schedule data? This will also remove WFM tags from all attendance records.')) return;
+  try {
+    const resp = await fetch(`${IO_API_BASE}/wfm-schedule`, { method: 'DELETE', headers: { 'X-Actor-Ohr': window.currentUserOhr } });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      showToast('All WFM schedule data cleared.', 'success');
+      wfmLoadScheduleSummary();
+    } else {
+      showToast('Failed to clear WFM data: ' + (data.error || 'Unknown'), 'error');
+    }
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  }
+}
+
+// ===== Database Backup / Export =====
+
 async function exportAllTables() {
   if (!isAdmin()) return;
   const resultEl = document.getElementById('backup-result');

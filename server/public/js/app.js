@@ -1294,6 +1294,7 @@ function populateInputFilterDropdowns() {
   const pgs = [...new Set(records.map(r => r.actualPlanningGroup).filter(Boolean))].sort();
   const shifts = [...new Set(records.map(r => r.shiftTime).filter(Boolean))].sort();
   const statuses = [...new Set(records.map(r => r.status).filter(Boolean))].sort();
+  const wfmTags = [...new Set(records.map(r => r.wfm_tag).filter(Boolean))].sort();
 
   if (appState.multiSelects.tag) appState.multiSelects.tag.setOptions(tags);
   if (appState.multiSelects.agent) appState.multiSelects.agent.setOptions(agents);
@@ -1302,6 +1303,7 @@ function populateInputFilterDropdowns() {
   if (appState.multiSelects.pg) appState.multiSelects.pg.setOptions(pgs);
   if (appState.multiSelects.shift) appState.multiSelects.shift.setOptions(shifts);
   if (appState.multiSelects.status) appState.multiSelects.status.setOptions(statuses);
+  if (appState.multiSelects.wfm_tag) appState.multiSelects.wfm_tag.setOptions(wfmTags);
 }
 
 function fillSelect(id, options, allLabel) {
@@ -1582,6 +1584,7 @@ function getColumnWidthClass(key) {
   const map = {
     date: 'col-date',
     tag: 'col-tag',
+    wfm_tag: 'col-wfm-tag',
     uplReason: 'col-reason',
     remarks: 'col-remarks',
     ot: 'col-ot',

@@ -99,6 +99,7 @@ export const ioAttendance = mysqlTable("io_attendance", {
   internal_role: varchar("internal_role", { length: 100 }),
   internal_planning_group: varchar("internal_planning_group", { length: 100 }),
   actual_vs_projection: varchar("actual_vs_projection", { length: 20 }),
+  wfm_tag: varchar("wfm_tag", { length: 50 }),
 });
 
 export type IoAttendance = typeof ioAttendance.$inferSelect;
@@ -791,3 +792,19 @@ export const ioCorrectiveActions = mysqlTable("io_corrective_actions", {
 });
 export type IoCorrectiveAction = typeof ioCorrectiveActions.$inferSelect;
 export type InsertIoCorrectiveAction = typeof ioCorrectiveActions.$inferInsert;
+
+// ============================================================
+// WFM Schedule Table — pre-plotted schedule data from WFM uploads
+// ============================================================
+
+export const ioWfmSchedules = mysqlTable("io_wfm_schedules", {
+  id: int("id").autoincrement().primaryKey(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  schedule_date: varchar("schedule_date", { length: 10 }).notNull(), // YYYY-MM-DD
+  wfm_value: varchar("wfm_value", { length: 50 }).notNull(),         // shift time or tag (PL, WO, LOA, etc.)
+  uploaded_at: varchar("uploaded_at", { length: 64 }),
+  uploaded_by: varchar("uploaded_by", { length: 255 }),
+});
+
+export type IoWfmSchedule = typeof ioWfmSchedules.$inferSelect;
+export type InsertIoWfmSchedule = typeof ioWfmSchedules.$inferInsert;

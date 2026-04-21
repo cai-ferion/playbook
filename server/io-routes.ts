@@ -344,7 +344,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
             attendance_date_gte, attendance_date_lte, date_gte, date_lte,
             // Server-side filter params
             agent_in, flm_in, planning_group_in,
-            status_in, shift_time_in, role_in, blanks_only,
+            status_in, shift_time_in, role_in, wfm_tag_in, blanks_only,
             // Server-side sort & pagination
             sort_by, sort_dir, paginated, exclude_managers } = req.query;
 
@@ -379,6 +379,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
     if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
     if (blanks_only === "true") {
       conditions.push(or(
         sql`${ioAttendance.tag} IS NULL`,
@@ -1260,7 +1261,7 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
     if (!filters) return res.status(400).json({ error: "filters object is required" });
 
     const { log_date_gte, log_date_lte, tag_in, agent_in, flm_in,
-            planning_group_in, status_in, shift_time_in, role_in, blanks_only } = filters;
+            planning_group_in, status_in, shift_time_in, role_in, wfm_tag_in, blanks_only } = filters;
 
     const conditions: any[] = [];
     // Exclude Managers — uses cached set
@@ -1278,6 +1279,7 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
     if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
     if (blanks_only) {
       conditions.push(or(
         sql`${ioAttendance.tag} IS NULL`,
@@ -1525,7 +1527,7 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
       startDate, endDate, format,
       log_date_gte, log_date_lte,
       tag_in, agent_in, flm_in, planning_group_in,
-      status_in, shift_time_in, role_in, blanks_only,
+      status_in, shift_time_in, role_in, wfm_tag_in, blanks_only,
       sort_by, sort_dir, exclude_managers,
     } = req.query;
     const conditions: any[] = [];
@@ -1550,6 +1552,7 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
     if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
     if (blanks_only === "true") {
       conditions.push(or(
         sql`${ioAttendance.tag} IS NULL`,
@@ -4304,6 +4307,169 @@ ${previousCapsText || 'None'}`;
     });
   } catch (err: any) {
     console.error('[IO API] CAP AI generation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// WFM Schedule Upload — parse OHR x Date CSV matrix, store in
+// io_wfm_schedules, and backfill io_attendance.wfm_tag
+// ============================================================
+
+/**
+ * POST /api/io/wfm-schedule-upload
+ * Body: { rows: string[][] } — first row is header [OHR, Employee Name, date1, date2, ...]
+ * Subsequent rows: [ohrId, name, value1, value2, ...]
+ * Values are shift times ("22:30-07:30"), tags (PL, WO, LOA, ML, BOJ, Exit, NH Training), or empty.
+ */
+router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    const { rows, uploadedBy } = req.body;
+    if (!rows || !Array.isArray(rows) || rows.length < 2) {
+      return res.status(400).json({ error: "rows array with header + data is required" });
+    }
+
+    const now = new Date().toISOString();
+    const uploaderName = uploadedBy || 'System';
+
+    // Parse header row to extract date columns
+    const headerRow = rows[0];
+    // First 2 columns are OHR and Employee Name, rest are dates
+    const dateColumns: string[] = [];
+    for (let c = 2; c < headerRow.length; c++) {
+      const raw = String(headerRow[c] || '').trim();
+      if (!raw) continue;
+      // Accept ISO date strings, Excel serial numbers, or YYYY-MM-DD
+      let dateStr = '';
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        dateStr = raw.substring(0, 10);
+      } else if (/^\d+$/.test(raw)) {
+        // Excel serial number → JS date
+        const excelEpoch = new Date(1899, 11, 30);
+        const d = new Date(excelEpoch.getTime() + parseInt(raw) * 86400000);
+        dateStr = d.toISOString().substring(0, 10);
+      } else {
+        // Try parsing as date string
+        const d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+          dateStr = d.toISOString().substring(0, 10);
+        }
+      }
+      dateColumns.push(dateStr || '');
+    }
+
+    if (dateColumns.filter(d => d).length === 0) {
+      return res.status(400).json({ error: "No valid date columns found in header" });
+    }
+
+    // Collect all unique dates for cleanup before insert
+    const uniqueDates = Array.from(new Set(dateColumns.filter(d => d)));
+
+    // Delete existing WFM data for these dates (upsert behavior)
+    for (const d of uniqueDates) {
+      await db.execute(sql`DELETE FROM io_wfm_schedules WHERE schedule_date = ${d}`);
+    }
+
+    // Parse data rows and build insert records
+    const BULK_SIZE = 500;
+    let totalInserted = 0;
+    let scheduleRecords: string[][] = [];
+
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r];
+      const ohr = String(row[0] || '').trim();
+      if (!ohr || ohr === 'OHR') continue; // skip empty or duplicate headers
+
+      for (let c = 2; c < row.length && (c - 2) < dateColumns.length; c++) {
+        const dateStr = dateColumns[c - 2];
+        if (!dateStr) continue;
+        const value = String(row[c] || '').trim();
+        if (!value) continue;
+        scheduleRecords.push([ohr, dateStr, value, now, uploaderName]);
+
+        // Flush in chunks
+        if (scheduleRecords.length >= BULK_SIZE) {
+          totalInserted += await flushWfmRecords(db, scheduleRecords);
+          scheduleRecords = [];
+        }
+      }
+    }
+    // Flush remaining
+    if (scheduleRecords.length > 0) {
+      totalInserted += await flushWfmRecords(db, scheduleRecords);
+    }
+
+    // Backfill io_attendance.wfm_tag from io_wfm_schedules
+    let backfilled = 0;
+    try {
+      const backfillResult: any = await db.execute(
+        sql`UPDATE io_attendance a
+            INNER JOIN io_wfm_schedules w
+              ON a.ohr_id = w.ohr_id AND a.log_date = w.schedule_date
+            SET a.wfm_tag = w.wfm_value`
+      );
+      const info = Array.isArray(backfillResult[0]) ? backfillResult[0] : backfillResult;
+      backfilled = info.affectedRows || 0;
+    } catch (bfErr: any) {
+      console.error('[IO API] WFM backfill error:', bfErr.message);
+    }
+
+    console.log(`[IO API] WFM schedule uploaded: ${totalInserted} records, ${backfilled} attendance rows backfilled`);
+    res.json({
+      success: true,
+      totalInserted,
+      datesProcessed: uniqueDates.length,
+      attendanceBackfilled: backfilled,
+    });
+  } catch (err: any) {
+    console.error('[IO API] wfm-schedule-upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function flushWfmRecords(db: any, records: string[][]): Promise<number> {
+  if (records.length === 0) return 0;
+  const valueSets = records.map(r =>
+    sql`(${r[0]}, ${r[1]}, ${r[2]}, ${r[3]}, ${r[4]})`
+  );
+  const bulkQuery = sql`INSERT INTO io_wfm_schedules (ohr_id, schedule_date, wfm_value, uploaded_at, uploaded_by)
+    VALUES ${sql.join(valueSets, sql`, `)}`;
+  const result: any = await db.execute(bulkQuery);
+  const info = Array.isArray(result[0]) ? result[0] : result;
+  return info.affectedRows || 0;
+}
+
+// GET /api/io/wfm-schedule/dates — list all unique dates with WFM data
+router.get("/wfm-schedule/dates", async (_req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const result: any = await db.execute(
+      sql`SELECT DISTINCT schedule_date, COUNT(*) as count, MAX(uploaded_at) as last_upload, MAX(uploaded_by) as uploaded_by
+          FROM io_wfm_schedules
+          GROUP BY schedule_date
+          ORDER BY schedule_date DESC`
+    );
+    const rows = Array.isArray(result[0]) ? result[0] : result;
+    res.json(rows);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/io/wfm-schedule — clear all WFM schedule data
+router.delete("/wfm-schedule", async (_req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    await db.execute(sql`DELETE FROM io_wfm_schedules`);
+    // Also clear wfm_tag from attendance
+    await db.execute(sql`UPDATE io_attendance SET wfm_tag = NULL WHERE wfm_tag IS NOT NULL`);
+    res.json({ success: true });
+  } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });

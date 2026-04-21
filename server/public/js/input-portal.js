@@ -11,6 +11,7 @@
 const OMNIBAR_FILTER_FIELDS = [
   { key: 'date_range', label: 'Date', type: 'date_range' },
   { key: 'tag', label: 'Tag', type: 'multi', recordKey: 'tag', searchable: false, sortable: true },
+  { key: 'wfm_tag', label: 'WFM Tag', type: 'multi', recordKey: 'wfm_tag', searchable: false, sortable: false },
   { key: 'agent', label: 'Agent', type: 'multi', recordKey: 'agent', searchable: true, sortable: true },
   { key: 'flm', label: 'FLM', type: 'multi', recordKey: 'flm', searchable: true, sortable: true },
   { key: 'actualPlanningGroup', label: 'Planning Group', type: 'multi', recordKey: 'actualPlanningGroup', searchable: true, sortable: true },
@@ -502,7 +503,7 @@ async function omnibarApplyView() {
     var f = omnibarState.filters[keys[ki]];
     if (f.type === 'multi' && f.values && f.values.length > 0) {
       var keyMap = {
-        tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
+        tag: 'tag_in', wfm_tag: 'wfm_tag_in', agent: 'agent_in', flm: 'flm_in',
         actualPlanningGroup: 'planning_group_in',
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };
@@ -573,7 +574,7 @@ async function serverPageChange(newPage) {
     var f = omnibarState.filters[keys[ki]];
     if (f.type === 'multi' && f.values && f.values.length > 0) {
       var keyMap = {
-        tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
+        tag: 'tag_in', wfm_tag: 'wfm_tag_in', agent: 'agent_in', flm: 'flm_in',
         actualPlanningGroup: 'planning_group_in',
         status: 'status_in', shiftTime: 'shift_time_in', role: 'role_in',
       };

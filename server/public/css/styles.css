@@ -1259,6 +1259,7 @@ body {
 /* Column-specific widths */
 .col-date { white-space: nowrap; min-width: 100px; }
 .col-tag { min-width: 110px; }
+.col-wfm-tag { min-width: 100px; }
 .col-reason { min-width: 160px; }
 .col-remarks { min-width: 240px; }
 .col-ot { width: 60px; max-width: 70px; }
