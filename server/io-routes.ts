@@ -4586,20 +4586,34 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
     for (let c = 2; c < headerRow.length; c++) {
       const raw = String(headerRow[c] || '').trim();
       if (!raw) continue;
-      // Accept ISO date strings, Excel serial numbers, or YYYY-MM-DD
+      // Accept ISO dates, DD-Mon (28-Mar), Excel serial numbers, or other parseable formats
       let dateStr = '';
       if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        // ISO: 2026-03-28
         dateStr = raw.substring(0, 10);
       } else if (/^\d+$/.test(raw)) {
         // Excel serial number → JS date
         const excelEpoch = new Date(1899, 11, 30);
         const d = new Date(excelEpoch.getTime() + parseInt(raw) * 86400000);
         dateStr = d.toISOString().substring(0, 10);
-      } else {
-        // Try parsing as date string
-        const d = new Date(raw);
+      } else if (/^\d{1,2}-[A-Za-z]{3}$/.test(raw)) {
+        // DD-Mon format (28-Mar, 1-Apr) — infer current year
+        const currentYear = new Date().getFullYear();
+        const d = new Date(`${raw}-${currentYear}`);
         if (!isNaN(d.getTime())) {
           dateStr = d.toISOString().substring(0, 10);
+        }
+      } else {
+        // Try parsing as date string; if no year, append current year
+        let d = new Date(raw);
+        if (!isNaN(d.getTime())) {
+          // Check if year defaulted to 2001 (no year in input)
+          if (d.getFullYear() === 2001 && !/\d{4}/.test(raw)) {
+            d = new Date(`${raw} ${new Date().getFullYear()}`);
+          }
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toISOString().substring(0, 10);
+          }
         }
       }
       dateColumns.push(dateStr || '');
@@ -4693,8 +4707,7 @@ async function flushWfmRecords(db: any, records: string[][]): Promise<number> {
   const bulkQuery = sql`INSERT INTO io_wfm_schedules (ohr_id, schedule_date, wfm_value, uploaded_at, uploaded_by)
     VALUES ${sql.join(valueSets, sql`, `)}`;
   const result: any = await db.execute(bulkQuery);
-  const info = Array.isArray(result[0]) ? result[0] : result;
-  return info.affectedRows || 0;
+  return result[0]?.affectedRows ?? 0;
 }
 
 // GET /api/io/wfm-schedule/dates — list all unique dates with WFM data

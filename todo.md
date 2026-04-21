@@ -2485,3 +2485,6 @@
 - [x] Build billing CSV upload Admin UI
 - [x] Disable/remove G Sheet billing sync (replaced with CSV upload, legacy endpoint kept for backward compat)
 - [x] Tests and checkpoint
+
+## Bug Fix — WFM Schedule Upload Button Not Working (April 2026)
+- [x] Fix WFM Schedule "Upload Schedule" button doing nothing after file selection (root cause: DD-Mon date format parsed to year 2001 + affectedRows extraction bug in flushWfmRecords)
