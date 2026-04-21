@@ -3383,7 +3383,10 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   b['regimen.export_csv'] = true;
   b['nav.compass'] = true;
   b['compass.disputes'] = true;
-  b['compass.corrective_actions'] = true;
+  // Corrective Actions: TLs and Managers only (not SMEs, QAs, Trainers, etc.)
+  if (role === 'Team Lead' || role === 'Manager') {
+    b['compass.corrective_actions'] = true;
+  }
   if (role === 'Team Lead') b['anchor.edit_attendance'] = true;
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
@@ -3919,9 +3922,27 @@ router.get("/corrective-actions/:id", async (req: Request, res: Response) => {
   }
 });
 
+// Server-side role enforcement: only TLs and Managers can create/modify CAs
+async function caEnforceRole(req: Request, res: Response): Promise<boolean> {
+  const actorOhr = req.body?.created_by_ohr || req.body?.decision_by_ohr || '';
+  if (!actorOhr) { res.status(403).json({ error: 'Actor OHR required' }); return false; }
+  // Admin bypass
+  if (actorOhr === '740045023') return true;
+  const db = await getDb();
+  if (!db) { res.status(500).json({ error: 'DB unavailable' }); return false; }
+  const [emp] = await db.select({ role: ioEmployees.actual_role }).from(ioEmployees).where(eq(ioEmployees.ohr_id, actorOhr)).limit(1);
+  const role = emp?.role || '';
+  if (role !== 'Team Lead' && role !== 'Manager') {
+    console.warn(`[CA RBAC] Blocked ${actorOhr} (role=${role}) from CA write operation`);
+    res.status(403).json({ error: 'Only Team Leads and Managers can perform this action' });
+    return false;
+  }
+  return true;
+}
 // POST /api/io/corrective-actions — create new NTE
 router.post("/corrective-actions", async (req: Request, res: Response) => {
   try {
+    if (!(await caEnforceRole(req, res))) return;
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
@@ -3993,6 +4014,7 @@ router.post("/corrective-actions", async (req: Request, res: Response) => {
 // PATCH /api/io/corrective-actions/:id — update (assign CAP, dismiss)
 router.patch("/corrective-actions/:id", async (req: Request, res: Response) => {
   try {
+    if (!(await caEnforceRole(req, res))) return;
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 

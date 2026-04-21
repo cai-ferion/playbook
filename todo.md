@@ -2416,3 +2416,11 @@
 - [ ] D3: Cache querySelector results in module-scoped variables
 - [x] D4: Throttle updateAllViews during rapid filter changes (150ms coalesce)
 - [x] Bump cache-bust version strings on all modified files
+
+## Compass Visibility Rules (April 2026)
+- [x] BUG: TLs, SMEs, QAs cannot see any Compass component — fixed (381 DB overrides deleted)
+- [x] Restrict Corrective Actions to Team Leads and Managers only (server defaults updated)
+- [x] Add server-side role enforcement on CA POST/PATCH endpoints (caEnforceRole)
+- [x] Verify Disputes Area remains hidden from Agents, visible to all non-agents
+- [x] Verify Coaching Profile visible to all with correct data scoping
+- [x] Verify Document Build Assist accessible to TLs + Managers only
