@@ -144,6 +144,10 @@ function caRenderFilterBar() {
       ${CA_CAP_LEVELS.map(l => `<option value="${l}">${l}</option>`).join('')}
     </select>
     <span class="ca-filter-count" id="ca-filter-count"></span>
+    <button class="ca-btn-kb" id="ca-kb-toggle-btn" onclick="caKbToggle()" title="Policy Reference">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Policy Reference
+    </button>
     ${canCreate ? `<button class="ca-btn-create" onclick="caOpenDocBuildAssist()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
       Document Build Assist
@@ -1919,4 +1923,172 @@ async function _caCap1Submit() {
     showToast('Failed to generate CAP 1: ' + e.message, 'error');
     if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Generate CAP 1 Document'; }
   }
+}
+
+
+// ============================================================
+// KNOWLEDGE BASE SIDEBAR
+// ============================================================
+
+const CA_KB = {
+  open: false,
+  activeCategory: 'All',
+  searchQuery: '',
+  currentArticleId: null,
+};
+
+/** Toggle KB sidebar open/close */
+function caKbToggle() {
+  const sidebar = document.getElementById('ca-kb-sidebar');
+  if (!sidebar) return;
+  CA_KB.open = !CA_KB.open;
+  sidebar.classList.toggle('open', CA_KB.open);
+
+  // Toggle active state on button
+  const btn = document.getElementById('ca-kb-toggle-btn');
+  if (btn) btn.classList.toggle('active', CA_KB.open);
+
+  // Initialize content on first open
+  if (CA_KB.open && !sidebar.dataset.initialized) {
+    sidebar.dataset.initialized = '1';
+    caKbRenderTabs();
+    caKbRenderList(CA_KB_ARTICLES);
+  }
+}
+
+/** Render category tabs */
+function caKbRenderTabs() {
+  const container = document.getElementById('ca-kb-tabs');
+  if (!container || typeof CA_KB_CATEGORIES === 'undefined') return;
+
+  container.innerHTML = CA_KB_CATEGORIES.map(cat => {
+    const active = cat === CA_KB.activeCategory ? ' active' : '';
+    const count = cat === 'All'
+      ? CA_KB_ARTICLES.length
+      : CA_KB_ARTICLES.filter(a => a.category === cat).length;
+    return '<button class="ca-kb-tab' + active + '" onclick="caKbSwitchCategory(\'' + cat + '\')">' +
+      cat + ' <span class="ca-kb-tab-count">' + count + '</span></button>';
+  }).join('');
+}
+
+/** Switch category tab */
+function caKbSwitchCategory(cat) {
+  CA_KB.activeCategory = cat;
+  CA_KB.currentArticleId = null;
+  // Show list, hide article
+  const listEl = document.getElementById('ca-kb-list');
+  const articleEl = document.getElementById('ca-kb-article');
+  if (listEl) listEl.style.display = '';
+  if (articleEl) articleEl.style.display = 'none';
+  caKbRenderTabs();
+  caKbApplyFilters();
+}
+
+/** Search handler */
+function caKbSearch(query) {
+  CA_KB.searchQuery = (query || '').toLowerCase().trim();
+  CA_KB.currentArticleId = null;
+  const listEl = document.getElementById('ca-kb-list');
+  const articleEl = document.getElementById('ca-kb-article');
+  if (listEl) listEl.style.display = '';
+  if (articleEl) articleEl.style.display = 'none';
+  caKbApplyFilters();
+}
+
+/** Apply category + search filters and render */
+function caKbApplyFilters() {
+  if (typeof CA_KB_ARTICLES === 'undefined') return;
+  let results = [...CA_KB_ARTICLES];
+
+  // Category filter
+  if (CA_KB.activeCategory !== 'All') {
+    results = results.filter(a => a.category === CA_KB.activeCategory);
+  }
+
+  // Search filter
+  if (CA_KB.searchQuery) {
+    const q = CA_KB.searchQuery;
+    results = results.filter(a => {
+      // Search in title, tags, keywords, and raw content text
+      if (a.title.toLowerCase().includes(q)) return true;
+      if (a.tags.some(t => t.toLowerCase().includes(q))) return true;
+      if (a.keywords.some(k => k.toLowerCase().includes(q))) return true;
+      // Strip HTML tags for content search
+      const plainContent = a.content.replace(/<[^>]*>/g, ' ').toLowerCase();
+      return plainContent.includes(q);
+    });
+  }
+
+  caKbRenderList(results);
+}
+
+/** Render article list */
+function caKbRenderList(articles) {
+  const container = document.getElementById('ca-kb-list');
+  if (!container) return;
+
+  if (!articles || articles.length === 0) {
+    container.innerHTML = '<div class="ca-kb-empty">' +
+      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+      '<p>No articles found</p>' +
+      '<span>Try a different search term or category</span>' +
+      '</div>';
+    return;
+  }
+
+  // Group by category
+  const grouped = {};
+  articles.forEach(a => {
+    if (!grouped[a.category]) grouped[a.category] = [];
+    grouped[a.category].push(a);
+  });
+
+  let html = '';
+  for (const [category, items] of Object.entries(grouped)) {
+    if (CA_KB.activeCategory === 'All') {
+      html += '<div class="ca-kb-group-label">' + escapeHtml(category) + '</div>';
+    }
+    items.forEach(a => {
+      const tagHtml = a.tags.slice(0, 3).map(t =>
+        '<span class="ca-kb-tag">' + escapeHtml(t) + '</span>'
+      ).join('');
+      html += '<div class="ca-kb-item" onclick="caKbOpenArticle(\'' + a.id + '\')">' +
+        '<div class="ca-kb-item-title">' + escapeHtml(a.title) + '</div>' +
+        '<div class="ca-kb-item-tags">' + tagHtml + '</div>' +
+        '</div>';
+    });
+  }
+
+  container.innerHTML = html;
+}
+
+/** Open a single article */
+function caKbOpenArticle(id) {
+  if (typeof CA_KB_ARTICLES === 'undefined') return;
+  const article = CA_KB_ARTICLES.find(a => a.id === id);
+  if (!article) return;
+
+  CA_KB.currentArticleId = id;
+
+  const listEl = document.getElementById('ca-kb-list');
+  const articleEl = document.getElementById('ca-kb-article');
+  if (listEl) listEl.style.display = 'none';
+  if (articleEl) {
+    articleEl.style.display = '';
+    articleEl.innerHTML =
+      '<button class="ca-kb-back" onclick="caKbBackToList()">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>' +
+        ' Back to list' +
+      '</button>' +
+      '<div class="ca-kb-article-content">' + article.content + '</div>';
+  }
+}
+
+/** Back to article list from article view */
+function caKbBackToList() {
+  CA_KB.currentArticleId = null;
+  const listEl = document.getElementById('ca-kb-list');
+  const articleEl = document.getElementById('ca-kb-article');
+  if (listEl) listEl.style.display = '';
+  if (articleEl) articleEl.style.display = 'none';
 }

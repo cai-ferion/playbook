@@ -2391,3 +2391,14 @@
 - [x] Backend: POST /cap-build-assist/generate (AI deliberation generation)
 - [x] NTE wizard Step 1 back button returns to type picker
 - [x] All 569 tests pass
+
+## Knowledge Base — Corrective Actions
+- [x] Extract all violation categories from HR Policy v3.0 (7 categories)
+- [x] Extract CAP reference table (levels, active periods, response windows)
+- [x] Extract process flowchart content (NTE → Explanation → CAP decision)
+- [x] Generate starter FAQ for TLs
+- [x] Build KB data file (ca-knowledge-base.js) with AI-ready chunked content
+- [x] Build KB sidebar UI with collapsible panel, category browsing, article detail
+- [x] Add keyword search across all KB articles
+- [x] Add KB CSS styling matching Corrective Actions design system
+- [x] Add KB toggle button to Corrective Actions filter bar

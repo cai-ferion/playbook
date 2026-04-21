@@ -551,3 +551,386 @@
 .ca-btn.ghost:hover:not(:disabled) {
   background: var(--compass-surface-alt);
 }
+
+
+/* ============================================================
+   KNOWLEDGE BASE SIDEBAR
+   ============================================================ */
+
+/* ---- Toggle Button in Filter Bar ---- */
+.ca-btn-kb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface);
+  color: var(--compass-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.ca-btn-kb:hover {
+  border-color: var(--compass-accent);
+  color: var(--compass-accent);
+  background: var(--compass-accent-dim);
+}
+.ca-btn-kb.active {
+  border-color: var(--compass-accent);
+  color: var(--compass-accent);
+  background: var(--compass-accent-dim);
+}
+
+/* ---- Sidebar Panel ---- */
+.ca-kb-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  max-width: 90vw;
+  height: 100vh;
+  background: var(--compass-surface);
+  border-left: 1px solid var(--compass-border);
+  box-shadow: var(--compass-shadow-xl);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.ca-kb-sidebar.open {
+  transform: translateX(0);
+}
+
+/* ---- Header ---- */
+.ca-kb-header {
+  padding: 18px 18px 0;
+  border-bottom: 1px solid var(--compass-border);
+  flex-shrink: 0;
+}
+.ca-kb-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.ca-kb-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0;
+}
+.ca-kb-title svg {
+  color: var(--compass-accent);
+}
+.ca-kb-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--compass-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ca-kb-close:hover {
+  background: var(--compass-surface-alt);
+  color: var(--compass-text);
+}
+
+/* ---- Search ---- */
+.ca-kb-search-wrapper {
+  position: relative;
+  margin-bottom: 12px;
+}
+.ca-kb-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--compass-text-subtle);
+  pointer-events: none;
+}
+.ca-kb-search-wrapper input {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  font-size: 13px;
+  color: var(--compass-text);
+  background: var(--compass-surface-alt);
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+.ca-kb-search-wrapper input:focus {
+  border-color: var(--compass-accent);
+  background: var(--compass-surface);
+}
+.ca-kb-search-wrapper input::placeholder {
+  color: var(--compass-text-subtle);
+}
+
+/* ---- Category Tabs ---- */
+.ca-kb-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding-bottom: 0;
+  scrollbar-width: none;
+}
+.ca-kb-tabs::-webkit-scrollbar { display: none; }
+.ca-kb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--compass-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.ca-kb-tab:hover {
+  color: var(--compass-text);
+  background: var(--compass-surface-alt);
+}
+.ca-kb-tab.active {
+  color: var(--compass-accent);
+  border-bottom-color: var(--compass-accent);
+}
+.ca-kb-tab-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--compass-text-subtle);
+  background: var(--compass-surface-alt);
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+.ca-kb-tab.active .ca-kb-tab-count {
+  background: var(--compass-accent-dim);
+  color: var(--compass-accent);
+}
+
+/* ---- Body ---- */
+.ca-kb-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px;
+}
+
+/* ---- Article List ---- */
+.ca-kb-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--compass-text-subtle);
+  padding: 12px 0 6px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+  margin-bottom: 4px;
+}
+.ca-kb-group-label:first-child {
+  padding-top: 0;
+}
+.ca-kb-item {
+  padding: 10px 12px;
+  border-radius: var(--compass-radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ca-kb-item:hover {
+  background: var(--compass-surface-alt);
+}
+.ca-kb-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--compass-text);
+  margin-bottom: 4px;
+}
+.ca-kb-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ca-kb-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--compass-text-muted);
+  background: var(--compass-surface-alt);
+  border: 1px solid var(--compass-border-subtle);
+}
+
+/* ---- Empty State ---- */
+.ca-kb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--compass-text-subtle);
+}
+.ca-kb-empty svg {
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+.ca-kb-empty p {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  margin: 0 0 4px;
+}
+.ca-kb-empty span {
+  font-size: 12px;
+}
+
+/* ---- Article View ---- */
+.ca-kb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: var(--compass-surface-alt);
+  color: var(--compass-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 14px;
+  transition: background 0.15s ease;
+}
+.ca-kb-back:hover {
+  background: var(--compass-accent-dim);
+}
+.ca-kb-article-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--compass-text);
+}
+.ca-kb-article-content h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0 0 4px;
+}
+.ca-kb-article-content h5 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+}
+.ca-kb-article-content p {
+  margin: 6px 0;
+}
+
+/* Source citation */
+.kb-source {
+  font-size: 11px;
+  color: var(--compass-text-subtle);
+  font-style: italic;
+  margin: 0 0 12px !important;
+}
+
+/* ---- KB Tables ---- */
+.kb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 8px 0 12px;
+}
+.kb-table thead th {
+  background: var(--compass-surface-alt);
+  color: var(--compass-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--compass-border);
+  position: sticky;
+  top: 0;
+}
+.kb-table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+  vertical-align: top;
+  color: var(--compass-text);
+}
+.kb-table tbody tr:hover {
+  background: var(--compass-surface-alt);
+}
+/* Penalty column styling */
+.kb-table tbody td:last-child {
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+/* ---- KB Lists ---- */
+.kb-list {
+  margin: 6px 0 12px;
+  padding-left: 20px;
+}
+.kb-list li {
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+ol.kb-list {
+  padding-left: 22px;
+}
+
+/* ---- KB Callouts ---- */
+.kb-callout {
+  padding: 10px 14px;
+  border-radius: var(--compass-radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0;
+  border-left: 3px solid;
+}
+.kb-callout-info {
+  background: var(--compass-info-bg);
+  border-left-color: var(--compass-info);
+  color: var(--compass-text);
+}
+.kb-callout-warning {
+  background: var(--compass-warning-bg);
+  border-left-color: var(--compass-warning);
+  color: var(--compass-text);
+}
+.kb-callout-danger {
+  background: var(--compass-danger-bg);
+  border-left-color: var(--compass-danger);
+  color: var(--compass-text);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .ca-kb-sidebar {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
