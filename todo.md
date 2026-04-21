@@ -2473,3 +2473,7 @@
 
 ## Bug Fix — WFM Tag Not Visible in Attendance Table
 - [x] Investigate and fix WFM Tag column not appearing in the Input Portal attendance table
+
+## WFM Tag Mapping Update (April 2026)
+- [x] Update WFM upload parser: time values → "Scheduled", BOJ → "Scheduled", keep WO/PL/ML/LOA/Exit/NH Training as-is
+- [x] Update tests and checkpoint

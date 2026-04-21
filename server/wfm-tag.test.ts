@@ -33,6 +33,12 @@ const indexHtmlContent = fs.readFileSync(indexHtmlPath, "utf-8");
 const adminJsPath = path.resolve(__dirname, "public/js/admin.js");
 const adminJsContent = fs.readFileSync(adminJsPath, "utf-8");
 
+const compactJsPath = path.resolve(__dirname, "public/js/input-compact.js");
+const compactJsContent = fs.readFileSync(compactJsPath, "utf-8");
+
+const redesignCssPath = path.resolve(__dirname, "public/css/input-redesign.css");
+const redesignCssContent = fs.readFileSync(redesignCssPath, "utf-8");
+
 // ============================================================
 // 1. DB Schema
 // ============================================================
@@ -324,5 +330,74 @@ describe("WFM Tag — fetchPaginatedAttendance wfm_tag_in", () => {
   it("passes wfm_tag_in filter param to the server", () => {
     expect(dataJsContent).toContain("filters.wfm_tag_in");
     expect(dataJsContent).toContain("params.set('wfm_tag_in'");
+  });
+});
+
+// ============================================================
+// 12. WFM Tag Mapping Logic (Server-side)
+// ============================================================
+describe("WFM Tag — Upload Mapping Logic", () => {
+  it("defines TIME_PATTERN regex for HH:MM-HH:MM shift times", () => {
+    expect(ioRoutesContent).toContain('const TIME_PATTERN = /^\\d{1,2}:\\d{2}\\s*-\\s*\\d{1,2}:\\d{2}$/');
+  });
+
+  it("defines SCHEDULED_ALIASES set with BOJ", () => {
+    expect(ioRoutesContent).toContain("const SCHEDULED_ALIASES = new Set(['BOJ'])");
+  });
+
+  it("defines mapWfmTag arrow function", () => {
+    expect(ioRoutesContent).toContain('const mapWfmTag = (rawValue: string): string =>');
+  });
+
+  it("maps time patterns to 'Scheduled'", () => {
+    expect(ioRoutesContent).toContain("if (TIME_PATTERN.test(rawValue)) return 'Scheduled'");
+  });
+
+  it("maps BOJ to 'Scheduled'", () => {
+    expect(ioRoutesContent).toContain("if (SCHEDULED_ALIASES.has(rawValue.toUpperCase())) return 'Scheduled'");
+  });
+
+  it("passes through WO, PL, ML, LOA, Exit, NH Training unchanged", () => {
+    // The function returns rawValue for non-time, non-BOJ values
+    expect(ioRoutesContent).toContain('return rawValue; // WO, PL, ML, LOA, Exit, NH Training pass through');
+  });
+
+  it("applies mapWfmTag before inserting into scheduleRecords", () => {
+    expect(ioRoutesContent).toContain('const mappedTag = mapWfmTag(rawValue)');
+    expect(ioRoutesContent).toContain("scheduleRecords.push([ohr, dateStr, mappedTag, now, uploaderName])");
+  });
+});
+
+// ============================================================
+// 13. WFM Tag — Compact View Rendering
+// ============================================================
+describe("WFM Tag — Compact Table Rendering", () => {
+  it("renders WFM Tag chip next to Tag chip in compact row", () => {
+    expect(compactJsContent).toContain('wfm-tag-chip');
+    expect(compactJsContent).toContain('r.wfm_tag');
+  });
+
+  it("renders WFM TAG field in the detail panel", () => {
+    expect(compactJsContent).toContain('WFM TAG');
+    expect(compactJsContent).toContain('wfm-tag-detail');
+  });
+
+  it("compactRefreshRow includes WFM Tag chip", () => {
+    // The refresh function should also render the wfm chip
+    const refreshBlock = compactJsContent.match(/compactRefreshRow[\s\S]*?^\};/m);
+    expect(refreshBlock).not.toBeNull();
+    expect(refreshBlock![0]).toContain('wfm-tag-chip');
+  });
+
+  it("has .wfm-tag-chip CSS styling in input-redesign.css", () => {
+    expect(redesignCssContent).toContain('.wfm-tag-chip');
+  });
+
+  it("has .wfm-tag-detail CSS styling in input-redesign.css", () => {
+    expect(redesignCssContent).toContain('.wfm-tag-detail');
+  });
+
+  it("detail-panel-grid uses 4-column layout", () => {
+    expect(redesignCssContent).toContain('grid-template-columns: 1fr 1fr 1fr 1fr');
   });
 });

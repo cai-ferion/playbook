@@ -4398,6 +4398,16 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
       await db.execute(sql`DELETE FROM io_wfm_schedules WHERE schedule_date = ${d}`);
     }
 
+    // WFM Tag mapping: time patterns (HH:MM-HH:MM) and BOJ → "Scheduled"
+    // Keep as-is: WO, PL, ML, LOA, Exit, NH Training
+    const TIME_PATTERN = /^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$/;
+    const SCHEDULED_ALIASES = new Set(['BOJ']);
+    const mapWfmTag = (rawValue: string): string => {
+      if (TIME_PATTERN.test(rawValue)) return 'Scheduled';
+      if (SCHEDULED_ALIASES.has(rawValue.toUpperCase())) return 'Scheduled';
+      return rawValue; // WO, PL, ML, LOA, Exit, NH Training pass through
+    };
+
     // Parse data rows and build insert records
     const BULK_SIZE = 500;
     let totalInserted = 0;
@@ -4411,9 +4421,10 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
       for (let c = 2; c < row.length && (c - 2) < dateColumns.length; c++) {
         const dateStr = dateColumns[c - 2];
         if (!dateStr) continue;
-        const value = String(row[c] || '').trim();
-        if (!value) continue;
-        scheduleRecords.push([ohr, dateStr, value, now, uploaderName]);
+        const rawValue = String(row[c] || '').trim();
+        if (!rawValue) continue;
+        const mappedTag = mapWfmTag(rawValue);
+        scheduleRecords.push([ohr, dateStr, mappedTag, now, uploaderName]);
 
         // Flush in chunks
         if (scheduleRecords.length >= BULK_SIZE) {
