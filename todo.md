@@ -2494,3 +2494,9 @@
 - [x] Add loading bar / progress indicator to WFM Schedule upload
 - [x] Add loading bar / progress indicator to Billing CSV upload
 - [x] Bump cache versions and test
+
+## Bug Fix — window.currentUserOhr Never Assigned (April 2026)
+- [x] Fix window.currentUserOhr never assigned in app.js — isAdmin() always returned false, silently blocking all admin functions (WFM upload, billing upload, etc.)
+- [x] Set window.currentUserOhr and window.currentUserName in all 3 login paths (loginAsEmployee, WFM login, session restore)
+- [x] Clear window.currentUserOhr on logout
+- [x] Bump app.js cache version

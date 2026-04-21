@@ -384,6 +384,8 @@ async function loginAsEmployee(emp) {
   };
 
   sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+  window.currentUserOhr = currentUser.ohr_id;
+  window.currentUserName = currentUser.full_name;
 
   document.getElementById('auth-page').style.display = 'none';
   document.getElementById('app-container').style.display = 'flex';
@@ -446,6 +448,8 @@ async function handleLogin() {
       permissions: { 'nav.anchor': true, 'anchor.download_csv': true }
     };
     sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
+    window.currentUserOhr = currentUser.ohr_id;
+    window.currentUserName = currentUser.full_name;
     document.getElementById('auth-page').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
     applyNavPermissions(currentUser);
@@ -575,6 +579,8 @@ function stopIdleTimer() {
 function handleLogout(reason) {
   stopIdleTimer();
   currentUser = null;
+  window.currentUserOhr = null;
+  window.currentUserName = null;
   sessionStorage.removeItem('playbook_user');
   appState.records = [];
   appState.originalRecords = [];
@@ -641,6 +647,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (stored) {
     try {
       currentUser = JSON.parse(stored);
+      window.currentUserOhr = currentUser.ohr_id;
+      window.currentUserName = currentUser.full_name;
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
 
