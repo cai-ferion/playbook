@@ -3179,7 +3179,7 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
         PRIMARY KEY (ohr_id, log_date)
       )`);
 
-      const STAGE_BATCH = 500;
+      const STAGE_BATCH = 2000;
       for (let i = 0; i < parsed.length; i += STAGE_BATCH) {
         const chunk = parsed.slice(i, i + STAGE_BATCH);
         const valueSets = chunk.map(r =>
@@ -3190,6 +3190,7 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
               VALUES ${sql.join(valueSets, sql`, `)}
               ON DUPLICATE KEY UPDATE role = VALUES(role)`
         );
+        console.log(`[BILLING CSV] Staged ${Math.min(i + STAGE_BATCH, parsed.length)}/${parsed.length} rows`);
       }
 
       const updateResult: any = await db.execute(
@@ -3203,12 +3204,13 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
       updated = updateResult[0]?.affectedRows ?? 0;
       skipped = parsed.length - updated;
       await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+      console.log(`[BILLING CSV] Attendance updated: ${updated}, skipped: ${skipped}`);
     } catch (batchErr: any) {
       console.error(`[BILLING CSV] Batch update error:`, batchErr.message);
       skipped = parsed.length;
     }
 
-    // 2. Sync latest data back to io_employees
+    // 2. Sync latest data back to io_employees (batch via staging table)
     let employeesSynced = 0;
     try {
       const latestByEmployee = new Map<string, BillingRow>();
@@ -3218,19 +3220,38 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
           latestByEmployee.set(r.ohr_id, r);
         }
       }
-      for (const [ohrId, latest] of Array.from(latestByEmployee.entries())) {
-        const syncResult: any = await db.execute(
-          sql`UPDATE io_employees
-              SET planning_group = ${latest.planning_group},
-                  actual_role = ${latest.role}
-              WHERE ohr_id = ${ohrId}
-                AND (planning_group != ${latest.planning_group} OR actual_role != ${latest.role})`
+      const empEntries = Array.from(latestByEmployee.values());
+      if (empEntries.length > 0) {
+        await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _emp_staging`);
+        await db.execute(sql`CREATE TEMPORARY TABLE _emp_staging (
+          ohr_id VARCHAR(20) NOT NULL PRIMARY KEY,
+          planning_group VARCHAR(100),
+          actual_role VARCHAR(100)
+        )`);
+        const EMP_BATCH = 2000;
+        for (let i = 0; i < empEntries.length; i += EMP_BATCH) {
+          const chunk = empEntries.slice(i, i + EMP_BATCH);
+          const valueSets = chunk.map(r => sql`(${r.ohr_id}, ${r.planning_group}, ${r.role})`);
+          await db.execute(
+            sql`INSERT INTO _emp_staging (ohr_id, planning_group, actual_role)
+                VALUES ${sql.join(valueSets, sql`, `)}
+                ON DUPLICATE KEY UPDATE planning_group = VALUES(planning_group)`
+          );
+        }
+        const empResult: any = await db.execute(
+          sql`UPDATE io_employees e
+              INNER JOIN _emp_staging s ON e.ohr_id = s.ohr_id
+              SET e.planning_group = s.planning_group,
+                  e.actual_role = s.actual_role
+              WHERE e.planning_group != s.planning_group OR e.actual_role != s.actual_role`
         );
-        if ((syncResult[0]?.affectedRows ?? 0) > 0) employeesSynced++;
-      }
-      if (employeesSynced > 0) {
-        const allEmps = await db.select().from(ioEmployees);
-        syncEmployeesToSupabase(allEmps).catch(() => {});
+        employeesSynced = empResult[0]?.affectedRows ?? 0;
+        await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _emp_staging`);
+        console.log(`[BILLING CSV] Employees synced: ${employeesSynced}`);
+        if (employeesSynced > 0) {
+          const allEmps = await db.select().from(ioEmployees);
+          syncEmployeesToSupabase(allEmps).catch(() => {});
+        }
       }
     } catch (syncErr: any) {
       console.error("[BILLING CSV] Employee sync error:", syncErr.message);
@@ -3239,7 +3260,7 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
     // 3. Upsert into io_srt_bill for historical tracking
     let srtBillUpserted = 0;
     try {
-      const SRT_BATCH = 500;
+      const SRT_BATCH = 2000;
       for (let i = 0; i < parsed.length; i += SRT_BATCH) {
         const chunk = parsed.slice(i, i + SRT_BATCH);
         const now = new Date().toISOString();

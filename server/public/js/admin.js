@@ -106,11 +106,15 @@ async function runBillingCsvUpload() {
     progressFill.style.width = '60%';
     progressText.textContent = `Uploading ${dataCount.toLocaleString()} billing rows...`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout for large files
     const resp = await fetch(`${IO_API_BASE}/billing-csv-upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Actor-Ohr': window.currentUserOhr },
-      body: JSON.stringify({ rows })
+      body: JSON.stringify({ rows }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     progressFill.style.width = '100%';
     const data = await resp.json();
 
@@ -389,11 +393,15 @@ async function wfmUploadSchedule() {
     progressFill.style.width = '60%';
     progressText.textContent = `Uploading ${rows.length - 1} employees × ${dateCount} dates...`;
 
+    const wfmController = new AbortController();
+    const wfmTimeoutId = setTimeout(() => wfmController.abort(), 180000); // 3 min timeout
     const resp = await fetch(`${IO_API_BASE}/wfm-schedule-upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Actor-Ohr': window.currentUserOhr },
-      body: JSON.stringify({ rows, uploadedBy: window.currentUserName || window.currentUserOhr })
+      body: JSON.stringify({ rows, uploadedBy: window.currentUserName || window.currentUserOhr }),
+      signal: wfmController.signal
     });
+    clearTimeout(wfmTimeoutId);
     progressFill.style.width = '100%';
     const data = await resp.json();
 

@@ -2500,3 +2500,6 @@
 - [x] Set window.currentUserOhr and window.currentUserName in all 3 login paths (loginAsEmployee, WFM login, session restore)
 - [x] Clear window.currentUserOhr on logout
 - [x] Bump app.js cache version
+
+## Bug Fix — Billing CSV Upload "Unknown Error" (April 2026)
+- [x] Fix billing CSV upload returning "Unknown error" toast (root cause: 10K rows caused HTTP timeout — optimized batch sizes to 2000, employee sync via staging table, added 5-min AbortController timeout on client)
