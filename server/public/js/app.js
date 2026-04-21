@@ -194,10 +194,9 @@ document.addEventListener('click', () => {
 
 let currentUser = null;
 
+// Show a specific auth panel (login or onboarding)
 function showAuthForm(type) {
-  document.getElementById('auth-buttons').style.display = 'none';
-  // All form panels
-  const panels = ['auth-form-signup', 'auth-form-login', 'auth-form-onboarding'];
+  const panels = ['auth-form-login', 'auth-form-onboarding'];
   panels.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -205,64 +204,19 @@ function showAuthForm(type) {
   // Show the requested panel
   const target = document.getElementById('auth-form-' + type);
   if (target) target.style.display = 'block';
-  // Clear errors and nudge
-  const errIds = ['signup-error', 'login-error'];
+  // Clear errors
+  const errIds = ['login-error', 'onboard-error'];
   errIds.forEach(id => { const el = document.getElementById(id); if (el) { el.textContent = ''; el.style.color = ''; } });
-  const nudge = document.getElementById('login-nudge');
-  if (nudge) nudge.style.display = 'none';
-  // Clear fields when not in onboarding flow
-  if (type !== 'onboarding') {
-    const clearIds = ['signup-ohr', 'login-ohr'];
-    clearIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  }
 }
 
-function showAuthButtons() {
-  document.getElementById('auth-buttons').style.display = 'flex';
-  const panels = ['auth-form-signup', 'auth-form-login', 'auth-form-onboarding'];
-  panels.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+// Cancel onboarding — return to login form
+function handleOnboardingCancel() {
   window._onboardOhr = null;
+  showAuthForm('login');
 }
 
 // Temporary storage for onboarding flow
 window._onboardOhr = null;
-window._signupType = null; // kept for backward compat if referenced elsewhere
-
-// Unified Sign Up: validate OHR exists and is active, then route to onboarding form
-async function handleSignUp() {
-  const ohr = document.getElementById('signup-ohr').value.trim();
-  const errorEl = document.getElementById('signup-error');
-  errorEl.textContent = '';
-  errorEl.style.color = '';
-
-  if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
-
-  try {
-    const empResp = await fetch(`${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`);
-    const empData = await empResp.json();
-
-    if (!Array.isArray(empData) || empData.length === 0) {
-      errorEl.textContent = 'OHR ID not found. Please check your ID.';
-      return;
-    }
-
-    const emp = empData[0];
-    if (emp.employement_status !== 'Active') {
-      errorEl.textContent = 'OHR ID not found. Please check your ID.';
-      return;
-    }
-
-    // OHR is valid — route to onboarding form to complete profile
-    window._onboardOhr = ohr;
-    showAuthForm('onboarding');
-
-  } catch (err) {
-    errorEl.textContent = 'Network error. Please try again.';
-  }
-}
 
 
 
@@ -356,6 +310,7 @@ async function handleOnboardingSubmit() {
           locker_number: lockerNumber || null,
           badge_id: badgeId,
           badge_serial: badgeSerial,
+          employement_status: 'Active',
           _actor_ohr: ohr,
           _actor_name: fullName,
         })
@@ -363,7 +318,7 @@ async function handleOnboardingSubmit() {
     );
 
     if (!updateResp.ok) {
-      errorEl.textContent = 'Failed to create account. Please try again.';
+      errorEl.textContent = 'Failed to save profile. Please try again.';
       return;
     }
 
@@ -526,28 +481,16 @@ async function handleLogin() {
 
     const emp = empData[0];
 
-    if (emp.employement_status !== 'Active') {
+    // Only Active and Onboarding employees can access the platform
+    if (emp.employement_status !== 'Active' && emp.employement_status !== 'Onboarding') {
       errorEl.textContent = 'Access denied. Only active employees can access the platform.';
       return;
     }
 
-    // Incomplete profile nudge: if key onboarding fields are missing, offer to complete profile
-    const nudgeEl = document.getElementById('login-nudge');
-    if (nudgeEl) nudgeEl.style.display = 'none'; // reset on each attempt
-    if (!emp.full_name || !emp.last_name || !emp.given_name) {
-      errorEl.textContent = 'Your profile is not yet complete. Please finish onboarding first.';
-      if (nudgeEl) {
-        nudgeEl.style.display = 'block';
-        const nudgeLink = document.getElementById('login-nudge-link');
-        if (nudgeLink) {
-          nudgeLink.onclick = (e) => {
-            e.preventDefault();
-            window._onboardOhr = ohr;
-            nudgeEl.style.display = 'none';
-            showAuthForm('onboarding');
-          };
-        }
-      }
+    // Onboarding gate: redirect to profile completion form
+    if (emp.employement_status === 'Onboarding' || !emp.full_name || !emp.last_name || !emp.given_name) {
+      window._onboardOhr = ohr;
+      showAuthForm('onboarding');
       return;
     }
 
@@ -639,10 +582,9 @@ function handleLogout(reason) {
   if (typeof billingDropdownInitialized !== 'undefined') billingDropdownInitialized = false;
   document.getElementById('app-container').style.display = 'none';
   document.getElementById('auth-page').style.display = 'flex';
-  showAuthButtons();
+  showAuthForm('login');
   // Show timeout message on the login form if auto-logged out
   if (reason === 'timeout') {
-    showAuthForm('login');
     const errorEl = document.getElementById('login-error');
     if (errorEl) {
       errorEl.style.color = 'var(--warning, #f59e0b)';
@@ -781,9 +723,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loginOhr = document.getElementById('login-ohr');
   if (loginOhr) loginOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
 
-  // Enter key support for signup
-  const signupOhr = document.getElementById('signup-ohr');
-  if (signupOhr) signupOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSignUp(); });
+
 });
 
 function initMultiSelects() {

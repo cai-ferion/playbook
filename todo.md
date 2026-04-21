@@ -2424,3 +2424,13 @@
 - [x] Verify Disputes Area remains hidden from Agents, visible to all non-agents
 - [x] Verify Coaching Profile visible to all with correct data scoping
 - [x] Verify Document Build Assist accessible to TLs + Managers only
+
+## Remove Sign Up + Onboarding Flow (April 2026)
+- [x] Remove Sign Up button and flow from landing page
+- [x] Simplify landing page to single Login with OHR ID input
+- [x] Add help text: "Enter your OHR ID to access Playbook"
+- [x] Build onboarding profile completion page (reused existing form)
+- [x] Add server-side onboarding gate: redirect Onboarding users to profile form
+- [x] Auto-flip employment_status from Onboarding to Active on form submission
+- [x] Gate Onboarding users from accessing main app until form is completed
+- [x] Clean up any remaining Sign Up references in codebase

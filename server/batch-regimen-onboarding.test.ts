@@ -299,12 +299,18 @@ describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", (
     });
   });
 
-  // ===== Onboarding Signup Flow =====
-  describe("Onboarding Signup Flow", () => {
-    it("should have unified signup form with OHR ID field", () => {
-      expect(indexHtml).toContain("auth-form-signup");
-      expect(indexHtml).toContain("signup-ohr");
-      expect(indexHtml).toContain("handleSignUp()");
+  // ===== Onboarding Login Flow (Sign Up removed) =====
+  describe("Onboarding Login Flow", () => {
+    it("should NOT have a separate signup form — single login only", () => {
+      expect(indexHtml).not.toContain("auth-form-signup");
+      expect(indexHtml).not.toContain("signup-ohr");
+      expect(indexHtml).not.toContain("handleSignUp()");
+    });
+
+    it("should have a single login form shown directly", () => {
+      expect(indexHtml).toContain("auth-form-login");
+      expect(indexHtml).toContain("login-ohr");
+      expect(indexHtml).toContain("handleLogin()");
     });
 
     it("should NOT have old trainee/production choice screen", () => {
