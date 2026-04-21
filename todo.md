@@ -2434,3 +2434,13 @@
 - [x] Auto-flip employment_status from Onboarding to Active on form submission
 - [x] Gate Onboarding users from accessing main app until form is completed
 - [x] Clean up any remaining Sign Up references in codebase
+
+## Login Page UI/UX Overhaul (April 2026)
+- [x] Redesign login page layout (split-panel: hero left + form right)
+- [x] New typography, color treatment, and visual hierarchy
+- [x] Animated/polished mascot presentation (140px with drop-shadow)
+- [x] Modernize input fields, button styles, and micro-interactions
+- [x] Redesign onboarding form (sectioned grid layout with scrollable area)
+- [x] Add subtle background texture (grid overlay, floating orb, radial gradients)
+- [x] Ensure responsive design (stacks vertically below 900px)
+- [x] Maintain all functional elements (OHR login, onboarding gate, WFM intercept)

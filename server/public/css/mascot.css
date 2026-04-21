@@ -44,35 +44,8 @@
 /* ============================================================
    LOGIN PAGE — Waving Fox
    ============================================================ */
-.auth-mascot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.auth-mascot .sprite-mascot {
-  width: 120px;
-  height: 120px;
-  background-image: var(--sprite-wave);
-  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.2));
-  animation: spritePingPong 2s steps(1) infinite;
-}
-
-/* Hide the old <img> tag if still present */
-.auth-mascot img:not(.sprite-mascot) {
-  display: none;
-}
-
-.auth-mascot .mascot-greeting {
-  font-size: 13px;
-  color: var(--fg-muted);
-  font-weight: 500;
-  margin-top: 4px;
-  letter-spacing: 0.3px;
-  opacity: 0;
-  animation: mascotFadeIn 0.6s ease-out 0.3s forwards;
-}
+/* auth-hero-mascot styles are now in styles.css (split-panel layout) */
+/* Keep mascotFadeIn for potential reuse */
 
 @keyframes mascotFadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -219,7 +192,7 @@
    ACCESSIBILITY — Reduce motion
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .auth-mascot .sprite-mascot,
+  .auth-hero-mascot .sprite-mascot,
   .loading-overlay .sprite-mascot,
   .progress-container .sprite-mascot,
   .mascot-empty-state .sprite-mascot,
