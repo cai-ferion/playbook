@@ -95,11 +95,30 @@ const ROSTER = {
 
 // ===== Filter Definitions =====
 // Build filter fields from ALL_COLUMNS: multi-select for text, date_range for dates, search for text search
+// Name columns replaced by a single Full Name filter pill
+const REPLACED_NAME_KEYS = new Set(['last_name', 'given_name', 'middle_name', 'suffix', 'billing_name', 'srt_name']);
+
 function buildFilterFields() {
   const fields = [];
   const visibleCols = ROSTER.getVisibleColumns();
+  let fullNameAdded = false;
   visibleCols.forEach(col => {
-    if (col.key === 'ohr_id' || col.key === 'full_name') return; // handled by search
+    if (col.key === 'ohr_id') return; // handled by search
+    // Collapse the 6 name columns into a single Full Name filter
+    if (REPLACED_NAME_KEYS.has(col.key)) {
+      if (!fullNameAdded) {
+        fields.push({ key: 'full_name', label: 'Full Name', type: 'multi' });
+        fullNameAdded = true;
+      }
+      return;
+    }
+    if (col.key === 'full_name') {
+      if (!fullNameAdded) {
+        fields.push({ key: 'full_name', label: 'Full Name', type: 'multi' });
+        fullNameAdded = true;
+      }
+      return;
+    }
     if (col.isDate) {
       fields.push({ key: col.key, label: col.label, type: 'date_range' });
     } else {

@@ -2444,3 +2444,11 @@
 - [x] Add subtle background texture (grid overlay, floating orb, radial gradients)
 - [x] Ensure responsive design (stacks vertically below 900px)
 - [x] Maintain all functional elements (OHR login, onboarding gate, WFM intercept)
+
+## Data Cleanup — Input Portal (April 2026)
+- [x] Fix attendance snap_status: backfilled from srt_status (42,692 records fixed — 42,026→Production, 629→Exit, 37→Inactive)
+- [x] Reverted io_employees.employement_status back to "Active" (389 employees restored)
+- [x] Remove all attendance records for Castro, Sarrah Jane Minguez (OHR 740046018, 151 records deleted)
+
+## Regimen Filter Simplification
+- [x] Replace Last Name, Given Name, Middle Name, Suffix, Billing Name, SRT Name filters with single Full Name filter
