@@ -2462,3 +2462,11 @@
 - [x] Add read-only WFM Tag column to Input Portal table
 - [x] Add WFM Tag filter to Input Portal filter bar
 - [x] Test end-to-end: upload CSV → verify WFM Tag appears in Input Portal
+
+## WFM Tag Column Position & Slim Endpoint (April 2026)
+- [x] Move WFM Tag column to sit immediately after Tag in TABLE_COLUMNS
+- [x] Move WFM Tag filter to sit immediately after Tag in OMNIBAR_FILTER_FIELDS
+- [x] Build slim attendance endpoint with field projection (return only columns needed by Input Portal)
+- [x] Update frontend to use slim endpoint for faster load times
+- [x] Bump cache versions
+- [x] Tests and checkpoint

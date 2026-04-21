@@ -769,6 +769,7 @@ async function saveRecords(edits) {
 async function fetchPaginatedAttendance({ startDate, endDate, limit = 50, offset = 0, sortBy, sortDir, filters = {} }) {
   const params = new URLSearchParams({
     paginated: 'true',
+    slim: 'true',
     limit: String(limit),
     offset: String(offset),
     exclude_managers: 'true',
@@ -787,6 +788,7 @@ async function fetchPaginatedAttendance({ startDate, endDate, limit = 50, offset
   if (filters.status_in) params.set('status_in', filters.status_in);
   if (filters.shift_time_in) params.set('shift_time_in', filters.shift_time_in);
   if (filters.role_in) params.set('role_in', filters.role_in);
+  if (filters.wfm_tag_in) params.set('wfm_tag_in', filters.wfm_tag_in);
   if (filters.blanks_only) params.set('blanks_only', 'true');
 
   const resp = await fetch(`${IO_API_BASE}/attendance?${params}`);

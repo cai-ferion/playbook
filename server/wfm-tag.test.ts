@@ -250,7 +250,7 @@ describe("WFM Tag — Admin Tools Upload UI", () => {
 // ============================================================
 describe("WFM Tag — Cache Busting", () => {
   it("data.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("data.js?v=105");
+    expect(indexHtmlContent).toContain("data.js?v=106");
   });
 
   it("app.js cache version is bumped", () => {
@@ -267,5 +267,62 @@ describe("WFM Tag — Cache Busting", () => {
 
   it("styles.css cache version is bumped", () => {
     expect(indexHtmlContent).toContain("styles.css?v=133");
+  });
+});
+
+// ============================================================
+// 10. Slim Attendance Endpoint (Field Projection)
+// ============================================================
+describe("Slim Attendance Endpoint — Field Projection", () => {
+  it("accepts 'slim' query parameter in GET /attendance", () => {
+    expect(ioRoutesContent).toContain("slim");
+  });
+
+  it("defines slimSelect projection with exactly the columns normalizeRecord needs", () => {
+    expect(ioRoutesContent).toContain('const slimSelect = slim === "true"');
+    // Verify all 19 projected columns are present
+    const slimColumns = [
+      'ioAttendance.id', 'ioAttendance.ohr_id', 'ioAttendance.log_date',
+      'ioAttendance.tag', 'ioAttendance.upl_reason', 'ioAttendance.remarks',
+      'ioAttendance.ot_hours', 'ioAttendance.snap_full_name', 'ioAttendance.snap_supervisor',
+      'ioAttendance.snap_planning_group', 'ioAttendance.snap_shift_time',
+      'ioAttendance.snap_actual_role', 'ioAttendance.snap_status',
+      'ioAttendance.is_locked', 'ioAttendance.role', 'ioAttendance.planning_group',
+      'ioAttendance.internal_role', 'ioAttendance.internal_planning_group',
+      'ioAttendance.wfm_tag',
+    ];
+    for (const col of slimColumns) {
+      expect(ioRoutesContent).toContain(col);
+    }
+  });
+
+  it("excludes created_at, locked_at, snap_billing_name, actual_vs_projection from slim projection", () => {
+    // Extract the slimSelect block
+    const slimBlock = ioRoutesContent.match(/const slimSelect = slim[\s\S]*?\} : undefined;/);
+    expect(slimBlock).not.toBeNull();
+    const block = slimBlock![0];
+    expect(block).not.toContain('created_at');
+    expect(block).not.toContain('locked_at');
+    expect(block).not.toContain('snap_billing_name');
+    expect(block).not.toContain('actual_vs_projection');
+  });
+
+  it("uses slimSelect when slim=true, falls back to full select otherwise", () => {
+    expect(ioRoutesContent).toContain('db.select(slimSelect).from(ioAttendance)');
+    expect(ioRoutesContent).toContain('db.select().from(ioAttendance)');
+  });
+
+  it("frontend fetchPaginatedAttendance passes slim=true", () => {
+    expect(dataJsContent).toContain("slim: 'true'");
+  });
+});
+
+// ============================================================
+// 11. WFM Tag Filter — Frontend Data Layer
+// ============================================================
+describe("WFM Tag — fetchPaginatedAttendance wfm_tag_in", () => {
+  it("passes wfm_tag_in filter param to the server", () => {
+    expect(dataJsContent).toContain("filters.wfm_tag_in");
+    expect(dataJsContent).toContain("params.set('wfm_tag_in'");
   });
 });

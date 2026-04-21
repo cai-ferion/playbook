@@ -346,7 +346,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
             agent_in, flm_in, planning_group_in,
             status_in, shift_time_in, role_in, wfm_tag_in, blanks_only,
             // Server-side sort & pagination
-            sort_by, sort_dir, paginated, exclude_managers } = req.query;
+            sort_by, sort_dir, paginated, exclude_managers, slim } = req.query;
 
     const conditions: any[] = [];
     // Exclude Managers from attendance results (Batch 124) — uses cached set instead of correlated subquery
@@ -414,7 +414,32 @@ router.get("/attendance", async (req: Request, res: Response) => {
       const col = sortColMap[String(sort_by || 'log_date')] || ioAttendance.log_date;
       const dir = String(sort_dir || 'asc').toLowerCase() === 'desc' ? desc : asc;
 
-      let q = db.select().from(ioAttendance);
+      // Slim projection: return only columns needed by Input Portal normalizeRecord
+      const slimSelect = slim === "true" ? {
+        id: ioAttendance.id,
+        ohr_id: ioAttendance.ohr_id,
+        log_date: ioAttendance.log_date,
+        tag: ioAttendance.tag,
+        upl_reason: ioAttendance.upl_reason,
+        remarks: ioAttendance.remarks,
+        ot_hours: ioAttendance.ot_hours,
+        snap_full_name: ioAttendance.snap_full_name,
+        snap_supervisor: ioAttendance.snap_supervisor,
+        snap_planning_group: ioAttendance.snap_planning_group,
+        snap_shift_time: ioAttendance.snap_shift_time,
+        snap_actual_role: ioAttendance.snap_actual_role,
+        snap_status: ioAttendance.snap_status,
+        is_locked: ioAttendance.is_locked,
+        role: ioAttendance.role,
+        planning_group: ioAttendance.planning_group,
+        internal_role: ioAttendance.internal_role,
+        internal_planning_group: ioAttendance.internal_planning_group,
+        wfm_tag: ioAttendance.wfm_tag,
+      } : undefined;
+
+      let q = slimSelect
+        ? db.select(slimSelect).from(ioAttendance)
+        : db.select().from(ioAttendance);
       if (where) q = q.where(where) as any;
       const rows = await (q as any)
         .orderBy(dir(col), asc(ioAttendance.ohr_id))
