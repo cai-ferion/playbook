@@ -24,77 +24,128 @@ function escapeHtml(str) {
 
 // ===== Locked Out Accounts (REMOVED — password system removed) =====
 
-// ===== Billing Data Sync from Google Sheet =====
+// ===== Billing CSV Upload =====
 
-async function runBillingSync() {
+// Enable upload button when a billing CSV file is selected
+document.addEventListener('DOMContentLoaded', () => {
+  const csvInput = document.getElementById('billing-csv-input');
+  const uploadBtn = document.getElementById('billing-upload-btn');
+  if (csvInput && uploadBtn) {
+    csvInput.addEventListener('change', () => {
+      uploadBtn.disabled = !csvInput.files || csvInput.files.length === 0;
+    });
+  }
+  // Load billing upload status on page load if admin
+  setTimeout(() => {
+    if (typeof isAdmin === 'function' && isAdmin()) {
+      loadBillingUploadStatus();
+    }
+  }, 2000);
+});
+
+function billingParseCSV(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  let row = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < text.length && text[i + 1] === '"') { current += '"'; i++; }
+        else { inQuotes = false; }
+      } else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(current.trim()); current = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n') i++;
+        row.push(current.trim());
+        if (row.some(c => c !== '')) rows.push(row);
+        row = []; current = '';
+      } else { current += ch; }
+    }
+  }
+  row.push(current.trim());
+  if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+
+async function runBillingCsvUpload() {
   if (!isAdmin()) return;
+  const fileInput = document.getElementById('billing-csv-input');
+  const btn = document.getElementById('billing-upload-btn');
+  const progressEl = document.getElementById('billing-upload-progress');
+  const progressFill = document.getElementById('billing-upload-progress-fill');
+  const progressText = document.getElementById('billing-upload-progress-text');
+  const resultEl = document.getElementById('billing-upload-result');
 
-  const btn = document.getElementById('billing-sync-btn');
-  const progressEl = document.getElementById('billing-sync-progress');
-  const progressFill = document.getElementById('billing-sync-progress-fill');
-  const progressText = document.getElementById('billing-sync-progress-text');
-  const resultEl = document.getElementById('billing-sync-result');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast('Please select a CSV file first.', 'warning'); return;
+  }
+  const file = fileInput.files[0];
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    showToast('Please select a .csv file.', 'warning'); return;
+  }
 
   btn.disabled = true;
-  btn.innerHTML = `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;animation:spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-    Syncing...
-  `;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;animation:spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Uploading...';
   progressEl.style.display = 'flex';
-  progressFill.style.width = '30%';
-  progressText.textContent = 'Reading Google Sheet and updating attendance rows...';
+  progressFill.style.width = '20%';
+  progressText.textContent = 'Reading CSV file...';
   resultEl.style.display = 'none';
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/billing-sheet-sync`, {
+    const text = await file.text();
+    progressFill.style.width = '40%';
+    progressText.textContent = 'Parsing CSV data...';
+    const rows = billingParseCSV(text);
+    if (rows.length < 2) throw new Error('CSV must have at least a header row and one data row.');
+    const dataCount = rows.length - 1;
+
+    progressFill.style.width = '60%';
+    progressText.textContent = `Uploading ${dataCount.toLocaleString()} billing rows...`;
+
+    const resp = await fetch(`${IO_API_BASE}/billing-csv-upload`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Actor-Ohr': window.currentUserOhr
-      }
+      headers: { 'Content-Type': 'application/json', 'X-Actor-Ohr': window.currentUserOhr },
+      body: JSON.stringify({ rows })
     });
-
     progressFill.style.width = '100%';
-
     const data = await resp.json();
 
     if (resp.ok && data.success) {
       progressText.textContent = 'Complete!';
       resultEl.className = 'admin-result success';
-      resultEl.textContent = `Sync complete: ${data.totalSheetRows} sheet rows processed, ${data.updated} attendance rows updated, ${data.skipped} skipped (no match), ${data.employeesSynced || 0} employees updated. Duration: ${data.durationMs}ms.`;
+      resultEl.textContent = `Upload complete: ${data.parsed.toLocaleString()} rows parsed, ${data.updated.toLocaleString()} attendance rows updated, ${data.skipped.toLocaleString()} skipped (no match), ${data.employeesSynced || 0} employees updated, ${data.srtBillUpserted || 0} SRT bill entries. Duration: ${data.durationMs}ms.`;
       resultEl.style.display = 'block';
-      showToast('Billing data synced successfully.', 'success');
-      // Refresh the last sync info
-      loadBillingSyncStatus();
+      showToast('Billing data uploaded successfully.', 'success');
+      loadBillingUploadStatus();
     } else {
       progressText.textContent = 'Failed';
       resultEl.className = 'admin-result warning';
-      resultEl.textContent = data.error || data.message || 'Sync failed.';
+      resultEl.textContent = data.error || 'Upload failed.';
       resultEl.style.display = 'block';
-      showToast('Billing sync failed.', 'error');
+      showToast('Billing upload failed: ' + (data.error || 'Unknown error'), 'error');
     }
   } catch (err) {
     progressFill.style.width = '100%';
     progressText.textContent = 'Error';
     resultEl.className = 'admin-result warning';
-    resultEl.textContent = 'Network error: ' + err.message;
+    resultEl.textContent = 'Error: ' + err.message;
     resultEl.style.display = 'block';
-    showToast('Billing sync error: ' + err.message, 'error');
+    showToast('Billing upload error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      Sync from Sheet
-    `;
-    setTimeout(() => {
-      progressEl.style.display = 'none';
-    }, 2000);
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload CSV';
+    fileInput.value = '';
+    setTimeout(() => { progressEl.style.display = 'none'; }, 3000);
   }
 }
 
-async function loadBillingSyncStatus() {
-  const statusEl = document.getElementById('billing-sync-status');
-  const lastEl = document.getElementById('billing-sync-last');
+async function loadBillingUploadStatus() {
+  const statusEl = document.getElementById('billing-upload-status');
+  const lastEl = document.getElementById('billing-upload-last');
   if (!statusEl || !lastEl) return;
 
   try {
@@ -104,16 +155,15 @@ async function loadBillingSyncStatus() {
     if (!resp.ok) return;
     const log = await resp.json();
 
-    // Find the latest billing sync log
-    if (log && log.sync_type === 'billing_sheet') {
+    if (log && (log.sync_type === 'billing_csv' || log.sync_type === 'billing_sheet')) {
       const ts = new Date(log.completed_at || log.started_at);
       const timeAgo = getTimeAgo(ts);
-      statusEl.textContent = log.status === 'success' ? 'Last sync OK' : 'Last sync failed';
+      statusEl.textContent = log.status === 'success' ? 'Last upload OK' : 'Last upload failed';
       statusEl.style.background = log.status === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
       statusEl.style.color = log.status === 'success' ? '#22c55e' : '#ef4444';
-      lastEl.textContent = `Last synced: ${ts.toLocaleString()} (${timeAgo})`;
+      lastEl.textContent = `Last uploaded: ${ts.toLocaleString()} (${timeAgo})`;
     } else {
-      lastEl.textContent = 'No billing sync has been run yet.';
+      lastEl.textContent = 'No billing data has been uploaded yet.';
     }
   } catch {
     // Silently fail — non-critical

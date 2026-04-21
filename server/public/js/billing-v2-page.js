@@ -187,33 +187,22 @@ function openBillingV2Drilldown(index) {
   tbody.innerHTML = '';
 
   if (!dd.days || dd.days.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);padding:20px;">No daily data available for this combination.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px;">No daily data available for this combination.</td></tr>';
   } else {
     for (const day of dd.days) {
       const tr = document.createElement('tr');
-      const isProjection = day.actual_vs_projection === 'Projection';
-      const apBadge = isProjection
-        ? '<span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">P</span>'
-        : '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">A</span>';
-
       // Format date nicely
       const d = new Date(day.date + 'T00:00:00Z');
       const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
       tr.innerHTML = `
         <td>${dateLabel}</td>
-        <td style="text-align:center;">${apBadge}</td>
         <td style="text-align:center;">${day.production_hc}</td>
         <td style="text-align:center;">${day.present_hc}</td>
         <td style="text-align:center;">${day.delivered_hours}</td>
         <td style="text-align:center;">${day.ot_hours}</td>
         <td style="text-align:center;font-weight:600;">${day.total_payload}</td>
       `;
-
-      if (isProjection) {
-        tr.style.opacity = '0.7';
-        tr.style.fontStyle = 'italic';
-      }
 
       tbody.appendChild(tr);
     }

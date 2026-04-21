@@ -2477,3 +2477,11 @@
 ## WFM Tag Mapping Update (April 2026)
 - [x] Update WFM upload parser: time values → "Scheduled", BOJ → "Scheduled", keep WO/PL/ML/LOA/Exit/NH Training as-is
 - [x] Update tests and checkpoint
+
+## PL Tag Restriction Removal + Billing CSV Upload + Remove actual_vs_projection (April 2026)
+- [x] Remove PL tag restriction — all Input Portal users can tag PL (not just Managers/740045023/740044909)
+- [x] Remove actual_vs_projection column from schema, queries, and all frontend references
+- [x] Build billing CSV upload endpoint (large file support, YYYY-DD-MM date parsing, chunked inserts)
+- [x] Build billing CSV upload Admin UI
+- [x] Disable/remove G Sheet billing sync (replaced with CSV upload, legacy endpoint kept for backward compat)
+- [x] Tests and checkpoint

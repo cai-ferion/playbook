@@ -2433,9 +2433,9 @@ router.post("/productivity-hours/upload", async (req: Request, res: Response) =>
 
 /**
  * POST /api/io/srt-bill-upload
- * Accepts JSON body: { rows: Array<{date, ohr, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group}> }
+ * Accepts JSON body: { rows: Array<{date, ohr, srt_id, billing_name, srt_status, role, planning_group}> }
  * Upserts into io_srt_bill by (date, ohr_id).
- * Syncs latest Actuals planning_group + role back to io_employees.
+ * Syncs latest planning_group + role back to io_employees.
  */
 router.post("/srt-bill-upload", async (req: Request, res: Response) => {
   try {
@@ -2464,7 +2464,6 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
           String(r.srt_id || '').trim(),
           String(r.billing_name || '').trim(),
           String(r.srt_status || '').trim(),
-          String(r.actual_vs_projection || '').trim(),
           String(r.role || '').trim(),
           normalizedPg,
           now
@@ -2474,15 +2473,14 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
 
       // Build bulk INSERT using drizzle sql tagged template with sql.join
       const valueSets = validRows.map(r =>
-        sql`(${r[0]}, ${r[1]}, ${r[2]}, ${r[3]}, ${r[4]}, ${r[5]}, ${r[6]}, ${r[7]}, ${r[8]})`
+        sql`(${r[0]}, ${r[1]}, ${r[2]}, ${r[3]}, ${r[4]}, ${r[5]}, ${r[6]}, ${r[7]})`
       );
-      const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group, created_at)
+      const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, role, planning_group, created_at)
         VALUES ${sql.join(valueSets, sql`, `)}
         ON DUPLICATE KEY UPDATE
           srt_id = VALUES(srt_id),
           billing_name = VALUES(billing_name),
           srt_status = VALUES(srt_status),
-          actual_vs_projection = VALUES(actual_vs_projection),
           role = VALUES(role),
           planning_group = VALUES(planning_group),
           created_at = VALUES(created_at)`;
@@ -2501,10 +2499,9 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
               INNER JOIN (
                 SELECT ohr_id, role, planning_group
                 FROM io_srt_bill
-                WHERE actual_vs_projection = 'Actuals'
-                  AND date = (
+                WHERE date = (
                     SELECT MAX(s2.date) FROM io_srt_bill s2
-                    WHERE s2.ohr_id = io_srt_bill.ohr_id AND s2.actual_vs_projection = 'Actuals'
+                    WHERE s2.ohr_id = io_srt_bill.ohr_id
                   )
               ) latest ON e.ohr_id = latest.ohr_id
               SET e.planning_group = latest.planning_group,
@@ -2540,9 +2537,7 @@ router.get("/srt-bill/summary", async (req: Request, res: Response) => {
             MIN(date) as min_date,
             MAX(date) as max_date,
             COUNT(DISTINCT ohr_id) as unique_employees,
-            COUNT(*) as total_rows,
-            SUM(CASE WHEN actual_vs_projection = 'Actuals' THEN 1 ELSE 0 END) as actuals_count,
-            SUM(CASE WHEN actual_vs_projection = 'Projection' THEN 1 ELSE 0 END) as projection_count
+            COUNT(*) as total_rows
           FROM io_srt_bill`
     );
     const rows = Array.isArray(result[0]) ? result[0] : result;
@@ -3094,11 +3089,241 @@ router.get("/sync-log/latest", async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// Billing CSV Upload (replaces G Sheet sync)
+// ============================================================
+
 /**
- * POST /api/io/billing-sheet-sync
+ * POST /api/io/billing-csv-upload
+ * Accepts JSON body: { rows: string[][] } — raw CSV rows including header.
+ * Columns: date, ohr, srt_id, billing_name, srt_status, role, planning_group
+ * Date format from CSV: YYYY-DD-MM → converted to YYYY-MM-DD.
+ * Updates io_attendance, io_srt_bill, and io_employees.
+ * Admin-only.
+ */
+router.post("/billing-csv-upload", async (req: Request, res: Response) => {
+  const actorOhr = String(req.headers["x-actor-ohr"] || req.headers["x-user-ohr"] || "").trim();
+  if (!ADMIN_OHRS.includes(actorOhr)) {
+    return res.status(403).json({ error: "Admin only" });
+  }
+  const startTime = Date.now();
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    const { rows: csvRows } = req.body;
+    if (!csvRows || !Array.isArray(csvRows) || csvRows.length < 2) {
+      return res.status(400).json({ error: "CSV must have at least a header row and one data row." });
+    }
+
+    // Skip header row
+    const dataRows = csvRows.slice(1);
+
+    // Parse date: YYYY-DD-MM → YYYY-MM-DD
+    const parseBillingDate = (raw: string): string | null => {
+      const parts = raw.split("-");
+      if (parts.length !== 3) return null;
+      const [yyyy, dd, mm] = parts;
+      const m = parseInt(mm, 10);
+      const d = parseInt(dd, 10);
+      if (isNaN(m) || isNaN(d) || m < 1 || m > 12 || d < 1 || d > 31) return null;
+      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    };
+
+    interface BillingRow {
+      log_date: string;
+      ohr_id: string;
+      srt_id: string;
+      billing_name: string;
+      srt_status: string;
+      role: string;
+      planning_group: string;
+    }
+
+    const parsed: BillingRow[] = [];
+    let parseErrors = 0;
+    for (const row of dataRows) {
+      if (!Array.isArray(row) || row.length < 7) { parseErrors++; continue; }
+      const logDate = parseBillingDate(String(row[0] || "").trim());
+      const ohrId = String(row[1] || "").trim();
+      if (!logDate || !ohrId) { parseErrors++; continue; }
+      parsed.push({
+        log_date: logDate,
+        ohr_id: ohrId,
+        srt_id: String(row[2] || "").trim(),
+        billing_name: String(row[3] || "").trim(),
+        srt_status: String(row[4] || "").trim(),
+        role: String(row[5] || "").trim(),
+        planning_group: normalizePg(String(row[6] || "").trim()),
+      });
+    }
+
+    if (parsed.length === 0) {
+      return res.status(400).json({ error: `No valid rows parsed. ${parseErrors} rows had errors.` });
+    }
+
+    console.log(`[BILLING CSV] Parsed ${parsed.length} rows (${parseErrors} errors)`);
+
+    // 1. Batch update io_attendance via staging table + UPDATE JOIN
+    let updated = 0;
+    let skipped = 0;
+    try {
+      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+      await db.execute(sql`CREATE TEMPORARY TABLE _billing_staging (
+        ohr_id VARCHAR(20) NOT NULL,
+        log_date VARCHAR(30) NOT NULL,
+        role VARCHAR(100),
+        planning_group VARCHAR(100),
+        billing_name VARCHAR(255),
+        srt_status VARCHAR(50),
+        PRIMARY KEY (ohr_id, log_date)
+      )`);
+
+      const STAGE_BATCH = 500;
+      for (let i = 0; i < parsed.length; i += STAGE_BATCH) {
+        const chunk = parsed.slice(i, i + STAGE_BATCH);
+        const valueSets = chunk.map(r =>
+          sql`(${r.ohr_id}, ${r.log_date}, ${r.role}, ${r.planning_group}, ${r.billing_name}, ${r.srt_status})`
+        );
+        await db.execute(
+          sql`INSERT INTO _billing_staging (ohr_id, log_date, role, planning_group, billing_name, srt_status)
+              VALUES ${sql.join(valueSets, sql`, `)}
+              ON DUPLICATE KEY UPDATE role = VALUES(role)`
+        );
+      }
+
+      const updateResult: any = await db.execute(
+        sql`UPDATE io_attendance a
+            INNER JOIN _billing_staging s ON a.ohr_id = s.ohr_id AND a.log_date = s.log_date
+            SET a.role = s.role,
+                a.planning_group = s.planning_group,
+                a.snap_billing_name = s.billing_name,
+                a.snap_status = s.srt_status`
+      );
+      updated = updateResult[0]?.affectedRows ?? 0;
+      skipped = parsed.length - updated;
+      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+    } catch (batchErr: any) {
+      console.error(`[BILLING CSV] Batch update error:`, batchErr.message);
+      skipped = parsed.length;
+    }
+
+    // 2. Sync latest data back to io_employees
+    let employeesSynced = 0;
+    try {
+      const latestByEmployee = new Map<string, BillingRow>();
+      for (const r of parsed) {
+        const existing = latestByEmployee.get(r.ohr_id);
+        if (!existing || r.log_date > existing.log_date) {
+          latestByEmployee.set(r.ohr_id, r);
+        }
+      }
+      for (const [ohrId, latest] of Array.from(latestByEmployee.entries())) {
+        const syncResult: any = await db.execute(
+          sql`UPDATE io_employees
+              SET planning_group = ${latest.planning_group},
+                  actual_role = ${latest.role}
+              WHERE ohr_id = ${ohrId}
+                AND (planning_group != ${latest.planning_group} OR actual_role != ${latest.role})`
+        );
+        if ((syncResult[0]?.affectedRows ?? 0) > 0) employeesSynced++;
+      }
+      if (employeesSynced > 0) {
+        const allEmps = await db.select().from(ioEmployees);
+        syncEmployeesToSupabase(allEmps).catch(() => {});
+      }
+    } catch (syncErr: any) {
+      console.error("[BILLING CSV] Employee sync error:", syncErr.message);
+    }
+
+    // 3. Upsert into io_srt_bill for historical tracking
+    let srtBillUpserted = 0;
+    try {
+      const SRT_BATCH = 500;
+      for (let i = 0; i < parsed.length; i += SRT_BATCH) {
+        const chunk = parsed.slice(i, i + SRT_BATCH);
+        const now = new Date().toISOString();
+        const valueSets = chunk.map(r =>
+          sql`(${r.log_date}, ${r.ohr_id}, ${r.srt_id}, ${r.billing_name}, ${r.srt_status}, ${r.role}, ${r.planning_group}, ${now})`
+        );
+        const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, role, planning_group, created_at)
+          VALUES ${sql.join(valueSets, sql`, `)}
+          ON DUPLICATE KEY UPDATE
+            srt_id = VALUES(srt_id),
+            billing_name = VALUES(billing_name),
+            srt_status = VALUES(srt_status),
+            role = VALUES(role),
+            planning_group = VALUES(planning_group),
+            created_at = VALUES(created_at)`;
+        const result: any = await db.execute(bulkQuery);
+        srtBillUpserted += result[0]?.affectedRows ?? 0;
+      }
+    } catch (srtErr: any) {
+      console.error("[BILLING CSV] SRT bill upsert error:", srtErr.message);
+    }
+
+    // 4. Log to io_sync_log
+    const durationMs = Date.now() - startTime;
+    try {
+      await db.insert(ioSyncLog).values({
+        sync_type: "billing_csv",
+        trigger: "manual",
+        status: "success",
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date().toISOString(),
+        duration_ms: durationMs,
+        rows_updated: updated,
+        rows_appended: 0,
+        total_db_rows: updated + skipped,
+        total_sheet_rows: parsed.length,
+        error_message: parseErrors > 0 ? `${parseErrors} rows skipped due to parse errors` : null,
+        output_log: `CSV rows: ${dataRows.length}, Parsed: ${parsed.length}, Updated: ${updated}, Skipped: ${skipped}, Employees synced: ${employeesSynced}, SRT bill upserted: ${srtBillUpserted}`,
+      });
+    } catch (logErr: any) {
+      console.error("[BILLING CSV] Log write error:", logErr.message);
+    }
+
+    console.log(`[BILLING CSV] Done in ${durationMs}ms — Updated: ${updated}, Skipped: ${skipped}, Employees: ${employeesSynced}`);
+    res.json({
+      success: true,
+      totalCsvRows: dataRows.length,
+      parsed: parsed.length,
+      updated,
+      skipped,
+      parseErrors,
+      employeesSynced,
+      srtBillUpserted,
+      durationMs,
+    });
+  } catch (err: any) {
+    const durationMs = Date.now() - startTime;
+    try {
+      const db = await getDb();
+      if (db) {
+        await db.insert(ioSyncLog).values({
+          sync_type: "billing_csv",
+          trigger: "manual",
+          status: "error",
+          started_at: new Date(startTime).toISOString(),
+          completed_at: new Date().toISOString(),
+          duration_ms: durationMs,
+          rows_updated: 0,
+          rows_appended: 0,
+          error_message: err.message,
+          output_log: err.stack?.substring(0, 500),
+        });
+      }
+    } catch (_) {}
+    console.error("[BILLING CSV] Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * POST /api/io/billing-sheet-sync (LEGACY — kept for backward compatibility)
  * Reads the BILLING Google Sheet and updates matching io_attendance rows
- * with role, planning_group, snap_billing_name, snap_status, actual_vs_projection.
- * Also syncs latest Actuals data back to io_employees.
+ * with role, planning_group, snap_billing_name, snap_status.
+ * Also syncs latest data back to io_employees.
  * Admin-only (740045023).
  */
 router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
@@ -3165,7 +3390,7 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
       return res.json({ success: true, message: "Sheet is empty", totalRows: 0, updated: 0, skipped: 0 });
     }
 
-    // 2. Parse sheet rows: columns are date(A), ohr(B), srt_id(C), billing_name(D), srt_status(E), actual_vs_projection(F), role(G), planning_group(H)
+    // 2. Parse sheet rows: columns are date(A), ohr(B), srt_id(C), billing_name(D), srt_status(E), role(F), planning_group(G)
     // Date format from sheet: YYYY-DD-MM → need to convert to YYYY-MM-DD
     const parseSheetDate = (raw: string): string | null => {
       const parts = raw.split("-");
@@ -3183,7 +3408,6 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
       srt_id: string;
       billing_name: string;
       srt_status: string;
-      actual_vs_projection: string;
       role: string;
       planning_group: string;
     }
@@ -3191,7 +3415,7 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
     const parsed: BillingRow[] = [];
     let parseErrors = 0;
     for (const row of rows) {
-      if (row.length < 8) { parseErrors++; continue; }
+      if (row.length < 7) { parseErrors++; continue; }
       const logDate = parseSheetDate(row[0]?.trim() || "");
       const ohrId = row[1]?.trim() || "";
       if (!logDate || !ohrId) { parseErrors++; continue; }
@@ -3201,9 +3425,8 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
         srt_id: row[2]?.trim() || "",
         billing_name: row[3]?.trim() || "",
         srt_status: row[4]?.trim() || "",
-        actual_vs_projection: row[5]?.trim() || "",
-        role: row[6]?.trim() || "",
-        planning_group: normalizePg(row[7]?.trim() || ""),
+        role: row[5]?.trim() || "",
+        planning_group: normalizePg(row[6]?.trim() || ""),
       });
     }
 
@@ -3221,7 +3444,6 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
         planning_group VARCHAR(100),
         billing_name VARCHAR(255),
         srt_status VARCHAR(50),
-        actual_vs_projection VARCHAR(20),
         PRIMARY KEY (ohr_id, log_date)
       )`);
 
@@ -3230,10 +3452,10 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
       for (let i = 0; i < parsed.length; i += STAGE_BATCH) {
         const chunk = parsed.slice(i, i + STAGE_BATCH);
         const valueSets = chunk.map(r =>
-          sql`(${r.ohr_id}, ${r.log_date}, ${r.role}, ${r.planning_group}, ${r.billing_name}, ${r.srt_status}, ${r.actual_vs_projection})`
+          sql`(${r.ohr_id}, ${r.log_date}, ${r.role}, ${r.planning_group}, ${r.billing_name}, ${r.srt_status})`
         );
         await db.execute(
-          sql`INSERT INTO _billing_staging (ohr_id, log_date, role, planning_group, billing_name, srt_status, actual_vs_projection)
+          sql`INSERT INTO _billing_staging (ohr_id, log_date, role, planning_group, billing_name, srt_status)
               VALUES ${sql.join(valueSets, sql`, `)}
               ON DUPLICATE KEY UPDATE role = VALUES(role)`
         );
@@ -3247,8 +3469,7 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
             SET a.role = s.role,
                 a.planning_group = s.planning_group,
                 a.snap_billing_name = s.billing_name,
-                a.snap_status = s.srt_status,
-                a.actual_vs_projection = s.actual_vs_projection`
+                a.snap_status = s.srt_status`
       );
       updated = updateResult[0]?.affectedRows ?? 0;
       skipped = parsed.length - updated;
@@ -3266,16 +3487,15 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
     let employeesSynced = 0;
     try {
       // Build a temp map of latest Actuals per employee from the sheet
-      const latestActuals = new Map<string, BillingRow>();
+      const latestByEmployee = new Map<string, BillingRow>();
       for (const r of parsed) {
-        if (r.actual_vs_projection !== "Actuals") continue;
-        const existing = latestActuals.get(r.ohr_id);
+        const existing = latestByEmployee.get(r.ohr_id);
         if (!existing || r.log_date > existing.log_date) {
-          latestActuals.set(r.ohr_id, r);
+          latestByEmployee.set(r.ohr_id, r);
         }
       }
       // Update io_employees with latest Actuals planning_group and role
-      for (const [ohrId, latest] of Array.from(latestActuals.entries())) {
+      for (const [ohrId, latest] of Array.from(latestByEmployee.entries())) {
         const syncResult: any = await db.execute(
           sql`UPDATE io_employees
               SET planning_group = ${latest.planning_group},
@@ -3301,15 +3521,14 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
         const chunk = parsed.slice(i, i + SRT_BATCH);
         const now = new Date().toISOString();
         const valueSets = chunk.map(r =>
-          sql`(${r.log_date}, ${r.ohr_id}, ${r.srt_id}, ${r.billing_name}, ${r.srt_status}, ${r.actual_vs_projection}, ${r.role}, ${r.planning_group}, ${now})`
+          sql`(${r.log_date}, ${r.ohr_id}, ${r.srt_id}, ${r.billing_name}, ${r.srt_status}, ${r.role}, ${r.planning_group}, ${now})`
         );
-        const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, actual_vs_projection, role, planning_group, created_at)
+        const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, role, planning_group, created_at)
           VALUES ${sql.join(valueSets, sql`, `)}
           ON DUPLICATE KEY UPDATE
             srt_id = VALUES(srt_id),
             billing_name = VALUES(billing_name),
             srt_status = VALUES(srt_status),
-            actual_vs_projection = VALUES(actual_vs_projection),
             role = VALUES(role),
             planning_group = VALUES(planning_group),
             created_at = VALUES(created_at)`;

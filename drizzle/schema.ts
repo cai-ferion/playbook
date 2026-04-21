@@ -98,7 +98,6 @@ export const ioAttendance = mysqlTable("io_attendance", {
   planning_group: varchar("planning_group", { length: 100 }),
   internal_role: varchar("internal_role", { length: 100 }),
   internal_planning_group: varchar("internal_planning_group", { length: 100 }),
-  actual_vs_projection: varchar("actual_vs_projection", { length: 20 }),
   wfm_tag: varchar("wfm_tag", { length: 50 }),
 });
 
@@ -464,7 +463,6 @@ export const ioSrtBill = mysqlTable("io_srt_bill", {
   srt_id: varchar("srt_id", { length: 50 }),
   billing_name: varchar("billing_name", { length: 255 }),
   srt_status: varchar("srt_status", { length: 50 }),             // Production, Nesting, Exit, Training, Attrition Backfill Training
-  actual_vs_projection: varchar("actual_vs_projection", { length: 20 }), // Actuals or Projection
   role: varchar("role", { length: 100 }),                        // Agent, Operational SME, Quality & Policy Expert
   planning_group: varchar("planning_group", { length: 100 }),    // e.g. MASA_MAFSA_CTR_SCALED_REVIEW
   created_at: varchar("created_at", { length: 64 }),

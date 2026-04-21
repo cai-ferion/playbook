@@ -763,27 +763,29 @@
           <!-- Locked Out Accounts -->
           <!-- Locked Out Accounts card removed — password system removed -->
 
-          <!-- Sync Billing Data from Google Sheet -->
+          <!-- Upload Billing Data (CSV) -->
           <div class="card admin-card" style="margin-bottom:20px;">
             <div class="card-header">
-              <span class="card-title">SYNC BILLING DATA</span>
-              <span id="billing-sync-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
+              <span class="card-title">UPLOAD BILLING DATA</span>
+              <span id="billing-upload-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
             </div>
             <div class="admin-card-body">
-              <p class="admin-help">Sync billing data from the <strong>TEMPLATE_BILLING</strong> Google Sheet &mdash; updates Billing Role, Planning Group, SRT Status, Billing Name, and Actual vs Projection for all matching attendance rows.</p>
-              <div id="billing-sync-last" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"></div>
+              <p class="admin-help">Upload the <strong>TEMPLATE_BILLING</strong> CSV file &mdash; updates Billing Role, Planning Group, SRT Status, and Billing Name for all matching attendance rows. Supports large files (10K+ rows).</p>
+              <p class="admin-help" style="font-size:11px;color:var(--fg-muted);margin-top:4px;">Expected columns: <code>date, ohr, srt_id, billing_name, srt_status, role, planning_group</code> &middot; Date format: YYYY-DD-MM</p>
+              <div id="billing-upload-last" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"></div>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <button class="btn btn-primary btn-sm" id="billing-sync-btn" onclick="runBillingSync()">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  Sync from Sheet
+                <input type="file" id="billing-csv-input" accept=".csv" style="font-size:13px;">
+                <button class="btn btn-primary btn-sm" id="billing-upload-btn" onclick="runBillingCsvUpload()" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload CSV
                 </button>
-                <a href="https://docs.google.com/spreadsheets/d/12H0ZBV1SleJ1N4-HQpdC7TIyOKdxxT40JmZvO6L__PY/edit" target="_blank" class="btn btn-outline btn-sm" style="font-size:12px;">Open Sheet</a>
               </div>
-              <div class="admin-progress" id="billing-sync-progress" style="display:none;margin-top:12px;">
-                <div class="progress-bar"><div class="progress-fill" id="billing-sync-progress-fill" style="width:0%;"></div></div>
-                <span class="progress-text" id="billing-sync-progress-text">Syncing...</span>
+              <div class="admin-progress" id="billing-upload-progress" style="display:none;margin-top:12px;">
+                <div class="progress-bar"><div class="progress-fill" id="billing-upload-progress-fill" style="width:0%;"></div></div>
+                <span class="progress-text" id="billing-upload-progress-text">Uploading...</span>
               </div>
-              <div class="admin-result" id="billing-sync-result" style="display:none;margin-top:8px;"></div>
+              <div class="admin-result" id="billing-upload-result" style="display:none;margin-top:8px;"></div>
+              <div id="billing-upload-summary" style="margin-top:12px;"></div>
             </div>
           </div>
 
@@ -1712,9 +1714,10 @@
   <script src="js/dash-omnibar.js?v=102g"></script>
   <script src="js/notifications.js?v=102g"></script>
   <script src="js/maintenance.js?v=102g"></script>
-  <script src="js/admin.js?v=103"></script>
+  <script src="js/admin.js?v=104"></script>
   <script src="js/billing.js?v=132"></script>
   <script src="js/billing-v2.js?v=122"></script>
+  <script src="js/billing-v2-page.js?v=101"></script>
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->

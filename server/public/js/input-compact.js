@@ -277,8 +277,7 @@ function renderDetailPanel(r, idx, locked) {
   var isWFM = cu && cu.actual_role === 'WFM';
 
   // Tag dropdown
-  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
-  var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
+  var tagOpts = TAG_OPTIONS;
 
   var tagField;
   if (locked || isWFM) {
@@ -749,8 +748,7 @@ function initFcbTagDropdown() {
   var sel = document.getElementById('fcb-tag-select');
   if (!sel) return;
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
-  var canSeePL = cu && (cu.ohr_id === '740045023' || cu.ohr_id === '740044909' || cu.actual_role === 'Manager');
-  var tagOpts = TAG_OPTIONS.filter(function(t) { return t !== 'PL' || canSeePL; });
+  var tagOpts = TAG_OPTIONS;
   while (sel.options.length > 2) sel.remove(2);
   tagOpts.forEach(function(t) {
     var opt = document.createElement('option');
