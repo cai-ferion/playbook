@@ -408,7 +408,7 @@ function helmShowNewForm() {
         <label class="form-label">Assign To <span class="required">*</span></label>
         <div id="helm-assignee-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;"></div>
         <div class="searchable-select" id="helm-assignee-wrapper" style="width:100%;">
-          <input type="text" class="form-input" id="helm-assignee-search" placeholder="Search and select employees..." autocomplete="off" onclick="helmToggleAssigneeDropdown(true)" oninput="helmFilterAssignees()" style="width:100%;">
+          <input type="text" class="form-input" id="helm-assignee-search" placeholder="Search and select employees..." autocomplete="off" onclick="helmToggleAssigneeDropdown(true)" oninput="_helmFilterAssigneesDebounced()" style="width:100%;">
           <div class="searchable-select-dropdown" id="helm-assignee-dropdown" style="display:none;max-height:200px;overflow-y:auto;">
             ${HELM.employees.map(e => `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmToggleAssigneeMulti('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)}</div>`).join('')}
           </div>
@@ -452,6 +452,11 @@ function helmToggleAssigneeDropdown(show) {
   if (dd) dd.style.display = show ? '' : 'none';
 }
 
+var _helmAssigneeDebounce = null;
+function _helmFilterAssigneesDebounced() {
+  clearTimeout(_helmAssigneeDebounce);
+  _helmAssigneeDebounce = setTimeout(helmFilterAssignees, 150);
+}
 function helmFilterAssignees() {
   const query = (document.getElementById('helm-assignee-search')?.value || '').toLowerCase();
   const dd = document.getElementById('helm-assignee-dropdown');
@@ -1067,7 +1072,7 @@ async function helmShowNewRequestForm() {
           <label class="form-label">Name <span class="required">*</span></label>
           <div id="helm-req-agent-chip" style="margin-bottom:6px;"></div>
           <div class="searchable-select" id="helm-req-agent-wrapper">
-            <input type="text" class="form-input" id="helm-req-agent-search" placeholder="Search for an employee..." autocomplete="off" onclick="helmToggleRequestAgentDropdown(true)" oninput="helmFilterRequestAgents()" style="max-width:320px;">
+            <input type="text" class="form-input" id="helm-req-agent-search" placeholder="Search for an employee..." autocomplete="off" onclick="helmToggleRequestAgentDropdown(true)" oninput="_helmFilterRequestAgentsDebounced()" style="max-width:320px;">
             <div class="searchable-select-dropdown" id="helm-req-agent-dropdown" style="display:none;max-height:200px;overflow-y:auto;">
               ${employeeOptions}
             </div>
@@ -1124,6 +1129,11 @@ function helmToggleRequestAgentDropdown(show) {
   if (dd) dd.style.display = show ? '' : 'none';
 }
 
+var _helmReqAgentDebounce = null;
+function _helmFilterRequestAgentsDebounced() {
+  clearTimeout(_helmReqAgentDebounce);
+  _helmReqAgentDebounce = setTimeout(helmFilterRequestAgents, 150);
+}
 function helmFilterRequestAgents() {
   const query = (document.getElementById('helm-req-agent-search')?.value || '').toLowerCase();
   const dd = document.getElementById('helm-req-agent-dropdown');

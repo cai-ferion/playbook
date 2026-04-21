@@ -2402,3 +2402,17 @@
 - [x] Add keyword search across all KB articles
 - [x] Add KB CSS styling matching Corrective Actions design system
 - [x] Add KB toggle button to Corrective Actions filter bar
+
+## Performance Optimization (April 2026)
+- [x] Remove "Remember my OHR ID" checkbox from login page
+- [x] S1: Add gzip compression middleware (compression npm package)
+- [x] S2: Set static asset Cache-Control to max-age=86400
+- [x] S3: Add database indexes on hot query columns (14/16 indexes created)
+- [x] S4: Replace NOT IN subquery with cached manager OHR set (5-min TTL)
+- [x] F2: Add preconnect hints for CDN origins
+- [x] F3: Defer CDN scripts (Chart.js, SheetJS)
+- [x] D1: Add debounce to all search/filter inputs (CA, Helm, updateAllViews)
+- [ ] D2: Batch innerHTML writes using DocumentFragment in compass.js
+- [ ] D3: Cache querySelector results in module-scoped variables
+- [x] D4: Throttle updateAllViews during rapid filter changes (150ms coalesce)
+- [x] Bump cache-bust version strings on all modified files

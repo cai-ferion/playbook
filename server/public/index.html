@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Playbook</title>
   <link rel="icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-icon_00ad95f9.png" type="image/png">
+  <!-- Preconnect to CDN origins for faster script loading -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin>
   <link rel="stylesheet" href="css/styles.css?v=131">
   <link rel="stylesheet" href="css/input-redesign.css?v=120">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/compass-redesign.css?v=100">
-  <link rel="stylesheet" href="css/corrective-actions.css?v=1">
+  <link rel="stylesheet" href="css/corrective-actions.css?v=2">
   <link rel="stylesheet" href="css/mascot.css?v=200">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
   <!-- ===== Auth Page ===== -->
@@ -49,10 +52,7 @@
           <label>OHR ID</label>
           <input type="text" class="form-input" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin:8px 0 4px;">
-          <input type="checkbox" id="login-remember" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
-          <label for="login-remember" style="font-size:13px;color:var(--fg-muted);cursor:pointer;user-select:none;">Remember my OHR ID</label>
-        </div>
+
         <div class="auth-error" id="login-error"></div>
         <div id="login-nudge" style="display:none;text-align:center;margin:8px 0;">
           <span style="font-size:13px;color:var(--fg-muted);">Profile incomplete.</span>
@@ -1636,9 +1636,9 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
   <script src="js/data.js?v=104"></script>
-  <script src="js/app.js?v=121"></script>
+  <script src="js/app.js?v=122"></script>
   <script src="js/dashboard-anim.js?v=121b"></script>
   <script src="js/input-portal.js?v=120"></script>
   <script src="js/input-compact.js?v=120"></script>

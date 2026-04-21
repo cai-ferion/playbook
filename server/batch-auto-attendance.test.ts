@@ -66,6 +66,7 @@ describe("Auto-Attendance Generation Trigger", () => {
 describe("Manager Attendance Exclusion", () => {
   it("attendance GET endpoint supports exclude_managers parameter", () => {
     expect(ioRoutesContent).toContain("exclude_managers");
-    expect(ioRoutesContent).toContain("actual_role = 'Manager'");
+    // After optimization: manager exclusion uses cached OHR set instead of inline subquery
+    expect(ioRoutesContent).toContain("getManagerOhrSet");
   });
 });

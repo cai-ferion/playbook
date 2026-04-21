@@ -551,14 +551,6 @@ async function handleLogin() {
       return;
     }
 
-    // Remember Me: save or clear OHR in localStorage
-    const rememberCb = document.getElementById('login-remember');
-    if (rememberCb && rememberCb.checked) {
-      localStorage.setItem('playbook_remembered_ohr', ohr);
-    } else {
-      localStorage.removeItem('playbook_remembered_ohr');
-    }
-
     await loginAsEmployee(emp);
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
@@ -700,14 +692,8 @@ function hideProgressBar() {
 // ===== Initialization =====
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Remember Me: pre-fill OHR ID from localStorage
-  const rememberedOhr = localStorage.getItem('playbook_remembered_ohr');
-  if (rememberedOhr) {
-    const loginOhrEl = document.getElementById('login-ohr');
-    if (loginOhrEl) loginOhrEl.value = rememberedOhr;
-    const rememberCb = document.getElementById('login-remember');
-    if (rememberCb) rememberCb.checked = true;
-  }
+  // Clean up legacy remembered OHR (feature removed — inactivity checker handles sessions)
+  localStorage.removeItem('playbook_remembered_ohr');
 
   const stored = sessionStorage.getItem('playbook_user');
   if (stored) {
@@ -1332,7 +1318,19 @@ function updateAlertNavBadge() {
   if (alertNavEl) alertNavEl.textContent = total;
 }
 
+// Throttled wrapper: coalesces rapid updateAllViews calls into one execution per 150ms
+var _updateAllViewsPending = false;
+var _updateAllViewsTimer = null;
 function updateAllViews() {
+  if (_updateAllViewsPending) return;
+  _updateAllViewsPending = true;
+  clearTimeout(_updateAllViewsTimer);
+  _updateAllViewsTimer = setTimeout(() => {
+    _updateAllViewsPending = false;
+    _updateAllViewsCore();
+  }, 150);
+}
+function _updateAllViewsCore() {
   updateRefreshDisplay();
   populateInputFilterDropdowns();
   populateDashboardFilterDropdowns();

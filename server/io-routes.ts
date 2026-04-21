@@ -40,6 +40,30 @@ const router = Router();
 // Admin OHRs exempt from date-based locks and other restrictions
 const ADMIN_OHRS = ["740045023", "740044909"];
 
+// ── Manager OHR Cache (5-min TTL) ──────────────────────────────
+// Replaces the correlated NOT IN (SELECT ...) subquery on every attendance request.
+let _managerOhrSet: Set<string> = new Set();
+let _managerCacheTs = 0;
+const MANAGER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getManagerOhrSet(): Promise<Set<string>> {
+  if (Date.now() - _managerCacheTs < MANAGER_CACHE_TTL && _managerOhrSet.size > 0) {
+    return _managerOhrSet;
+  }
+  try {
+    const db = await getDb();
+    if (!db) return _managerOhrSet;
+    const rows = await db.select({ ohr_id: ioEmployees.ohr_id })
+      .from(ioEmployees)
+      .where(eq(ioEmployees.actual_role, 'Manager'));
+    _managerOhrSet = new Set(rows.map(r => r.ohr_id));
+    _managerCacheTs = Date.now();
+  } catch (err) {
+    console.warn('[ManagerCache] Failed to refresh:', err);
+  }
+  return _managerOhrSet;
+}
+
 // Normalize long PG codes from Google Sheet / SRT to short codes used in DB
 const PG_NORMALIZE: Record<string, string> = {
   'MASA_MAFSA_CTR_SCALED_REVIEW': 'S-ABF',
@@ -325,9 +349,13 @@ router.get("/attendance", async (req: Request, res: Response) => {
             sort_by, sort_dir, paginated, exclude_managers } = req.query;
 
     const conditions: any[] = [];
-    // Exclude Managers from attendance results (Batch 124)
+    // Exclude Managers from attendance results (Batch 124) — uses cached set instead of correlated subquery
     if (exclude_managers === 'true') {
-      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (SELECT ohr_id FROM io_employees WHERE actual_role = 'Manager')`);
+      const mgrSet = await getManagerOhrSet();
+      if (mgrSet.size > 0) {
+        const mgrArr = Array.from(mgrSet);
+        conditions.push(sql`${ioAttendance.ohr_id} NOT IN (${sql.join(mgrArr.map(o => sql`${o}`), sql`, `)})`);
+      }
     }
     if (ohr_id) conditions.push(eq(ioAttendance.ohr_id, String(ohr_id)));
     if (log_date) conditions.push(eq(ioAttendance.log_date, String(log_date)));
@@ -1235,8 +1263,12 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
             planning_group_in, status_in, shift_time_in, role_in, blanks_only } = filters;
 
     const conditions: any[] = [];
-    // Exclude Managers
-    conditions.push(sql`${ioAttendance.ohr_id} NOT IN (SELECT ohr_id FROM io_employees WHERE actual_role = 'Manager')`);
+    // Exclude Managers — uses cached set
+    const mgrSet2 = await getManagerOhrSet();
+    if (mgrSet2.size > 0) {
+      const mgrArr2 = Array.from(mgrSet2);
+      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (${sql.join(mgrArr2.map(o => sql`${o}`), sql`, `)})`);
+    }
     if (log_date_gte) conditions.push(gte(ioAttendance.log_date, String(log_date_gte)));
     if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
     if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
@@ -1497,9 +1529,13 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
       sort_by, sort_dir, exclude_managers,
     } = req.query;
     const conditions: any[] = [];
-    // Exclude managers if requested
+    // Exclude managers if requested — uses cached set
     if (exclude_managers === 'true') {
-      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (SELECT ohr_id FROM io_employees WHERE actual_role = 'Manager')`);
+      const mgrSet3 = await getManagerOhrSet();
+      if (mgrSet3.size > 0) {
+        const mgrArr3 = Array.from(mgrSet3);
+        conditions.push(sql`${ioAttendance.ohr_id} NOT IN (${sql.join(mgrArr3.map(o => sql`${o}`), sql`, `)})`);
+      }
     }
     // Date range (support both legacy and new param names)
     const gteDate = startDate || log_date_gte;

@@ -130,7 +130,7 @@ function caRenderFilterBar() {
   container.innerHTML = `
     <div class="ca-search-wrapper">
       <svg class="ca-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="ca-search-input" placeholder="Search by name, OHR, or incident..." oninput="caApplyFilters()">
+      <input type="text" id="ca-search-input" placeholder="Search by name, OHR, or incident..." oninput="_caApplyFiltersDebounced()">
     </div>
     <select id="ca-filter-status" onchange="caApplyFilters()">
       <option value="">All Statuses</option>
@@ -156,6 +156,11 @@ function caRenderFilterBar() {
 }
 
 // ===== Filtering =====
+var _caDebounceTimer = null;
+function _caApplyFiltersDebounced() {
+  clearTimeout(_caDebounceTimer);
+  _caDebounceTimer = setTimeout(caApplyFilters, 200);
+}
 function caApplyFilters() {
   const searchEl = document.getElementById('ca-search-input');
   const statusEl = document.getElementById('ca-filter-status');
