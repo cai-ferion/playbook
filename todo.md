@@ -2574,3 +2574,11 @@
 - [x] Grant nav.sandbox to all roles in both client + server getPermissionDefaults
 - [x] Update batch-rbac tests for new Agent defaults (nav.helm + nav.sandbox)
 - [x] Bump cache versions: sandbox.js v=103, permissions.js v=2
+
+## Portillo Reassignment & Coaching Log Audit (April 2026)
+- [x] Reassign Portillo from TL Natividad to TL Esmino in io_employ- [x] Retrograde 58 attendance records from April 4, 2026 (snap_supervisor → Esmino)lect new supervisor
+- [x] Audit coaching logs for supervisor misalignment — fixed 579 rows (coachee_sup aligned to current supervisor)
+- [x] Fix coaching logs ack discrepancies — backfilled 107 ack_dates, filled 34 partial ack fields. Final: 1,797 acknowledged, 1,644 unacknowledged (before 2025 cleanup)
+
+## Coaching Log Cleanup (April 2026)
+- [x] Remove all coaching logs from 2025 (1,008 logs deleted, 2,433 remaining)
