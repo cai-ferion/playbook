@@ -2680,3 +2680,12 @@
 - [x] Cleaned up dead CSS (.compass-inline-add-header, .compass-inline-add-title) and dead JS references
 - [x] Cache versions bumped: compass-redesign.css v=110, compass.js v=112, corrective-actions.js v=10
 - [x] All 761 tests passing
+
+## Coaching Profile Visibility Fix — Supervisor-Based Filtering (April 2026)
+- [x] TLs: "Received" table now shows logs where coachee is any team member (supervisor_name match) OR coachee is the TL themselves
+- [x] SMEs: "Received" table now shows logs for their TL's team members (supervisor_name match) OR coachee is the SME themselves
+- [x] TL/SME "Given" table now strictly shows logs where coach_ohr === currentUser (logs they personally filed)
+- [x] Coach field on each log is NOT changed — read/filter only
+- [x] Managers and admin (740045023) unchanged — see all logs
+- [x] Cache version bumped: compass.js v=113
+- [x] All 761 tests passing

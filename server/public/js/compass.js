@@ -278,11 +278,12 @@ function compassApplyFilters() {
       });
     }
     teamOhrs.add(currentUser.ohr_id); // include self
-    // Given = logs where coachee is in team OR coach is me
-    COMPASS.filteredGiven = allData.filter(l =>
-      teamOhrs.has(l.coachee_ohr) || l.coach_ohr === currentUser.ohr_id
+    // Given = logs where coach is me
+    COMPASS.filteredGiven = allData.filter(l => l.coach_ohr === currentUser.ohr_id);
+    // Received = logs where coachee is any team member (regardless of coach) OR coachee is me
+    COMPASS.filteredReceived = allData.filter(l =>
+      teamOhrs.has(l.coachee_ohr) || l.coachee_ohr === currentUser.ohr_id
     );
-    COMPASS.filteredReceived = allData.filter(l => l.coachee_ohr === currentUser.ohr_id);
   } else if (role === 'Operational SME') {
     // SMEs — same as TL but "their agents" = agents under their supervisor's team.
     // SME's supervisor_name points to a TL; team = all employees whose supervisor_name matches that TL.
@@ -294,11 +295,12 @@ function compassApplyFilters() {
       });
     }
     teamOhrs.add(currentUser.ohr_id); // include self
-    // Given = logs where coachee is in team OR coach is me
-    COMPASS.filteredGiven = allData.filter(l =>
-      teamOhrs.has(l.coachee_ohr) || l.coach_ohr === currentUser.ohr_id
+    // Given = logs where coach is me
+    COMPASS.filteredGiven = allData.filter(l => l.coach_ohr === currentUser.ohr_id);
+    // Received = logs where coachee is any team member (regardless of coach) OR coachee is me
+    COMPASS.filteredReceived = allData.filter(l =>
+      teamOhrs.has(l.coachee_ohr) || l.coachee_ohr === currentUser.ohr_id
     );
-    COMPASS.filteredReceived = allData.filter(l => l.coachee_ohr === currentUser.ohr_id);
   } else if (role === 'Quality & Policy Expert' || role === 'Trainer') {
     // QAs & Trainers — see logs they filed + logs filed to them
     COMPASS.filteredGiven = allData.filter(l => l.coach_ohr === currentUser.ohr_id);
