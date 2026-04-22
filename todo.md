@@ -2511,3 +2511,12 @@
 - [x] Handle partial failures gracefully (report last error while preserving successful chunks)
 - [x] Bump admin.js cache version to v=107
 - [x] Update test assertions for new cache version
+
+## CAP 2 & CAP 3 Document Build Assist Integration (April 2026)
+- [x] Convert "Document Build Assist" button to dropdown with NTE, CAP 1, CAP 2, CAP 3 options
+- [x] Implement CAP 2 wizard (3-step: Employee+NTE link, Explanation+AI Deliberation, Review+Generate DOCX)
+- [x] Implement CAP 3 wizard (3-step: same pattern as CAP 2 with 180-day active period)
+- [x] Wire CAP 2/CAP 3 to existing /cap-build-assist/generate and /cap-build-assist/docx endpoints
+- [x] Write cap-build-assist.test.ts (27 tests: config, payloads, active periods, template URLs)
+- [x] Bump corrective-actions.js cache version to v=2
+- [x] Update back buttons to close wizard instead of re-opening old type picker overlay

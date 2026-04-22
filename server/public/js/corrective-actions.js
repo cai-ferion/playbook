@@ -148,10 +148,14 @@ function caRenderFilterBar() {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Policy Reference
     </button>
-    ${canCreate ? `<button class="ca-btn-create" onclick="caOpenDocBuildAssist()">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
-      Document Build Assist
-    </button>` : ''}
+    ${canCreate ? `<div style="position:relative;flex-shrink:0;" id="ca-dba-wrapper">
+      <button class="ca-btn-create" id="ca-dba-trigger" onclick="caToggleDocBuildMenu()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+        Document Build Assist
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px;"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="ca-dba-menu" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;min-width:280px;background:var(--bg-card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;overflow:hidden;"></div>
+    </div>` : ''}
   `;
 }
 
@@ -462,44 +466,59 @@ var CA_NTE_WIZARD = {
   isGenerating: false
 };
 
-// ===== Document Build Assist — Type Picker =====
-var CA_DOC_TYPE = ''; // 'nte' or 'cap1'
+// ===== Document Build Assist — Dropdown Menu =====
+var CA_DOC_TYPE = ''; // 'nte', 'cap1', 'cap2', 'cap3'
 
+function caToggleDocBuildMenu() {
+  var menu = document.getElementById('ca-dba-menu');
+  if (!menu) return;
+  var isOpen = menu.style.display !== 'none';
+  if (isOpen) { menu.style.display = 'none'; return; }
+
+  var docTypes = [
+    { id: 'nte', icon: '\u26A0\uFE0F', label: 'Notice to Explain (NTE)', desc: 'AI-assisted NTE with attendance data & violations', accent: '#EF4444' },
+    { id: 'cap1', icon: '\u{1F4C4}', label: 'CAP 1 — First Corrective Action', desc: 'First formal corrective action (60 days active)', accent: '#3B82F6' },
+    { id: 'cap2', icon: '\u{1F4CB}', label: 'CAP 2 — Second Corrective Action', desc: 'Second formal corrective action (90 days active)', accent: '#F59E0B' },
+    { id: 'cap3', icon: '\u{1F6A8}', label: 'CAP 3 — Third Corrective Action', desc: 'Third formal corrective action (180 days active)', accent: '#DC2626' },
+  ];
+
+  menu.innerHTML = docTypes.map(function(t) {
+    return '<div onclick="caDocBuildMenuSelect(\'' + t.id + '\')" style="' +
+      'display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background 0.12s;' +
+      '" onmouseover="this.style.background=\'' + t.accent + '10\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">' + t.icon + '</span>' +
+      '<div style="min-width:0;">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--fg,#1a202c);line-height:1.3;">' + t.label + '</div>' +
+      '<div style="font-size:11px;color:var(--fg-muted,#64748b);line-height:1.3;">' + t.desc + '</div>' +
+      '</div></div>';
+  }).join('');
+
+  menu.style.display = 'block';
+
+  // Close on outside click
+  setTimeout(function() {
+    var closeHandler = function(e) {
+      if (!menu.contains(e.target) && !document.getElementById('ca-dba-trigger')?.contains(e.target)) {
+        menu.style.display = 'none';
+        document.removeEventListener('click', closeHandler);
+      }
+    };
+    document.addEventListener('click', closeHandler);
+  }, 0);
+}
+
+function caDocBuildMenuSelect(type) {
+  var menu = document.getElementById('ca-dba-menu');
+  if (menu) menu.style.display = 'none';
+  if (type === 'nte') caStartNteWizard();
+  else if (type === 'cap1') caStartCap1Wizard();
+  else if (type === 'cap2') caStartCap2Wizard();
+  else if (type === 'cap3') caStartCap3Wizard();
+}
+
+// Keep legacy function for back buttons
 function caOpenDocBuildAssist() {
-  CA_DOC_TYPE = '';
-  var overlay = document.getElementById('ca-form-overlay');
-  var formTitle = document.getElementById('ca-form-title');
-  var formBody = document.getElementById('ca-form-body');
-  var formFooter = document.getElementById('ca-form-footer');
-
-  formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>' +
-    'Document Build Assist</span>';
-
-  formBody.innerHTML =
-    '<div style="padding:12px 16px; background:#6366F108; border:1px solid #6366F130; border-radius:var(--radius); margin-bottom:20px;">' +
-      '<div style="font-size:13px; font-weight:600; color:#6366F1; margin-bottom:4px;">Select Document Type</div>' +
-      '<div style="font-size:11px; color:var(--fg-muted);">Choose which document you want to generate. The wizard will guide you through the required information.</div>' +
-    '</div>' +
-    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">' +
-      '<div onclick="caStartNteWizard()" style="cursor:pointer; padding:20px; border:2px solid var(--border); border-radius:var(--radius); transition:border-color 0.15s; text-align:center;" onmouseover="this.style.borderColor=\'#EF4444\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
-        '<div style="width:48px; height:48px; margin:0 auto 12px; background:#EF444415; border-radius:12px; display:flex; align-items:center; justify-content:center;">' +
-          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-        '</div>' +
-        '<div style="font-size:14px; font-weight:600; color:var(--fg); margin-bottom:4px;">Notice to Explain (NTE)</div>' +
-        '<div style="font-size:11px; color:var(--fg-muted); line-height:1.5;">Generate an NTE document with AI-assisted narrative based on attendance data and violations.</div>' +
-      '</div>' +
-      '<div onclick="caStartCap1Wizard()" style="cursor:pointer; padding:20px; border:2px solid var(--border); border-radius:var(--radius); transition:border-color 0.15s; text-align:center;" onmouseover="this.style.borderColor=\'#3B82F6\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
-        '<div style="width:48px; height:48px; margin:0 auto 12px; background:#3B82F615; border-radius:12px; display:flex; align-items:center; justify-content:center;">' +
-          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
-        '</div>' +
-        '<div style="font-size:14px; font-weight:600; color:var(--fg); margin-bottom:4px;">CAP 1 — Corrective Action</div>' +
-        '<div style="font-size:11px; color:var(--fg-muted); line-height:1.5;">Generate a CAP 1 letter referencing a served NTE with AI-assisted deliberation.</div>' +
-      '</div>' +
-    '</div>';
-
-  formFooter.innerHTML = '';
-  overlay.style.display = 'flex';
+  caToggleDocBuildMenu();
 }
 
 function caStartNteWizard() {
@@ -618,7 +637,7 @@ function _caWizStep1(formBody, formFooter, progressHtml) {
   `;
 
   formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="caOpenDocBuildAssist()">← Back</button>
+    <button class="btn btn-outline btn-sm" onclick="caCloseWizard()">← Back</button>
     <button class="btn btn-primary btn-sm" onclick="_caWizGoStep2()">Next →</button>
   `;
 }
@@ -1616,7 +1635,7 @@ function _caCap1Step1(formBody, formFooter, progressHtml) {
     (CA_CAP1_WIZARD.employee ? '<div class="ca-form-group" style="margin-top:16px;"><label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Linked NTE *</label>' + nteHtml + '</div>' : '');
 
   var canProceed = CA_CAP1_WIZARD.employee && CA_CAP1_WIZARD.linkedNte;
-  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="caOpenDocBuildAssist()">← Back</button>' +
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="caCloseWizard()">← Back</button>' +
     '<button class="btn btn-primary btn-sm" ' + (canProceed ? '' : 'disabled') + ' onclick="_caCap1GoStep2()">Next →</button>';
 }
 
@@ -1927,6 +1946,526 @@ async function _caCap1Submit() {
     console.error('CAP 1 submission error:', e);
     showToast('Failed to generate CAP 1: ' + e.message, 'error');
     if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Generate CAP 1 Document'; }
+  }
+}
+
+
+
+
+// ============================================================
+// CAP 2 & CAP 3 BUILD ASSIST WIZARDS
+// ============================================================
+// Reuse the same 3-step pattern as CAP 1:
+//   Step 1: Select Employee + Linked NTE/CAP record
+//   Step 2: Explanation Letter + AI Deliberation
+//   Step 3: Confirm & Generate DOCX
+// Backend endpoints already support CAP 2/3:
+//   POST /cap-build-assist/generate  (AI deliberation)
+//   POST /cap-build-assist/docx      (DOCX from CDN template)
+
+// ===== CAP 2 Wizard State =====
+var CA_CAP2_WIZARD = {
+  step: 1,
+  employee: null,
+  linkedNte: null,
+  servedNtes: [],
+  explanationDate: '',
+  explanationSummary: '',
+  deliberation: '',
+  violationSection: '',
+  violationSubsection: '',
+  isGenerating: false
+};
+
+function caStartCap2Wizard() {
+  CA_DOC_TYPE = 'cap2';
+  CA_CAP2_WIZARD = { step: 1, employee: null, linkedNte: null, servedNtes: [], explanationDate: '', explanationSummary: '', deliberation: '', violationSection: '', violationSubsection: '', isGenerating: false };
+  _caCap2WizRender();
+}
+
+// ===== CAP 3 Wizard State =====
+var CA_CAP3_WIZARD = {
+  step: 1,
+  employee: null,
+  linkedNte: null,
+  servedNtes: [],
+  explanationDate: '',
+  explanationSummary: '',
+  deliberation: '',
+  violationSection: '',
+  violationSubsection: '',
+  isGenerating: false
+};
+
+function caStartCap3Wizard() {
+  CA_DOC_TYPE = 'cap3';
+  CA_CAP3_WIZARD = { step: 1, employee: null, linkedNte: null, servedNtes: [], explanationDate: '', explanationSummary: '', deliberation: '', violationSection: '', violationSubsection: '', isGenerating: false };
+  _caCap3WizRender();
+}
+
+// ===== Generic CAP N Wizard (shared logic for CAP 2 and CAP 3) =====
+// Config maps for CAP 2 vs CAP 3 differences
+var _capNConfig = {
+  cap2: {
+    level: 'CAP 2', num: '2', ordinal: 'Second', activeDays: 90, accent: '#F59E0B',
+    title: 'CAP 2 Build Assist', desc: 'Second Formal Corrective Action',
+    getWiz: function() { return CA_CAP2_WIZARD; },
+    setWiz: function(k, v) { CA_CAP2_WIZARD[k] = v; },
+    render: function() { _caCap2WizRender(); }
+  },
+  cap3: {
+    level: 'CAP 3', num: '3', ordinal: 'Third', activeDays: 180, accent: '#DC2626',
+    title: 'CAP 3 Build Assist', desc: 'Third Formal Corrective Action',
+    getWiz: function() { return CA_CAP3_WIZARD; },
+    setWiz: function(k, v) { CA_CAP3_WIZARD[k] = v; },
+    render: function() { _caCap3WizRender(); }
+  }
+};
+
+function _capNWizRender(capKey) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  var overlay = document.getElementById('ca-form-overlay');
+  var formTitle = document.getElementById('ca-form-title');
+  var formBody = document.getElementById('ca-form-body');
+  var formFooter = document.getElementById('ca-form-footer');
+
+  var stepLabels = ['Employee & NTE', 'Explanation & Deliberation', 'Confirm & Generate'];
+
+  formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
+    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + cfg.accent + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+    cfg.title +
+    '<span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Step ' + wiz.step + ' of 3 — ' + stepLabels[wiz.step - 1] + '</span>' +
+    '</span>';
+
+  var progressHtml = '<div style="display:flex;gap:4px;margin-bottom:16px;">' +
+    [1,2,3].map(function(s) {
+      return '<div style="flex:1;height:3px;border-radius:2px;background:' + (s <= wiz.step ? cfg.accent : 'var(--border)') + ';transition:background 0.2s;"></div>';
+    }).join('') + '</div>';
+
+  if (wiz.step === 1) _capNStep1(capKey, formBody, formFooter, progressHtml);
+  else if (wiz.step === 2) _capNStep2(capKey, formBody, formFooter, progressHtml);
+  else if (wiz.step === 3) _capNStep3(capKey, formBody, formFooter, progressHtml);
+
+  overlay.style.display = 'flex';
+}
+
+function _caCap2WizRender() { _capNWizRender('cap2'); }
+function _caCap3WizRender() { _capNWizRender('cap3'); }
+
+// ---- Step 1: Select Employee + Linked NTE/CAP Record ----
+function _capNStep1(capKey, formBody, formFooter, progressHtml) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  var empHtml = '';
+
+  if (wiz.employee) {
+    empHtml = '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius);">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+      '<div><div style="font-weight:600; font-size:13px;">' + escapeHtml(wiz.employee.full_name) + '</div>' +
+      '<div style="font-size:11px; color:var(--fg-muted);">' + escapeHtml(wiz.employee.ohr_id) + ' · ' + escapeHtml(wiz.employee.actual_role || '') + '</div></div>' +
+      '<button class="btn btn-outline btn-xs" onclick="_capNConfig[\'' + capKey + '\'].getWiz().employee=null; _capNConfig[\'' + capKey + '\'].getWiz().linkedNte=null; _capNConfig[\'' + capKey + '\'].getWiz().servedNtes=[]; _capNConfig[\'' + capKey + '\'].render();">Change</button>' +
+      '</div></div>';
+  } else {
+    empHtml = '<div class="searchable-select" id="' + capKey + '-wiz-emp-wrapper">' +
+      '<input type="text" class="form-input" id="' + capKey + '-wiz-emp-search" placeholder="Search by name or OHR..." autocomplete="off" oninput="_capNFilterEmployees(\'' + capKey + '\')" onclick="_capNToggleEmpDropdown(\'' + capKey + '\', true)" onfocus="_capNToggleEmpDropdown(\'' + capKey + '\', true)">' +
+      '<div class="searchable-select-dropdown" id="' + capKey + '-wiz-emp-dropdown" style="display:none; max-height:200px; overflow-y:auto;"></div>' +
+      '</div>';
+  }
+
+  // Build NTE/CAP record list
+  var nteHtml = '';
+  if (wiz.employee) {
+    if (wiz.servedNtes.length === 0 && !wiz.linkedNte) {
+      nteHtml = '<div style="padding:12px 16px; background:#EF444408; border:1px solid #EF444430; border-radius:var(--radius); font-size:12px; color:#EF4444;">' +
+        'No served NTEs or prior CAP records found for <strong>' + escapeHtml(wiz.employee.full_name) + '</strong>. An NTE must be served before issuing a ' + cfg.level + '.' +
+        '</div>';
+    } else if (wiz.linkedNte) {
+      var nte = wiz.linkedNte;
+      var nteDate = nte.created_at ? new Date(nte.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+      nteHtml = '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius);">' +
+        '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">' +
+        '<div style="font-weight:600; font-size:13px;">NTE #' + nte.id + ' — ' + nteDate + (nte.cap_level ? ' (' + nte.cap_level + ')' : '') + '</div>' +
+        '<button class="btn btn-outline btn-xs" onclick="_capNConfig[\'' + capKey + '\'].getWiz().linkedNte=null; _capNConfig[\'' + capKey + '\'].render();">Change</button>' +
+        '</div>' +
+        '<div style="font-size:11px; color:var(--fg-muted); line-height:1.5;">' +
+        '<div><strong>Violation:</strong> ' + escapeHtml((nte.policy_violated || nte.nte_type || 'N/A').substring(0, 120)) + '</div>' +
+        '<div><strong>Incident:</strong> ' + escapeHtml((nte.incident_description || '').replace(/<[^>]*>/g, '').substring(0, 150)) + '</div>' +
+        '</div></div>';
+    } else {
+      nteHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+      wiz.servedNtes.forEach(function(nte) {
+        var nteDate = nte.created_at ? new Date(nte.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+        var desc = (nte.incident_description || '').replace(/<[^>]*>/g, '').substring(0, 100);
+        var capBadge = nte.cap_level ? ' <span style="padding:1px 6px;background:' + cfg.accent + '15;color:' + cfg.accent + ';border-radius:8px;font-size:10px;font-weight:600;">' + nte.cap_level + '</span>' : '';
+        nteHtml += '<div onclick="_capNSelectNte(\'' + capKey + '\',' + nte.id + ')" ' +
+          'style="cursor:pointer; padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); transition:border-color 0.15s;" ' +
+          'onmouseover="this.style.borderColor=\'' + cfg.accent + '\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+          '<div style="font-weight:600; font-size:12px;">NTE #' + nte.id + ' — ' + nteDate + capBadge + '</div>' +
+          '<div style="font-size:11px; color:var(--fg-muted); margin-top:2px;">' + escapeHtml(desc) + '</div>' +
+          '</div>';
+      });
+      nteHtml += '</div>';
+    }
+  }
+
+  formBody.innerHTML = progressHtml +
+    '<div style="padding:10px 14px; background:' + cfg.accent + '08; border:1px solid ' + cfg.accent + '30; border-radius:var(--radius); margin-bottom:16px; font-size:11px; color:var(--fg-muted);">' +
+    '<strong style="color:' + cfg.accent + ';">Step 1:</strong> Select the employee and the served NTE/CAP record this ' + cfg.level + ' references.' +
+    '</div>' +
+    '<div class="ca-form-group"><label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Employee *</label>' + empHtml + '</div>' +
+    (wiz.employee ? '<div class="ca-form-group" style="margin-top:16px;"><label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Linked NTE/CAP Record *</label>' + nteHtml + '</div>' : '');
+
+  var canProceed = wiz.employee && wiz.linkedNte;
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="caCloseWizard()">← Back</button>' +
+    '<button class="btn btn-primary btn-sm" ' + (canProceed ? '' : 'disabled') + ' onclick="_capNGoStep2(\'' + capKey + '\')">Next →</button>';
+}
+
+function _capNSelectNte(capKey, nteId) {
+  var wiz = _capNConfig[capKey].getWiz();
+  var nte = wiz.servedNtes.find(function(n) { return n.id === nteId; });
+  if (nte) {
+    wiz.linkedNte = nte;
+    _capNConfig[capKey].render();
+  }
+}
+
+// ---- Employee Picker (shared for CAP 2/3) ----
+var _capNEmpFilterTimer = null;
+function _capNFilterEmployees(capKey) {
+  clearTimeout(_capNEmpFilterTimer);
+  _capNEmpFilterTimer = setTimeout(function() {
+    var search = (document.getElementById(capKey + '-wiz-emp-search')?.value || '').toLowerCase();
+    var dropdown = document.getElementById(capKey + '-wiz-emp-dropdown');
+    if (!dropdown || !search) { if (dropdown) dropdown.style.display = 'none'; return; }
+    var matches = CA.employees
+      .filter(function(e) { return e.actual_role !== 'Manager' && (
+        (e.full_name || '').toLowerCase().includes(search) ||
+        (e.ohr_id || '').toLowerCase().includes(search)
+      ); })
+      .slice(0, 30);
+    if (matches.length === 0) {
+      dropdown.innerHTML = '<div style="padding:8px 12px; color:var(--fg-muted); font-size:12px;">No matches found</div>';
+    } else {
+      dropdown.innerHTML = matches.map(function(e) {
+        return '<div onclick="_capNSelectEmployee(\'' + capKey + '\',\'' + e.ohr_id + '\')" style="padding:8px 12px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border);" onmouseover="this.style.background=\'var(--bg-alt)\'" onmouseout="this.style.background=\'transparent\'">' +
+          '<div style="font-weight:600;">' + escapeHtml(e.full_name) + '</div>' +
+          '<div style="font-size:11px; color:var(--fg-muted);">' + escapeHtml(e.ohr_id) + ' · ' + escapeHtml(e.actual_role || '') + '</div></div>';
+      }).join('');
+    }
+    dropdown.style.display = 'block';
+  }, 200);
+}
+
+function _capNToggleEmpDropdown(capKey, show) {
+  var dropdown = document.getElementById(capKey + '-wiz-emp-dropdown');
+  if (dropdown) dropdown.style.display = show ? '' : 'none';
+  if (show) _capNFilterEmployees(capKey);
+}
+
+async function _capNSelectEmployee(capKey, ohrId) {
+  var wiz = _capNConfig[capKey].getWiz();
+  var emp = CA.employees.find(function(e) { return e.ohr_id === ohrId; });
+  if (!emp) return;
+  wiz.employee = emp;
+  wiz.linkedNte = null;
+
+  // Fetch served NTEs / CAP records for this employee
+  try {
+    var resp = await fetch(IO_API_BASE + '/corrective-actions?status=Served&ohr_id=' + encodeURIComponent(ohrId));
+    if (resp.ok) {
+      var data = await resp.json();
+      wiz.servedNtes = Array.isArray(data) ? data : (data.records || []);
+    } else {
+      wiz.servedNtes = [];
+    }
+    // Also fetch CAP Issued records (prior CAP levels that could be escalated)
+    var capResp = await fetch(IO_API_BASE + '/corrective-actions?status=CAP%20Issued&ohr_id=' + encodeURIComponent(ohrId));
+    if (capResp.ok) {
+      var capData = await capResp.json();
+      var capRecords = Array.isArray(capData) ? capData : (capData.records || []);
+      // Merge, avoiding duplicates
+      var existingIds = new Set(wiz.servedNtes.map(function(n) { return n.id; }));
+      capRecords.forEach(function(r) { if (!existingIds.has(r.id)) wiz.servedNtes.push(r); });
+    }
+  } catch (e) {
+    wiz.servedNtes = [];
+  }
+
+  _capNConfig[capKey].render();
+}
+
+// ---- Step 2: Explanation + AI Deliberation ----
+function _capNGoStep2(capKey) {
+  var wiz = _capNConfig[capKey].getWiz();
+  wiz.step = 2;
+  _capNConfig[capKey].render();
+}
+
+function _capNStep2(capKey, formBody, formFooter, progressHtml) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  var nte = wiz.linkedNte || {};
+  var nteNarrative = (nte.incident_description || '').replace(/<[^>]*>/g, '').substring(0, 300);
+
+  formBody.innerHTML = progressHtml +
+    '<div style="padding:10px 14px; background:' + cfg.accent + '08; border:1px solid ' + cfg.accent + '30; border-radius:var(--radius); margin-bottom:16px; font-size:11px; color:var(--fg-muted);">' +
+    '<strong style="color:' + cfg.accent + ';">Step 2:</strong> Provide the explanation details and generate the AI-assisted deliberation paragraph for ' + cfg.level + '.' +
+    '</div>' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:16px;">' +
+    '<div style="font-size:11px; color:var(--fg-muted); margin-bottom:4px;"><strong>NTE/Prior CAP Context:</strong></div>' +
+    '<div style="font-size:12px; color:var(--fg); line-height:1.5;">' + escapeHtml(nteNarrative || 'No narrative available') + '</div>' +
+    '</div>' +
+    '<div class="ca-form-group">' +
+    '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Explanation Letter Date</label>' +
+    '<input type="date" id="' + capKey + '-explanation-date" value="' + (wiz.explanationDate || '') + '" ' +
+    'style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; background:var(--bg); color:var(--fg);">' +
+    '</div>' +
+    '<div class="ca-form-group" style="margin-top:12px;">' +
+    '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Explanation Summary *</label>' +
+    '<textarea id="' + capKey + '-explanation-summary" rows="4" placeholder="Summarize what the employee stated in their explanation letter..." ' +
+    'style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; background:var(--bg); color:var(--fg); resize:vertical;">' +
+    escapeHtml(wiz.explanationSummary || '') + '</textarea>' +
+    '</div>' +
+    '<div style="margin-top:16px;">' +
+    '<button class="btn btn-primary btn-sm" id="' + capKey + '-generate-btn" onclick="_capNGenerateDeliberation(\'' + capKey + '\')" style="width:100%;">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' +
+    'Generate AI Deliberation' +
+    '</button>' +
+    '</div>' +
+    (wiz.deliberation ? '<div style="margin-top:16px;">' +
+      '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Generated Deliberation</label>' +
+      '<div id="' + capKey + '-deliberation-preview" contenteditable="true" style="padding:10px 14px; background:var(--bg-alt); border:1px solid ' + cfg.accent + '50; border-radius:var(--radius); font-size:12px; line-height:1.6; min-height:60px; color:var(--fg);">' +
+      wiz.deliberation + '</div>' +
+      '<div style="font-size:10px; color:var(--fg-muted); margin-top:4px;">You can edit the text above before proceeding.</div>' +
+      (wiz.violationSection ? '<div style="margin-top:8px; font-size:11px; color:var(--fg-muted);"><strong>Policy Section:</strong> ' + escapeHtml(wiz.violationSection) + '</div>' : '') +
+      (wiz.violationSubsection ? '<div style="font-size:11px; color:var(--fg-muted);"><strong>Sub-section:</strong> ' + escapeHtml(wiz.violationSubsection) + '</div>' : '') +
+      '</div>' : '');
+
+  var canProceed = wiz.deliberation && wiz.explanationSummary;
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="_capNConfig[\'' + capKey + '\'].getWiz().step=1; _capNConfig[\'' + capKey + '\'].render();">← Back</button>' +
+    '<button class="btn btn-primary btn-sm" ' + (canProceed ? '' : 'disabled') + ' onclick="_capNGoStep3(\'' + capKey + '\')">Next →</button>';
+}
+
+async function _capNGenerateDeliberation(capKey) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  var summary = document.getElementById(capKey + '-explanation-summary')?.value?.trim();
+  var expDate = document.getElementById(capKey + '-explanation-date')?.value || '';
+  if (!summary) { showToast('Please provide an explanation summary first.', 'warning'); return; }
+
+  wiz.explanationSummary = summary;
+  wiz.explanationDate = expDate;
+
+  var btn = document.getElementById(capKey + '-generate-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-sm"></span> Generating...'; }
+
+  try {
+    var nte = wiz.linkedNte || {};
+    var violations = [];
+    try { violations = JSON.parse(nte.violations || '[]'); } catch(e) {}
+
+    // Fetch previous CAs for context
+    var previousCaps = [];
+    try {
+      var histResp = await fetch(IO_API_BASE + '/corrective-actions/employee/' + encodeURIComponent(wiz.employee.ohr_id) + '/history');
+      if (histResp.ok) previousCaps = await histResp.json();
+    } catch(e) {}
+
+    var resp = await fetch(IO_API_BASE + '/cap-build-assist/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employee: wiz.employee,
+        violation: violations[0] || null,
+        violations: violations,
+        cap_level: cfg.level,
+        explanation_date: expDate,
+        explanation_summary: summary,
+        nte_narrative: nte.incident_description || '',
+        previous_caps: previousCaps
+      })
+    });
+
+    if (!resp.ok) throw new Error('AI generation failed');
+    var data = await resp.json();
+
+    wiz.deliberation = data.deliberation || '';
+    wiz.violationSection = data.violation_section || '';
+    wiz.violationSubsection = data.violation_subsection || '';
+
+    cfg.render();
+    showToast('Deliberation generated successfully!', 'success');
+  } catch (e) {
+    console.error(cfg.level + ' AI generation error:', e);
+    showToast('Failed to generate deliberation: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Generate AI Deliberation'; }
+  }
+}
+
+// ---- Step 3: Confirm & Generate DOCX ----
+function _capNGoStep3(capKey) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  // Capture any edits from the deliberation preview
+  var preview = document.getElementById(capKey + '-deliberation-preview');
+  if (preview) wiz.deliberation = preview.innerHTML;
+
+  var summary = document.getElementById(capKey + '-explanation-summary')?.value?.trim();
+  if (summary) wiz.explanationSummary = summary;
+
+  wiz.step = 3;
+  cfg.render();
+}
+
+function _capNStep3(capKey, formBody, formFooter, progressHtml) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  var emp = wiz.employee || {};
+  var nte = wiz.linkedNte || {};
+  var nteDate = nte.created_at ? new Date(nte.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+  var coach = typeof currentUser !== 'undefined' ? currentUser : null;
+
+  var activeDays = cfg.activeDays;
+  var startDate = new Date();
+  var endDate = new Date(startDate.getTime() + activeDays * 24 * 60 * 60 * 1000);
+  var fmtDate = function(d) { return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); };
+
+  formBody.innerHTML = progressHtml +
+    '<div style="padding:10px 14px; background:#10B98108; border:1px solid #10B98130; border-radius:var(--radius); margin-bottom:16px; font-size:11px; color:var(--fg-muted);">' +
+    '<strong style="color:#10B981;">Step 3:</strong> Review the details below and generate the ' + cfg.level + ' document.' +
+    '</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius);">' +
+    '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Employee</div>' +
+    '<div style="font-size:13px; font-weight:600;">' + escapeHtml(emp.full_name || '') + '</div>' +
+    '<div style="font-size:11px; color:var(--fg-muted);">' + escapeHtml(emp.ohr_id || '') + ' · ' + escapeHtml(emp.actual_role || 'Process Associate') + '</div>' +
+    '</div>' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius);">' +
+    '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">CAP Details</div>' +
+    '<div style="font-size:13px; font-weight:600; color:' + cfg.accent + ';">' + cfg.level + ' — ' + cfg.desc + '</div>' +
+    '<div style="font-size:11px; color:var(--fg-muted);">Active: ' + activeDays + ' days (until ' + fmtDate(endDate) + ')</div>' +
+    '</div>' +
+    '</div>' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px;">' +
+    '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Linked NTE/CAP Record</div>' +
+    '<div style="font-size:12px;">NTE #' + (nte.id || 'N/A') + ' — Served ' + nteDate + (nte.cap_level ? ' (' + nte.cap_level + ')' : '') + '</div>' +
+    '</div>' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px;">' +
+    '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Policy Violated</div>' +
+    '<div style="font-size:12px;">' + escapeHtml(wiz.violationSection || 'N/A') + '</div>' +
+    (wiz.violationSubsection ? '<div style="font-size:11px; color:var(--fg-muted); margin-top:2px;">' + escapeHtml(wiz.violationSubsection) + '</div>' : '') +
+    '</div>' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px;">' +
+    '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Deliberation</div>' +
+    '<div style="font-size:12px; line-height:1.6;">' + (wiz.deliberation || 'N/A') + '</div>' +
+    '</div>' +
+    '<div style="padding:10px 14px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius);">' +
+    '<div style="font-size:10px; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Issued By</div>' +
+    '<div style="font-size:12px;">' + escapeHtml(coach ? coach.full_name : 'Unknown') + ' (' + escapeHtml(emp.supervisor_name || '') + ')</div>' +
+    '</div>';
+
+  formFooter.innerHTML = '<button class="btn btn-outline btn-sm" onclick="_capNConfig[\'' + capKey + '\'].getWiz().step=2; _capNConfig[\'' + capKey + '\'].render();">← Back</button>' +
+    '<button class="btn btn-primary btn-sm" id="' + capKey + '-submit-btn" onclick="_capNSubmit(\'' + capKey + '\');">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+    'Generate ' + cfg.level + ' Document</button>';
+}
+
+async function _capNSubmit(capKey) {
+  var cfg = _capNConfig[capKey];
+  var wiz = cfg.getWiz();
+  var coach = typeof currentUser !== 'undefined' ? currentUser : null;
+  var submitBtn = document.getElementById(capKey + '-submit-btn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-sm"></span> Updating Record...'; }
+
+  try {
+    var nte = wiz.linkedNte || {};
+    var emp = wiz.employee || {};
+
+    // 1. Update the NTE record with CAP assignment
+    if (submitBtn) { submitBtn.innerHTML = '<span class="spinner-sm"></span> Assigning ' + cfg.level + '...'; }
+    var activeDays = cfg.activeDays;
+    var startDate = new Date();
+    var endDate = new Date(startDate.getTime() + activeDays * 24 * 60 * 60 * 1000);
+
+    var patchPayload = {
+      action: 'assign_cap',
+      cap_level: cfg.level,
+      cap_start_date: startDate.toISOString().slice(0, 10),
+      cap_expiry_date: endDate.toISOString().slice(0, 10),
+      decision_remarks: cfg.level + ' issued via Document Build Assist. Deliberation: ' + (wiz.deliberation || '').replace(/<[^>]*>/g, '').substring(0, 200),
+      decided_by: coach ? coach.full_name : '',
+      decided_by_ohr: coach ? coach.ohr_id : '',
+    };
+
+    var patchResp = await fetch(IO_API_BASE + '/corrective-actions/' + nte.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patchPayload)
+    });
+    if (!patchResp.ok) {
+      var errData = await patchResp.json().catch(function() { return {}; });
+      console.warn(cfg.level + ' assignment warning:', errData.error || patchResp.statusText);
+    }
+
+    // 2. Generate the CAP DOCX document
+    if (submitBtn) { submitBtn.innerHTML = '<span class="spinner-sm"></span> Generating DOCX...'; }
+
+    var violations = [];
+    try { violations = JSON.parse(nte.violations || '[]'); } catch(e) {}
+
+    var docxPayload = {
+      cap_level: cfg.level,
+      employee: {
+        full_name: emp.full_name || '',
+        ohr_id: emp.ohr_id || '',
+        actual_role: emp.actual_role || 'Process Associate',
+        department: emp.department || 'Operations',
+        supervisor_name: emp.supervisor_name || '',
+        gender: emp.gender || 'Male',
+      },
+      explanation_date: wiz.explanationDate || '',
+      explanation_summary: wiz.explanationSummary || '',
+      violation_section: wiz.violationSection || '',
+      violation_subsection: wiz.violationSubsection || '',
+      violations: violations,
+      flm_name: emp.supervisor_name || (coach ? coach.full_name : ''),
+      issuance_date: startDate.toISOString().slice(0, 10),
+      nte_response_text: wiz.deliberation ? wiz.deliberation.replace(/<[^>]*>/g, '') : '',
+    };
+
+    var docxResp = await fetch(IO_API_BASE + '/cap-build-assist/docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(docxPayload)
+    });
+    if (!docxResp.ok) {
+      var errData2 = await docxResp.json().catch(function() { return {}; });
+      throw new Error('DOCX generation failed: ' + (errData2.error || docxResp.statusText));
+    }
+
+    // Download the DOCX file
+    var blob = await docxResp.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var safeName = emp.full_name.replace(/[^a-zA-Z0-9 ,]/g, '').replace(/\s+/g, '_');
+    a.href = url;
+    a.download = cfg.level.replace(' ', '') + '_' + safeName + '_' + new Date().toISOString().slice(0, 10) + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(cfg.level + ' document generated and downloaded! Record updated.', 'success');
+    caCloseWizard();
+    // Refresh the corrective actions list
+    await Promise.all([caFetchRecords(), caFetchStats()]);
+    caRenderSummaryCards();
+    caApplyFilters();
+  } catch (e) {
+    console.error(cfg.level + ' submission error:', e);
+    showToast('Failed to generate ' + cfg.level + ': ' + e.message, 'error');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Generate ' + cfg.level + ' Document'; }
   }
 }
 
