@@ -2663,3 +2663,11 @@
 - [x] Updated coaching log 8866a5f2 status to "Markdown Retained - QTP Manager"
 - [x] Cache versions bumped: compass-redesign.css v=108, compass.js v=110, notifications.js v=104
 - [x] All 762 tests passing
+
+## Disputes Buttons Fix + CA Inline Wizard + CP Table Alignment (April 2026)
+- [x] Fix Disputes Area action buttons regression — added missing class="disputes-inline-action-panel" and removed inline style="display:none" override
+- [x] Convert CA Document Build Assist wizard options to inline expansion — all 3 wizard renderers (NTE, CAP 1, CAP 2/3) now target ca-inline-form-* elements; caCloseWizard() updated
+- [x] Realign Coaching Profile tables to near-equal width — grid-template-columns changed from 7fr 3fr to 1fr 1fr
+- [x] Remove "Session Goal" column from both Coaching Profile tables — totalCols 5→4, thead/tbody updated, expand indicator moved to person column; Session Goal remains in inline detail panel
+- [x] Cache versions bumped: compass-redesign.css v=109, compass.js v=111, corrective-actions.js v=9
+- [x] All 762 tests passing

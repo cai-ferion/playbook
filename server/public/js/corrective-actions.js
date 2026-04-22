@@ -667,8 +667,15 @@ function caStartCap1Wizard() {
 }
 
 function caCloseWizard() {
-  const overlay = document.getElementById('ca-form-overlay');
+  // Close legacy modal overlay (if still present)
+  var overlay = document.getElementById('ca-form-overlay');
   if (overlay) overlay.style.display = 'none';
+  // Close inline wizard form and restore type chips
+  var formPanel = document.getElementById('ca-inline-add-form');
+  var typesEl = document.getElementById('ca-inline-add-types');
+  if (formPanel) formPanel.style.display = 'none';
+  if (typesEl) typesEl.style.display = 'flex';
+  CA_DOC_TYPE = '';
 }
 
 // ---- Rich text exec helper ----
@@ -677,28 +684,35 @@ function caRteExec(command) {
 }
 
 function _caWizRender() {
-  const overlay = document.getElementById('ca-form-overlay');
-  const formTitle = document.getElementById('ca-form-title');
-  const formBody = document.getElementById('ca-form-body');
-  const formFooter = document.getElementById('ca-form-footer');
-  const stepLabels = ['Employee & Violation', 'Date Range & Attendance', 'AI Narrative & Review', 'Confirm & Save'];
+  var formTitle = document.getElementById('ca-inline-form-title');
+  var formBody = document.getElementById('ca-inline-form-body');
+  var formFooter = document.getElementById('ca-inline-form-footer');
+  var formPanel = document.getElementById('ca-inline-add-form');
+  var typesEl = document.getElementById('ca-inline-add-types');
+  var stepLabels = ['Employee & Violation', 'Date Range & Attendance', 'AI Narrative & Review', 'Confirm & Save'];
 
-  formTitle.innerHTML = `<span style="display:flex;align-items:center;gap:8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+  if (formTitle) formTitle.innerHTML = `<span style="display:flex;align-items:center;gap:8px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
     NTE Build Assist
     <span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Step ${CA_NTE_WIZARD.step} of 4 — ${stepLabels[CA_NTE_WIZARD.step - 1]}</span>
   </span>`;
 
-  const progressHtml = `<div style="display:flex;gap:4px;margin-bottom:16px;">
+  var progressHtml = `<div style="display:flex;gap:4px;margin-bottom:16px;">
     ${[1,2,3,4].map(s => `<div style="flex:1;height:3px;border-radius:2px;background:${s <= CA_NTE_WIZARD.step ? '#6366F1' : 'var(--border)'};transition:background 0.2s;"></div>`).join('')}
   </div>`;
 
-  if (CA_NTE_WIZARD.step === 1) _caWizStep1(formBody, formFooter, progressHtml);
-  else if (CA_NTE_WIZARD.step === 2) _caWizStep2(formBody, formFooter, progressHtml);
-  else if (CA_NTE_WIZARD.step === 3) _caWizStep3(formBody, formFooter, progressHtml);
-  else if (CA_NTE_WIZARD.step === 4) _caWizStep4(formBody, formFooter, progressHtml);
+  if (formBody && formFooter) {
+    if (CA_NTE_WIZARD.step === 1) _caWizStep1(formBody, formFooter, progressHtml);
+    else if (CA_NTE_WIZARD.step === 2) _caWizStep2(formBody, formFooter, progressHtml);
+    else if (CA_NTE_WIZARD.step === 3) _caWizStep3(formBody, formFooter, progressHtml);
+    else if (CA_NTE_WIZARD.step === 4) _caWizStep4(formBody, formFooter, progressHtml);
+  }
 
-  overlay.style.display = 'flex';
+  // Show inline form, hide type chips
+  if (typesEl) typesEl.style.display = 'none';
+  if (formPanel) formPanel.style.display = 'block';
+  var panel = document.getElementById('ca-inline-add');
+  if (panel) { panel.style.display = 'block'; panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 }
 
 // ---- Step 1: Employee + Violation Type (Multi-select) ----
@@ -1676,15 +1690,16 @@ async function caSubmitDismiss() {
 var _caCap1EmpFilterTimer = null;
 
 function _caCap1WizRender() {
-  var overlay = document.getElementById('ca-form-overlay');
-  var formTitle = document.getElementById('ca-form-title');
-  var formBody = document.getElementById('ca-form-body');
-  var formFooter = document.getElementById('ca-form-footer');
+  var formTitle = document.getElementById('ca-inline-form-title');
+  var formBody = document.getElementById('ca-inline-form-body');
+  var formFooter = document.getElementById('ca-inline-form-footer');
+  var formPanel = document.getElementById('ca-inline-add-form');
+  var typesEl = document.getElementById('ca-inline-add-types');
 
   var stepLabels = ['Employee & NTE', 'Explanation & Deliberation', 'Confirm & Generate'];
 
-  formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+  if (formTitle) formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
     'CAP 1 Build Assist' +
     '<span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Step ' + CA_CAP1_WIZARD.step + ' of 3 — ' + stepLabels[CA_CAP1_WIZARD.step - 1] + '</span>' +
     '</span>';
@@ -1694,11 +1709,16 @@ function _caCap1WizRender() {
       return '<div style="flex:1;height:3px;border-radius:2px;background:' + (s <= CA_CAP1_WIZARD.step ? '#3B82F6' : 'var(--border)') + ';transition:background 0.2s;"></div>';
     }).join('') + '</div>';
 
-  if (CA_CAP1_WIZARD.step === 1) _caCap1Step1(formBody, formFooter, progressHtml);
-  else if (CA_CAP1_WIZARD.step === 2) _caCap1Step2(formBody, formFooter, progressHtml);
-  else if (CA_CAP1_WIZARD.step === 3) _caCap1Step3(formBody, formFooter, progressHtml);
+  if (formBody && formFooter) {
+    if (CA_CAP1_WIZARD.step === 1) _caCap1Step1(formBody, formFooter, progressHtml);
+    else if (CA_CAP1_WIZARD.step === 2) _caCap1Step2(formBody, formFooter, progressHtml);
+    else if (CA_CAP1_WIZARD.step === 3) _caCap1Step3(formBody, formFooter, progressHtml);
+  }
 
-  overlay.style.display = 'flex';
+  if (typesEl) typesEl.style.display = 'none';
+  if (formPanel) formPanel.style.display = 'block';
+  var panel = document.getElementById('ca-inline-add');
+  if (panel) { panel.style.display = 'block'; panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 }
 
 // ---- Step 1: Select Employee + Linked NTE ----
@@ -2153,15 +2173,16 @@ var _capNConfig = {
 function _capNWizRender(capKey) {
   var cfg = _capNConfig[capKey];
   var wiz = cfg.getWiz();
-  var overlay = document.getElementById('ca-form-overlay');
-  var formTitle = document.getElementById('ca-form-title');
-  var formBody = document.getElementById('ca-form-body');
-  var formFooter = document.getElementById('ca-form-footer');
+  var formTitle = document.getElementById('ca-inline-form-title');
+  var formBody = document.getElementById('ca-inline-form-body');
+  var formFooter = document.getElementById('ca-inline-form-footer');
+  var formPanel = document.getElementById('ca-inline-add-form');
+  var typesEl = document.getElementById('ca-inline-add-types');
 
   var stepLabels = ['Employee & NTE', 'Explanation & Deliberation', 'Confirm & Generate'];
 
-  formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + cfg.accent + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
+  if (formTitle) formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + cfg.accent + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' +
     cfg.title +
     '<span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Step ' + wiz.step + ' of 3 — ' + stepLabels[wiz.step - 1] + '</span>' +
     '</span>';
@@ -2171,11 +2192,16 @@ function _capNWizRender(capKey) {
       return '<div style="flex:1;height:3px;border-radius:2px;background:' + (s <= wiz.step ? cfg.accent : 'var(--border)') + ';transition:background 0.2s;"></div>';
     }).join('') + '</div>';
 
-  if (wiz.step === 1) _capNStep1(capKey, formBody, formFooter, progressHtml);
-  else if (wiz.step === 2) _capNStep2(capKey, formBody, formFooter, progressHtml);
-  else if (wiz.step === 3) _capNStep3(capKey, formBody, formFooter, progressHtml);
+  if (formBody && formFooter) {
+    if (wiz.step === 1) _capNStep1(capKey, formBody, formFooter, progressHtml);
+    else if (wiz.step === 2) _capNStep2(capKey, formBody, formFooter, progressHtml);
+    else if (wiz.step === 3) _capNStep3(capKey, formBody, formFooter, progressHtml);
+  }
 
-  overlay.style.display = 'flex';
+  if (typesEl) typesEl.style.display = 'none';
+  if (formPanel) formPanel.style.display = 'block';
+  var panel = document.getElementById('ca-inline-add');
+  if (panel) { panel.style.display = 'block'; panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 }
 
 function _caCap2WizRender() { _capNWizRender('cap2'); }

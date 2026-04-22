@@ -196,7 +196,7 @@
 /* ---- Dual Table Panels ---- */
 #view-compass-input .compass-dual-tables {
   display: grid;
-  grid-template-columns: 7fr 3fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 20px;
   animation: compassFadeUp 0.5s ease-out;
@@ -312,13 +312,13 @@
   font-size: 12px;
   width: 100%;
 }
-/* Allow session goal badges to wrap */
+/* Person column (last): allow wrapping for expand indicator layout */
 #view-compass-input .compass-table-panel .module-table td:last-child {
   white-space: normal;
 }
-/* Coachee column: truncate long names */
-#view-compass-input .compass-table-panel:first-child .module-table td:nth-child(4) {
-  max-width: 160px;
+/* Person column (4th): truncate long names */
+#view-compass-input .compass-table-panel .module-table td:nth-child(4) {
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

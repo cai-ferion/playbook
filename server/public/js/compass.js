@@ -509,12 +509,12 @@ function compassRenderTable(which) {
   // Given table: no Coach column. Received table: no Coachee column.
   const showCoachCol = !isGiven;
   const showCoacheeCol = isGiven;
-  const totalCols = 5; // ID, Type, Stamp, Person, Session Goal
+  const totalCols = 4; // ID, Type, Stamp, Person
 
   if (isGiven) {
-    thead.innerHTML = `<tr><th>ID</th><th>Type</th><th>Coaching Stamp</th><th>Coachee</th><th>Session Goal</th></tr>`;
+    thead.innerHTML = `<tr><th>ID</th><th>Type</th><th>Coaching Stamp</th><th>Coachee</th></tr>`;
   } else {
-    thead.innerHTML = `<tr><th>ID</th><th>Type</th><th>Coaching Stamp</th><th>Coach</th><th>Session Goal</th></tr>`;
+    thead.innerHTML = `<tr><th>ID</th><th>Type</th><th>Coaching Stamp</th><th>Coach</th></tr>`;
   }
 
   const start = (COMPASS[pageKey] - 1) * COMPASS.pageSize;
@@ -535,20 +535,14 @@ function compassRenderTable(which) {
       : (log.coachee || '\u2014');
     const personCol = isGiven ? escapeHtml(coacheeDisplay) : escapeHtml(log.coach || '\u2014');
 
-    // Session goal: split by comma and display each as a color-coded badge
-    const sessionGoalHtml = log.session_goal
-      ? log.session_goal.split(',').map(g => compassGoalBadge(g)).join('')
-      : '\u2014';
-
     const cid = log.coaching_id || log.id;
     const isExpanded = COMPASS._expandedRowId === String(cid);
     return `<tr class="module-row${isExpanded ? ' compass-row-expanded' : ''}" data-cid="${escapeAttr(String(cid))}" onclick="compassToggleInlineDetail('${escapeAttr(String(cid))}', '${which}')">
       <td><span class="module-id">${cid}</span></td>
       <td><span class="module-type-badge type-${(log.coaching_type || '').replace(/\s+/g, '-').toLowerCase()}">${escapeHtml(log.coaching_type || '')}</span></td>
       <td>${date}</td>
-      <td>${personCol}</td>
-      <td style="font-size:12px;"><div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;display:flex;flex-direction:column;gap:2px;">${sessionGoalHtml}</div><span class="compass-expand-indicator"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span></div></td>
-    </tr>${isExpanded ? `<tr class="compass-detail-panel-row"><td colspan="5"><div class="compass-detail-panel open" id="compass-inline-detail-${escapeAttr(String(cid))}"><div class="compass-detail-loading" style="text-align:center;padding:20px;color:var(--compass-text-muted);">Loading...</div></div></td></tr>` : ''}`;
+      <td><div style="display:flex;align-items:center;gap:6px;"><span style="flex:1;">${personCol}</span><span class="compass-expand-indicator"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span></div></td>
+    </tr>${isExpanded ? `<tr class="compass-detail-panel-row"><td colspan="4"><div class="compass-detail-panel open" id="compass-inline-detail-${escapeAttr(String(cid))}"><div class="compass-detail-loading" style="text-align:center;padding:20px;color:var(--compass-text-muted);">Loading...</div></div></td></tr>` : ''}`;
   }).join('');
 
   compassRenderPagination(which);
