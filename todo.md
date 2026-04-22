@@ -2631,3 +2631,8 @@
 - [x] Disputes detail body refactored to cdp-* card-based layout (header, session details, RCA, dispute trail)
 - [x] Cache versions bumped: compass.js v=106, compass-redesign.css v=103
 - [x] All 762 tests passing
+
+## Fixes — Coaching Profile Layout + Disputes Card Click (April 2026)
+- [x] Coaching Profile inline expansion already uses same cdp-* classes as CA — both are aligned (user may have been seeing cached old version)
+- [x] Disputes Area: added try-catch with visible error alert + fallback display:block + console.warn for missing log IDs
+- [x] Bumped compass.js to v=107 to force cache refresh

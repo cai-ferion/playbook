@@ -3508,8 +3508,9 @@ function compassRenderAttachmentList() {
 var _disputesEditingId = null;
 
 async function disputesOpenDetail(coachingId) {
+  try {
   let log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
-  if (!log) return;
+  if (!log) { console.warn('[Disputes] Log not found for ID:', coachingId, 'Total logs:', COMPASS.logs.length); return; }
   _disputesEditingId = log.coaching_id || log.id;
 
   // Fetch full record on demand if coaching_details is missing (lean mode)
@@ -3685,13 +3686,18 @@ async function disputesOpenDetail(coachingId) {
   footerEl.innerHTML = footerHtml;
   // Open side panel
   overlay.classList.add('active');
+  overlay.style.display = 'block'; // fallback for cached CSS
   const wrapper = document.getElementById('disputes-layout-wrapper');
   if (wrapper) wrapper.classList.add('panel-open');
+  } catch (err) {
+    console.error('[Disputes] Error opening detail:', err);
+    alert('Error opening dispute detail: ' + err.message);
+  }
 }
 
 function disputesCloseDetail() {
   const overlay = document.getElementById('disputes-detail-overlay');
-  if (overlay) overlay.classList.remove('active');
+  if (overlay) { overlay.classList.remove('active'); overlay.style.display = ''; }
   const wrapper = document.getElementById('disputes-layout-wrapper');
   if (wrapper) wrapper.classList.remove('panel-open');
   _disputesEditingId = null;
