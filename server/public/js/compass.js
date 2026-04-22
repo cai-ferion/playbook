@@ -3580,6 +3580,14 @@ async function disputesSubmitAcceptMarkdown() {
     disputeNotify(log, 'dispute_l2_decision', `Your coaching ${cid} was accepted by the SME. Please acknowledge.`, [
       log.coachee_ohr
     ]);
+    // Dispute Resolution Summary → notify TL
+    try {
+      const coacheeName = log.coachee || 'Coachee';
+      const tlOhr = log.coach_sup ? (appState.employees || []).find(e => e.full_name === log.coach_sup)?.ohr_id : null;
+      if (tlOhr) {
+        createNotification({ type: 'dispute_resolved', title: `Dispute Resolved — ${coacheeName}`, message: `Dispute on ${cid} resolved at L2: SME accepted markdown. Sent to coachee for acknowledgement.`, target_ohr: tlOhr, metadata: { coaching_id: cid, outcome: 'Accepted', level: 'L2' } });
+      }
+    } catch (e) { console.error('[Notif] dispute_resolved error:', e); }
 
     disputesCloseAction();
     disputesCloseDetail();
@@ -3900,7 +3908,14 @@ async function disputesSubmitReverseMarkdown() {
     disputeNotify(log, 'dispute_l2_decision', `Your dispute on ${cid6} was reversed by the coach. Sent for acknowledgement.`, [
       log.coachee_ohr
     ]);
-
+    // Dispute Resolution Summary → notify TL
+    try {
+      const coacheeName = log.coachee || 'Coachee';
+      const tlOhr = log.coach_sup ? (appState.employees || []).find(e => e.full_name === log.coach_sup)?.ohr_id : null;
+      if (tlOhr) {
+        createNotification({ type: 'dispute_resolved', title: `Dispute Resolved — ${coacheeName}`, message: `Dispute on ${cid6} resolved at L2: Coach reversed markdown. Sent to coachee for acknowledgement.`, target_ohr: tlOhr, metadata: { coaching_id: cid6, outcome: 'Reversed', level: 'L2' } });
+      }
+    } catch (e) { console.error('[Notif] dispute_resolved error:', e); }
     disputesCloseAction();
     disputesCloseDetail();
     await compassFetchLogs();
@@ -4557,6 +4572,14 @@ async function disputesSubmitLV6ReverseMarkdown() {
       resolveOhr(log.sme_joiner),
       resolveOhr(log.sme_joiner_2)
     ]);
+    // Dispute Resolution Summary → notify TL
+    try {
+      const coacheeName = log.coachee || 'Coachee';
+      const tlOhr = log.coach_sup ? (appState.employees || []).find(e => e.full_name === log.coach_sup)?.ohr_id : null;
+      if (tlOhr) {
+        createNotification({ type: 'dispute_resolved', title: `Dispute Resolved — ${coacheeName}`, message: `Dispute on ${cid11a} resolved: QTP Manager reversed markdown. Final decision reached.`, target_ohr: tlOhr, metadata: { coaching_id: cid11a, outcome: 'Reversed', level: 'L6' } });
+      }
+    } catch (e) { console.error('[Notif] dispute_resolved error:', e); }
 
     disputesCloseAction();
     disputesCloseDetail();
@@ -4666,6 +4689,14 @@ async function disputesSubmitLV6RetainMarkdown() {
       resolveOhr(log.sme_joiner),
       resolveOhr(log.sme_joiner_2)
     ]);
+    // Dispute Resolution Summary → notify TL
+    try {
+      const coacheeName = log.coachee || 'Coachee';
+      const tlOhr = log.coach_sup ? (appState.employees || []).find(e => e.full_name === log.coach_sup)?.ohr_id : null;
+      if (tlOhr) {
+        createNotification({ type: 'dispute_resolved', title: `Dispute Resolved — ${coacheeName}`, message: `Dispute on ${cid11b} resolved: QTP Manager retained markdown. Final decision reached.`, target_ohr: tlOhr, metadata: { coaching_id: cid11b, outcome: 'Retained', level: 'L6' } });
+      }
+    } catch (e) { console.error('[Notif] dispute_resolved error:', e); }
 
     disputesCloseAction();
     disputesCloseDetail();

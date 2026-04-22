@@ -2526,3 +2526,21 @@
 - [x] Root cause: canCreate/canAct used hardcoded role strings ['Team Lead', 'Manager'] but user's actual_role is 'Operational SME'
 - [x] Fix: switched to RBAC permission check (currentUser.permissions['compass.corrective_actions']) which correctly covers all authorized users
 - [x] Bumped corrective-actions.js cache version to v=3
+
+## Compass Notification Enhancements (April 2026)
+### Fix: Missing Registration
+- [x] Register nte_issued, cap_issued, nte_dismissed, ot_forfeited in notifications.js (labels, colors, icons)
+### Priority 1 — Real-time
+- [x] NTE Served Confirmation → notify issuing TL when employee responds
+- [x] CAP Issued — Supervisor Copy → extend cap_issued to also notify agent's supervisor
+### Priority 1 — Cron
+- [x] CAP Expiry Warning (cap_expiring) → daily cron at 01:00 UTC (9 AM PHT), alert agent + TL when CAP expires in 7 days
+- [x] NTE Deadline Reminder (nte_deadline_reminder) → cron every 4h, nudge agent when deadline is 12h out
+### Priority 2
+- [x] Coaching Acknowledgement Overdue (coaching_ack_overdue) → daily cron at 02:00 UTC (10 AM PHT), coaching not ack'd within 48h
+- [x] Repeat Offender Alert (repeat_offender) → on NTE creation, 2nd+ NTE in 90 days
+- [x] CAP Escalation Path (cap_escalated) → on CAP decision, notify TL + Manager when agent moves CAP 1→2 or 2→3
+### Priority 3
+- [x] Weekly Compass Digest (weekly_digest) → cron Monday 00:00 UTC (8 AM PHT), summary of coaching/CA activity
+- [x] Document Build Assist Complete (docx_generated) → real-time on DOCX generation
+- [x] Dispute Resolution Summary (dispute_resolved) → real-time on L2/L6 final decisions (4 trigger points)

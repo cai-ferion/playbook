@@ -4272,6 +4272,65 @@ router.post("/corrective-actions", async (req: Request, res: Response) => {
       console.error('[IO API] NTE notification error:', notifErr.message);
     }
 
+    // Notification: NTE Served — notify the issuing TL/creator
+    try {
+      if (body.created_by_ohr && body.created_by_ohr !== body.ohr_id) {
+        await db.insert(ioNotifications).values({
+          type: 'nte_served',
+          title: `NTE Served — ${body.employee_name || body.ohr_id}`,
+          message: `NTE for ${body.employee_name || body.ohr_id} regarding ${body.nte_type || 'Policy Violation'} has been served. Deadline: ${deadlineHours} hours.`,
+          actor_ohr: body.ohr_id,
+          actor_name: body.employee_name || 'Employee',
+          target_ohr: body.created_by_ohr,
+          metadata: JSON.stringify({ ca_id: id, nte_type: body.nte_type, employee_name: body.employee_name }),
+          is_read: false,
+          created_at: now,
+        });
+      }
+    } catch (notifErr: any) {
+      console.error('[IO API] NTE served notification error:', notifErr.message);
+    }
+
+    // Notification: Repeat Offender — if agent has 2+ NTEs in last 90 days
+    try {
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const recentNtes = await db.select({ id: ioCorrectiveActions.id })
+        .from(ioCorrectiveActions)
+        .where(and(
+          eq(ioCorrectiveActions.ohr_id, body.ohr_id),
+          gte(ioCorrectiveActions.created_at, ninetyDaysAgo)
+        ));
+      if (recentNtes.length >= 2 && body.created_by_ohr) {
+        await db.insert(ioNotifications).values({
+          type: 'repeat_offender',
+          title: `Repeat Offender — ${body.employee_name || body.ohr_id}`,
+          message: `${body.employee_name || body.ohr_id} has received ${recentNtes.length} NTEs in the last 90 days. Consider escalation.`,
+          actor_ohr: 'SYSTEM',
+          actor_name: 'Playbook System',
+          target_ohr: body.created_by_ohr,
+          metadata: JSON.stringify({ ca_id: id, total_ntes_90d: recentNtes.length, employee_name: body.employee_name, ohr_id: body.ohr_id }),
+          is_read: false,
+          created_at: now,
+        });
+        // Also notify the supervisor if different from creator
+        if (body.supervisor_ohr && body.supervisor_ohr !== body.created_by_ohr) {
+          await db.insert(ioNotifications).values({
+            type: 'repeat_offender',
+            title: `Repeat Offender — ${body.employee_name || body.ohr_id}`,
+            message: `${body.employee_name || body.ohr_id} has received ${recentNtes.length} NTEs in the last 90 days. Consider escalation.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: body.supervisor_ohr,
+            metadata: JSON.stringify({ ca_id: id, total_ntes_90d: recentNtes.length, employee_name: body.employee_name, ohr_id: body.ohr_id }),
+            is_read: false,
+            created_at: now,
+          });
+        }
+      }
+    } catch (notifErr: any) {
+      console.error('[IO API] Repeat offender notification error:', notifErr.message);
+    }
+
     res.status(201).json({ ...record, id });
   } catch (err: any) {
     console.error("[IO API] corrective-actions POST error:", err);
@@ -4338,6 +4397,71 @@ router.patch("/corrective-actions/:id", async (req: Request, res: Response) => {
         });
       } catch (notifErr: any) {
         console.error('[IO API] CAP notification error:', notifErr.message);
+      }
+
+      // Notification: CAP Issued — Supervisor Copy
+      try {
+        if (existing.supervisor_ohr && existing.supervisor_ohr !== body.decision_by_ohr) {
+          await db.insert(ioNotifications).values({
+            type: 'cap_issued',
+            title: `CAP Issued to ${existing.employee_name || existing.ohr_id} — ${body.cap_level}`,
+            message: `A ${body.cap_level} corrective action has been issued to ${existing.employee_name || existing.ohr_id}. ${activeDays > 0 ? `Active period: ${activeDays} days.` : ''}`,
+            actor_ohr: body.decision_by_ohr || null,
+            actor_name: body.decision_by || 'System',
+            target_ohr: existing.supervisor_ohr,
+            metadata: JSON.stringify({ ca_id: id, cap_level: body.cap_level, employee_name: existing.employee_name, ohr_id: existing.ohr_id }),
+            is_read: false,
+            created_at: now,
+          });
+        }
+      } catch (notifErr: any) {
+        console.error('[IO API] CAP supervisor notification error:', notifErr.message);
+      }
+
+      // Notification: CAP Escalation Path — if agent moves from CAP 1→2 or CAP 2→3
+      try {
+        const capNum = parseInt((body.cap_level || '').replace(/\D/g, ''), 10);
+        if (capNum >= 2) {
+          const prevCapLevel = `CAP ${capNum - 1}`;
+          const prevCaps = await db.select({ id: ioCorrectiveActions.id })
+            .from(ioCorrectiveActions)
+            .where(and(
+              eq(ioCorrectiveActions.ohr_id, existing.ohr_id),
+              eq(ioCorrectiveActions.cap_level, prevCapLevel)
+            ));
+          if (prevCaps.length > 0) {
+            // Notify the decision-maker (TL)
+            if (body.decision_by_ohr) {
+              await db.insert(ioNotifications).values({
+                type: 'cap_escalated',
+                title: `CAP Escalation — ${existing.employee_name || existing.ohr_id}`,
+                message: `${existing.employee_name || existing.ohr_id} has been escalated from ${prevCapLevel} to ${body.cap_level}. Review corrective action history.`,
+                actor_ohr: 'SYSTEM',
+                actor_name: 'Playbook System',
+                target_ohr: body.decision_by_ohr,
+                metadata: JSON.stringify({ ca_id: id, from_level: prevCapLevel, to_level: body.cap_level, employee_name: existing.employee_name }),
+                is_read: false,
+                created_at: now,
+              });
+            }
+            // Notify the supervisor if different
+            if (existing.supervisor_ohr && existing.supervisor_ohr !== body.decision_by_ohr) {
+              await db.insert(ioNotifications).values({
+                type: 'cap_escalated',
+                title: `CAP Escalation — ${existing.employee_name || existing.ohr_id}`,
+                message: `${existing.employee_name || existing.ohr_id} has been escalated from ${prevCapLevel} to ${body.cap_level}. Review corrective action history.`,
+                actor_ohr: 'SYSTEM',
+                actor_name: 'Playbook System',
+                target_ohr: existing.supervisor_ohr,
+                metadata: JSON.stringify({ ca_id: id, from_level: prevCapLevel, to_level: body.cap_level, employee_name: existing.employee_name }),
+                is_read: false,
+                created_at: now,
+              });
+            }
+          }
+        }
+      } catch (notifErr: any) {
+        console.error('[IO API] CAP escalation notification error:', notifErr.message);
       }
     }
 
@@ -4477,6 +4601,29 @@ router.post("/cap-build-assist/docx", async (req: Request, res: Response) => {
     const docxBuffer = Buffer.from(zip.generate({ type: 'nodebuffer' }));
     const safeName = employeeName.replace(/[^a-zA-Z0-9 ,]/g, '').replace(/\s+/g, '_');
     const filename = `${cap_level.replace(' ', '')}_${safeName}_${new Date().toISOString().slice(0, 10)}.docx`;
+
+    // Notification: Document Generated
+    try {
+      const db = await getDb();
+      if (db) {
+        const creatorOhr = req.body.created_by_ohr || null;
+        if (creatorOhr) {
+          await db.insert(ioNotifications).values({
+            type: 'docx_generated',
+            title: `${cap_level} Document Generated`,
+            message: `${cap_level} document for ${employeeName} has been generated and downloaded successfully.`,
+            actor_ohr: creatorOhr,
+            actor_name: req.body.created_by || 'System',
+            target_ohr: creatorOhr,
+            metadata: JSON.stringify({ cap_level, employee_name: employeeName, filename }),
+            is_read: false,
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+    } catch (notifErr: any) {
+      console.error('[IO API] DOCX generated notification error:', notifErr.message);
+    }
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

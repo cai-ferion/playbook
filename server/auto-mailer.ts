@@ -9,7 +9,7 @@ import { Express } from "express";
 import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq, and, inArray, sql, gte, lte, asc, ne, isNotNull } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig, ioCoaching } from "../drizzle/schema";
+import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig, ioCoaching, ioCorrectiveActions } from "../drizzle/schema";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -870,4 +870,324 @@ export function registerAutoMailer(app: Express): void {
   });
 
   console.log("[AutoNotifier] Manual triggers: POST /api/io/send-notifications, POST /api/io/ot-forfeiture-check, POST /api/io/ot-auto-open, POST /api/io/dispute-aging-check");
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CAP Expiry Warning — daily at 9:00 AM PHT (01:00 UTC)
+  // Alerts agents + supervisors when a CAP expires within 7 days
+  // ═══════════════════════════════════════════════════════════════════
+  async function checkCapExpiry(db: ReturnType<typeof drizzle>): Promise<{ alerts: number; errors: number }> {
+    let alerts = 0, errors = 0;
+    try {
+      const today = getTodayPHT();
+      const sevenDaysOut = new Date(new Date(today + 'T00:00:00Z').getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const now = new Date().toISOString();
+      // Find CAPs expiring within 7 days that haven't been notified yet for this window
+      const expiringCaps = await db.select()
+        .from(ioCorrectiveActions)
+        .where(and(
+          eq(ioCorrectiveActions.status, 'CAP Issued'),
+          gte(ioCorrectiveActions.cap_expiry_date, today),
+          lte(ioCorrectiveActions.cap_expiry_date, sevenDaysOut)
+        ));
+      for (const cap of expiringCaps) {
+        try {
+          const daysLeft = Math.ceil((new Date((cap.cap_expiry_date || today) + 'T00:00:00Z').getTime() - new Date(today + 'T00:00:00Z').getTime()) / (24 * 60 * 60 * 1000));
+          // Check if we already sent a cap_expiring notification for this CA today
+          const existingNotifs = await db.select({ id: ioNotifications.id })
+            .from(ioNotifications)
+            .where(and(
+              eq(ioNotifications.type, 'cap_expiring'),
+              eq(ioNotifications.target_ohr, cap.ohr_id),
+              gte(ioNotifications.created_at, today + 'T00:00:00.000Z')
+            ))
+            .limit(1);
+          if (existingNotifs.length > 0) continue; // Already notified today
+          // Notify the agent
+          await db.insert(ioNotifications).values({
+            type: 'cap_expiring',
+            title: `${cap.cap_level} Expiring in ${daysLeft} Day${daysLeft !== 1 ? 's' : ''}`,
+            message: `Your ${cap.cap_level} corrective action expires on ${formatDateReadable(cap.cap_expiry_date || today)}. Ensure compliance during the remaining active period.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: cap.ohr_id,
+            metadata: JSON.stringify({ ca_id: cap.id, cap_level: cap.cap_level, expiry_date: cap.cap_expiry_date, days_left: daysLeft }),
+            is_read: false,
+            created_at: now,
+          });
+          alerts++;
+          // Notify the supervisor
+          if (cap.supervisor_ohr) {
+            await db.insert(ioNotifications).values({
+              type: 'cap_expiring',
+              title: `${cap.cap_level} Expiring — ${cap.employee_name || cap.ohr_id}`,
+              message: `${cap.employee_name || cap.ohr_id}'s ${cap.cap_level} expires on ${formatDateReadable(cap.cap_expiry_date || today)} (${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining).`,
+              actor_ohr: 'SYSTEM',
+              actor_name: 'Playbook System',
+              target_ohr: cap.supervisor_ohr,
+              metadata: JSON.stringify({ ca_id: cap.id, cap_level: cap.cap_level, expiry_date: cap.cap_expiry_date, days_left: daysLeft, employee_name: cap.employee_name }),
+              is_read: false,
+              created_at: now,
+            });
+            alerts++;
+          }
+        } catch (err) {
+          errors++;
+          console.error('[CAP-Expiry] Error processing:', cap.id, err);
+        }
+      }
+      console.log(`[CAP-Expiry] Completed: ${alerts} alerts sent, ${errors} errors.`);
+    } catch (err) {
+      console.error('[CAP-Expiry] Fatal error:', err);
+    }
+    return { alerts, errors };
+  }
+  // Schedule: 9:00 AM PHT = 01:00 UTC daily
+  cron.schedule("0 1 * * *", async () => {
+    try { await checkCapExpiry(db); } catch (err) { console.error('[CAP-Expiry] Cron error:', err); }
+  });
+  console.log("[AutoNotifier] Scheduled: 9:00 AM PHT daily (CAP Expiry Warning)");
+  // Manual trigger
+  app.post("/api/io/cap-expiry-check", async (req, res) => {
+    try {
+      const result = await checkCapExpiry(db);
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // NTE Deadline Reminder — every 4 hours
+  // Nudges agents when their NTE response deadline is within 12 hours
+  // ═══════════════════════════════════════════════════════════════════
+  async function checkNteDeadlines(db: ReturnType<typeof drizzle>): Promise<{ alerts: number; errors: number }> {
+    let alerts = 0, errors = 0;
+    try {
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const twelveHoursOut = new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString();
+      // Find NTEs with status 'Served' and deadline within 12 hours
+      const urgentNtes = await db.select()
+        .from(ioCorrectiveActions)
+        .where(and(
+          eq(ioCorrectiveActions.status, 'Served'),
+          gte(ioCorrectiveActions.response_deadline, nowIso),
+          lte(ioCorrectiveActions.response_deadline, twelveHoursOut)
+        ));
+      for (const nte of urgentNtes) {
+        try {
+          // Check if we already sent a deadline reminder for this NTE today
+          const today = getTodayPHT();
+          const existingReminder = await db.select({ id: ioNotifications.id })
+            .from(ioNotifications)
+            .where(and(
+              eq(ioNotifications.type, 'nte_deadline_reminder'),
+              eq(ioNotifications.target_ohr, nte.ohr_id),
+              gte(ioNotifications.created_at, today + 'T00:00:00.000Z')
+            ))
+            .limit(1);
+          if (existingReminder.length > 0) continue;
+          const hoursLeft = Math.ceil((new Date(nte.response_deadline!).getTime() - now.getTime()) / (60 * 60 * 1000));
+          await db.insert(ioNotifications).values({
+            type: 'nte_deadline_reminder',
+            title: `NTE Deadline — ${hoursLeft} Hour${hoursLeft !== 1 ? 's' : ''} Remaining`,
+            message: `Your NTE regarding ${nte.nte_type || 'Policy Violation'} has a response deadline in approximately ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}. Please respond promptly.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: nte.ohr_id,
+            metadata: JSON.stringify({ ca_id: nte.id, nte_type: nte.nte_type, deadline: nte.response_deadline, hours_left: hoursLeft }),
+            is_read: false,
+            created_at: nowIso,
+          });
+          alerts++;
+        } catch (err) {
+          errors++;
+          console.error('[NTE-Deadline] Error processing:', nte.id, err);
+        }
+      }
+      console.log(`[NTE-Deadline] Completed: ${alerts} reminders sent, ${errors} errors.`);
+    } catch (err) {
+      console.error('[NTE-Deadline] Fatal error:', err);
+    }
+    return { alerts, errors };
+  }
+  // Schedule: every 4 hours (same cadence as dispute aging)
+  cron.schedule("30 */4 * * *", async () => {
+    try { await checkNteDeadlines(db); } catch (err) { console.error('[NTE-Deadline] Cron error:', err); }
+  });
+  console.log("[AutoNotifier] Scheduled: Every 4 hours (NTE Deadline Reminder)");
+  app.post("/api/io/nte-deadline-check", async (req, res) => {
+    try {
+      const result = await checkNteDeadlines(db);
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Coaching Acknowledgement Overdue — daily at 10:00 AM PHT (02:00 UTC)
+  // Alerts coach + TL when coaching not acknowledged within 48 hours
+  // ═══════════════════════════════════════════════════════════════════
+  async function checkCoachingAckOverdue(db: ReturnType<typeof drizzle>): Promise<{ alerts: number; errors: number }> {
+    let alerts = 0, errors = 0;
+    try {
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+      const today = getTodayPHT();
+      // Find coaching logs created >48h ago that are not yet acknowledged
+      const overdueLogs = await db.select()
+        .from(ioCoaching)
+        .where(and(
+          lte(ioCoaching.created_at, fortyEightHoursAgo),
+          sql`${ioCoaching.ack_date} IS NULL`
+        ));
+      for (const log of overdueLogs) {
+        try {
+          // Deduplicate: only one alert per coaching log per day
+          const existingAlert = await db.select({ id: ioNotifications.id })
+            .from(ioNotifications)
+            .where(and(
+              eq(ioNotifications.type, 'coaching_ack_overdue'),
+              eq(ioNotifications.target_ohr, log.coach_ohr || ''),
+              gte(ioNotifications.created_at, today + 'T00:00:00.000Z')
+            ))
+            .limit(1);
+          if (existingAlert.length > 0) continue;
+          const coacheeName = log.coachee || 'Coachee';
+          const cid = log.coaching_id || log.id;
+          const hoursOverdue = Math.floor((now.getTime() - new Date(log.created_at!).getTime()) / (60 * 60 * 1000));
+          // Notify the coach
+          if (log.coach_ohr) {
+            await db.insert(ioNotifications).values({
+              type: 'coaching_ack_overdue',
+              title: `Coaching Acknowledgement Overdue — ${coacheeName}`,
+              message: `${coacheeName} has not acknowledged coaching log ${cid} after ${hoursOverdue} hours. Please follow up.`,
+              actor_ohr: 'SYSTEM',
+              actor_name: 'Playbook System',
+              target_ohr: log.coach_ohr,
+              metadata: JSON.stringify({ coaching_id: cid, coachee: coacheeName, hours_overdue: hoursOverdue }),
+              is_read: false,
+              created_at: nowIso,
+            });
+            alerts++;
+          }
+          // Notify the coach's supervisor (TL)
+          if (log.coach_sup) {
+            const supEmp = await db.select({ ohr_id: ioEmployees.ohr_id })
+              .from(ioEmployees)
+              .where(eq(ioEmployees.full_name, log.coach_sup))
+              .limit(1);
+            if (supEmp.length > 0 && supEmp[0].ohr_id) {
+              await db.insert(ioNotifications).values({
+                type: 'coaching_ack_overdue',
+                title: `Coaching Ack Overdue — ${coacheeName} (Coach: ${log.coach || 'Unknown'})`,
+                message: `Coaching log ${cid} by ${log.coach || 'Coach'} for ${coacheeName} has not been acknowledged after ${hoursOverdue} hours.`,
+                actor_ohr: 'SYSTEM',
+                actor_name: 'Playbook System',
+                target_ohr: supEmp[0].ohr_id,
+                metadata: JSON.stringify({ coaching_id: cid, coachee: coacheeName, coach: log.coach, hours_overdue: hoursOverdue }),
+                is_read: false,
+                created_at: nowIso,
+              });
+              alerts++;
+            }
+          }
+        } catch (err) {
+          errors++;
+          console.error('[Coaching-Ack-Overdue] Error processing:', log.id, err);
+        }
+      }
+      console.log(`[Coaching-Ack-Overdue] Completed: ${alerts} alerts sent, ${errors} errors.`);
+    } catch (err) {
+      console.error('[Coaching-Ack-Overdue] Fatal error:', err);
+    }
+    return { alerts, errors };
+  }
+  // Schedule: 10:00 AM PHT = 02:00 UTC daily
+  cron.schedule("0 2 * * *", async () => {
+    try { await checkCoachingAckOverdue(db); } catch (err) { console.error('[Coaching-Ack-Overdue] Cron error:', err); }
+  });
+  console.log("[AutoNotifier] Scheduled: 10:00 AM PHT daily (Coaching Ack Overdue)");
+  app.post("/api/io/coaching-ack-overdue-check", async (req, res) => {
+    try {
+      const result = await checkCoachingAckOverdue(db);
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Weekly Compass Digest — Monday 8:00 AM PHT (00:00 UTC Monday)
+  // Summary of coaching/CA activity for TLs and Managers
+  // ═══════════════════════════════════════════════════════════════════
+  async function sendWeeklyDigest(db: ReturnType<typeof drizzle>): Promise<{ sent: number; errors: number }> {
+    let sent = 0, errors = 0;
+    try {
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      // Count coaching logs created in the last 7 days
+      const [coachingCount] = await db.select({ cnt: sql<number>`COUNT(*)` })
+        .from(ioCoaching)
+        .where(gte(ioCoaching.created_at, sevenDaysAgo));
+      // Count NTEs created in the last 7 days
+      const [nteCount] = await db.select({ cnt: sql<number>`COUNT(*)` })
+        .from(ioCorrectiveActions)
+        .where(gte(ioCorrectiveActions.created_at, sevenDaysAgo));
+      // Count unacknowledged coaching logs
+      const [unackCount] = await db.select({ cnt: sql<number>`COUNT(*)` })
+        .from(ioCoaching)
+        .where(sql`${ioCoaching.ack_date} IS NULL`);
+      // Count active CAPs
+      const [activeCaps] = await db.select({ cnt: sql<number>`COUNT(*)` })
+        .from(ioCorrectiveActions)
+        .where(eq(ioCorrectiveActions.status, 'CAP Issued'));
+      const digestMsg = `Weekly Compass Summary:\n• ${coachingCount.cnt} coaching sessions this week\n• ${nteCount.cnt} NTEs issued this week\n• ${unackCount.cnt} coaching logs pending acknowledgement\n• ${activeCaps.cnt} active CAPs currently enforced`;
+      // Send to all TLs and Managers
+      const supervisors = await db.selectDistinct({ ohr_id: ioEmployees.ohr_id, full_name: ioEmployees.full_name })
+        .from(ioEmployees)
+        .where(inArray(ioEmployees.actual_role, ['Team Lead', 'Manager', 'Operational SME']));
+      for (const sup of supervisors) {
+        try {
+          if (!sup.ohr_id) continue;
+          await db.insert(ioNotifications).values({
+            type: 'weekly_digest',
+            title: 'Weekly Compass Digest',
+            message: digestMsg,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: sup.ohr_id,
+            metadata: JSON.stringify({ coaching_count: coachingCount.cnt, nte_count: nteCount.cnt, unack_count: unackCount.cnt, active_caps: activeCaps.cnt }),
+            is_read: false,
+            created_at: nowIso,
+          });
+          sent++;
+        } catch (err) {
+          errors++;
+        }
+      }
+      console.log(`[Weekly-Digest] Completed: ${sent} digests sent, ${errors} errors.`);
+    } catch (err) {
+      console.error('[Weekly-Digest] Fatal error:', err);
+    }
+    return { sent, errors };
+  }
+  // Schedule: Monday 8:00 AM PHT = 00:00 UTC Monday
+  cron.schedule("0 0 * * 1", async () => {
+    try { await sendWeeklyDigest(db); } catch (err) { console.error('[Weekly-Digest] Cron error:', err); }
+  });
+  console.log("[AutoNotifier] Scheduled: Monday 8:00 AM PHT (Weekly Compass Digest)");
+  app.post("/api/io/weekly-digest", async (req, res) => {
+    try {
+      const result = await sendWeeklyDigest(db);
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  console.log("[AutoNotifier] All cron jobs and manual triggers initialized.");
 }
