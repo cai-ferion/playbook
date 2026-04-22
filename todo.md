@@ -2591,3 +2591,6 @@
 - [x] Root cause: lean API endpoint omitted coachee_ack, coachee_commitments, coaching_rating, coachee_sentiments, ack_date fields — compassIsAcknowledged() always returned false for list view
 - [x] Fix: Added 5 ack fields to lean query in io-routes.ts GET /api/io/coaching?lean=1
 - [x] Verified: a1a037d9 and e857ffad now correctly show as Acknowledged in lean response
+
+## CA Detail Panel — Dismiss/Assign CAP Buttons Still Visible (April 2026)
+- [x] Remove Dismiss and Assign CAP buttons from NTE detail panel in Corrective Actions — buttons were already removed in code (checkpoint f2b61ce) but cache version was not bumped (both old and new used ?v=4), so user's browser served stale JS. Bumped corrective-actions.js to v=5 and corrective-actions.css to v=3.
