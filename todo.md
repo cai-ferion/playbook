@@ -2585,3 +2585,9 @@
 
 ## Coaching Log Supervisor Restoration (April 2026)
 - [x] Restore coaching log supervisors from DS.COACHING.xlsx — 298 rows updated to match spreadsheet's historical supervisors (269 now correctly differ from current employee supervisor due to transfers)
+
+## Coaching Log Ack Status Fix — Round 2 (April 2026)
+- [x] Thorough audit of compassIsAcknowledged logic vs actual DB data
+- [x] Root cause: lean API endpoint omitted coachee_ack, coachee_commitments, coaching_rating, coachee_sentiments, ack_date fields — compassIsAcknowledged() always returned false for list view
+- [x] Fix: Added 5 ack fields to lean query in io-routes.ts GET /api/io/coaching?lean=1
+- [x] Verified: a1a037d9 and e857ffad now correctly show as Acknowledged in lean response

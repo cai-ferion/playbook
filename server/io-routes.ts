@@ -738,6 +738,12 @@ router.get("/coaching", async (req: Request, res: Response) => {
         sme_meta_email: ioCoaching.sme_meta_email,
         sme_joiner_2: ioCoaching.sme_joiner_2,
         sme_joiner_2_email: ioCoaching.sme_joiner_2_email,
+        // Ack fields required for compassIsAcknowledged() tab filtering
+        coachee_ack: ioCoaching.coachee_ack,
+        coachee_commitments: ioCoaching.coachee_commitments,
+        coaching_rating: ioCoaching.coaching_rating,
+        coachee_sentiments: ioCoaching.coachee_sentiments,
+        ack_date: ioCoaching.ack_date,
         created_at: ioCoaching.created_at,
         updated_at: ioCoaching.updated_at,
       }).from(ioCoaching).orderBy(desc(ioCoaching.id)).limit(lim);
