@@ -1811,3 +1811,150 @@
     padding: 5px 10px;
   }
 }
+
+/* ============================================================
+   COACHING LOG INLINE DETAIL EXPANSION (Accordion)
+   ============================================================ */
+
+/* Row hover & expand indicator */
+#compass-table-given .module-row,
+#compass-table-received .module-row {
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+#compass-table-given .module-row:hover,
+#compass-table-received .module-row:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+.module-row.compass-row-expanded {
+  background: rgba(99, 102, 241, 0.06) !important;
+  box-shadow: inset 3px 0 0 #6366F1;
+}
+
+/* Expand indicator chevron */
+.compass-expand-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--compass-border, #e2e8f0);
+  color: var(--compass-text-muted, #94a3b8);
+  font-size: 10px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.module-row:hover .compass-expand-indicator {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366F1;
+}
+.module-row.compass-row-expanded .compass-expand-indicator {
+  transform: rotate(180deg);
+  background: #6366F1;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+/* Detail panel row — the <tr> that holds the expanded content */
+.compass-detail-panel-row td {
+  padding: 0 !important;
+  border: none !important;
+}
+.compass-detail-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.04) 0%, var(--compass-surface, #fff) 40%);
+  border: 2px solid #6366F1;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  margin: 0 0 6px 0;
+  padding: 0 24px;
+}
+.compass-detail-panel.open {
+  max-height: 2000px;
+  opacity: 1;
+  padding: 20px 24px;
+}
+
+/* Detail panel sections — reuse existing detail-section styles but scoped to inline */
+.compass-detail-panel .detail-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #6366F1;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid rgba(99, 102, 241, 0.12);
+}
+.compass-detail-panel .detail-section {
+  margin-bottom: 12px;
+}
+.compass-detail-panel .detail-row {
+  display: flex;
+  gap: 14px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--compass-border-subtle, rgba(0,0,0,0.06));
+}
+.compass-detail-panel .detail-row:last-child {
+  border-bottom: none;
+}
+.compass-detail-panel .detail-label {
+  min-width: 150px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--compass-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.compass-detail-panel .detail-value {
+  font-size: 13px;
+  color: var(--compass-text, #1e293b);
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.5;
+}
+.compass-detail-panel .detail-multiline {
+  white-space: pre-wrap;
+}
+
+/* Footer actions inside inline detail */
+.compass-detail-panel-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--compass-border, #e2e8f0);
+}
+
+/* Staggered animation for detail sections */
+@keyframes compass-detail-item-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.compass-detail-panel.open .detail-section {
+  animation: compass-detail-item-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.compass-detail-panel.open .detail-section:nth-child(1) { animation-delay: 50ms; }
+.compass-detail-panel.open .detail-section:nth-child(2) { animation-delay: 80ms; }
+.compass-detail-panel.open .detail-section:nth-child(3) { animation-delay: 110ms; }
+.compass-detail-panel.open .detail-section:nth-child(4) { animation-delay: 140ms; }
+.compass-detail-panel.open .detail-section:nth-child(n+5) { animation-delay: 170ms; }
+
+@media (max-width: 768px) {
+  .compass-detail-panel.open {
+    padding: 14px 14px;
+  }
+  .compass-detail-panel .detail-label {
+    min-width: 110px;
+    font-size: 10px;
+  }
+}

@@ -2607,3 +2607,11 @@
 - [x] Success message shown inline after each create
 - [x] Cache versions bumped (compass.js v=105, compass-redesign.css v=101)
 - [x] 34 vitest tests covering HTML structure, JS functions, CSS styles
+
+## UI Revisions — Inline Expansion Pattern (April 2026)
+- [x] Remove "Collapse" text from inline add panel button, keep only the chevron icon
+- [x] Coaching Profile: Replace modal detail popout with inline row expansion (accordion-style, click row to expand/collapse)
+- [x] Corrective Actions: Document Build Assist as inline panel with type chips (NTE, CAP 1, CAP 2, CAP 3)
+- [x] Corrective Actions: Each CA item expands inline to show details (no modal popout)
+- [x] Cache versions bumped: corrective-actions.js v=6, corrective-actions.css v=4
+- [x] All 762 tests passing

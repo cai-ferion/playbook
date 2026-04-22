@@ -68,6 +68,7 @@ const COMPASS = {
   pageSize: 25,
   editingId: null,
   selectedParentLog: null,
+  _expandedRowId: null,  // Currently expanded inline detail row
   givenTab: 'all',  // 'all', 'acknowledged', 'unacknowledged'
   receivedTab: 'all',  // 'all', 'acknowledged', 'unacknowledged'
   pageGiven: 1,
@@ -539,13 +540,15 @@ function compassRenderTable(which) {
       ? log.session_goal.split(',').map(g => compassGoalBadge(g)).join('')
       : '\u2014';
 
-    return `<tr class="module-row" onclick="compassOpenDetail('${log.coaching_id || log.id}')">
-      <td><span class="module-id">${log.coaching_id || log.id}</span></td>
+    const cid = log.coaching_id || log.id;
+    const isExpanded = COMPASS._expandedRowId === String(cid);
+    return `<tr class="module-row${isExpanded ? ' compass-row-expanded' : ''}" data-cid="${escapeAttr(String(cid))}" onclick="compassToggleInlineDetail('${escapeAttr(String(cid))}', '${which}')">
+      <td><span class="module-id">${cid}</span></td>
       <td><span class="module-type-badge type-${(log.coaching_type || '').replace(/\s+/g, '-').toLowerCase()}">${escapeHtml(log.coaching_type || '')}</span></td>
       <td>${date}</td>
       <td>${personCol}</td>
-      <td style="font-size:12px;"><div style="display:flex;flex-direction:column;gap:2px;">${sessionGoalHtml}</div></td>
-    </tr>`;
+      <td style="font-size:12px;"><div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;display:flex;flex-direction:column;gap:2px;">${sessionGoalHtml}</div><span class="compass-expand-indicator"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span></div></td>
+    </tr>${isExpanded ? `<tr class="compass-detail-panel-row"><td colspan="5"><div class="compass-detail-panel open" id="compass-inline-detail-${escapeAttr(String(cid))}"><div class="compass-detail-loading" style="text-align:center;padding:20px;color:var(--compass-text-muted);">Loading...</div></div></td></tr>` : ''}`;
   }).join('');
 
   compassRenderPagination(which);
@@ -1429,6 +1432,216 @@ function compassRenderRelatedLogsPage() {
   body.innerHTML = html;
 }
 
+// ===== Inline Detail Expansion =====
+
+/**
+ * Toggle inline detail panel for a coaching log row.
+ * Clicking an expanded row collapses it; clicking a different row collapses the old and expands the new.
+ */
+async function compassToggleInlineDetail(coachingId, which) {
+  const cid = String(coachingId);
+
+  // If already expanded, collapse it
+  if (COMPASS._expandedRowId === cid) {
+    COMPASS._expandedRowId = null;
+    COMPASS.editingId = null;
+    compassRenderTable(which);
+    return;
+  }
+
+  // Expand the new row
+  COMPASS._expandedRowId = cid;
+  COMPASS.editingId = cid;
+  compassRenderTable(which);
+
+  // Now populate the detail panel asynchronously
+  const panel = document.getElementById('compass-inline-detail-' + cid);
+  if (!panel) return;
+
+  let log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === cid);
+  if (!log) { panel.innerHTML = '<div style="padding:16px;color:var(--error);">Log not found</div>'; return; }
+
+  // Fetch full record on demand if coaching_details is missing (lean mode)
+  if (log.coaching_details === undefined) {
+    try {
+      const fullResp = await fetch(`${IO_API_BASE}/coaching?coaching_id=${encodeURIComponent(cid)}`);
+      if (fullResp.ok) {
+        const fullRows = await fullResp.json();
+        if (fullRows.length > 0) Object.assign(log, fullRows[0]);
+      }
+    } catch (e) { console.warn('Failed to fetch full coaching details:', e); }
+  }
+
+  // Ensure employees are loaded for supervisor visibility check
+  if (!COMPASS.employees || COMPASS.employees.length === 0) {
+    await compassFetchEmployees();
+  }
+
+  panel.innerHTML = _compassBuildInlineDetailHtml(log);
+}
+
+/**
+ * Build the HTML content for an inline detail panel.
+ * Mirrors the old compassOpenDetail() body generation but outputs to inline panel.
+ */
+function _compassBuildInlineDetailHtml(log) {
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isCoachee = cu && cu.ohr_id === log.coachee_ohr;
+  const coachEmployee = (COMPASS.employees && COMPASS.employees.length > 0) ? COMPASS.employees.find(e => e.ohr_id === log.coach_ohr) : null;
+  let isCoachSup = false;
+  if (cu && coachEmployee && coachEmployee.supervisor_name) {
+    isCoachSup = cu.full_name === coachEmployee.supervisor_name;
+    if (!isCoachSup) {
+      const supEmployee = COMPASS.employees.find(e => e.full_name === coachEmployee.supervisor_name);
+      if (supEmployee) isCoachSup = cu.ohr_id === supEmployee.ohr_id;
+    }
+  }
+  const isAdmin = cu && cu.ohr_id === '740045023';
+  const canSeeAckDetails = isCoachSup || isAdmin;
+  const isAcknowledged = compassIsAcknowledged(log);
+  const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '\u2014';
+
+  // ===== SECTION 1: SESSION DETAILS =====
+  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
+  html += `<div class="detail-row"><span class="detail-label">Coaching Type</span><span class="detail-value">${escapeHtml(log.coaching_type || '')}</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
+
+  if (log.coaching_type === 'Group Coaching') {
+    const coachees = log.coachee_list || [];
+    html += `<div class="detail-row"><span class="detail-label">Coachees (${coachees.length})</span><span class="detail-value">${coachees.length > 0 ? coachees.map(c => escapeHtml(c.name || c)).join(', ') : escapeHtml(log.coachee || '\u2014')}</span></div>`;
+  } else if (log.coaching_type === 'Triad Coaching') {
+    const leader = log.coachee_list && log.coachee_list.length > 0 ? log.coachee_list[0] : null;
+    html += `<div class="detail-row"><span class="detail-label">Leader</span><span class="detail-value">${leader ? escapeHtml(leader.name || '') : '\u2014'}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '\u2014')} (${escapeHtml(log.coachee_ohr || '')})</span></div>`;
+  } else {
+    html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '\u2014')} (${escapeHtml(log.coachee_ohr || '')})</span></div>`;
+  }
+
+  if (log.coaching_type === 'QA Feedback' && log.job_id) {
+    html += `<div class="detail-row"><span class="detail-label">Job ID</span><span class="detail-value">${escapeHtml(log.job_id)}</span></div>`;
+  }
+  if (log.coachee_sup && log.coach !== log.coachee_sup) {
+    html += `<div class="detail-row"><span class="detail-label">Coachee Supervisor</span><span class="detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
+  }
+  html += `<div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${escapeHtml(log.coach || '\u2014')} (${escapeHtml(log.coach_ohr || '')})</span></div>`;
+  html += `<div class="detail-row"><span class="detail-label">Session Goal</span><span class="detail-value">${escapeHtml(log.session_goal || '\u2014')}</span></div>`;
+
+  if (log.cap_level) {
+    const capBg = log.cap_level === 'CAP 3' ? '#EF444420' : log.cap_level === 'CAP 2' ? '#F59E0B20' : '#3B82F620';
+    const capFg = log.cap_level === 'CAP 3' ? '#EF4444' : log.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6';
+    html += `<div class="detail-row"><span class="detail-label">CAP Level</span><span class="detail-value"><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;background:${capBg};color:${capFg};">${escapeHtml(log.cap_level)}</span>`;
+    html += ` <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();compassViewNte('${escapeAttr(log.coaching_id || log.id)}')" style="margin-left:8px;font-size:10px;padding:2px 8px;">View NTE</button>`;
+    html += `</span></div>`;
+  }
+
+  html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '\u2014'}</span></div>`;
+
+  // QA Feedback RCA section
+  if (log.coaching_type === 'QA Feedback') {
+    html += '</div>';
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
+    html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value">${escapeHtml(log.guidelines || '\u2014')}</span></div>`;
+    const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
+    html += `<div class="detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span class="detail-label">Markdown Status</span><span class="detail-value" style="font-weight:600;color:${mdStatusColor};">${escapeHtml(log.status || '\u2014')}</span></div>`;
+    html += '</div>';
+    html += '<div class="detail-section" style="margin-top:0;">';
+  }
+
+  // ZTP section
+  if (log.coaching_type === 'ZTP Coaching') {
+    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">`;
+    html += `<div class="detail-row"><span class="detail-label">Infraction Category</span><span class="detail-value">${escapeHtml(log.infraction_category || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Infraction</span><span class="detail-value">${escapeHtml(log.infraction || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Description</span><span class="detail-value detail-multiline">${escapeHtml(log.infraction_description || '\u2014')}</span></div>`;
+    html += `<div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value">${escapeHtml(log.severity || '\u2014')}</span></div>`;
+    html += `</div>`;
+  }
+
+  // Dispute Trail for QA Feedback
+  if (log.coaching_type === 'QA Feedback') {
+    const hasDispute = log.dispute_comments || log.qa_comments || log.sme_qa_dispute_comments || log.trainer_comments || log.sme_trainer_comments || log.qtp_manager_comments;
+    if (hasDispute) {
+      html += '</div>';
+      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
+      if (log.dispute_comments) html += `<div class="detail-row"><span class="detail-label">Dispute Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.dispute_comments)}</span></div>`;
+      if (log.qa_comments) html += `<div class="detail-row"><span class="detail-label">QA Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.qa_comments)}</span></div>`;
+      if (log.sme_qa_dispute_comments) html += `<div class="detail-row"><span class="detail-label">SME QA Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_qa_dispute_comments)}</span></div>`;
+      if (log.trainer_comments) html += `<div class="detail-row"><span class="detail-label">Trainer Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.trainer_comments)}</span></div>`;
+      if (log.sme_trainer_comments) html += `<div class="detail-row"><span class="detail-label">SME Trainer Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_trainer_comments)}</span></div>`;
+      if (log.qtp_manager_comments) html += `<div class="detail-row"><span class="detail-label">QTP Manager</span><span class="detail-value detail-multiline">${escapeHtml(log.qtp_manager_comments)}</span></div>`;
+      html += '</div>';
+      html += '<div class="detail-section" style="margin-top:0;">';
+    }
+  }
+
+  html += compassRenderAttachmentsDetail(log);
+  html += compassRenderRelatedLogs(log);
+  html += '</div>';
+
+  // ===== SECTION 2: ACKNOWLEDGEMENT =====
+  const ACK_ELIGIBLE_STATUSES = ['Pending Acknowledgement', 'Acknowledged'];
+  const isAwarenessOnly = COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type);
+  const showAckSection = !isAwarenessOnly && (log.coaching_type !== 'QA Feedback' || ACK_ELIGIBLE_STATUSES.includes(log.status));
+
+  if (showAckSection) {
+    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Acknowledgement</h4>';
+    html += '<div id="compass-ack-details">';
+    if (isAcknowledged) {
+      html += `<div class="detail-row"><span class="detail-label">Status</span><span style="display:inline-flex;align-items:center;gap:4px;color:var(--success);font-weight:600;font-size:13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Coachee Acknowledged</span></div>`;
+    } else {
+      html += `<div class="detail-row"><span class="detail-label">Status</span><span style="display:inline-flex;align-items:center;gap:4px;color:var(--warning);font-weight:600;font-size:13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Needs Acknowledgement</span></div>`;
+    }
+    html += `<div class="detail-row"><span class="detail-label">Commitments</span><span class="detail-value detail-multiline">${escapeHtml(log.coachee_commitments || '\u2014')}</span></div>`;
+    if (canSeeAckDetails) {
+      html += `<div class="detail-row"><span class="detail-label">Coaching Rating</span><span class="detail-value">${compassRenderStars(log.coaching_rating)}</span></div>`;
+      html += `<div class="detail-row"><span class="detail-label">Sentiments</span><span class="detail-value detail-multiline">${escapeHtml(log.coachee_sentiments || '\u2014')}</span></div>`;
+    }
+    html += '</div>';
+
+    // Inline acknowledgement form
+    html += `<div id="compass-ack-form" style="display:none;margin-top:12px;padding:14px;background:var(--bg-inset);border-radius:var(--radius);border:1px solid var(--border);">
+      <div style="font-size:12px;color:var(--fg-subtle);padding:8px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">Saving will record your acknowledgement automatically.</div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Commitments <span style="color:var(--error);">*</span></label>
+        <textarea id="compass-ack-commitments" class="form-input" style="width:100%;min-height:60px;resize:vertical;font-size:13px;" placeholder="Enter your commitments..." onclick="event.stopPropagation()" required></textarea>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Rating (1-5) <span style="color:var(--error);">*</span></label>
+        <div id="compass-ack-rating" style="display:flex;gap:4px;">
+          ${[1,2,3,4,5].map(n => `<button type="button" class="compass-star-btn" data-val="${n}" onclick="event.stopPropagation();compassSetAckRating(${n})" style="background:none;border:1px solid var(--border);border-radius:4px;width:36px;height:36px;cursor:pointer;font-size:18px;color:var(--fg-subtle);transition:all 0.15s;">\u2605</button>`).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Sentiments <span style="color:var(--error);">*</span></label>
+        <textarea id="compass-ack-sentiments" class="form-input" style="width:100%;min-height:60px;resize:vertical;font-size:13px;" placeholder="Share your sentiments..." onclick="event.stopPropagation()" required></textarea>
+      </div>
+    </div>`;
+    html += '</div>';
+  }
+
+  // ===== FOOTER ACTIONS =====
+  let footerHtml = '';
+  if (_compassDetailStack.length > 0) {
+    footerHtml += '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();compassGoBack()" style="margin-right:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><polyline points="15 18 9 12 15 6"/></svg> Back</button>';
+  }
+  if (cu) {
+    const _isAwarenessOnly = COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type);
+    if (isCoachee && !isAcknowledged && !_isAwarenessOnly) {
+      footerHtml += ' <button class="btn btn-primary btn-sm" id="compass-ack-trigger-btn" onclick="event.stopPropagation();compassShowAckForm()">Acknowledge</button>';
+    }
+  }
+  if (footerHtml) {
+    html += `<div class="compass-detail-panel-footer">${footerHtml}</div>`;
+  }
+
+  return html;
+}
+
 // ===== Star Rating Renderer =====
 function compassRenderStars(rating) {
   const r = parseInt(rating) || 0;
@@ -1565,13 +1778,30 @@ function compassOpenRelatedDetail(coachingId) {
   if (COMPASS.editingId) {
     _compassDetailStack.push(COMPASS.editingId);
   }
-  compassOpenDetail(coachingId);
+  // Re-render the inline detail panel with the related log
+  const cid = String(coachingId);
+  COMPASS.editingId = cid;
+  const panel = document.getElementById('compass-inline-detail-' + COMPASS._expandedRowId);
+  if (panel) {
+    let log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === cid);
+    if (log) {
+      // Fetch full record if needed
+      if (log.coaching_details === undefined) {
+        fetch(`${IO_API_BASE}/coaching?coaching_id=${encodeURIComponent(cid)}`)
+          .then(r => r.json())
+          .then(rows => { if (rows.length > 0) Object.assign(log, rows[0]); panel.innerHTML = _compassBuildInlineDetailHtml(log); })
+          .catch(() => { panel.innerHTML = _compassBuildInlineDetailHtml(log); });
+      } else {
+        panel.innerHTML = _compassBuildInlineDetailHtml(log);
+      }
+    }
+  }
 }
 
 function compassGoBack() {
   if (_compassDetailStack.length > 0) {
     const prevId = _compassDetailStack.pop();
-    compassOpenDetail(prevId);
+    compassOpenRelatedDetail(prevId);
   }
 }
 

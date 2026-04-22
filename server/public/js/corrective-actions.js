@@ -23,6 +23,7 @@ const CA = {
   currentDetail: null,
   _initialized: false,
   viewMode: 'all',  // 'all' = see everything, 'team' = TL-scoped view
+  _expandedRowId: null,  // Currently expanded inline detail row
 };
 
 // ===== Initialization =====
@@ -330,22 +331,26 @@ function caRenderTable() {
   for (const r of CA.filtered) {
     const statusClass = CA_STATUS_COLORS[r.status] || '';
     const agingInfo = caGetAgingInfo(r);
-    const capBadge = r.cap_level ? caGetCapBadge(r.cap_level) : '<span style="color:var(--compass-text-subtle);">—</span>';
-    const deadlineDisplay = r.response_deadline ? caFormatDate(r.response_deadline) : '—';
-    const servedDisplay = r.served_date ? caFormatDate(r.served_date) : '—';
+    const capBadge = r.cap_level ? caGetCapBadge(r.cap_level) : '<span style="color:var(--compass-text-subtle);">\u2014</span>';
+    const deadlineDisplay = r.response_deadline ? caFormatDate(r.response_deadline) : '\u2014';
+    const servedDisplay = r.served_date ? caFormatDate(r.served_date) : '\u2014';
+    const isExpanded = CA._expandedRowId === r.id;
 
-    html += `<tr onclick="caOpenDetail('${r.id}')">
+    html += `<tr class="ca-table-row${isExpanded ? ' ca-row-expanded' : ''}" onclick="caToggleInlineDetail('${r.id}')">
       <td>
         <div class="ca-name-cell">${escapeHtml(r.employee_name || '')}</div>
         <div class="ca-ohr-cell">${escapeHtml(r.ohr_id || '')}</div>
       </td>
-      <td>${escapeHtml(r.nte_type || '—')}</td>
-      <td>${r.date_of_incident ? caFormatDate(r.date_of_incident) : '—'}</td>
+      <td>${escapeHtml(r.nte_type || '\u2014')}</td>
+      <td>${r.date_of_incident ? caFormatDate(r.date_of_incident) : '\u2014'}</td>
       <td>${agingInfo.dot}<span class="ca-status-badge ${statusClass}">${escapeHtml(r.status)}</span></td>
       <td>${capBadge}</td>
       <td>${deadlineDisplay}</td>
-      <td>${servedDisplay}</td>
+      <td style="position:relative;">${servedDisplay}<span class="ca-expand-indicator"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span></td>
     </tr>`;
+    if (isExpanded) {
+      html += `<tr class="ca-detail-panel-row"><td colspan="7"><div class="ca-inline-detail-panel open" id="ca-inline-detail-${r.id}"><div style="text-align:center;padding:20px;color:var(--compass-text-muted);">Loading...</div></div></td></tr>`;
+    }
   }
 
   html += '</tbody></table>';
@@ -385,14 +390,26 @@ function caGetCapBadge(capLevel) {
   return `<span class="ca-cap-badge ${cls}">${escapeHtml(capLevel)}</span>`;
 }
 
-// ===== Detail Overlay =====
-async function caOpenDetail(id) {
-  const overlay = document.getElementById('ca-detail-overlay');
-  if (!overlay) return;
+// ===== Inline Detail Expansion =====
+async function caToggleInlineDetail(id) {
+  // If already expanded, collapse it
+  if (CA._expandedRowId === id) {
+    CA._expandedRowId = null;
+    CA.currentDetail = null;
+    caRenderTable();
+    return;
+  }
+
+  // Expand the new row
+  CA._expandedRowId = id;
+  caRenderTable();
 
   const record = CA.records.find(r => r.id === id);
   if (!record) return;
   CA.currentDetail = record;
+
+  const panel = document.getElementById('ca-inline-detail-' + id);
+  if (!panel) return;
 
   // Fetch employee CAP history
   let history = [];
@@ -401,11 +418,10 @@ async function caOpenDetail(id) {
     if (resp.ok) history = await resp.json();
   } catch (e) { console.error('CA: history fetch error', e); }
 
-  const body = document.getElementById('ca-detail-body');
-  const footer = document.getElementById('ca-detail-footer');
-  const title = document.getElementById('ca-detail-title');
-  if (title) title.textContent = `NTE — ${record.employee_name || 'Unknown'}`;
+  panel.innerHTML = _caBuildInlineDetailHtml(record, history);
+}
 
+function _caBuildInlineDetailHtml(record, history) {
   // Parse violations JSON
   let violations = [];
   try { violations = record.violations ? JSON.parse(record.violations) : []; } catch { violations = []; }
@@ -418,10 +434,10 @@ async function caOpenDetail(id) {
     <div class="ca-detail-grid">
       <div class="ca-detail-field"><span class="ca-detail-label">Name</span><span class="ca-detail-value">${escapeHtml(record.employee_name || '')}</span></div>
       <div class="ca-detail-field"><span class="ca-detail-label">OHR ID</span><span class="ca-detail-value">${escapeHtml(record.ohr_id || '')}</span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Role</span><span class="ca-detail-value">${escapeHtml(record.actual_role || '—')}</span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Planning Group</span><span class="ca-detail-value">${escapeHtml(record.planning_group || '—')}</span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Supervisor</span><span class="ca-detail-value">${escapeHtml(record.supervisor_name || '—')}</span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Email</span><span class="ca-detail-value">${escapeHtml(record.employee_email || '—')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Role</span><span class="ca-detail-value">${escapeHtml(record.actual_role || '\u2014')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Planning Group</span><span class="ca-detail-value">${escapeHtml(record.planning_group || '\u2014')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Supervisor</span><span class="ca-detail-value">${escapeHtml(record.supervisor_name || '\u2014')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Email</span><span class="ca-detail-value">${escapeHtml(record.employee_email || '\u2014')}</span></div>
     </div>
   </div>`;
 
@@ -429,12 +445,12 @@ async function caOpenDetail(id) {
   html += `<div class="ca-detail-section">
     <div class="ca-detail-section-title">Notice to Explain</div>
     <div class="ca-detail-grid">
-      <div class="ca-detail-field"><span class="ca-detail-label">NTE Type</span><span class="ca-detail-value">${escapeHtml(record.nte_type || '—')}</span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Date of Incident</span><span class="ca-detail-value">${record.date_of_incident ? caFormatDate(record.date_of_incident) : '—'}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">NTE Type</span><span class="ca-detail-value">${escapeHtml(record.nte_type || '\u2014')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Date of Incident</span><span class="ca-detail-value">${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'}</span></div>
       <div class="ca-detail-field"><span class="ca-detail-label">Status</span><span class="ca-detail-value"><span class="ca-status-badge ${CA_STATUS_COLORS[record.status] || ''}">${escapeHtml(record.status)}</span></span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Response Deadline</span><span class="ca-detail-value">${record.response_deadline ? caFormatDateTime(record.response_deadline) : '—'}</span></div>
-      <div class="ca-detail-field full-width"><span class="ca-detail-label">Incident Description</span><span class="ca-detail-value">${escapeHtml(record.incident_description || '—')}</span></div>
-      <div class="ca-detail-field full-width"><span class="ca-detail-label">Policy Violated</span><span class="ca-detail-value">${escapeHtml(record.policy_violated || '—')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Response Deadline</span><span class="ca-detail-value">${record.response_deadline ? caFormatDateTime(record.response_deadline) : '\u2014'}</span></div>
+      <div class="ca-detail-field full-width"><span class="ca-detail-label">Incident Description</span><span class="ca-detail-value">${escapeHtml(record.incident_description || '\u2014')}</span></div>
+      <div class="ca-detail-field full-width"><span class="ca-detail-label">Policy Violated</span><span class="ca-detail-value">${escapeHtml(record.policy_violated || '\u2014')}</span></div>
     </div>`;
 
   if (violations.length > 0) {
@@ -442,7 +458,7 @@ async function caOpenDetail(id) {
       <div style="margin-top:4px;">`;
     for (const v of violations) {
       html += `<div style="font-size:12px;color:var(--compass-text);margin-bottom:4px;">
-        <strong>${escapeHtml(v.code || '')}</strong> — ${escapeHtml(v.text || '')}
+        <strong>${escapeHtml(v.code || '')}</strong> \u2014 ${escapeHtml(v.text || '')}
         ${v.penalty ? `<span style="color:var(--compass-text-muted);font-size:11px;"> (${escapeHtml(v.penalty)})</span>` : ''}
       </div>`;
     }
@@ -457,8 +473,8 @@ async function caOpenDetail(id) {
       <div class="ca-detail-grid">
         ${record.cap_level ? `<div class="ca-detail-field"><span class="ca-detail-label">CAP Level</span><span class="ca-detail-value">${caGetCapBadge(record.cap_level)}</span></div>` : ''}
         ${record.cap_active_days ? `<div class="ca-detail-field"><span class="ca-detail-label">Active Period</span><span class="ca-detail-value">${record.cap_active_days} days</span></div>` : ''}
-        <div class="ca-detail-field"><span class="ca-detail-label">Decision Date</span><span class="ca-detail-value">${record.cap_decision_date ? caFormatDateTime(record.cap_decision_date) : '—'}</span></div>
-        <div class="ca-detail-field"><span class="ca-detail-label">Decision By</span><span class="ca-detail-value">${escapeHtml(record.cap_decision_by || '—')}</span></div>
+        <div class="ca-detail-field"><span class="ca-detail-label">Decision Date</span><span class="ca-detail-value">${record.cap_decision_date ? caFormatDateTime(record.cap_decision_date) : '\u2014'}</span></div>
+        <div class="ca-detail-field"><span class="ca-detail-label">Decision By</span><span class="ca-detail-value">${escapeHtml(record.cap_decision_by || '\u2014')}</span></div>
         ${record.cap_start_date ? `<div class="ca-detail-field"><span class="ca-detail-label">CAP Start</span><span class="ca-detail-value">${caFormatDate(record.cap_start_date)}</span></div>` : ''}
         ${record.cap_expiry_date ? `<div class="ca-detail-field"><span class="ca-detail-label">CAP Expiry</span><span class="ca-detail-value">${caFormatDate(record.cap_expiry_date)}</span></div>` : ''}
         ${record.suspension_days ? `<div class="ca-detail-field"><span class="ca-detail-label">Suspension Days</span><span class="ca-detail-value">${record.suspension_days}</span></div>` : ''}
@@ -478,14 +494,14 @@ async function caOpenDetail(id) {
   html += `<div class="ca-detail-section">
     <div class="ca-detail-section-title">Record Info</div>
     <div class="ca-detail-grid">
-      <div class="ca-detail-field"><span class="ca-detail-label">Created By</span><span class="ca-detail-value">${escapeHtml(record.created_by || '—')}</span></div>
-      <div class="ca-detail-field"><span class="ca-detail-label">Served Date</span><span class="ca-detail-value">${record.served_date ? caFormatDateTime(record.served_date) : '—'}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Created By</span><span class="ca-detail-value">${escapeHtml(record.created_by || '\u2014')}</span></div>
+      <div class="ca-detail-field"><span class="ca-detail-label">Served Date</span><span class="ca-detail-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</span></div>
       ${record.linked_coaching_id ? `<div class="ca-detail-field"><span class="ca-detail-label">Linked Coaching Log</span><span class="ca-detail-value"><a href="#" onclick="event.stopPropagation();caOpenLinkedCoaching('${record.linked_coaching_id}')" style="color:var(--compass-accent);text-decoration:underline;">${record.linked_coaching_id.substring(0,8)}...</a></span></div>` : ''}
     </div>
   </div>`;
 
   // Section 5: Employee CAP History
-  const otherHistory = history.filter(h => h.id !== record.id);
+  const otherHistory = (history || []).filter(h => h.id !== record.id);
   if (otherHistory.length > 0) {
     html += `<div class="ca-detail-section">
       <div class="ca-detail-section-title">Employee CAP History (${otherHistory.length} prior record${otherHistory.length !== 1 ? 's' : ''})</div>
@@ -493,26 +509,34 @@ async function caOpenDetail(id) {
     for (const h of otherHistory) {
       const itemClass = h.status === 'CAP Issued' ? 'active' : h.status === 'Dismissed' ? 'dismissed' : h.status === 'Expired' ? 'expired' : '';
       html += `<div class="ca-history-item ${itemClass}">
-        <div class="ca-history-date">${h.served_date ? caFormatDate(h.served_date) : '—'}</div>
-        <div class="ca-history-title">${escapeHtml(h.nte_type || 'NTE')} ${h.cap_level ? `→ ${escapeHtml(h.cap_level)}` : ''}</div>
-        <div class="ca-history-sub">${escapeHtml(h.status)} ${h.cap_expiry_date ? `· Expires ${caFormatDate(h.cap_expiry_date)}` : ''}</div>
+        <div class="ca-history-date">${h.served_date ? caFormatDate(h.served_date) : '\u2014'}</div>
+        <div class="ca-history-title">${escapeHtml(h.nte_type || 'NTE')} ${h.cap_level ? `\u2192 ${escapeHtml(h.cap_level)}` : ''}</div>
+        <div class="ca-history-sub">${escapeHtml(h.status)} ${h.cap_expiry_date ? `\u00B7 Expires ${caFormatDate(h.cap_expiry_date)}` : ''}</div>
       </div>`;
     }
     html += '</div></div>';
   }
 
-  body.innerHTML = html;
+  return html;
+}
 
-  // Footer actions — Close only (Dismiss/Assign CAP removed per TL request)
-  footer.innerHTML = `<button class="ca-btn ghost" onclick="caCloseDetail()">Close</button>`;
-
-  overlay.classList.add('active');
+// Legacy caOpenDetail — redirect to inline toggle
+async function caOpenDetail(id) {
+  caToggleInlineDetail(id);
 }
 
 function caCloseDetail() {
+  // Legacy: close overlay if open
   const overlay = document.getElementById('ca-detail-overlay');
   if (overlay) overlay.classList.remove('active');
-  CA.currentDetail = null;
+  // Also collapse inline detail
+  if (CA._expandedRowId) {
+    CA._expandedRowId = null;
+    CA.currentDetail = null;
+    caRenderTable();
+  } else {
+    CA.currentDetail = null;
+  }
 }
 
 function caOpenLinkedCoaching(coachingId) {
@@ -547,41 +571,43 @@ var CA_NTE_WIZARD = {
 var CA_DOC_TYPE = ''; // 'nte', 'cap1', 'cap2', 'cap3'
 
 function caToggleDocBuildMenu() {
-  var menu = document.getElementById('ca-dba-menu');
-  if (!menu) return;
-  var isOpen = menu.style.display !== 'none';
-  if (isOpen) { menu.style.display = 'none'; return; }
+  var panel = document.getElementById('ca-inline-add');
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  if (isOpen) { caCollapseInlineAdd(); return; }
 
-  var docTypes = [
-    { id: 'nte', icon: '\u26A0\uFE0F', label: 'Notice to Explain (NTE)', desc: 'AI-assisted NTE with attendance data & violations', accent: '#EF4444' },
-    { id: 'cap1', icon: '\u{1F4C4}', label: 'CAP 1 — First Corrective Action', desc: 'First formal corrective action (60 days active)', accent: '#3B82F6' },
-    { id: 'cap2', icon: '\u{1F4CB}', label: 'CAP 2 — Second Corrective Action', desc: 'Second formal corrective action (90 days active)', accent: '#F59E0B' },
-    { id: 'cap3', icon: '\u{1F6A8}', label: 'CAP 3 — Third Corrective Action', desc: 'Third formal corrective action (180 days active)', accent: '#DC2626' },
-  ];
+  // Show the inline panel with type chips
+  panel.style.display = 'block';
+  var typesContainer = document.getElementById('ca-inline-add-types');
+  if (typesContainer) {
+    var docTypes = [
+      { id: 'nte', icon: '\u26A0\uFE0F', label: 'NTE', accent: '#EF4444' },
+      { id: 'cap1', icon: '\u{1F4C4}', label: 'CAP 1', accent: '#3B82F6' },
+      { id: 'cap2', icon: '\u{1F4CB}', label: 'CAP 2', accent: '#F59E0B' },
+      { id: 'cap3', icon: '\u{1F6A8}', label: 'CAP 3', accent: '#DC2626' },
+    ];
+    typesContainer.innerHTML = docTypes.map(function(t) {
+      var isActive = CA_DOC_TYPE === t.id;
+      return `<button onclick="caInlineSelectDocType('${t.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;border:2px solid ${isActive ? t.accent : '#e2e8f0'};background:${isActive ? t.accent + '15' : '#fff'};cursor:pointer;font-size:12px;font-weight:600;color:${isActive ? t.accent : '#475569'};transition:all 0.15s;white-space:nowrap;">
+        <span style="font-size:14px;">${t.icon}</span>${t.label}
+      </button>`;
+    }).join('');
+  }
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
-  menu.innerHTML = docTypes.map(function(t) {
-    return '<div onclick="caDocBuildMenuSelect(\'' + t.id + '\')" style="' +
-      'display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background 0.12s;' +
-      '" onmouseover="this.style.background=\'' + t.accent + '10\'" onmouseout="this.style.background=\'transparent\'">' +
-      '<span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">' + t.icon + '</span>' +
-      '<div style="min-width:0;">' +
-      '<div style="font-size:13px;font-weight:600;color:var(--fg,#1a202c);line-height:1.3;">' + t.label + '</div>' +
-      '<div style="font-size:11px;color:var(--fg-muted,#64748b);line-height:1.3;">' + t.desc + '</div>' +
-      '</div></div>';
-  }).join('');
+function caCollapseInlineAdd() {
+  var panel = document.getElementById('ca-inline-add');
+  if (panel) panel.style.display = 'none';
+  CA_DOC_TYPE = '';
+}
 
-  menu.style.display = 'block';
-
-  // Close on outside click
-  setTimeout(function() {
-    var closeHandler = function(e) {
-      if (!menu.contains(e.target) && !document.getElementById('ca-dba-trigger')?.contains(e.target)) {
-        menu.style.display = 'none';
-        document.removeEventListener('click', closeHandler);
-      }
-    };
-    document.addEventListener('click', closeHandler);
-  }, 0);
+function caInlineSelectDocType(type) {
+  CA_DOC_TYPE = type;
+  // Re-render chips to show active state
+  caToggleDocBuildMenu();
+  // Close the inline panel and open the wizard
+  caDocBuildMenuSelect(type);
 }
 
 function caDocBuildMenuSelect(type) {
