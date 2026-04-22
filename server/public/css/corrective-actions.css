@@ -1039,14 +1039,14 @@ ol.kb-list {
 }
 .ca-inline-detail-panel.open .cdp-header,
 .ca-inline-detail-panel.open .cdp-section {
-  animation: ca-cdp-in 0.3s cubic-bezier(0.4,0,0.2,1) both;
+  animation: ca-cdp-in 0.25s cubic-bezier(0.4,0,0.2,1) both;
 }
-.ca-inline-detail-panel.open .cdp-header { animation-delay: 30ms; }
-.ca-inline-detail-panel.open .cdp-section:nth-of-type(1) { animation-delay: 60ms; }
-.ca-inline-detail-panel.open .cdp-section:nth-of-type(2) { animation-delay: 100ms; }
-.ca-inline-detail-panel.open .cdp-section:nth-of-type(3) { animation-delay: 140ms; }
-.ca-inline-detail-panel.open .cdp-section:nth-of-type(4) { animation-delay: 180ms; }
-.ca-inline-detail-panel.open .cdp-section:nth-of-type(n+5) { animation-delay: 220ms; }
+.ca-inline-detail-panel.open .cdp-header { animation-delay: 20ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(1) { animation-delay: 50ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(2) { animation-delay: 80ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(3) { animation-delay: 110ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(4) { animation-delay: 140ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(n+5) { animation-delay: 170ms; }
 
 @media (max-width: 768px) {
   .ca-inline-detail-panel.open { padding: 0 12px 12px; }

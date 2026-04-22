@@ -1342,8 +1342,8 @@
 }
 
 /* Reuse cdp-* classes inside side panel for content sections */
-.disputes-side-panel-body .cdp-section { margin-bottom: 10px; }
-.disputes-side-panel-body .cdp-header { margin-bottom: 12px; }
+.disputes-side-panel-body .cdp-section { margin-bottom: 8px; }
+.disputes-side-panel-body .cdp-header { margin-bottom: 10px; }
 
 /* Responsive: full-width on narrow screens */
 @media (max-width: 1024px) {
@@ -1928,66 +1928,75 @@
   padding: 0 20px 16px;
 }
 
-/* ---- Detail Header ---- */
+/* ═══════════════════════════════════════════════════════════════
+   CDP DESIGN SYSTEM v2 — Left-aligned, compact, professional
+   Shared across Coaching Profile + Corrective Actions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---- Header Bar ---- */
 .cdp-header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 0 12px;
-  border-bottom: 1px solid var(--compass-border, #e2e8f0);
-  margin-bottom: 14px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0 10px;
+  border-bottom: 2px solid var(--compass-accent, #38BDF8);
+  margin-bottom: 12px;
 }
 .cdp-header-icon {
-  width: 36px; height: 36px;
-  border-radius: 8px;
+  width: 32px; height: 32px;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
+  margin-top: 1px;
 }
-.cdp-header-info { flex: 1; min-width: 0; }
+.cdp-header-info {
+  flex: 1; min-width: 0;
+  text-align: left;
+}
 .cdp-header-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--compass-text, #1e293b);
+  color: var(--compass-text, #0F172A);
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 .cdp-header-sub {
   font-size: 11px;
-  color: var(--compass-text-muted, #64748b);
-  margin-top: 2px;
+  color: var(--compass-text-muted, #64748B);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
 }
 .cdp-header-actions {
-  display: flex; gap: 6px; align-items: center; flex-shrink: 0;
+  display: flex; gap: 5px; align-items: center; flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
-/* ---- Section Cards ---- */
+/* ---- Section Blocks ---- */
 .cdp-section {
-  background: var(--compass-bg-inset, #f8fafc);
-  border: 1px solid var(--compass-border, #e2e8f0);
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
+  background: var(--compass-surface-alt, #F8FAFC);
+  border: 1px solid var(--compass-border-subtle, #F1F5F9);
+  border-left: 3px solid var(--compass-accent, #38BDF8);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  margin-bottom: 8px;
 }
 .cdp-section-title {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--compass-accent, #6366F1);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  letter-spacing: 0.6px;
+  color: var(--compass-accent, #38BDF8);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--compass-border-subtle, #F1F5F9);
+  text-align: left;
 }
 .cdp-section-title::before {
-  content: '';
-  width: 3px; height: 12px;
-  background: var(--compass-accent, #6366F1);
-  border-radius: 2px;
-  flex-shrink: 0;
+  display: none;
 }
 
-/* ---- 2-Column Grid for metadata ---- */
+/* ---- 2-Column Grid ---- */
 .cdp-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1997,136 +2006,163 @@
   grid-column: 1 / -1;
 }
 
-/* ---- Field rows ---- */
+/* ---- Field Rows ---- */
 .cdp-field {
-  padding: 7px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  text-align: left;
 }
 .cdp-field:last-child { border-bottom: none; }
 .cdp-field-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
-  color: var(--compass-text-muted, #94a3b8);
+  color: var(--compass-text-subtle, #94A3B8);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 2px;
+  letter-spacing: 0.5px;
+  margin-bottom: 1px;
+  text-align: left;
 }
 .cdp-field-value {
-  font-size: 13px;
-  color: var(--compass-text, #1e293b);
-  line-height: 1.5;
+  font-size: 12.5px;
+  color: var(--compass-text, #0F172A);
+  line-height: 1.45;
   word-break: break-word;
+  text-align: left;
 }
 .cdp-field-value.multiline {
   white-space: pre-wrap;
-  font-size: 12.5px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.55;
   color: var(--compass-text, #334155);
+  padding: 4px 0;
 }
 
-/* ---- Ack Status Badges ---- */
+/* ---- Full-width content block (Coaching Details, RCA, etc.) ---- */
+.cdp-content-block {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  text-align: left;
+}
+.cdp-content-block .cdp-field-label { margin-bottom: 3px; }
+.cdp-content-block .cdp-field-value.multiline {
+  background: var(--compass-surface, #fff);
+  border: 1px solid var(--compass-border-subtle, #F1F5F9);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+/* ---- Status Badges ---- */
 .cdp-ack-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 .cdp-ack-badge.acknowledged {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
+  background: var(--compass-success-bg, rgba(16,185,129,0.08));
+  color: var(--compass-success, #10B981);
 }
 .cdp-ack-badge.needs-ack {
-  background: rgba(245, 158, 11, 0.1);
-  color: #D97706;
+  background: var(--compass-warning-bg, rgba(245,158,11,0.08));
+  color: var(--compass-warning, #F59E0B);
 }
 
 /* ---- CAP Level Badge ---- */
 .cdp-cap-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 /* ---- Markdown Status Badge ---- */
 .cdp-md-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 /* ---- Ack Form (inline) ---- */
 .cdp-ack-form {
   background: var(--compass-surface, #fff);
-  border: 1px solid var(--compass-accent, #6366F1);
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-top: 10px;
+  border: 1px solid var(--compass-accent, #38BDF8);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-top: 8px;
 }
 .cdp-ack-form label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--compass-text-muted, #64748b);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--compass-text-muted, #64748B);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .cdp-ack-form textarea {
   width: 100%;
-  min-height: 56px;
+  min-height: 48px;
   resize: vertical;
-  font-size: 13px;
-  border: 1px solid var(--compass-border, #e2e8f0);
-  border-radius: 6px;
-  padding: 8px 10px;
-  background: var(--compass-bg-inset, #f8fafc);
+  font-size: 12.5px;
+  border: 1px solid var(--compass-border, #E2E8F0);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: var(--compass-surface-alt, #F8FAFC);
   transition: border-color 0.15s;
 }
 .cdp-ack-form textarea:focus {
   outline: none;
-  border-color: var(--compass-accent, #6366F1);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+  border-color: var(--compass-accent, #38BDF8);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.12);
 }
 
 /* ---- Footer Actions ---- */
 .compass-detail-panel-footer {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  gap: 6px;
+  justify-content: flex-start;
   align-items: center;
-  padding-top: 10px;
-  margin-top: 6px;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--compass-border-subtle, #F1F5F9);
 }
 
 /* ---- Staggered entrance animation ---- */
 @keyframes cdp-section-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .compass-detail-panel.open .cdp-section,
 .compass-detail-panel.open .cdp-header {
-  animation: cdp-section-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: cdp-section-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
-.compass-detail-panel.open .cdp-header { animation-delay: 30ms; }
-.compass-detail-panel.open .cdp-section:nth-of-type(1) { animation-delay: 60ms; }
-.compass-detail-panel.open .cdp-section:nth-of-type(2) { animation-delay: 100ms; }
-.compass-detail-panel.open .cdp-section:nth-of-type(3) { animation-delay: 140ms; }
-.compass-detail-panel.open .cdp-section:nth-of-type(4) { animation-delay: 180ms; }
-.compass-detail-panel.open .cdp-section:nth-of-type(n+5) { animation-delay: 220ms; }
+.compass-detail-panel.open .cdp-header { animation-delay: 20ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(1) { animation-delay: 50ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(2) { animation-delay: 80ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(3) { animation-delay: 110ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(4) { animation-delay: 140ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(n+5) { animation-delay: 170ms; }
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-  .compass-detail-panel.open { padding: 0 12px 12px; }
+  .compass-detail-panel.open { padding: 0 10px 12px; }
   .cdp-grid { grid-template-columns: 1fr; }
   .cdp-header { flex-wrap: wrap; }
-  .cdp-header-actions { width: 100%; justify-content: flex-end; }
+  .cdp-header-actions { width: 100%; justify-content: flex-start; margin-top: 4px; }
 }

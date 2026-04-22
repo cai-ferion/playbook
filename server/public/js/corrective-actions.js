@@ -465,8 +465,8 @@ function _caBuildInlineDetailHtml(record, history) {
   html += `<div class="cdp-field"><div class="cdp-field-label">Response Deadline</div><div class="cdp-field-value">${record.response_deadline ? caFormatDateTime(record.response_deadline) : '\u2014'}</div></div>`;
   html += `<div class="cdp-field"><div class="cdp-field-label">Served Date</div><div class="cdp-field-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</div></div>`;
   html += `</div>`;
-  html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Incident Description</div><div class="cdp-field-value multiline">${escapeHtml(record.incident_description || '\u2014')}</div></div>`;
-  html += `<div class="cdp-field cdp-grid-full" style="margin-top:4px;"><div class="cdp-field-label">Policy Violated</div><div class="cdp-field-value multiline">${escapeHtml(record.policy_violated || '\u2014')}</div></div>`;
+  html += `<div class="cdp-content-block"><div class="cdp-field-label">Incident Description</div><div class="cdp-field-value multiline">${escapeHtml(record.incident_description || '\u2014')}</div></div>`;
+  html += `<div class="cdp-content-block"><div class="cdp-field-label">Policy Violated</div><div class="cdp-field-value multiline">${escapeHtml(record.policy_violated || '\u2014')}</div></div>`;
 
   if (violations.length > 0) {
     html += `<div style="margin-top:8px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label" style="margin-bottom:6px;">Violations (${violations.length})</div>`;

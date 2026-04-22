@@ -794,11 +794,12 @@ router.patch("/coaching/:id", async (req: Request, res: Response) => {
 
     const paramId = req.params.id;
     const updates = { ...req.body, updated_at: new Date().toISOString() };
-    // If param starts with "CL-", match by coaching_id; otherwise by numeric id
-    if (paramId.startsWith("CL-")) {
-      await db.update(ioCoaching).set(updates).where(eq(ioCoaching.coaching_id, paramId));
-    } else {
+    // Route by ID type: pure numeric → match by auto-increment id; otherwise → match by coaching_id
+    const isNumericId = /^\d+$/.test(paramId);
+    if (isNumericId) {
       await db.update(ioCoaching).set(updates).where(eq(ioCoaching.id, Number(paramId)));
+    } else {
+      await db.update(ioCoaching).set(updates).where(eq(ioCoaching.coaching_id, paramId));
     }
     res.json({ ok: true });
   } catch (err: any) {

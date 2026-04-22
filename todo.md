@@ -2641,3 +2641,17 @@
 - [x] Disputes Area: Rewrote side panel from flex-based layout to full-screen overlay pattern (display:none → display:flex, position:fixed, z-index:1000) — moved element to body-level for reliable rendering
 - [x] Coaching Profile: Added font-style:normal !important override on .compass-detail-panel-row td to prevent td[colspan] italic rule from cascading into inline detail panel
 - [x] Cache versions bumped: compass-redesign.css v=106, compass.js v=108
+
+## Coaching Profile + CA Inline Expansion — Complete UI/UX Overhaul (April 2026)
+- [x] CDP Design System v2: Left-aligned, compact layout with accent-bar section blocks, 2-col metadata grids, full-width content blocks
+- [x] Overhaul Coaching Profile inline expansion — new cdp-content-block for Coaching Details, RCA Description, Infraction Description
+- [x] Overhaul Corrective Actions inline expansion — updated to use cdp-content-block for Incident Description, Policy Violated
+- [x] Tighter vertical spacing (5px field padding, 8px section margin), section titles with bottom border, no ::before accent bar
+- [x] Unified animation timing (0.25s, staggered 20ms→170ms) across both CP and CA
+- [x] Cache versions bumped: compass-redesign.css v=107, compass.js v=109, corrective-actions.css v=6, corrective-actions.js v=8
+- [x] All 762 tests passing
+
+## Bug Fix — Acknowledgement Action Failure (April 2026)
+- [x] Root cause: PATCH endpoint only handled CL- prefix and numeric IDs; alphanumeric hashes (e.g. fadc6cc9) caused Number('fadc6cc9') = NaN → SQL WHERE id = NaN → 500 error
+- [x] Fix: Treat any non-numeric ID as coaching_id lookup (not just CL- prefix)
+- [x] Verified: CL-prefixed, numeric, and alphanumeric IDs all return 200 OK

@@ -1559,8 +1559,8 @@ function _compassBuildInlineDetailHtml(log) {
 
   html += `</div>`; // close cdp-grid
 
-  // Coaching Details — full width, outside grid
-  html += `<div class="cdp-field" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Coaching Details</div><div class="cdp-field-value multiline">${log.coaching_details || '\u2014'}</div></div>`;
+  // Coaching Details — full width content block
+  html += `<div class="cdp-content-block"><div class="cdp-field-label">Coaching Details</div><div class="cdp-field-value multiline">${log.coaching_details || '\u2014'}</div></div>`;
   html += `</div>`; // close cdp-section
 
   // ===== QA FEEDBACK: RCA CARD =====
@@ -1573,7 +1573,7 @@ function _compassBuildInlineDetailHtml(log) {
     html += `<div class="cdp-field"><div class="cdp-field-label">L4 Deficiency</div><div class="cdp-field-value">${escapeHtml(log.level_4_deficiency || '\u2014')}</div></div>`;
     html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">L5 Root Cause</div><div class="cdp-field-value">${escapeHtml(log.level_5_root_cause || '\u2014')}</div></div>`;
     html += `</div>`;
-    html += `<div class="cdp-field" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">RCA Description</div><div class="cdp-field-value multiline">${escapeHtml(log.guidelines || '\u2014')}</div></div>`;
+    html += `<div class="cdp-content-block"><div class="cdp-field-label">RCA Description</div><div class="cdp-field-value multiline">${escapeHtml(log.guidelines || '\u2014')}</div></div>`;
     const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--compass-text-muted)';
     html += `<div class="cdp-field" style="margin-top:6px;"><div class="cdp-field-label">Markdown Status</div><div class="cdp-field-value"><span class="cdp-md-status" style="background:${mdStatusColor}18;color:${mdStatusColor};">${escapeHtml(log.status || '\u2014')}</span></div></div>`;
     html += `</div>`;
@@ -1587,7 +1587,7 @@ function _compassBuildInlineDetailHtml(log) {
     html += `<div class="cdp-field"><div class="cdp-field-label">Infraction</div><div class="cdp-field-value">${escapeHtml(log.infraction || '\u2014')}</div></div>`;
     html += `<div class="cdp-field"><div class="cdp-field-label">Severity</div><div class="cdp-field-value">${escapeHtml(log.severity || '\u2014')}</div></div>`;
     html += `</div>`;
-    html += `<div class="cdp-field" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Description</div><div class="cdp-field-value multiline">${escapeHtml(log.infraction_description || '\u2014')}</div></div>`;
+    html += `<div class="cdp-content-block"><div class="cdp-field-label">Description</div><div class="cdp-field-value multiline">${escapeHtml(log.infraction_description || '\u2014')}</div></div>`;
     html += `</div>`;
   }
 
