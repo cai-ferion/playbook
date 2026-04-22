@@ -1692,14 +1692,58 @@ function _compassResetFormFields() {
 
 // ===== Add Button Dropdown Menu =====
 function compassToggleAddMenu() {
-  const menu = document.getElementById('compass-add-menu');
-  if (!menu) return;
-  const isOpen = menu.style.display !== 'none';
-  if (isOpen) {
-    menu.style.display = 'none';
+  const panel = document.getElementById('compass-inline-add');
+  if (!panel) return;
+
+  // If panel is already visible, collapse it
+  if (panel.style.display !== 'none') {
+    compassCollapseInlineAdd();
     return;
   }
 
+  // Close old dropdown menu if it was open
+  const oldMenu = document.getElementById('compass-add-menu');
+  if (oldMenu) oldMenu.style.display = 'none';
+
+  // Build type chips
+  const typesContainer = document.getElementById('compass-inline-add-types');
+  const formContainer = document.getElementById('compass-inline-add-form');
+  const footerContainer = document.getElementById('compass-inline-add-footer');
+  if (!typesContainer) return;
+
+  // Reset state
+  COMPASS._inlineSelectedType = null;
+  COMPASS._formBuilt = false;
+  COMPASS._formEls = {};
+  if (formContainer) { formContainer.innerHTML = ''; formContainer.style.display = 'none'; }
+  if (footerContainer) { footerContainer.innerHTML = ''; footerContainer.style.display = 'none'; }
+
+  const types = _compassGetAllowedTypes();
+
+  typesContainer.innerHTML = types.map(t => `
+    <div class="compass-type-chip" data-type="${escapeAttr(t.id)}" onclick="compassInlineSelectType('${escapeAttr(t.id)}')">
+      <span class="compass-type-chip-icon">${t.icon}</span>
+      <div>
+        <div class="compass-type-chip-label">${escapeHtml(t.label)}</div>
+        <div class="compass-type-chip-desc">${escapeHtml(t.desc)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Show the panel with slide-down animation
+  panel.classList.remove('collapsing');
+  panel.style.display = '';
+
+  // Update title
+  const title = document.getElementById('compass-inline-add-title');
+  if (title) title.textContent = 'New Coaching Log — Select Type';
+
+  // Scroll to the panel
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Extract the type list + role filtering into a reusable function
+function _compassGetAllowedTypes() {
   const allTypes = [
     { id: 'General Coaching', icon: '\u{1F4AC}', label: 'General Coaching', desc: 'One-on-one coaching session', accent: '#3B82F6' },
     { id: 'Follow-Up Session', icon: '\u{1F504}', label: 'Follow-Up Session', desc: 'Continue a previous session', accent: '#8B5CF6' },
@@ -1710,91 +1754,86 @@ function compassToggleAddMenu() {
     { id: 'ZTP Coaching', icon: '\u{1F512}', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
   ];
 
-  // Role-based coaching type restrictions
   const role = currentUser ? currentUser.actual_role : '';
   const isOwner = currentUser && currentUser.ohr_id === '740045023';
-  let types;
-  if (isOwner || role === 'Manager') {
-    types = allTypes; // Managers see all types
-  } else if (role === 'Quality & Policy Expert') {
-    // QAs: only QA Feedback, ZTP Coaching, Follow-Up Session
+  if (isOwner || role === 'Manager') return allTypes;
+  if (role === 'Quality & Policy Expert') {
     const qaAllowed = ['QA Feedback', 'ZTP Coaching', 'Follow-Up Session'];
-    types = allTypes.filter(t => qaAllowed.includes(t.id));
-  } else if (role === 'Operational SME') {
-    // SMEs: all EXCEPT QA Feedback and Triad Coaching
-    const smeExcluded = ['QA Feedback', 'Triad Coaching'];
-    types = allTypes.filter(t => !smeExcluded.includes(t.id));
-  } else if (role === 'Team Lead') {
-    // TLs: all EXCEPT QA Feedback
-    types = allTypes.filter(t => t.id !== 'QA Feedback');
-  } else {
-    // Trainers, Content Reviewers, etc. — all except QA Feedback (safe default)
-    types = allTypes.filter(t => t.id !== 'QA Feedback');
+    return allTypes.filter(t => qaAllowed.includes(t.id));
   }
-
-  menu.innerHTML = types.map(t => `
-    <div onclick="compassAddMenuSelect('${escapeAttr(t.id)}')" style="
-      display:flex; align-items:center; gap:10px; padding:10px 14px;
-      cursor:pointer; transition:background 0.12s;
-      ${t.special ? 'border-top:1px solid var(--border,#e2e8f0);' : ''}
-    " onmouseover="this.style.background='${t.accent}10'" onmouseout="this.style.background='transparent'">
-      <span style="font-size:16px;flex-shrink:0;width:22px;text-align:center;">${t.icon}</span>
-      <div style="min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:var(--fg,#1a202c);line-height:1.3;">${escapeHtml(t.label)}</div>
-        <div style="font-size:11px;color:var(--fg-muted,#64748b);line-height:1.3;">${escapeHtml(t.desc)}</div>
-      </div>
-    </div>
-  `).join('');
-
-  menu.style.display = 'block';
-
-  // Close on outside click
-  setTimeout(() => {
-    const closeHandler = (e) => {
-      if (!menu.contains(e.target) && !document.getElementById('compass-add-trigger')?.contains(e.target)) {
-        menu.style.display = 'none';
-        document.removeEventListener('click', closeHandler);
-      }
-    };
-    document.addEventListener('click', closeHandler);
-  }, 0);
+  if (role === 'Operational SME') {
+    const smeExcluded = ['QA Feedback', 'Triad Coaching'];
+    return allTypes.filter(t => !smeExcluded.includes(t.id));
+  }
+  if (role === 'Team Lead') return allTypes.filter(t => t.id !== 'QA Feedback');
+  return allTypes.filter(t => t.id !== 'QA Feedback');
 }
 
 async function compassAddMenuSelect(type) {
-  // Close the dropdown
-  const menu = document.getElementById('compass-add-menu');
-  if (menu) menu.style.display = 'none';
-
-  // NTE Build Assist relocated to Corrective Actions page
-  // Store the selected type and open the form directly
+  // Legacy path — redirect to inline panel
   COMPASS._selectedType = type;
-  await compassShowNewFormForType(type);
+  await compassInlineSelectType(type);
+}
+
+// Inline panel: user clicked a type chip
+async function compassInlineSelectType(type) {
+  COMPASS._selectedType = type;
+  COMPASS._inlineSelectedType = type;
+
+  // Highlight the selected chip
+  const chips = document.querySelectorAll('.compass-type-chip');
+  chips.forEach(c => c.classList.toggle('selected', c.dataset.type === type));
+
+  // Update title
+  const title = document.getElementById('compass-inline-add-title');
+  if (title) title.textContent = 'New Coaching Log — ' + type;
+
+  // Build the form in the inline container
+  await compassShowNewFormInline(type);
+}
+
+// Collapse the inline add panel
+function compassCollapseInlineAdd() {
+  const panel = document.getElementById('compass-inline-add');
+  if (!panel) return;
+  panel.classList.add('collapsing');
+  setTimeout(() => {
+    panel.style.display = 'none';
+    panel.classList.remove('collapsing');
+    COMPASS._inlineSelectedType = null;
+    COMPASS._formBuilt = false;
+    COMPASS._formEls = {};
+    COMPASS.editingId = null;
+    COMPASS.selectedParentLog = null;
+  }, 250);
 }
 
 
+// Legacy wrapper — still used by detail panel edit flows
 async function compassShowNewFormForType(preselectedType) {
-  // Employees already prefetched in initCompass — no await needed here
+  await compassShowNewFormInline(preselectedType);
+}
+
+// Build the coaching form inside the inline panel (not the modal)
+async function compassShowNewFormInline(preselectedType) {
   if (COMPASS.employees.length === 0) await compassFetchEmployees();
   COMPASS.editingId = null;
 
-  const formTitle = document.getElementById('compass-form-title');
-  const formBody = document.getElementById('compass-form-body');
-  const formFooter = document.getElementById('compass-form-footer');
-  const overlay = document.getElementById('compass-form-overlay');
-
-  formTitle.textContent = 'New Coaching Log';
+  const formBody = document.getElementById('compass-inline-add-form');
+  const formFooter = document.getElementById('compass-inline-add-footer');
+  if (!formBody || !formFooter) return;
 
   // Performance: only build form HTML once, then reuse with field reset
-  // But if the type changed, rebuild so the type label updates
   if (COMPASS._formBuilt && COMPASS._lastFormType === preselectedType) {
     _compassResetFormFields();
     formFooter.innerHTML = `
-      <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
+      <span id="compass-inline-success-msg"></span>
+      <button class="btn btn-outline btn-sm" onclick="compassCollapseInlineAdd()">Cancel</button>
       <button class="btn btn-primary btn-sm" id="compass-submit-btn" onclick="compassSubmitNew()">Create</button>
     `;
     COMPASS._formEls['compass-submit-btn'] = document.getElementById('compass-submit-btn');
-    overlay.style.display = 'flex';
-    // Set the pre-selected type on the hidden field
+    formBody.style.display = '';
+    formFooter.style.display = '';
     const typeSelect = COMPASS._formEls['compass-new-type'];
     if (typeSelect && preselectedType) {
       typeSelect.value = preselectedType;
@@ -2043,7 +2082,8 @@ async function compassShowNewFormForType(preselectedType) {
   `;
 
   formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="compassCloseForm()">Cancel</button>
+    <span id="compass-inline-success-msg"></span>
+    <button class="btn btn-outline btn-sm" onclick="compassCollapseInlineAdd()">Cancel</button>
     <button class="btn btn-primary btn-sm" id="compass-submit-btn" onclick="compassSubmitNew()">Create</button>
   `;
 
@@ -2052,7 +2092,9 @@ async function compassShowNewFormForType(preselectedType) {
   COMPASS._lastFormType = preselectedType;
   _compassCacheFormEls();
 
-  overlay.style.display = 'flex';
+  // Show the inline form body and footer (no modal overlay)
+  formBody.style.display = '';
+  formFooter.style.display = '';
 
   // Set the pre-selected type and trigger field visibility
   if (preselectedType) {
@@ -2062,6 +2104,9 @@ async function compassShowNewFormForType(preselectedType) {
     }
     compassOnTypeChange();
   }
+
+  // Scroll form into view
+  formBody.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function compassOnTypeChange() {
@@ -2553,11 +2598,12 @@ async function compassSubmitNew() {
 
     if (successCount > 0) {
       showToast(`${successCount} coaching log${successCount > 1 ? 's' : ''} created successfully${failCount > 0 ? ` (${failCount} failed)` : ''}`, failCount > 0 ? 'warning' : 'success');
-
+      _compassShowInlineSuccessMsg(`${successCount} log${successCount > 1 ? 's' : ''} created`);
     } else {
       showToast('Failed to create coaching logs', 'error');
     }
-    compassCloseForm();
+    // Keep inline form open for consecutive entries — just reset fields
+    _compassResetFormFieldsForNext();
     await compassFetchLogs();
     return;
   }
@@ -2582,6 +2628,7 @@ async function compassSubmitNew() {
     const newId = created?.coaching_id || (Array.isArray(created) ? created[0]?.coaching_id : null) || created?.id;
 
     showToast('Coaching log created successfully', 'success');
+    _compassShowInlineSuccessMsg('Log created: ' + (record.coachee || 'Unknown'));
 
     // #1 Notification: coaching_issued → notify coachee (+ supervisor for ZTP/Incident)
     try {
@@ -2617,7 +2664,8 @@ async function compassSubmitNew() {
       }
     } catch (notifErr) { console.error('[Notif] coaching_issued error:', notifErr); }
 
-    compassCloseForm();
+    // Keep inline form open for consecutive entries — just reset fields
+    _compassResetFormFieldsForNext();
     await compassFetchLogs();
   } catch (e) {
     console.error('Failed to create coaching log:', e);
@@ -2626,17 +2674,48 @@ async function compassSubmitNew() {
 }
 
 function compassCloseForm() {
+  // Close the modal overlay (used for detail views)
   const overlay = document.getElementById('compass-form-overlay');
   if (overlay) overlay.style.display = 'none';
+  // Also collapse the inline add panel if open
+  const inlinePanel = document.getElementById('compass-inline-add');
+  if (inlinePanel && inlinePanel.style.display !== 'none') {
+    compassCollapseInlineAdd();
+  }
   COMPASS.editingId = null;
-  // If the overlay was used for detail/NTE view, invalidate form cache
-  // so next Add click rebuilds the form HTML
   if (COMPASS._formBuilt && !document.getElementById('compass-new-type')) {
     COMPASS._formBuilt = false;
     COMPASS._formEls = {};
   }
   COMPASS.selectedParentLog = null;
-  _compassDetailStack = []; // Clear navigation stack on close
+  _compassDetailStack = [];
+}
+
+// Reset form fields after successful submit, keeping the form open for consecutive entries
+function _compassResetFormFieldsForNext() {
+  _compassResetFormFields();
+  // Re-apply the type change so conditional sections are correctly shown
+  const type = COMPASS._inlineSelectedType || COMPASS._selectedType;
+  const typeInput = document.getElementById('compass-new-type');
+  if (typeInput && type) {
+    typeInput.value = type;
+    compassOnTypeChange();
+  }
+  // Focus the coachee search field for quick next entry
+  const coacheeSearch = document.getElementById('compass-coachee-search');
+  if (coacheeSearch && coacheeSearch.offsetParent !== null) {
+    setTimeout(() => coacheeSearch.focus(), 100);
+  }
+}
+
+// Show a brief success message in the inline footer
+function _compassShowInlineSuccessMsg(msg) {
+  const el = document.getElementById('compass-inline-success-msg');
+  if (!el) return;
+  el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--compass-success)"><polyline points="20 6 9 17 4 12"/></svg> ${escapeHtml(msg)}`;
+  el.className = 'submit-success-msg';
+  // Auto-clear after 5 seconds
+  setTimeout(() => { if (el) el.innerHTML = ''; }, 5000);
 }
 
 // ===== Multi-Coachee Select (Group/Triad Coaching) =====

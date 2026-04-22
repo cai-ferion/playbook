@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/input-redesign.css?v=121">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
-  <link rel="stylesheet" href="css/compass-redesign.css?v=100">
+  <link rel="stylesheet" href="css/compass-redesign.css?v=101">
   <link rel="stylesheet" href="css/corrective-actions.css?v=3">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1008,6 +1008,24 @@
           <!-- Hidden filters kept for backward compatibility -->
           <select class="form-select" id="compass-filter-type" style="display:none;"><option value="All">All Types</option></select>
           <select class="form-select" id="compass-filter-status" style="display:none;"><option value="All">All Statuses</option></select>
+
+          <!-- Inline Add Panel (replaces modal) -->
+          <div class="compass-inline-add" id="compass-inline-add" style="display:none;">
+            <div class="compass-inline-add-header">
+              <h4 class="compass-inline-add-title" id="compass-inline-add-title">New Coaching Log</h4>
+              <button class="compass-inline-add-collapse" id="compass-inline-collapse-btn" onclick="compassCollapseInlineAdd()" title="Collapse">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                Collapse
+              </button>
+            </div>
+            <!-- Step 1: Type chips -->
+            <div class="compass-inline-add-types" id="compass-inline-add-types"></div>
+            <!-- Step 2: Form body (shown after type selection) -->
+            <div class="compass-inline-add-form" id="compass-inline-add-form" style="display:none;"></div>
+            <!-- Form footer -->
+            <div class="compass-inline-add-footer" id="compass-inline-add-footer" style="display:none;"></div>
+          </div>
+
           <!-- Side-by-side tables: Coaching Given & Coaching Received -->
           <div class="compass-dual-tables" id="compass-dual-tables">
             <div class="compass-table-panel">
@@ -1721,7 +1739,7 @@
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
-  <script src="js/compass.js?v=104" defer></script>
+  <script src="js/compass.js?v=105" defer></script>
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=5" defer></script>
   <script src="js/compass-omnibar.js?v=102h" defer></script>

@@ -2594,3 +2594,16 @@
 
 ## CA Detail Panel — Dismiss/Assign CAP Buttons Still Visible (April 2026)
 - [x] Remove Dismiss and Assign CAP buttons from NTE detail panel in Corrective Actions — buttons were already removed in code (checkpoint f2b61ce) but cache version was not bumped (both old and new used ?v=4), so user's browser served stale JS. Bumped corrective-actions.js to v=5 and corrective-actions.css to v=3.
+
+## Coaching Profile — Inline Add Panel (April 2026)
+- [x] Replace modal-based Add form with inline expandable panel below filter bar
+- [x] Type selection via horizontal clickable chips (not dropdown)
+- [x] Employee selection via type-to-search pattern (not full dropdown)
+- [x] Form stays open after submit for consecutive entries
+- [x] Manual collapse button to close the inline panel
+- [x] Smooth CSS slide-down/slide-up animations
+- [x] Role-based type filtering preserved (TL=all except QA Feedback, QA=QA Feedback+ZTP+Follow Up, SME=all except QA Feedback+Triad, Manager=all)
+- [x] Old modal form code redirected to inline panel (legacy wrapper preserved for edit flows)
+- [x] Success message shown inline after each create
+- [x] Cache versions bumped (compass.js v=105, compass-redesign.css v=101)
+- [x] 34 vitest tests covering HTML structure, JS functions, CSS styles

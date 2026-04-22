@@ -260,8 +260,8 @@ describe("Cache Version Bumps", () => {
     expect(indexHtml).toContain('notifications.js?v=103');
   });
 
-  it("should have compass.js at v=104", () => {
-    expect(indexHtml).toContain('compass.js?v=104');
+  it("should have compass.js at v=105", () => {
+    expect(indexHtml).toContain('compass.js?v=105');
   });
 
   it("should have corrective-actions.js at v=5", () => {
