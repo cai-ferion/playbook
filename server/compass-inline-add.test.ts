@@ -226,7 +226,7 @@ describe("Inline Panel Cache Versions", () => {
     expect(indexHtml).toContain("compass.js?v=105");
   });
 
-  it("should have compass-redesign.css at v=101", () => {
-    expect(indexHtml).toContain("compass-redesign.css?v=101");
+  it("should have compass-redesign.css at v=102", () => {
+    expect(indexHtml).toContain("compass-redesign.css?v=102");
   });
 });

@@ -2615,3 +2615,11 @@
 - [x] Corrective Actions: Each CA item expands inline to show details (no modal popout)
 - [x] Cache versions bumped: corrective-actions.js v=6, corrective-actions.css v=4
 - [x] All 762 tests passing
+
+## Inline Detail Panel — Complete UI/UX Overhaul (April 2026)
+- [x] Coaching Profile: Redesign inline expansion panel — card-based sections (cdp-*), 2-col grid, header with type badge + icon, staggered entrance animations
+- [x] Corrective Actions: Redesign inline expansion panel — matching card-based design (ca-cdp-*), NTE type icons, status-colored header
+- [x] Preserve all action buttons (Acknowledge, Close, etc.) in both panels — footer with all original buttons intact
+- [x] Improved information density: 2-column grids, section cards with accent bars, multiline field support
+- [x] Cache versions bumped: compass-redesign.css v=102, corrective-actions.css v=5, corrective-actions.js v=7
+- [x] All 762 tests passing

@@ -1501,124 +1501,155 @@ function _compassBuildInlineDetailHtml(log) {
   const isAcknowledged = compassIsAcknowledged(log);
   const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '\u2014';
 
-  // ===== SECTION 1: SESSION DETAILS =====
-  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
-  html += `<div class="detail-row"><span class="detail-label">Coaching Type</span><span class="detail-value">${escapeHtml(log.coaching_type || '')}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
+  // Type icon map
+  const typeIcons = { 'General Coaching': '\uD83D\uDCAC', 'Follow-Up Session': '\uD83D\uDD04', 'Group Coaching': '\uD83D\uDC65', 'Triad Coaching': '\uD83D\uDD35', 'QA Feedback': '\uD83D\uDCCB', 'Incident Report': '\u26A0\uFE0F', 'ZTP Coaching': '\uD83D\uDD12' };
+  const typeIcon = typeIcons[log.coaching_type] || '\uD83D\uDCAC';
+  const typeBg = log.coaching_type === 'QA Feedback' ? 'rgba(245,158,11,0.1)' : log.coaching_type === 'ZTP Coaching' ? 'rgba(239,68,68,0.1)' : log.coaching_type === 'Incident Report' ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.08)';
 
-  if (log.coaching_type === 'Group Coaching') {
-    const coachees = log.coachee_list || [];
-    html += `<div class="detail-row"><span class="detail-label">Coachees (${coachees.length})</span><span class="detail-value">${coachees.length > 0 ? coachees.map(c => escapeHtml(c.name || c)).join(', ') : escapeHtml(log.coachee || '\u2014')}</span></div>`;
-  } else if (log.coaching_type === 'Triad Coaching') {
-    const leader = log.coachee_list && log.coachee_list.length > 0 ? log.coachee_list[0] : null;
-    html += `<div class="detail-row"><span class="detail-label">Leader</span><span class="detail-value">${leader ? escapeHtml(leader.name || '') : '\u2014'}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '\u2014')} (${escapeHtml(log.coachee_ohr || '')})</span></div>`;
-  } else {
-    html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '\u2014')} (${escapeHtml(log.coachee_ohr || '')})</span></div>`;
-  }
-
-  if (log.coaching_type === 'QA Feedback' && log.job_id) {
-    html += `<div class="detail-row"><span class="detail-label">Job ID</span><span class="detail-value">${escapeHtml(log.job_id)}</span></div>`;
-  }
-  if (log.coachee_sup && log.coach !== log.coachee_sup) {
-    html += `<div class="detail-row"><span class="detail-label">Coachee Supervisor</span><span class="detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
-  }
-  html += `<div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${escapeHtml(log.coach || '\u2014')} (${escapeHtml(log.coach_ohr || '')})</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Session Goal</span><span class="detail-value">${escapeHtml(log.session_goal || '\u2014')}</span></div>`;
-
-  if (log.cap_level) {
-    const capBg = log.cap_level === 'CAP 3' ? '#EF444420' : log.cap_level === 'CAP 2' ? '#F59E0B20' : '#3B82F620';
-    const capFg = log.cap_level === 'CAP 3' ? '#EF4444' : log.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6';
-    html += `<div class="detail-row"><span class="detail-label">CAP Level</span><span class="detail-value"><span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;background:${capBg};color:${capFg};">${escapeHtml(log.cap_level)}</span>`;
-    html += ` <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();compassViewNte('${escapeAttr(log.coaching_id || log.id)}')" style="margin-left:8px;font-size:10px;padding:2px 8px;">View NTE</button>`;
-    html += `</span></div>`;
-  }
-
-  html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '\u2014'}</span></div>`;
-
-  // QA Feedback RCA section
-  if (log.coaching_type === 'QA Feedback') {
-    html += '</div>';
-    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
-    html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L3 Contributing Cause</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value">${escapeHtml(log.guidelines || '\u2014')}</span></div>`;
-    const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
-    html += `<div class="detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span class="detail-label">Markdown Status</span><span class="detail-value" style="font-weight:600;color:${mdStatusColor};">${escapeHtml(log.status || '\u2014')}</span></div>`;
-    html += '</div>';
-    html += '<div class="detail-section" style="margin-top:0;">';
-  }
-
-  // ZTP section
-  if (log.coaching_type === 'ZTP Coaching') {
-    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">`;
-    html += `<div class="detail-row"><span class="detail-label">Infraction Category</span><span class="detail-value">${escapeHtml(log.infraction_category || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">Infraction</span><span class="detail-value">${escapeHtml(log.infraction || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">Description</span><span class="detail-value detail-multiline">${escapeHtml(log.infraction_description || '\u2014')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">Severity</span><span class="detail-value">${escapeHtml(log.severity || '\u2014')}</span></div>`;
-    html += `</div>`;
-  }
-
-  // Dispute Trail for QA Feedback
-  if (log.coaching_type === 'QA Feedback') {
-    const hasDispute = log.dispute_comments || log.qa_comments || log.sme_qa_dispute_comments || log.trainer_comments || log.sme_trainer_comments || log.qtp_manager_comments;
-    if (hasDispute) {
-      html += '</div>';
-      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
-      if (log.dispute_comments) html += `<div class="detail-row"><span class="detail-label">Dispute Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.dispute_comments)}</span></div>`;
-      if (log.qa_comments) html += `<div class="detail-row"><span class="detail-label">QA Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.qa_comments)}</span></div>`;
-      if (log.sme_qa_dispute_comments) html += `<div class="detail-row"><span class="detail-label">SME QA Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_qa_dispute_comments)}</span></div>`;
-      if (log.trainer_comments) html += `<div class="detail-row"><span class="detail-label">Trainer Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.trainer_comments)}</span></div>`;
-      if (log.sme_trainer_comments) html += `<div class="detail-row"><span class="detail-label">SME Trainer Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_trainer_comments)}</span></div>`;
-      if (log.qtp_manager_comments) html += `<div class="detail-row"><span class="detail-label">QTP Manager</span><span class="detail-value detail-multiline">${escapeHtml(log.qtp_manager_comments)}</span></div>`;
-      html += '</div>';
-      html += '<div class="detail-section" style="margin-top:0;">';
-    }
-  }
-
-  html += compassRenderAttachmentsDetail(log);
-  html += compassRenderRelatedLogs(log);
-  html += '</div>';
-
-  // ===== SECTION 2: ACKNOWLEDGEMENT =====
+  // ===== HEADER =====
+  let html = `<div class="cdp-header">`;
+  html += `<div class="cdp-header-icon" style="background:${typeBg};">${typeIcon}</div>`;
+  html += `<div class="cdp-header-info">`;
+  html += `<div class="cdp-header-title">${escapeHtml(log.coaching_type || 'Coaching Log')}</div>`;
+  html += `<div class="cdp-header-sub">${date} &middot; ID: ${escapeHtml(String(log.coaching_id || log.id).slice(0,8))}</div>`;
+  html += `</div>`;
+  // Ack badge in header
   const ACK_ELIGIBLE_STATUSES = ['Pending Acknowledgement', 'Acknowledged'];
   const isAwarenessOnly = COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type);
   const showAckSection = !isAwarenessOnly && (log.coaching_type !== 'QA Feedback' || ACK_ELIGIBLE_STATUSES.includes(log.status));
-
   if (showAckSection) {
-    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Acknowledgement</h4>';
-    html += '<div id="compass-ack-details">';
     if (isAcknowledged) {
-      html += `<div class="detail-row"><span class="detail-label">Status</span><span style="display:inline-flex;align-items:center;gap:4px;color:var(--success);font-weight:600;font-size:13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Coachee Acknowledged</span></div>`;
+      html += `<span class="cdp-ack-badge acknowledged"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Acknowledged</span>`;
     } else {
-      html += `<div class="detail-row"><span class="detail-label">Status</span><span style="display:inline-flex;align-items:center;gap:4px;color:var(--warning);font-weight:600;font-size:13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Needs Acknowledgement</span></div>`;
+      html += `<span class="cdp-ack-badge needs-ack"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Pending</span>`;
     }
-    html += `<div class="detail-row"><span class="detail-label">Commitments</span><span class="detail-value detail-multiline">${escapeHtml(log.coachee_commitments || '\u2014')}</span></div>`;
+  }
+  html += `</div>`;
+
+  // ===== SESSION DETAILS CARD =====
+  html += `<div class="cdp-section"><div class="cdp-section-title">Session Details</div>`;
+  html += `<div class="cdp-grid">`;
+
+  // People fields
+  if (log.coaching_type === 'Group Coaching') {
+    const coachees = log.coachee_list || [];
+    html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">Coachees (${coachees.length})</div><div class="cdp-field-value">${coachees.length > 0 ? coachees.map(c => escapeHtml(c.name || c)).join(', ') : escapeHtml(log.coachee || '\u2014')}</div></div>`;
+  } else if (log.coaching_type === 'Triad Coaching') {
+    const leader = log.coachee_list && log.coachee_list.length > 0 ? log.coachee_list[0] : null;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Leader</div><div class="cdp-field-value">${leader ? escapeHtml(leader.name || '') : '\u2014'}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Coachee</div><div class="cdp-field-value">${escapeHtml(log.coachee || '\u2014')}</div></div>`;
+  } else {
+    html += `<div class="cdp-field"><div class="cdp-field-label">Coachee</div><div class="cdp-field-value">${escapeHtml(log.coachee || '\u2014')} <span style="color:var(--compass-text-muted,#94a3b8);font-size:11px;">(${escapeHtml(log.coachee_ohr || '')})</span></div></div>`;
+  }
+  html += `<div class="cdp-field"><div class="cdp-field-label">Coach</div><div class="cdp-field-value">${escapeHtml(log.coach || '\u2014')} <span style="color:var(--compass-text-muted,#94a3b8);font-size:11px;">(${escapeHtml(log.coach_ohr || '')})</span></div></div>`;
+
+  if (log.coachee_sup && log.coach !== log.coachee_sup) {
+    html += `<div class="cdp-field"><div class="cdp-field-label">Coachee Supervisor</div><div class="cdp-field-value">${escapeHtml(log.coachee_sup)}</div></div>`;
+  }
+  html += `<div class="cdp-field"><div class="cdp-field-label">Session Goal</div><div class="cdp-field-value">${escapeHtml(log.session_goal || '\u2014')}</div></div>`;
+
+  if (log.coaching_type === 'QA Feedback' && log.job_id) {
+    html += `<div class="cdp-field"><div class="cdp-field-label">Job ID</div><div class="cdp-field-value" style="font-family:monospace;">${escapeHtml(log.job_id)}</div></div>`;
+  }
+  if (log.cap_level) {
+    const capBg = log.cap_level === 'CAP 3' ? 'rgba(239,68,68,0.1)' : log.cap_level === 'CAP 2' ? 'rgba(245,158,11,0.1)' : 'rgba(59,130,246,0.1)';
+    const capFg = log.cap_level === 'CAP 3' ? '#EF4444' : log.cap_level === 'CAP 2' ? '#F59E0B' : '#3B82F6';
+    html += `<div class="cdp-field"><div class="cdp-field-label">CAP Level</div><div class="cdp-field-value"><span class="cdp-cap-badge" style="background:${capBg};color:${capFg};">${escapeHtml(log.cap_level)}</span> <button class="btn btn-outline btn-xs" onclick="event.stopPropagation();compassViewNte('${escapeAttr(log.coaching_id || log.id)}')" style="margin-left:6px;font-size:10px;padding:2px 8px;">View NTE</button></div></div>`;
+  }
+
+  html += `</div>`; // close cdp-grid
+
+  // Coaching Details — full width, outside grid
+  html += `<div class="cdp-field" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Coaching Details</div><div class="cdp-field-value multiline">${log.coaching_details || '\u2014'}</div></div>`;
+  html += `</div>`; // close cdp-section
+
+  // ===== QA FEEDBACK: RCA CARD =====
+  if (log.coaching_type === 'QA Feedback') {
+    html += `<div class="cdp-section"><div class="cdp-section-title">Root Cause Analysis</div>`;
+    html += `<div class="cdp-grid">`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L1 Category</div><div class="cdp-field-value">${escapeHtml(log.level_1_category || '\u2014')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L2 Direct Cause</div><div class="cdp-field-value">${escapeHtml(log.level_2_direct_cause || '\u2014')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L3 Contributing</div><div class="cdp-field-value">${escapeHtml(log.level_3_contributing_cause || '\u2014')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L4 Deficiency</div><div class="cdp-field-value">${escapeHtml(log.level_4_deficiency || '\u2014')}</div></div>`;
+    html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">L5 Root Cause</div><div class="cdp-field-value">${escapeHtml(log.level_5_root_cause || '\u2014')}</div></div>`;
+    html += `</div>`;
+    html += `<div class="cdp-field" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">RCA Description</div><div class="cdp-field-value multiline">${escapeHtml(log.guidelines || '\u2014')}</div></div>`;
+    const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--compass-text-muted)';
+    html += `<div class="cdp-field" style="margin-top:6px;"><div class="cdp-field-label">Markdown Status</div><div class="cdp-field-value"><span class="cdp-md-status" style="background:${mdStatusColor}18;color:${mdStatusColor};">${escapeHtml(log.status || '\u2014')}</span></div></div>`;
+    html += `</div>`;
+  }
+
+  // ===== ZTP SECTION =====
+  if (log.coaching_type === 'ZTP Coaching') {
+    html += `<div class="cdp-section"><div class="cdp-section-title">ZTP Infraction</div>`;
+    html += `<div class="cdp-grid">`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Category</div><div class="cdp-field-value">${escapeHtml(log.infraction_category || '\u2014')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Infraction</div><div class="cdp-field-value">${escapeHtml(log.infraction || '\u2014')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Severity</div><div class="cdp-field-value">${escapeHtml(log.severity || '\u2014')}</div></div>`;
+    html += `</div>`;
+    html += `<div class="cdp-field" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Description</div><div class="cdp-field-value multiline">${escapeHtml(log.infraction_description || '\u2014')}</div></div>`;
+    html += `</div>`;
+  }
+
+  // ===== DISPUTE TRAIL =====
+  if (log.coaching_type === 'QA Feedback') {
+    const hasDispute = log.dispute_comments || log.qa_comments || log.sme_qa_dispute_comments || log.trainer_comments || log.sme_trainer_comments || log.qtp_manager_comments;
+    if (hasDispute) {
+      html += `<div class="cdp-section"><div class="cdp-section-title">Dispute Trail</div>`;
+      const disputes = [
+        ['Dispute Comments', log.dispute_comments],
+        ['QA Comments', log.qa_comments],
+        ['SME QA Dispute', log.sme_qa_dispute_comments],
+        ['Trainer Comments', log.trainer_comments],
+        ['SME Trainer Dispute', log.sme_trainer_comments],
+        ['QTP Manager', log.qtp_manager_comments]
+      ].filter(d => d[1]);
+      disputes.forEach(d => {
+        html += `<div class="cdp-field"><div class="cdp-field-label">${d[0]}</div><div class="cdp-field-value multiline">${escapeHtml(d[1])}</div></div>`;
+      });
+      html += `</div>`;
+    }
+  }
+
+  // ===== ATTACHMENTS & RELATED LOGS =====
+  const attachHtml = compassRenderAttachmentsDetail(log);
+  const relatedHtml = compassRenderRelatedLogs(log);
+  if (attachHtml || relatedHtml) {
+    html += `<div class="cdp-section">`;
+    html += attachHtml;
+    html += relatedHtml;
+    html += `</div>`;
+  }
+
+  // ===== ACKNOWLEDGEMENT CARD =====
+  if (showAckSection) {
+    html += `<div class="cdp-section"><div class="cdp-section-title">Acknowledgement</div>`;
+    html += '<div id="compass-ack-details">';
+    html += `<div class="cdp-grid">`;
+    html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">Commitments</div><div class="cdp-field-value multiline">${escapeHtml(log.coachee_commitments || '\u2014')}</div></div>`;
     if (canSeeAckDetails) {
-      html += `<div class="detail-row"><span class="detail-label">Coaching Rating</span><span class="detail-value">${compassRenderStars(log.coaching_rating)}</span></div>`;
-      html += `<div class="detail-row"><span class="detail-label">Sentiments</span><span class="detail-value detail-multiline">${escapeHtml(log.coachee_sentiments || '\u2014')}</span></div>`;
+      html += `<div class="cdp-field"><div class="cdp-field-label">Coaching Rating</div><div class="cdp-field-value">${compassRenderStars(log.coaching_rating)}</div></div>`;
+      html += `<div class="cdp-field"><div class="cdp-field-label">Sentiments</div><div class="cdp-field-value multiline">${escapeHtml(log.coachee_sentiments || '\u2014')}</div></div>`;
     }
+    html += `</div>`;
     html += '</div>';
 
     // Inline acknowledgement form
-    html += `<div id="compass-ack-form" style="display:none;margin-top:12px;padding:14px;background:var(--bg-inset);border-radius:var(--radius);border:1px solid var(--border);">
-      <div style="font-size:12px;color:var(--fg-subtle);padding:8px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">Saving will record your acknowledgement automatically.</div>
+    html += `<div id="compass-ack-form" class="cdp-ack-form" style="display:none;">
+      <div style="font-size:12px;color:var(--compass-text-muted,#64748b);padding:8px 12px;background:var(--compass-bg-inset,#f1f5f9);border-radius:6px;margin-bottom:12px;">Saving will record your acknowledgement automatically.</div>
       <div style="margin-bottom:10px;">
-        <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Commitments <span style="color:var(--error);">*</span></label>
-        <textarea id="compass-ack-commitments" class="form-input" style="width:100%;min-height:60px;resize:vertical;font-size:13px;" placeholder="Enter your commitments..." onclick="event.stopPropagation()" required></textarea>
+        <label>Commitments <span style="color:#EF4444;">*</span></label>
+        <textarea id="compass-ack-commitments" placeholder="Enter your commitments..." onclick="event.stopPropagation()" required></textarea>
       </div>
       <div style="margin-bottom:10px;">
-        <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Rating (1-5) <span style="color:var(--error);">*</span></label>
+        <label>Rating (1-5) <span style="color:#EF4444;">*</span></label>
         <div id="compass-ack-rating" style="display:flex;gap:4px;">
-          ${[1,2,3,4,5].map(n => `<button type="button" class="compass-star-btn" data-val="${n}" onclick="event.stopPropagation();compassSetAckRating(${n})" style="background:none;border:1px solid var(--border);border-radius:4px;width:36px;height:36px;cursor:pointer;font-size:18px;color:var(--fg-subtle);transition:all 0.15s;">\u2605</button>`).join('')}
+          ${[1,2,3,4,5].map(n => `<button type="button" class="compass-star-btn" data-val="${n}" onclick="event.stopPropagation();compassSetAckRating(${n})" style="background:none;border:1px solid var(--compass-border,#e2e8f0);border-radius:6px;width:36px;height:36px;cursor:pointer;font-size:18px;color:var(--compass-text-muted,#94a3b8);transition:all 0.15s;">\u2605</button>`).join('')}
         </div>
       </div>
       <div style="margin-bottom:10px;">
-        <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Sentiments <span style="color:var(--error);">*</span></label>
-        <textarea id="compass-ack-sentiments" class="form-input" style="width:100%;min-height:60px;resize:vertical;font-size:13px;" placeholder="Share your sentiments..." onclick="event.stopPropagation()" required></textarea>
+        <label>Sentiments <span style="color:#EF4444;">*</span></label>
+        <textarea id="compass-ack-sentiments" placeholder="Share your sentiments..." onclick="event.stopPropagation()" required></textarea>
       </div>
     </div>`;
     html += '</div>';
