@@ -3686,7 +3686,7 @@ async function disputesOpenDetail(coachingId) {
   footerEl.innerHTML = footerHtml;
   // Open side panel
   overlay.classList.add('active');
-  overlay.style.display = 'block'; // fallback for cached CSS
+  // display is controlled by .active class (display:none -> display:flex)
   const wrapper = document.getElementById('disputes-layout-wrapper');
   if (wrapper) wrapper.classList.add('panel-open');
   } catch (err) {
@@ -3697,7 +3697,7 @@ async function disputesOpenDetail(coachingId) {
 
 function disputesCloseDetail() {
   const overlay = document.getElementById('disputes-detail-overlay');
-  if (overlay) { overlay.classList.remove('active'); overlay.style.display = ''; }
+  if (overlay) { overlay.classList.remove('active'); }
   const wrapper = document.getElementById('disputes-layout-wrapper');
   if (wrapper) wrapper.classList.remove('panel-open');
   _disputesEditingId = null;

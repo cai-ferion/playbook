@@ -2636,3 +2636,8 @@
 - [x] Coaching Profile inline expansion already uses same cdp-* classes as CA — both are aligned (user may have been seeing cached old version)
 - [x] Disputes Area: added try-catch with visible error alert + fallback display:block + console.warn for missing log IDs
 - [x] Bumped compass.js to v=107 to force cache refresh
+
+## Bug Fixes — Disputes Expansion + Coaching Profile Styling (April 23, 2026)
+- [x] Disputes Area: Rewrote side panel from flex-based layout to full-screen overlay pattern (display:none → display:flex, position:fixed, z-index:1000) — moved element to body-level for reliable rendering
+- [x] Coaching Profile: Added font-style:normal !important override on .compass-detail-panel-row td to prevent td[colspan] italic rule from cascading into inline detail panel
+- [x] Cache versions bumped: compass-redesign.css v=106, compass.js v=108

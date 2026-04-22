@@ -1271,30 +1271,32 @@
   min-width: 0;
   transition: flex 0.35s cubic-bezier(0.4,0,0.2,1);
 }
-.disputes-layout-wrapper.panel-open .kanban-board {
-  flex: 1 1 55%;
-}
 
 /* ---- Side Panel (drawer) ---- */
 .disputes-side-panel {
-  width: 0;
-  min-width: 0;
-  overflow: hidden;
-  transition: width 0.35s cubic-bezier(0.4,0,0.2,1), min-width 0.35s cubic-bezier(0.4,0,0.2,1);
-  flex-shrink: 0;
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1000;
+  justify-content: flex-end;
+  align-items: stretch;
 }
 .disputes-side-panel.active {
-  width: 440px;
-  min-width: 440px;
+  display: flex;
 }
 .disputes-side-panel-inner {
-  width: 440px;
-  height: calc(100vh - 200px);
+  width: 480px;
+  max-width: 90vw;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--compass-surface, #fff);
   border-left: 1px solid var(--compass-border, #e2e8f0);
-  box-shadow: -4px 0 20px rgba(0,0,0,0.06);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.12);
 }
 
 /* Side Panel Header */
@@ -1343,17 +1345,13 @@
 .disputes-side-panel-body .cdp-section { margin-bottom: 10px; }
 .disputes-side-panel-body .cdp-header { margin-bottom: 12px; }
 
-/* Responsive: stack on narrow screens */
+/* Responsive: full-width on narrow screens */
 @media (max-width: 1024px) {
-  .disputes-layout-wrapper { flex-direction: column; }
-  .disputes-side-panel.active {
+  .disputes-side-panel {
     width: 100%;
-    min-width: 100%;
   }
   .disputes-side-panel-inner {
     width: 100%;
-    height: auto;
-    max-height: 60vh;
   }
 }
 
@@ -1906,6 +1904,7 @@
   padding: 0 !important;
   border: none !important;
   background: transparent !important;
+  font-style: normal !important;
 }
 
 /* Main panel shell */
