@@ -503,19 +503,8 @@ async function caOpenDetail(id) {
 
   body.innerHTML = html;
 
-  // Footer actions
-  const canAct = currentUser && (currentUser.permissions && currentUser.permissions['compass.corrective_actions']);
-  let footerHtml = '';
-  if (canAct && record.status === 'Served') {
-    footerHtml = `
-      <button class="ca-btn ghost" onclick="caCloseDetail()">Close</button>
-      <button class="ca-btn success" onclick="caOpenDismissConfirm()">Dismiss</button>
-      <button class="ca-btn primary" onclick="caOpenCapModal()">Assign CAP</button>
-    `;
-  } else {
-    footerHtml = `<button class="ca-btn ghost" onclick="caCloseDetail()">Close</button>`;
-  }
-  footer.innerHTML = footerHtml;
+  // Footer actions — Close only (Dismiss/Assign CAP removed per TL request)
+  footer.innerHTML = `<button class="ca-btn ghost" onclick="caCloseDetail()">Close</button>`;
 
   overlay.classList.add('active');
 }
@@ -1413,8 +1402,17 @@ async function _caWizSubmit() {
   }
 }
 
-// ===== Assign CAP Modal =====
-function caOpenCapModal() {
+// ===== Assign CAP Modal & Dismiss — REMOVED (handled via Document Build Assist) =====
+// Kept as stubs in case any residual calls exist
+function caOpenCapModal() { showToast('Use Document Build Assist to manage CAP assignments', 'info'); }
+function caCloseCapModal() { const o = document.getElementById('ca-cap-overlay'); if (o) o.classList.remove('active'); }
+function caOnCapLevelChange() {}
+async function caSubmitCap() {}
+function caOpenDismissConfirm() { showToast('Dismiss functionality has been removed', 'info'); }
+async function caSubmitDismiss() {}
+
+/*--- REMOVED CODE START (Assign CAP Modal + Dismiss Confirmation) ---
+function caOpenCapModal_REMOVED() {
   const overlay = document.getElementById('ca-cap-overlay');
   if (!overlay || !CA.currentDetail) return;
 
@@ -1629,6 +1627,8 @@ async function caSubmitDismiss() {
   }
 }
 
+
+--- REMOVED CODE END ---*/
 
 // ===== CAP 1 Build Assist Wizard =====
 // 3-step wizard: 1) Select Employee + Linked NTE  2) Explanation + AI Deliberation  3) Confirm & Generate DOCX

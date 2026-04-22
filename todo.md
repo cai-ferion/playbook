@@ -2560,3 +2560,17 @@
 - [x] Ensure NTE Logs are excluded from Coaching Profile (filtered out in compassApplyFilters, removed from COACHING_TYPES, AWARENESS_ONLY_TYPES, omnibar options)
 - [x] Apply full role-based visibility rules to Corrective Actions (Manager/Admin=all, TL=team+own, SME=TL's team+own, QA/Trainer=own, Agent=own)
 - [x] Add "All Logs | My Team" toggle to Corrective Actions for admin (740045023) and Manager roles
+
+## Regimen Table Role Misalignment (April 2026)
+- [ ] Investigate misaligned roles in Regimen table vs database
+- [ ] Fix any role discrepancies
+
+## Role Realignment + CA Cleanup + Sandbox Visibility (April 2026)
+- [x] Bulk update 13 SMEs with direct reports to "Team Lead" in DB
+- [x] Check Roster Google Sheet for other misaligned columns — DB already aligned (0 updates needed)
+- [x] Remove Dismiss and Assign CAP buttons from CA detail panel + related code
+- [x] Open Sandbox Input Portal to all employees with role-based visibility (agents=own, TL/SME=team+own, Managers/Admin=all)
+- [x] Add Submitter column to Input Portal table for TL/SME/Manager views
+- [x] Grant nav.sandbox to all roles in both client + server getPermissionDefaults
+- [x] Update batch-rbac tests for new Agent defaults (nav.helm + nav.sandbox)
+- [x] Bump cache versions: sandbox.js v=103, permissions.js v=2

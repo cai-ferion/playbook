@@ -3639,7 +3639,7 @@ const ALL_PERMISSION_KEYS = [
 function getPermissionDefaults(role: string, ohrId: string): Record<string, boolean> {
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
-  if (role === 'Agent') { b['nav.helm'] = true; b['nav.compass'] = true; return b; }
+  if (role === 'Agent') { b['nav.helm'] = true; b['nav.compass'] = true; b['nav.sandbox'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
   b['anchor.dashboard'] = true;
@@ -3648,6 +3648,7 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   b['anchor.download_csv'] = true;
   b['nav.helm'] = true;
   b['nav.regimen'] = true;
+  b['nav.sandbox'] = true;
   b['regimen.export_csv'] = true;
   b['nav.compass'] = true;
   b['compass.disputes'] = true;

@@ -21,7 +21,7 @@ const ALL_PERMISSION_KEYS = [
 function getPermissionDefaults(role: string, ohrId: string): Record<string, boolean> {
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
-  if (role === 'Agent') { b['nav.helm'] = true; return b; }
+  if (role === 'Agent') { b['nav.helm'] = true; b['nav.sandbox'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
   b['anchor.dashboard'] = true;
@@ -30,6 +30,7 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   b['anchor.download_csv'] = true;
   b['nav.helm'] = true;
   b['nav.regimen'] = true;
+  b['nav.sandbox'] = true;
   b['regimen.export_csv'] = true;
   if (role === 'Team Lead') b['anchor.edit_attendance'] = true;
   if (role === 'Manager') {
@@ -95,10 +96,11 @@ describe('RBAC Permission System', () => {
 
     describe('Agent role', () => {
       const perms = getPermissionDefaults('Agent', '999999999');
-      it('only gets nav.helm = true', () => {
+      it('gets nav.helm and nav.sandbox = true', () => {
         const granted = Object.entries(perms).filter(([, v]) => v === true);
-        expect(granted.length).toBe(1);
-        expect(granted[0][0]).toBe('nav.helm');
+        expect(granted.length).toBe(2);
+        expect(perms['nav.helm']).toBe(true);
+        expect(perms['nav.sandbox']).toBe(true);
       });
       it('has nav.anchor = false', () => expect(perms['nav.anchor']).toBe(false));
       it('has nav.regimen = false', () => expect(perms['nav.regimen']).toBe(false));

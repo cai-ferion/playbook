@@ -269,9 +269,42 @@ function sandboxOmnibarClearAll() {
 function sandboxOmniApply() {
   let data = [...SANDBOX_MOD.insights];
 
-  // Always filter to current user's submissions in Input Portal
+  // Role-based visibility for Input Portal
+  // Agents: own submissions only
+  // TLs: their team's + own submissions
+  // SMEs: their TL's team's + own submissions
+  // Managers/Admin: all submissions
   if (typeof currentUser !== 'undefined' && currentUser) {
-    data = data.filter(i => i.ohr_id === currentUser.ohr_id);
+    const role = currentUser.actual_role;
+    const isAdmin = currentUser.ohr_id === '740045023';
+    const isManager = role === 'Manager';
+    if (!isAdmin && !isManager) {
+      const isTL = role === 'Team Lead';
+      const isSME = role === 'Operational SME' || role === 'Content Reviewer';
+      if (isTL || isSME) {
+        // TLs see insights from agents they supervise + own
+        // SMEs see insights from agents under their TL + own
+        const teamOhrs = new Set();
+        teamOhrs.add(currentUser.ohr_id);
+        const emps = SANDBOX_MOD.employees || [];
+        if (isTL) {
+          emps.forEach(e => {
+            if (e.supervisor === currentUser.full_name || e.flm === currentUser.full_name) teamOhrs.add(e.ohr_id);
+          });
+        } else if (isSME) {
+          // Find the SME's TL (supervisor), then get all agents under that TL
+          const myTL = currentUser.supervisor || currentUser.flm || '';
+          emps.forEach(e => {
+            if (e.supervisor === myTL || e.flm === myTL) teamOhrs.add(e.ohr_id);
+          });
+        }
+        data = data.filter(i => teamOhrs.has(i.ohr_id));
+      } else {
+        // Agents, QAs, Trainers: own submissions only
+        data = data.filter(i => i.ohr_id === currentUser.ohr_id);
+      }
+    }
+    // Managers and admin see all — no filter
   }
 
   // Apply omnibar filters
@@ -355,15 +388,24 @@ function sandboxRenderTable() {
   const tbody = document.getElementById('sandbox-table-body');
   if (!thead || !tbody) return;
 
+  // Show Submitter column for TLs/SMEs/Managers who see team insights
+  const showSubmitter = typeof currentUser !== 'undefined' && currentUser && (
+    currentUser.ohr_id === '740045023' ||
+    currentUser.actual_role === 'Manager' ||
+    currentUser.actual_role === 'Team Lead' ||
+    currentUser.actual_role === 'Operational SME' ||
+    currentUser.actual_role === 'Content Reviewer'
+  );
+  const colSpan = showSubmitter ? 7 : 6;
   thead.innerHTML = `<tr>
-    <th>Insight ID</th><th>Title</th><th>Category</th><th>Proposal Type</th><th>Status</th><th>Created Date</th>
+    <th>Insight ID</th>${showSubmitter ? '<th>Submitter</th>' : ''}<th>Title</th><th>Category</th><th>Proposal Type</th><th>Status</th><th>Created Date</th>
   </tr>`;
 
   const start = (SANDBOX_MOD.page - 1) * SANDBOX_MOD.pageSize;
   const pageData = SANDBOX_MOD.filtered.slice(start, start + SANDBOX_MOD.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No insights found</div><div class="empty-subtitle">Submit a new insight or adjust filters</div></div></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No insights found</div><div class="empty-subtitle">Submit a new insight or adjust filters</div></div></td></tr>`;
     sandboxRenderPagination();
     return;
   }
@@ -376,6 +418,7 @@ function sandboxRenderTable() {
 
     return `<tr class="module-row" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','input')">
       <td><span class="module-id">${escapeHtml(ins.insight_id || '')}</span></td>
+      ${showSubmitter ? `<td>${escapeHtml(ins.submitter || ins.ohr_id || '—')}</td>` : ''}
       <td class="module-title-cell">${escapeHtml(ins.title || ins.insight_title || '—')}</td>
       <td>${escapeHtml(cat)}</td>
       <td>${escapeHtml(ins.proposal_type || '—')}</td>

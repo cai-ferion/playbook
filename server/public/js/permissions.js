@@ -347,7 +347,7 @@ async function permResetToDefaults() {
 function computeRoleDefaults(role, ohrId) {
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERM_KEYS.map(k => [k, true]));
   const b = Object.fromEntries(ALL_PERM_KEYS.map(k => [k, false]));
-  if (role === 'Agent') { b['nav.helm'] = true; return b; }
+  if (role === 'Agent') { b['nav.helm'] = true; b['nav.sandbox'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
   b['anchor.dashboard'] = true;
@@ -356,6 +356,7 @@ function computeRoleDefaults(role, ohrId) {
   b['anchor.download_csv'] = true;
   b['nav.helm'] = true;
   b['nav.regimen'] = true;
+  b['nav.sandbox'] = true;
   b['regimen.export_csv'] = true;
   if (role === 'Team Lead') b['anchor.edit_attendance'] = true;
   if (role === 'Manager') {
