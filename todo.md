@@ -2520,3 +2520,9 @@
 - [x] Write cap-build-assist.test.ts (27 tests: config, payloads, active periods, template URLs)
 - [x] Bump corrective-actions.js cache version to v=2
 - [x] Update back buttons to close wizard instead of re-opening old type picker overlay
+
+## Bug Fix — Document Build Assist Button Missing (April 2026)
+- [x] Fix: Document Build Assist dropdown button not visible on Corrective Actions page for Team Leader role
+- [x] Root cause: canCreate/canAct used hardcoded role strings ['Team Lead', 'Manager'] but user's actual_role is 'Operational SME'
+- [x] Fix: switched to RBAC permission check (currentUser.permissions['compass.corrective_actions']) which correctly covers all authorized users
+- [x] Bumped corrective-actions.js cache version to v=3

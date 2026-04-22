@@ -124,8 +124,8 @@ function caRenderFilterBar() {
   const container = document.getElementById('ca-filter-bar');
   if (!container) return;
 
-  // Determine if current user can create NTEs (TL or Manager only)
-  const canCreate = currentUser && ['Team Lead', 'Manager'].includes(currentUser.actual_role);
+  // Determine if current user can create NTEs — use RBAC permission (covers TL, Manager, and owner OHR)
+  const canCreate = currentUser && (currentUser.permissions && currentUser.permissions['compass.corrective_actions']);
 
   container.innerHTML = `
     <div class="ca-search-wrapper">
@@ -416,7 +416,7 @@ async function caOpenDetail(id) {
   body.innerHTML = html;
 
   // Footer actions
-  const canAct = currentUser && ['Team Lead', 'Manager'].includes(currentUser.actual_role);
+  const canAct = currentUser && (currentUser.permissions && currentUser.permissions['compass.corrective_actions']);
   let footerHtml = '';
   if (canAct && record.status === 'Served') {
     footerHtml = `
