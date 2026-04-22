@@ -1974,21 +1974,18 @@ function compassToggleAddMenu() {
   if (footerContainer) { footerContainer.innerHTML = ''; footerContainer.style.display = 'none'; }
 
   const types = _compassGetAllowedTypes();
-
   typesContainer.innerHTML = types.map(t => `
     <div class="compass-type-chip" data-type="${escapeAttr(t.id)}" onclick="compassInlineSelectType('${escapeAttr(t.id)}')">
       <span class="compass-type-chip-icon">${t.icon}</span>
       <span class="compass-type-chip-label">${escapeHtml(t.label)}</span>
     </div>
-  `).join('');
+  `).join('') + `<button class="compass-inline-add-collapse" onclick="compassCollapseInlineAdd()" title="Collapse" style="margin-left:auto;flex-shrink:0;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>`;
 
   // Show the panel with slide-down animation
   panel.classList.remove('collapsing');
   panel.style.display = '';
-
-  // Update title
-  const title = document.getElementById('compass-inline-add-title');
-  if (title) title.textContent = 'New Coaching Log — Select Type';
 
   // Scroll to the panel
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -2035,10 +2032,6 @@ async function compassInlineSelectType(type) {
   // Highlight the selected chip
   const chips = document.querySelectorAll('.compass-type-chip');
   chips.forEach(c => c.classList.toggle('selected', c.dataset.type === type));
-
-  // Update title
-  const title = document.getElementById('compass-inline-add-title');
-  if (title) title.textContent = 'New Coaching Log — ' + type;
 
   // Build the form in the inline container
   await compassShowNewFormInline(type);

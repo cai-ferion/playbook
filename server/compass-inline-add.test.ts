@@ -39,13 +39,9 @@ describe("Inline Add Panel HTML Structure", () => {
     expect(indexHtml).toContain('id="compass-inline-add-footer"');
   });
 
-  it("should have the collapse button", () => {
-    expect(indexHtml).toContain('id="compass-inline-collapse-btn"');
-    expect(indexHtml).toContain("compassCollapseInlineAdd()");
-  });
-
-  it("should have the inline panel title", () => {
-    expect(indexHtml).toContain('id="compass-inline-add-title"');
+  it("should have the collapse button rendered by JS in the type chips row", () => {
+    // Collapse button is now injected by compassShowInlineAdd() into the types container
+    expect(compassJs).toContain("compassCollapseInlineAdd()");
   });
 
   it("should be positioned between filter bar and dual tables", () => {
@@ -191,8 +187,7 @@ describe("Inline Add Panel CSS", () => {
     expect(compassCss).toContain(".submit-success-msg");
   });
 
-  it("should have header styles with collapse button", () => {
-    expect(compassCss).toContain(".compass-inline-add-header {");
+  it("should have collapse button styles", () => {
     expect(compassCss).toContain(".compass-inline-add-collapse {");
   });
 
@@ -222,11 +217,11 @@ describe("Inline Add Panel CSS", () => {
 // 4. Cache Version Bumps
 // ═══════════════════════════════════════════════════════════════════════
 describe("Inline Panel Cache Versions", () => {
-  it("should have compass.js at v=111", () => {
-    expect(indexHtml).toContain("compass.js?v=111");
+  it("should have compass.js at v=112", () => {
+    expect(indexHtml).toContain("compass.js?v=112");
   });
 
-  it("should have compass-redesign.css at v=109", () => {
-    expect(indexHtml).toContain("compass-redesign.css?v=109");
+  it("should have compass-redesign.css at v=110", () => {
+    expect(indexHtml).toContain("compass-redesign.css?v=110");
   });
 });

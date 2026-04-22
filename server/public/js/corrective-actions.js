@@ -605,7 +605,9 @@ function caToggleDocBuildMenu() {
       return `<button onclick="caInlineSelectDocType('${t.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;border:2px solid ${isActive ? t.accent : '#e2e8f0'};background:${isActive ? t.accent + '15' : '#fff'};cursor:pointer;font-size:12px;font-weight:600;color:${isActive ? t.accent : '#475569'};transition:all 0.15s;white-space:nowrap;">
         <span style="font-size:14px;">${t.icon}</span>${t.label}
       </button>`;
-    }).join('');
+    }).join('') + `<button onclick="caCollapseInlineAdd()" title="Collapse" style="margin-left:auto;flex-shrink:0;background:none;border:1px solid #e2e8f0;cursor:pointer;color:#64748b;padding:6px 14px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+    </button>`;
   }
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }

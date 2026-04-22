@@ -2671,3 +2671,12 @@
 - [x] Remove "Session Goal" column from both Coaching Profile tables — totalCols 5→4, thead/tbody updated, expand indicator moved to person column; Session Goal remains in inline detail panel
 - [x] Cache versions bumped: compass-redesign.css v=109, compass.js v=111, corrective-actions.js v=9
 - [x] All 762 tests passing
+
+## Remove Inline Add Header Bars (April 2026)
+- [x] Remove "New Coaching Log — Select Type" header bar from Coaching Profile inline add panel
+- [x] Place collapse button inline with the coaching type chips row (margin-left:auto pushes it to the right)
+- [x] Remove "Document Build Assist" header bar from CA inline add panel
+- [x] Place collapse button inline with the CA type chips row
+- [x] Cleaned up dead CSS (.compass-inline-add-header, .compass-inline-add-title) and dead JS references
+- [x] Cache versions bumped: compass-redesign.css v=110, compass.js v=112, corrective-actions.js v=10
+- [x] All 761 tests passing

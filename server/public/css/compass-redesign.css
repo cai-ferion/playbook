@@ -1647,21 +1647,7 @@
   animation: compassInlineSlideUp 0.25s ease-in forwards;
 }
 
-.compass-inline-add-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--compass-border);
-  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
-}
-.compass-inline-add-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--compass-text);
-  letter-spacing: -0.3px;
-  margin: 0;
-}
+/* Header bar removed — collapse button now sits inline with type chips */
 .compass-inline-add-collapse {
   display: flex;
   align-items: center;
@@ -1689,6 +1675,7 @@
   flex-wrap: nowrap;
   gap: 6px;
   overflow-x: auto;
+  align-items: center;
 }
 .compass-type-chip {
   display: flex;
