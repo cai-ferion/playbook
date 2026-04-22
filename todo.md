@@ -2503,3 +2503,11 @@
 
 ## Bug Fix — Billing CSV Upload "Unknown Error" (April 2026)
 - [x] Fix billing CSV upload returning "Unknown error" toast (root cause: 10K rows caused HTTP timeout — optimized batch sizes to 2000, employee sync via staging table, added 5-min AbortController timeout on client)
+
+## Bug Fix — Billing CSV Upload Proxy Payload Limit (April 2026)
+- [x] Refactor billing CSV upload to use client-side chunking (2000 rows per request) to stay under proxy payload size limits (~1.2MB)
+- [x] Progress bar shows chunk-by-chunk progress (e.g., "Uploading chunk 2/6 (rows 2001-4000 of 10,132)")
+- [x] Aggregate results across all chunks (parsed, updated, skipped, employees synced, SRT bill upserted)
+- [x] Handle partial failures gracefully (report last error while preserving successful chunks)
+- [x] Bump admin.js cache version to v=107
+- [x] Update test assertions for new cache version

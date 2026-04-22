@@ -91,47 +91,78 @@ async function runBillingCsvUpload() {
   btn.disabled = true;
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;animation:spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Uploading...';
   progressEl.style.display = 'flex';
-  progressFill.style.width = '20%';
+  progressFill.style.width = '10%';
   progressText.textContent = 'Reading CSV file...';
   resultEl.style.display = 'none';
 
   try {
     const text = await file.text();
-    progressFill.style.width = '40%';
+    progressFill.style.width = '20%';
     progressText.textContent = 'Parsing CSV data...';
-    const rows = billingParseCSV(text);
-    if (rows.length < 2) throw new Error('CSV must have at least a header row and one data row.');
-    const dataCount = rows.length - 1;
+    const allRows = billingParseCSV(text);
+    if (allRows.length < 2) throw new Error('CSV must have at least a header row and one data row.');
+    const header = allRows[0];
+    const dataRows = allRows.slice(1);
+    const totalData = dataRows.length;
 
-    progressFill.style.width = '60%';
-    progressText.textContent = `Uploading ${dataCount.toLocaleString()} billing rows...`;
+    // Client-side chunking: send 2000 data rows per request to stay under proxy payload limits
+    const CHUNK_SIZE = 2000;
+    const totalChunks = Math.ceil(totalData / CHUNK_SIZE);
+    let totalUpdated = 0, totalSkipped = 0, totalParsed = 0, totalParseErrors = 0;
+    let totalEmployeesSynced = 0, totalSrtBillUpserted = 0, totalDurationMs = 0;
+    let lastError = null;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout for large files
-    const resp = await fetch(`${IO_API_BASE}/billing-csv-upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Actor-Ohr': window.currentUserOhr },
-      body: JSON.stringify({ rows }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
+    for (let c = 0; c < totalChunks; c++) {
+      const start = c * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, totalData);
+      const chunkRows = [header, ...dataRows.slice(start, end)];
+      const pct = 20 + Math.round(((c + 0.5) / totalChunks) * 70);
+      progressFill.style.width = pct + '%';
+      progressText.textContent = `Uploading chunk ${c + 1}/${totalChunks} (rows ${start + 1}-${end} of ${totalData.toLocaleString()})...`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min per chunk
+      try {
+        const resp = await fetch(`${IO_API_BASE}/billing-csv-upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Actor-Ohr': window.currentUserOhr },
+          body: JSON.stringify({ rows: chunkRows }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+          totalUpdated += (data.updated || 0);
+          totalSkipped += (data.skipped || 0);
+          totalParsed += (data.parsed || 0);
+          totalParseErrors += (data.parseErrors || 0);
+          totalEmployeesSynced += (data.employeesSynced || 0);
+          totalSrtBillUpserted += (data.srtBillUpserted || 0);
+          totalDurationMs += (data.durationMs || 0);
+        } else {
+          lastError = data.error || 'Chunk ' + (c + 1) + ' failed.';
+        }
+      } catch (chunkErr) {
+        clearTimeout(timeoutId);
+        lastError = 'Chunk ' + (c + 1) + ': ' + chunkErr.message;
+      }
+    }
+
     progressFill.style.width = '100%';
-    const data = await resp.json();
-
-    if (resp.ok && data.success) {
+    if (lastError) {
+      progressText.textContent = 'Completed with errors';
+      resultEl.className = 'admin-result warning';
+      resultEl.textContent = `Partial upload: ${totalParsed.toLocaleString()} parsed, ${totalUpdated.toLocaleString()} updated, ${totalSkipped.toLocaleString()} skipped. Last error: ${lastError}`;
+      resultEl.style.display = 'block';
+      showToast('Billing upload completed with errors.', 'warning');
+    } else {
       progressText.textContent = 'Complete!';
       resultEl.className = 'admin-result success';
-      resultEl.textContent = `Upload complete: ${data.parsed.toLocaleString()} rows parsed, ${data.updated.toLocaleString()} attendance rows updated, ${data.skipped.toLocaleString()} skipped (no match), ${data.employeesSynced || 0} employees updated, ${data.srtBillUpserted || 0} SRT bill entries. Duration: ${data.durationMs}ms.`;
+      resultEl.textContent = `Upload complete: ${totalParsed.toLocaleString()} rows parsed, ${totalUpdated.toLocaleString()} attendance rows updated, ${totalSkipped.toLocaleString()} skipped (no match), ${totalEmployeesSynced} employees updated, ${totalSrtBillUpserted} SRT bill entries. Total time: ${totalDurationMs}ms.`;
       resultEl.style.display = 'block';
       showToast('Billing data uploaded successfully.', 'success');
-      loadBillingUploadStatus();
-    } else {
-      progressText.textContent = 'Failed';
-      resultEl.className = 'admin-result warning';
-      resultEl.textContent = data.error || 'Upload failed.';
-      resultEl.style.display = 'block';
-      showToast('Billing upload failed: ' + (data.error || 'Unknown error'), 'error');
     }
+    loadBillingUploadStatus();
   } catch (err) {
     progressFill.style.width = '100%';
     progressText.textContent = 'Error';
@@ -143,7 +174,7 @@ async function runBillingCsvUpload() {
     btn.disabled = false;
     btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload CSV';
     fileInput.value = '';
-    setTimeout(() => { progressEl.style.display = 'none'; }, 3000);
+    setTimeout(() => { progressEl.style.display = 'none'; }, 5000);
   }
 }
 
