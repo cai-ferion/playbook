@@ -73,7 +73,7 @@ const COMPASS = {
   pageGiven: 1,
   pageReceived: 1,
 
-  COACHING_TYPES: ['General Coaching', 'NTE Log', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+  COACHING_TYPES: ['General Coaching', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
     'Pending SME Review',
@@ -95,7 +95,7 @@ const COMPASS = {
 
   SIMPLE_STATUSES: ['Pending Acknowledgement', 'Acknowledged'],
   // Awareness-only types: no acknowledgement workflow, status goes straight to 'Issued'
-  AWARENESS_ONLY_TYPES: ['ZTP Coaching', 'Incident Report', 'NTE Log'],
+  AWARENESS_ONLY_TYPES: ['ZTP Coaching', 'Incident Report'],
 
   STATUS_COLORS: {
     'Pending Acknowledgement': '#F59E0B',
@@ -225,6 +225,9 @@ function compassApplyFilters() {
 
   if (typeFilter !== 'All') allData = allData.filter(l => l.coaching_type === typeFilter);
   if (statusFilter !== 'All') allData = allData.filter(l => l.status === statusFilter);
+
+  // Exclude NTE Log entries from Coaching Profile — they belong in Corrective Actions
+  allData = allData.filter(l => l.coaching_type !== 'NTE Log');
 
   // Hide QA Feedback logs with active dispute statuses from Coaching Profile
   // (these remain visible in the Disputes Area kanban)
@@ -384,7 +387,7 @@ function compassApplyFilters() {
  * Acknowledged = coachee_ack, coachee_commitments, coaching_rating, coachee_sentiments all filled.
  */
 function compassIsAcknowledged(log) {
-  // Awareness-only types (ZTP, Incident Report, NTE Log) are always considered "acknowledged"
+  // Awareness-only types (ZTP, Incident Report) are always considered "acknowledged"
   // so they don't appear in the Unacknowledged tab
   if (COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type)) return true;
   return !!(log.coachee_ack && log.coachee_ack.trim() &&

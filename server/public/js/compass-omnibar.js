@@ -37,7 +37,7 @@
 
   // Predefined option sets — always show these regardless of data presence
   const COMPASS_DEFINED_OPTIONS = {
-    coaching_type: ['General Coaching', 'NTE Log', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
+    coaching_type: ['General Coaching', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
     session_goal: ['AES/Scorecard Discussion', 'Attendance & Tardiness', 'Compliance & Behavior', 'Escalation', 'Internal Discussion', 'Performance & Metrics', 'Performance Improvement Plan', 'Professional & Personal Development'],
   };
 

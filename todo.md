@@ -2544,3 +2544,19 @@
 - [x] Weekly Compass Digest (weekly_digest) → cron Monday 00:00 UTC (8 AM PHT), summary of coaching/CA activity
 - [x] Document Build Assist Complete (docx_generated) → real-time on DOCX generation
 - [x] Dispute Resolution Summary (dispute_resolved) → real-time on L2/L6 final decisions (4 trigger points)
+
+## Coaching Data Import — DS.COACHING.xlsx (April 2026)
+- [x] Parse COACH ID sheet (3,231 rows) and map to io_coaching schema
+- [x] Parse COACH BULK sheet (7 groups → 105 individual records)
+- [x] Transform: "New Session" → "General Coaching", "Group Coaching" → "General Coaching", "Triad Coaching" → "General Coaching"
+- [x] Transform: Session Goal old values to current allowed values (11 mappings + 4 edge cases: AHT, Genome, PKT Result, Policy dissemination)
+- [x] Transform: OHR floats to integer strings
+- [x] Upsert: Updated 1,895 overlapping rows, inserted 1,336 new rows from COACH ID
+- [x] Insert: 105 expanded COACH BULK records as individual General Coaching (with coachee_list traceability)
+- [x] Verify final row count: 3,444 rows (was 2,003). All 726 tests pass. Zero unmapped session goals.
+
+## NTE Log Cleanup & CA Visibility Rules (April 2026)
+- [x] Remove NTE Log entries CL-945ccb9d from io_coaching table (already removed during earlier import; 0 NTE Logs remain)
+- [x] Ensure NTE Logs are excluded from Coaching Profile (filtered out in compassApplyFilters, removed from COACHING_TYPES, AWARENESS_ONLY_TYPES, omnibar options)
+- [x] Apply full role-based visibility rules to Corrective Actions (Manager/Admin=all, TL=team+own, SME=TL's team+own, QA/Trainer=own, Agent=own)
+- [x] Add "All Logs | My Team" toggle to Corrective Actions for admin (740045023) and Manager roles

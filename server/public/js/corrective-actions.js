@@ -22,6 +22,7 @@ const CA = {
   employees: [],  // shared from COMPASS or fetched independently
   currentDetail: null,
   _initialized: false,
+  viewMode: 'all',  // 'all' = see everything, 'team' = TL-scoped view
 };
 
 // ===== Initialization =====
@@ -54,6 +55,10 @@ async function initCorrectiveActions() {
     }
 
     await Promise.all([caFetchRecords(), caFetchStats()]);
+    // Set default view mode: admin/managers see all, others see team
+    const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+    const isManager = currentUser && currentUser.actual_role === 'Manager';
+    CA.viewMode = (isAdmin740 || isManager) ? 'all' : 'team';
     caRenderSummaryCards();
     caRenderFilterBar();
     caApplyFilters();
@@ -127,7 +132,18 @@ function caRenderFilterBar() {
   // Determine if current user can create NTEs — use RBAC permission (covers TL, Manager, and owner OHR)
   const canCreate = currentUser && (currentUser.permissions && currentUser.permissions['compass.corrective_actions']);
 
+  // Show view toggle for admin (740045023) and Managers
+  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+  const isManager = currentUser && currentUser.actual_role === 'Manager';
+  const showToggle = isAdmin740 || isManager;
+
   container.innerHTML = `
+    ${showToggle ? `<div style="flex-shrink:0;">
+      <div style="display:inline-flex;border-radius:6px;overflow:hidden;border:1px solid #cbd5e1;font-size:12px;font-weight:600;">
+        <button id="ca-toggle-all" onclick="caSetViewMode('all')" style="padding:5px 12px;border:none;cursor:pointer;transition:background .15s,color .15s;background:${CA.viewMode === 'all' ? '#1a365d' : '#f8fafc'};color:${CA.viewMode === 'all' ? '#fff' : '#64748b'};">All Logs</button>
+        <button id="ca-toggle-team" onclick="caSetViewMode('team')" style="padding:5px 12px;border:none;cursor:pointer;transition:background .15s,color .15s;background:${CA.viewMode === 'team' ? '#1a365d' : '#f8fafc'};color:${CA.viewMode === 'team' ? '#fff' : '#64748b'};">My Team</button>
+      </div>
+    </div>` : ''}
     <div class="ca-search-wrapper">
       <svg class="ca-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="ca-search-input" placeholder="Search by name, OHR, or incident..." oninput="_caApplyFiltersDebounced()">
@@ -175,21 +191,75 @@ function caApplyFilters() {
 
   let data = [...CA.records];
 
-  // Role-based scoping: Agents see only their own; TLs see their team; Managers see all
+  // Role-based visibility (mirrors Coaching Profile rules)
+  // Admin (740045023) and Managers respect the All/My Team toggle
   if (currentUser) {
+    const isAdmin740 = currentUser.ohr_id === '740045023';
     const role = currentUser.actual_role;
-    if (role === 'Agent') {
-      data = data.filter(r => r.ohr_id === currentUser.ohr_id);
+
+    if (isAdmin740 || role === 'Manager') {
+      // Admin + Managers: 'all' = everything, 'team' = TL-scoped view
+      if (CA.viewMode === 'team') {
+        const myName = currentUser.full_name;
+        const teamOhrs = new Set();
+        if (CA.employees && CA.employees.length) {
+          CA.employees.forEach(function(e) {
+            if (e.supervisor_name === myName) teamOhrs.add(e.ohr_id);
+          });
+        }
+        teamOhrs.add(currentUser.ohr_id);
+        data = data.filter(function(r) {
+          return teamOhrs.has(r.ohr_id) ||
+                 r.supervisor_ohr === currentUser.ohr_id ||
+                 r.created_by_ohr === currentUser.ohr_id;
+        });
+      }
+      // else 'all' — no filter
+    } else if (role === 'Agent') {
+      // Agents: only see their own records
+      data = data.filter(function(r) { return r.ohr_id === currentUser.ohr_id; });
     } else if (role === 'Team Lead') {
-      // TLs see records for their team (supervisor_name matches) + records they created
-      data = data.filter(r =>
-        r.supervisor_name === currentUser.full_name ||
-        r.supervisor_ohr === currentUser.ohr_id ||
-        r.created_by_ohr === currentUser.ohr_id ||
-        r.ohr_id === currentUser.ohr_id
-      );
+      // TLs: see records for their team (supervisor matches) + records they created + their own
+      const myName = currentUser.full_name;
+      const teamOhrs = new Set();
+      if (CA.employees && CA.employees.length) {
+        CA.employees.forEach(function(e) {
+          if (e.supervisor_name === myName) teamOhrs.add(e.ohr_id);
+        });
+      }
+      teamOhrs.add(currentUser.ohr_id);
+      data = data.filter(function(r) {
+        return teamOhrs.has(r.ohr_id) ||
+               r.supervisor_ohr === currentUser.ohr_id ||
+               r.created_by_ohr === currentUser.ohr_id;
+      });
+    } else if (role === 'Operational SME') {
+      // SMEs: same as TL but team = agents under their supervisor's team
+      const myTlName = currentUser.supervisor_name || '';
+      const teamOhrs = new Set();
+      if (CA.employees && CA.employees.length && myTlName) {
+        CA.employees.forEach(function(e) {
+          if (e.supervisor_name === myTlName) teamOhrs.add(e.ohr_id);
+        });
+      }
+      teamOhrs.add(currentUser.ohr_id);
+      data = data.filter(function(r) {
+        return teamOhrs.has(r.ohr_id) ||
+               r.created_by_ohr === currentUser.ohr_id;
+      });
+    } else if (role === 'Quality & Policy Expert' || role === 'Trainer') {
+      // QAs & Trainers: see records they created + their own
+      data = data.filter(function(r) {
+        return r.created_by_ohr === currentUser.ohr_id ||
+               r.ohr_id === currentUser.ohr_id;
+      });
+    } else {
+      // Fallback: own records + records they created
+      data = data.filter(function(r) {
+        return r.created_by_ohr === currentUser.ohr_id ||
+               r.ohr_id === currentUser.ohr_id;
+      });
     }
-    // Managers + owner see all
   }
 
   if (search) {
@@ -209,6 +279,24 @@ function caApplyFilters() {
   if (countEl) countEl.textContent = `${data.length} record${data.length !== 1 ? 's' : ''}`;
 
   caRenderTable();
+}
+
+// ===== View Mode Toggle =====
+function caSetViewMode(mode) {
+  CA.viewMode = mode;
+  // Update toggle button styles
+  var btnAll = document.getElementById('ca-toggle-all');
+  var btnTeam = document.getElementById('ca-toggle-team');
+  if (btnAll && btnTeam) {
+    if (mode === 'all') {
+      btnAll.style.background = '#1a365d'; btnAll.style.color = '#fff';
+      btnTeam.style.background = '#f8fafc'; btnTeam.style.color = '#64748b';
+    } else {
+      btnTeam.style.background = '#1a365d'; btnTeam.style.color = '#fff';
+      btnAll.style.background = '#f8fafc'; btnAll.style.color = '#64748b';
+    }
+  }
+  caApplyFilters();
 }
 
 // ===== Table Rendering =====
