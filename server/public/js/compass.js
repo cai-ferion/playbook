@@ -3539,48 +3539,57 @@ async function disputesOpenDetail(coachingId) {
   const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
   const statusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--compass-text-muted)';
 
-  // ===== SECTION 1: SESSION DETAILS (Coaching Profile layout) =====
-  let html = '<div class="detail-section"><h4 class="detail-section-title">Session Details</h4>';
-  html += `<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" style="font-weight:600;color:${statusColor};">${escapeHtml(log.status || '—')}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Level</span><span class="detail-value" style="font-weight:600;">${levelLabel}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Coaching Date</span><span class="detail-value">${date}</span></div>`;
-  html += `<div class="detail-row"><span class="detail-label">Coachee</span><span class="detail-value">${escapeHtml(log.coachee || '—')} (${escapeHtml(log.coachee_ohr || '')})</span></div>`;
+  // ===== HEADER CARD =====
+  const typeIcon = log.coaching_type === 'QA Feedback' ? '\uD83D\uDCCB' : log.coaching_type === 'ZTP Coaching' ? '\uD83D\uDD12' : log.coaching_type === 'Incident Report' ? '\u26A0\uFE0F' : '\uD83D\uDCAC';
+  let html = `<div class="cdp-header">`;
+  html += `<div class="cdp-header-icon" style="background:rgba(99,102,241,0.08);">${typeIcon}</div>`;
+  html += `<div class="cdp-header-info">`;
+  html += `<div class="cdp-header-title">${escapeHtml(log.coachee || 'Employee')}</div>`;
+  html += `<div class="cdp-header-sub">${escapeHtml(log.coaching_type || '')} &middot; ${date} &middot; ${levelLabel}</div>`;
+  html += `</div>`;
+  html += `<div class="cdp-header-actions">`;
+  html += `<span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;color:${statusColor};background:${statusColor}14;">${escapeHtml(log.status || '—')}</span>`;
+  html += `</div></div>`;
+
+  // ===== SECTION 1: SESSION DETAILS =====
+  html += `<div class="cdp-section"><div class="cdp-section-title">Session Details</div>`;
+  html += `<div class="cdp-grid">`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Coachee</div><div class="cdp-field-value">${escapeHtml(log.coachee || '—')} (${escapeHtml(log.coachee_ohr || '')})</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Coach</div><div class="cdp-field-value">${escapeHtml(log.coach || '—')}</div></div>`;
   if (log.coaching_type === 'QA Feedback' && log.job_id) {
-    html += `<div class="detail-row"><span class="detail-label">Job ID</span><span class="detail-value">${escapeHtml(log.job_id)}</span></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Job ID</div><div class="cdp-field-value" style="font-family:monospace;">${escapeHtml(log.job_id)}</div></div>`;
   }
   if (log.coachee_sup && log.coach !== log.coachee_sup) {
-    html += `<div class="detail-row"><span class="detail-label">Coachee Supervisor</span><span class="detail-value">${escapeHtml(log.coachee_sup)}</span></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Coachee Supervisor</div><div class="cdp-field-value">${escapeHtml(log.coachee_sup)}</div></div>`;
   }
-  html += `<div class="detail-row"><span class="detail-label">Coach</span><span class="detail-value">${escapeHtml(log.coach || '—')}</span></div>`;
   if (log.session_goal) {
-    html += `<div class="detail-row"><span class="detail-label">Session Goal</span><span class="detail-value">${escapeHtml(log.session_goal)}</span></div>`;
+    html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">Session Goal</div><div class="cdp-field-value">${escapeHtml(log.session_goal)}</div></div>`;
   }
-  // Support Joiners
   if (log.sme_joiner) {
-    html += `<div class="detail-row"><span class="detail-label">Support Joiner 1</span><span class="detail-value">${escapeHtml(log.sme_joiner)}</span></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Support Joiner 1</div><div class="cdp-field-value">${escapeHtml(log.sme_joiner)}</div></div>`;
   }
   if (log.sme_joiner_2) {
-    html += `<div class="detail-row"><span class="detail-label">Support Joiner 2</span><span class="detail-value">${escapeHtml(log.sme_joiner_2)}</span></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Support Joiner 2</div><div class="cdp-field-value">${escapeHtml(log.sme_joiner_2)}</div></div>`;
   }
-  html += `<div class="detail-row"><span class="detail-label">Coaching Details</span><span class="detail-value detail-multiline">${log.coaching_details || '—'}</span></div>`;
-
+  html += `</div>`;
+  html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Coaching Details</div><div class="cdp-field-value multiline">${log.coaching_details || '—'}</div></div>`;
   // Attachments
   html += compassRenderAttachmentsDetail(log);
-
-  html += '</div>'; // close Session Details
+  html += '</div>';
 
   // ===== SECTION 2: ROOT CAUSE ANALYSIS (QA Feedback only) =====
   if (log.coaching_type === 'QA Feedback') {
-    html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Root Cause Analysis</h4>';
-    html += `<div class="detail-row"><span class="detail-label">L1 Category</span><span class="detail-value">${escapeHtml(log.level_1_category || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L2 Direct Cause</span><span class="detail-value">${escapeHtml(log.level_2_direct_cause || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L3 Contributing</span><span class="detail-value">${escapeHtml(log.level_3_contributing_cause || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L4 Deficiency</span><span class="detail-value">${escapeHtml(log.level_4_deficiency || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">L5 Root Cause</span><span class="detail-value">${escapeHtml(log.level_5_root_cause || '—')}</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">RCA Description</span><span class="detail-value detail-multiline">${escapeHtml(log.guidelines || '—')}</span></div>`;
-    // Markdown Status
+    html += `<div class="cdp-section"><div class="cdp-section-title">Root Cause Analysis</div>`;
+    html += `<div class="cdp-grid">`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L1 Category</div><div class="cdp-field-value">${escapeHtml(log.level_1_category || '—')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L2 Direct Cause</div><div class="cdp-field-value">${escapeHtml(log.level_2_direct_cause || '—')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L3 Contributing</div><div class="cdp-field-value">${escapeHtml(log.level_3_contributing_cause || '—')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L4 Deficiency</div><div class="cdp-field-value">${escapeHtml(log.level_4_deficiency || '—')}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">L5 Root Cause</div><div class="cdp-field-value">${escapeHtml(log.level_5_root_cause || '—')}</div></div>`;
+    html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">RCA Description</div><div class="cdp-field-value multiline">${escapeHtml(log.guidelines || '—')}</div></div>`;
+    html += `</div>`;
     const mdStatusColor = COMPASS.STATUS_COLORS[log.status] || 'var(--fg-muted)';
-    html += `<div class="detail-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span class="detail-label">Markdown Status</span><span class="detail-value" style="font-weight:600;color:${mdStatusColor};">${escapeHtml(log.status || '—')}</span></div>`;
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;gap:8px;"><span class="cdp-field-label" style="margin:0;">Markdown Status</span><span style="font-weight:600;font-size:13px;color:${mdStatusColor};">${escapeHtml(log.status || '—')}</span></div>`;
     html += '</div>';
   }
 
@@ -3592,13 +3601,11 @@ async function disputesOpenDetail(coachingId) {
     ];
     const hasDispute = commentFields.some(c => c && c.trim());
     if (hasDispute) {
-      html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
+      html += `<div class="cdp-section"><div class="cdp-section-title">Dispute Trail</div>`;
       html += disputesRenderTrailEntries(log);
       html += '</div>';
     }
   }
-
-  // NO ACKNOWLEDGEMENT SECTION for Disputes Area
 
   bodyEl.innerHTML = html;
 
@@ -3676,12 +3683,17 @@ async function disputesOpenDetail(coachingId) {
   }
 
   footerEl.innerHTML = footerHtml;
+  // Open side panel
   overlay.classList.add('active');
+  const wrapper = document.getElementById('disputes-layout-wrapper');
+  if (wrapper) wrapper.classList.add('panel-open');
 }
 
 function disputesCloseDetail() {
   const overlay = document.getElementById('disputes-detail-overlay');
   if (overlay) overlay.classList.remove('active');
+  const wrapper = document.getElementById('disputes-layout-wrapper');
+  if (wrapper) wrapper.classList.remove('panel-open');
   _disputesEditingId = null;
 }
 

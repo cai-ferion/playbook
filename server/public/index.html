@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/input-redesign.css?v=121">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
-  <link rel="stylesheet" href="css/compass-redesign.css?v=102">
+  <link rel="stylesheet" href="css/compass-redesign.css?v=103">
   <link rel="stylesheet" href="css/corrective-actions.css?v=5">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1112,18 +1112,20 @@
               <button class="disputes-toggle-btn" data-mode="mine" onclick="disputesSetQaMode('mine')">My Disputes</button>
             </div>
           </div>
-          <div id="compass-kanban-board" class="kanban-board"></div>
-          <!-- Disputes Detail Overlay -->
-          <div class="disputes-detail-overlay" id="disputes-detail-overlay">
-            <div class="disputes-detail-panel">
-              <div class="disputes-detail-header">
-                <h3 id="disputes-detail-title">Coaching Log</h3>
-                <button class="disputes-modal-close" onclick="disputesCloseDetail()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+          <div class="disputes-layout-wrapper" id="disputes-layout-wrapper">
+            <div id="compass-kanban-board" class="kanban-board"></div>
+            <!-- Disputes Side Panel (drawer) -->
+            <div class="disputes-side-panel" id="disputes-detail-overlay">
+              <div class="disputes-side-panel-inner">
+                <div class="disputes-side-panel-header">
+                  <h3 id="disputes-detail-title">Coaching Log</h3>
+                  <button class="disputes-modal-close" onclick="disputesCloseDetail()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <div class="disputes-side-panel-body" id="disputes-detail-body"></div>
+                <div class="disputes-side-panel-footer" id="disputes-detail-footer"></div>
               </div>
-              <div class="disputes-detail-body" id="disputes-detail-body"></div>
-              <div class="disputes-detail-actions" id="disputes-detail-footer"></div>
             </div>
           </div>
           <!-- Disputes Detail Overlay (opens within Disputes Area, not Coaching Profile) -->
@@ -1749,7 +1751,7 @@
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
-  <script src="js/compass.js?v=105" defer></script>
+  <script src="js/compass.js?v=106" defer></script>
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=7" defer></script>
   <script src="js/compass-omnibar.js?v=102h" defer></script>

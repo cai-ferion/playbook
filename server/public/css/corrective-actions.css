@@ -1037,20 +1037,18 @@ ol.kb-list {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.ca-inline-detail-panel.open .ca-cdp-header,
-.ca-inline-detail-panel.open .ca-cdp-section {
+.ca-inline-detail-panel.open .cdp-header,
+.ca-inline-detail-panel.open .cdp-section {
   animation: ca-cdp-in 0.3s cubic-bezier(0.4,0,0.2,1) both;
 }
-.ca-inline-detail-panel.open .ca-cdp-header { animation-delay: 30ms; }
-.ca-inline-detail-panel.open .ca-cdp-section:nth-of-type(1) { animation-delay: 60ms; }
-.ca-inline-detail-panel.open .ca-cdp-section:nth-of-type(2) { animation-delay: 100ms; }
-.ca-inline-detail-panel.open .ca-cdp-section:nth-of-type(3) { animation-delay: 140ms; }
-.ca-inline-detail-panel.open .ca-cdp-section:nth-of-type(4) { animation-delay: 180ms; }
-.ca-inline-detail-panel.open .ca-cdp-section:nth-of-type(n+5) { animation-delay: 220ms; }
+.ca-inline-detail-panel.open .cdp-header { animation-delay: 30ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(1) { animation-delay: 60ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(2) { animation-delay: 100ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(3) { animation-delay: 140ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(4) { animation-delay: 180ms; }
+.ca-inline-detail-panel.open .cdp-section:nth-of-type(n+5) { animation-delay: 220ms; }
 
 @media (max-width: 768px) {
   .ca-inline-detail-panel.open { padding: 0 12px 12px; }
-  .ca-cdp-grid { grid-template-columns: 1fr; }
-  .ca-cdp-header { flex-wrap: wrap; }
-  .ca-cdp-header-badges { width: 100%; }
+  /* CA responsive handled by shared cdp-* classes in compass-redesign.css */
 }

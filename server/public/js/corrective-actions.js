@@ -433,13 +433,13 @@ function _caBuildInlineDetailHtml(record, history) {
   const statusFg = record.status === 'CAP Issued' ? '#EF4444' : record.status === 'Pending Response' ? '#D97706' : record.status === 'Dismissed' ? '#059669' : '#6366F1';
 
   // ===== HEADER =====
-  let html = `<div class="ca-cdp-header">`;
-  html += `<div class="ca-cdp-header-icon" style="background:${statusBg};">${nteIcon}</div>`;
-  html += `<div class="ca-cdp-header-info">`;
-  html += `<div class="ca-cdp-header-title">${escapeHtml(record.employee_name || 'Employee')}</div>`;
-  html += `<div class="ca-cdp-header-sub">${escapeHtml(record.nte_type || 'NTE')} &middot; ${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'} &middot; ID: ${escapeHtml(String(record.id).slice(0,8))}</div>`;
+  let html = `<div class="cdp-header">`;
+  html += `<div class="cdp-header-icon" style="background:${statusBg};">${nteIcon}</div>`;
+  html += `<div class="cdp-header-info">`;
+  html += `<div class="cdp-header-title">${escapeHtml(record.employee_name || 'Employee')}</div>`;
+  html += `<div class="cdp-header-sub">${escapeHtml(record.nte_type || 'NTE')} &middot; ${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'} &middot; ID: ${escapeHtml(String(record.id).slice(0,8))}</div>`;
   html += `</div>`;
-  html += `<div class="ca-cdp-header-badges">`;
+  html += `<div class="cdp-header-actions">`;
   html += `<span class="ca-status-badge ${CA_STATUS_COLORS[record.status] || ''}">${escapeHtml(record.status)}</span>`;
   if (record.cap_level) {
     html += ` ${caGetCapBadge(record.cap_level)}`;
@@ -447,29 +447,29 @@ function _caBuildInlineDetailHtml(record, history) {
   html += `</div></div>`;
 
   // ===== EMPLOYEE INFO CARD =====
-  html += `<div class="ca-cdp-section"><div class="ca-cdp-section-title">Employee Information</div>`;
-  html += `<div class="ca-cdp-grid">`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Name</div><div class="ca-cdp-field-value">${escapeHtml(record.employee_name || '')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">OHR ID</div><div class="ca-cdp-field-value" style="font-family:monospace;">${escapeHtml(record.ohr_id || '')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Role</div><div class="ca-cdp-field-value">${escapeHtml(record.actual_role || '\u2014')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Planning Group</div><div class="ca-cdp-field-value">${escapeHtml(record.planning_group || '\u2014')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Supervisor</div><div class="ca-cdp-field-value">${escapeHtml(record.supervisor_name || '\u2014')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Email</div><div class="ca-cdp-field-value">${escapeHtml(record.employee_email || '\u2014')}</div></div>`;
+  html += `<div class="cdp-section"><div class="cdp-section-title">Employee Information</div>`;
+  html += `<div class="cdp-grid">`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Name</div><div class="cdp-field-value">${escapeHtml(record.employee_name || '')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">OHR ID</div><div class="cdp-field-value" style="font-family:monospace;">${escapeHtml(record.ohr_id || '')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Role</div><div class="cdp-field-value">${escapeHtml(record.actual_role || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Planning Group</div><div class="cdp-field-value">${escapeHtml(record.planning_group || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Supervisor</div><div class="cdp-field-value">${escapeHtml(record.supervisor_name || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Email</div><div class="cdp-field-value">${escapeHtml(record.employee_email || '\u2014')}</div></div>`;
   html += `</div></div>`;
 
   // ===== NTE DETAILS CARD =====
-  html += `<div class="ca-cdp-section"><div class="ca-cdp-section-title">Notice to Explain</div>`;
-  html += `<div class="ca-cdp-grid">`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">NTE Type</div><div class="ca-cdp-field-value">${escapeHtml(record.nte_type || '\u2014')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Date of Incident</div><div class="ca-cdp-field-value">${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Response Deadline</div><div class="ca-cdp-field-value">${record.response_deadline ? caFormatDateTime(record.response_deadline) : '\u2014'}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Served Date</div><div class="ca-cdp-field-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</div></div>`;
+  html += `<div class="cdp-section"><div class="cdp-section-title">Notice to Explain</div>`;
+  html += `<div class="cdp-grid">`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">NTE Type</div><div class="cdp-field-value">${escapeHtml(record.nte_type || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Date of Incident</div><div class="cdp-field-value">${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Response Deadline</div><div class="cdp-field-value">${record.response_deadline ? caFormatDateTime(record.response_deadline) : '\u2014'}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Served Date</div><div class="cdp-field-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</div></div>`;
   html += `</div>`;
-  html += `<div class="ca-cdp-field ca-cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="ca-cdp-field-label">Incident Description</div><div class="ca-cdp-field-value multiline">${escapeHtml(record.incident_description || '\u2014')}</div></div>`;
-  html += `<div class="ca-cdp-field ca-cdp-grid-full" style="margin-top:4px;"><div class="ca-cdp-field-label">Policy Violated</div><div class="ca-cdp-field-value multiline">${escapeHtml(record.policy_violated || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Incident Description</div><div class="cdp-field-value multiline">${escapeHtml(record.incident_description || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field cdp-grid-full" style="margin-top:4px;"><div class="cdp-field-label">Policy Violated</div><div class="cdp-field-value multiline">${escapeHtml(record.policy_violated || '\u2014')}</div></div>`;
 
   if (violations.length > 0) {
-    html += `<div style="margin-top:8px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="ca-cdp-field-label" style="margin-bottom:6px;">Violations (${violations.length})</div>`;
+    html += `<div style="margin-top:8px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label" style="margin-bottom:6px;">Violations (${violations.length})</div>`;
     for (const v of violations) {
       html += `<div style="font-size:12px;color:var(--compass-text,#1e293b);margin-bottom:4px;padding:4px 8px;background:rgba(0,0,0,0.02);border-radius:4px;">`;
       html += `<strong>${escapeHtml(v.code || '')}</strong> \u2014 ${escapeHtml(v.text || '')}`;
@@ -482,20 +482,20 @@ function _caBuildInlineDetailHtml(record, history) {
 
   // ===== CAP DECISION CARD =====
   if (record.status === 'CAP Issued' || record.status === 'Expired' || record.status === 'Dismissed') {
-    html += `<div class="ca-cdp-section"><div class="ca-cdp-section-title">CAP Decision</div>`;
-    html += `<div class="ca-cdp-grid">`;
-    if (record.cap_level) html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">CAP Level</div><div class="ca-cdp-field-value">${caGetCapBadge(record.cap_level)}</div></div>`;
-    if (record.cap_active_days) html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Active Period</div><div class="ca-cdp-field-value">${record.cap_active_days} days</div></div>`;
-    html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Decision Date</div><div class="ca-cdp-field-value">${record.cap_decision_date ? caFormatDateTime(record.cap_decision_date) : '\u2014'}</div></div>`;
-    html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Decision By</div><div class="ca-cdp-field-value">${escapeHtml(record.cap_decision_by || '\u2014')}</div></div>`;
-    if (record.cap_start_date) html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">CAP Start</div><div class="ca-cdp-field-value">${caFormatDate(record.cap_start_date)}</div></div>`;
-    if (record.cap_expiry_date) html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">CAP Expiry</div><div class="ca-cdp-field-value">${caFormatDate(record.cap_expiry_date)}</div></div>`;
-    if (record.suspension_days) html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Suspension Days</div><div class="ca-cdp-field-value">${record.suspension_days}</div></div>`;
-    if (record.cap_remarks) html += `<div class="ca-cdp-field ca-cdp-grid-full"><div class="ca-cdp-field-label">Remarks</div><div class="ca-cdp-field-value multiline">${escapeHtml(record.cap_remarks)}</div></div>`;
+    html += `<div class="cdp-section"><div class="cdp-section-title">CAP Decision</div>`;
+    html += `<div class="cdp-grid">`;
+    if (record.cap_level) html += `<div class="cdp-field"><div class="cdp-field-label">CAP Level</div><div class="cdp-field-value">${caGetCapBadge(record.cap_level)}</div></div>`;
+    if (record.cap_active_days) html += `<div class="cdp-field"><div class="cdp-field-label">Active Period</div><div class="cdp-field-value">${record.cap_active_days} days</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Decision Date</div><div class="cdp-field-value">${record.cap_decision_date ? caFormatDateTime(record.cap_decision_date) : '\u2014'}</div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Decision By</div><div class="cdp-field-value">${escapeHtml(record.cap_decision_by || '\u2014')}</div></div>`;
+    if (record.cap_start_date) html += `<div class="cdp-field"><div class="cdp-field-label">CAP Start</div><div class="cdp-field-value">${caFormatDate(record.cap_start_date)}</div></div>`;
+    if (record.cap_expiry_date) html += `<div class="cdp-field"><div class="cdp-field-label">CAP Expiry</div><div class="cdp-field-value">${caFormatDate(record.cap_expiry_date)}</div></div>`;
+    if (record.suspension_days) html += `<div class="cdp-field"><div class="cdp-field-label">Suspension Days</div><div class="cdp-field-value">${record.suspension_days}</div></div>`;
+    if (record.cap_remarks) html += `<div class="cdp-field cdp-grid-full"><div class="cdp-field-label">Remarks</div><div class="cdp-field-value multiline">${escapeHtml(record.cap_remarks)}</div></div>`;
     html += `</div>`;
     if (record.nod_issued) {
       html += `<div style="margin-top:10px;padding:10px 14px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.12);border-radius:8px;">`;
-      html += `<div class="ca-cdp-field-label" style="color:#3B82F6;">Notice of Decision Issued</div>`;
+      html += `<div class="cdp-field-label" style="color:#3B82F6;">Notice of Decision Issued</div>`;
       if (record.nod_date) html += `<div style="font-size:12px;color:var(--compass-text-muted,#64748b);margin-top:2px;">${caFormatDate(record.nod_date)}</div>`;
       if (record.nod_summary) html += `<div style="font-size:13px;color:var(--compass-text,#1e293b);margin-top:4px;line-height:1.5;">${escapeHtml(record.nod_summary)}</div>`;
       html += `</div>`;
@@ -504,19 +504,19 @@ function _caBuildInlineDetailHtml(record, history) {
   }
 
   // ===== RECORD INFO CARD =====
-  html += `<div class="ca-cdp-section"><div class="ca-cdp-section-title">Record Info</div>`;
-  html += `<div class="ca-cdp-grid">`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Created By</div><div class="ca-cdp-field-value">${escapeHtml(record.created_by || '\u2014')}</div></div>`;
-  html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Served Date</div><div class="ca-cdp-field-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</div></div>`;
+  html += `<div class="cdp-section"><div class="cdp-section-title">Record Info</div>`;
+  html += `<div class="cdp-grid">`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Created By</div><div class="cdp-field-value">${escapeHtml(record.created_by || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Served Date</div><div class="cdp-field-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</div></div>`;
   if (record.linked_coaching_id) {
-    html += `<div class="ca-cdp-field"><div class="ca-cdp-field-label">Linked Coaching Log</div><div class="ca-cdp-field-value"><a href="#" onclick="event.stopPropagation();caOpenLinkedCoaching('${record.linked_coaching_id}')" style="color:var(--compass-accent,#6366F1);text-decoration:underline;font-size:12px;">${record.linked_coaching_id.substring(0,8)}...</a></div></div>`;
+    html += `<div class="cdp-field"><div class="cdp-field-label">Linked Coaching Log</div><div class="cdp-field-value"><a href="#" onclick="event.stopPropagation();caOpenLinkedCoaching('${record.linked_coaching_id}')" style="color:var(--compass-accent,#6366F1);text-decoration:underline;font-size:12px;">${record.linked_coaching_id.substring(0,8)}...</a></div></div>`;
   }
   html += `</div></div>`;
 
   // ===== CAP HISTORY CARD =====
   const otherHistory = (history || []).filter(h => h.id !== record.id);
   if (otherHistory.length > 0) {
-    html += `<div class="ca-cdp-section"><div class="ca-cdp-section-title">Employee CAP History (${otherHistory.length} prior record${otherHistory.length !== 1 ? 's' : ''})</div>`;
+    html += `<div class="cdp-section"><div class="cdp-section-title">Employee CAP History (${otherHistory.length} prior record${otherHistory.length !== 1 ? 's' : ''})</div>`;
     html += `<div class="ca-history-timeline">`;
     for (const h of otherHistory) {
       const itemClass = h.status === 'CAP Issued' ? 'active' : h.status === 'Dismissed' ? 'dismissed' : h.status === 'Expired' ? 'expired' : '';
@@ -529,10 +529,7 @@ function _caBuildInlineDetailHtml(record, history) {
     html += '</div></div>';
   }
 
-  // ===== FOOTER ACTIONS =====
-  html += `<div class="ca-cdp-footer">`;
-  html += `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();caCloseDetail()">Close</button>`;
-  html += `</div>`;
+  // Footer removed — user clicks row to collapse
 
   return html;
 }

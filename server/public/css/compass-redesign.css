@@ -1259,57 +1259,102 @@
 .disputes-confirm-icon.danger { background: var(--compass-danger-bg); color: var(--compass-danger); }
 
 /* -- Detail Overlay Polish -- */
-.disputes-detail-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  z-index: 1050;
-  padding-top: 5vh;
-  overflow-y: auto;
+/* ---- Disputes Layout Wrapper (board + side panel) ---- */
+.disputes-layout-wrapper {
+  display: flex;
+  gap: 0;
+  position: relative;
+  min-height: 0;
 }
-.disputes-detail-overlay.active { display: flex; }
-
-.disputes-detail-panel {
-  background: var(--compass-surface);
-  border: 1px solid var(--compass-border);
-  border-radius: 14px;
-  width: 90%;
-  max-width: 640px;
-  max-height: 85vh;
-  overflow-y: auto;
-  box-shadow: var(--compass-shadow-xl);
-  animation: disputes-modal-slide 0.25s ease;
-  margin-bottom: 5vh;
+.disputes-layout-wrapper .kanban-board {
+  flex: 1;
+  min-width: 0;
+  transition: flex 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.disputes-layout-wrapper.panel-open .kanban-board {
+  flex: 1 1 55%;
 }
 
-.disputes-detail-header {
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--compass-border);
+/* ---- Side Panel (drawer) ---- */
+.disputes-side-panel {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  transition: width 0.35s cubic-bezier(0.4,0,0.2,1), min-width 0.35s cubic-bezier(0.4,0,0.2,1);
+  flex-shrink: 0;
+}
+.disputes-side-panel.active {
+  width: 440px;
+  min-width: 440px;
+}
+.disputes-side-panel-inner {
+  width: 440px;
+  height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  background: var(--compass-surface, #fff);
+  border-left: 1px solid var(--compass-border, #e2e8f0);
+  box-shadow: -4px 0 20px rgba(0,0,0,0.06);
+}
+
+/* Side Panel Header */
+.disputes-side-panel-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--compass-border, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  background: var(--compass-surface);
-  z-index: 2;
-  border-radius: 14px 14px 0 0;
+  flex-shrink: 0;
+  background: var(--compass-surface, #fff);
 }
-.disputes-detail-header h3 {
-  font-size: 16px;
+.disputes-side-panel-header h3 {
+  font-size: 14px;
   font-weight: 700;
-  color: var(--compass-text);
+  color: var(--compass-text, #1e293b);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+  line-height: 1.3;
 }
 
-.disputes-detail-body {
-  padding: 20px;
+/* Side Panel Body */
+.disputes-side-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+
+/* Side Panel Footer */
+.disputes-side-panel-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-top: 1px solid var(--compass-border, #e2e8f0);
+  background: var(--compass-surface, #fff);
+}
+.disputes-side-panel-footer:empty {
+  display: none;
+}
+
+/* Reuse cdp-* classes inside side panel for content sections */
+.disputes-side-panel-body .cdp-section { margin-bottom: 10px; }
+.disputes-side-panel-body .cdp-header { margin-bottom: 12px; }
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 1024px) {
+  .disputes-layout-wrapper { flex-direction: column; }
+  .disputes-side-panel.active {
+    width: 100%;
+    min-width: 100%;
+  }
+  .disputes-side-panel-inner {
+    width: 100%;
+    height: auto;
+    max-height: 60vh;
+  }
 }
 
 /* Detail sections */
@@ -1352,15 +1397,10 @@
   line-height: 1.5;
 }
 
-/* Detail action buttons */
-.disputes-detail-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 16px 20px;
-  border-top: 1px solid var(--compass-border);
-  background: var(--compass-surface-alt);
-  border-radius: 0 0 14px 14px;
+/* Detail action buttons (now in side panel footer) */
+.disputes-side-panel-footer .btn {
+  padding: 6px 14px;
+  font-size: 12px;
 }
 
 /* -- Dispute Trail Polish -- */

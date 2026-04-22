@@ -2623,3 +2623,11 @@
 - [x] Improved information density: 2-column grids, section cards with accent bars, multiline field support
 - [x] Cache versions bumped: compass-redesign.css v=102, corrective-actions.css v=5, corrective-actions.js v=7
 - [x] All 762 tests passing
+
+## UI Revisions — CA Alignment + Disputes Side Panel (April 2026)
+- [x] Remove "Close" button from CA inline detail expansion (click row to collapse instead)
+- [x] Align CA inline detail styling/layout to match Coaching Profile cdp-* design system — refactored to use shared cdp-* classes directly
+- [x] Replace Disputes Area modal popout with side panel (drawer) expansion — slides in from right, kanban board shrinks to make room
+- [x] Disputes detail body refactored to cdp-* card-based layout (header, session details, RCA, dispute trail)
+- [x] Cache versions bumped: compass.js v=106, compass-redesign.css v=103
+- [x] All 762 tests passing
