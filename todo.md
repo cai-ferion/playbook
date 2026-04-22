@@ -2582,3 +2582,6 @@
 
 ## Coaching Log Cleanup (April 2026)
 - [x] Remove all coaching logs from 2025 (1,008 logs deleted, 2,433 remaining)
+
+## Coaching Log Supervisor Restoration (April 2026)
+- [x] Restore coaching log supervisors from DS.COACHING.xlsx — 298 rows updated to match spreadsheet's historical supervisors (269 now correctly differ from current employee supervisor due to transfers)
