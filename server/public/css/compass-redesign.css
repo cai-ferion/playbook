@@ -1401,6 +1401,56 @@
   font-size: 12px;
 }
 
+/* -- Disputes Inline Action Panel -- */
+.disputes-inline-action-panel {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: var(--surface-alt, var(--surface));
+}
+.disputes-inline-action-panel.open {
+  display: block;
+}
+.disputes-inline-action-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.disputes-inline-action-header h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+}
+.disputes-inline-action-header .collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.disputes-inline-action-header .collapse-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+.disputes-inline-action-body {
+  padding: 12px 16px;
+}
+.disputes-inline-action-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
 /* -- Dispute Trail Polish -- */
 .dispute-trail {
   display: flex;

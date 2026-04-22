@@ -2655,3 +2655,11 @@
 - [x] Root cause: PATCH endpoint only handled CL- prefix and numeric IDs; alphanumeric hashes (e.g. fadc6cc9) caused Number('fadc6cc9') = NaN → SQL WHERE id = NaN → 500 error
 - [x] Fix: Treat any non-numeric ID as coaching_id lookup (not just CL- prefix)
 - [x] Verified: CL-prefixed, numeric, and alphanumeric IDs all return 200 OK
+
+## Inline Expansion for Disputes Buttons + Alerts Fix + Data Fix (April 2026)
+- [x] Converted all 12 disputesShow* action buttons from modal overlay to inline downward expansion within the side panel
+- [x] Added _disputesOpenInlineAction() helper, disputesCollapseInlineAction(), and CSS for .disputes-inline-action-panel
+- [x] Fixed Clear All notifications — added proper error handling, optimistic UI update with rollback on failure
+- [x] Updated coaching log 8866a5f2 status to "Markdown Retained - QTP Manager"
+- [x] Cache versions bumped: compass-redesign.css v=108, compass.js v=110, notifications.js v=104
+- [x] All 762 tests passing

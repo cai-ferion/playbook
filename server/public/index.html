@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/input-redesign.css?v=121">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
-  <link rel="stylesheet" href="css/compass-redesign.css?v=107">
+  <link rel="stylesheet" href="css/compass-redesign.css?v=108">
   <link rel="stylesheet" href="css/corrective-actions.css?v=6">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1730,7 +1730,7 @@
   <script src="js/input-portal.js?v=121"></script>
   <script src="js/input-compact.js?v=121"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
-  <script src="js/notifications.js?v=103"></script>
+  <script src="js/notifications.js?v=104"></script>
   <script src="js/maintenance.js?v=102g"></script>
   <script src="js/admin.js?v=107"></script>
   <script src="js/billing.js?v=132"></script>
@@ -1739,7 +1739,7 @@
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
-  <script src="js/compass.js?v=109" defer></script>
+  <script src="js/compass.js?v=110" defer></script>
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=8" defer></script>
   <script src="js/compass-omnibar.js?v=102h" defer></script>
@@ -1772,6 +1772,17 @@
     </div>
     <div class="disputes-side-panel-body" id="disputes-detail-body"></div>
     <div class="disputes-side-panel-footer" id="disputes-detail-footer"></div>
+    <!-- Inline Action Panel (replaces modal) -->
+    <div id="disputes-inline-action" style="display:none;border-top:2px solid var(--primary,#6366F1);background:linear-gradient(135deg,#F8FAFC 0%,#EEF2FF 100%);">
+      <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(99,102,241,0.15);">
+        <h4 id="disputes-inline-action-title" style="font-size:13px;font-weight:700;color:#1e293b;flex:1;margin:0;">Action</h4>
+        <button onclick="disputesCollapseInlineAction()" style="background:none;border:none;cursor:pointer;color:#64748b;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;" title="Collapse">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </div>
+      <div id="disputes-inline-action-body" style="padding:12px 16px;"></div>
+      <div id="disputes-inline-action-footer" style="padding:8px 16px 12px;display:flex;gap:8px;justify-content:flex-end;"></div>
+    </div>
   </div>
 </div>
 </body>

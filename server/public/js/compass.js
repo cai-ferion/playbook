@@ -3704,8 +3704,30 @@ function disputesCloseDetail() {
 }
 
 function disputesCloseAction() {
+  // Close legacy modal (kept as fallback)
   const overlay = document.getElementById('disputes-action-overlay');
   if (overlay) overlay.classList.remove('active');
+  // Close inline action panel
+  disputesCollapseInlineAction();
+}
+
+function disputesCollapseInlineAction() {
+  const panel = document.getElementById('disputes-inline-action');
+  if (panel) panel.classList.remove('open');
+}
+
+// Helper: open inline action panel and return element refs
+function _disputesOpenInlineAction(title) {
+  const panel = document.getElementById('disputes-inline-action');
+  const titleEl = document.getElementById('disputes-inline-action-title');
+  const bodyEl = document.getElementById('disputes-inline-action-body');
+  const footerEl = document.getElementById('disputes-inline-action-footer');
+  if (titleEl) titleEl.textContent = title;
+  if (panel) {
+    panel.classList.add('open');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  return { titleEl, bodyEl, footerEl };
 }
 
 // ===== LV1: Dispute Markdown Popout =====
@@ -3742,14 +3764,9 @@ function resolveOhr(name) {
 var _disputeAttachedFiles = [];
 
 function disputesShowDisputeMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Dispute Markdown');
 
   _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Dispute Markdown';
   bodyEl.innerHTML = `
     <div style="margin-bottom:14px;">
       <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -3772,7 +3789,6 @@ function disputesShowDisputeMarkdown() {
     <button class="btn btn-danger btn-sm" onclick="disputesSubmitDisputeMarkdown()">Save</button>
   `;
 
-  overlay.classList.add('active');
 }
 
 function disputeUpdateFiles() {
@@ -3887,12 +3903,7 @@ async function disputesSubmitDisputeMarkdown() {
 // ===== LV1: Accept Markdown Popout =====
 
 function disputesShowAcceptMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  titleEl.textContent = 'Accept Markdown';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Accept Markdown');
   bodyEl.innerHTML = `
     <div style="text-align:center;padding:16px 0;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -3906,7 +3917,6 @@ function disputesShowAcceptMarkdown() {
     <button class="btn btn-success btn-sm" onclick="disputesSubmitAcceptMarkdown()">Save</button>
   `;
 
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitAcceptMarkdown() {
@@ -4108,14 +4118,7 @@ function disputesRenderTrailEntries(log) {
 // ===== LV2: Retain Markdown Popout =====
 
 function disputesShowRetainMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Retain Markdown';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Retain Markdown');
   bodyEl.innerHTML = `
     <div style="padding:8px 0;">
       <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -4137,8 +4140,6 @@ function disputesShowRetainMarkdown() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitRetainMarkdown()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitRetainMarkdown() {
@@ -4215,12 +4216,7 @@ async function disputesSubmitRetainMarkdown() {
 // ===== LV2: Reverse Markdown Popout =====
 
 function disputesShowReverseMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  titleEl.textContent = 'Reverse Markdown';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Reverse Markdown');
   bodyEl.innerHTML = `
     <div style="text-align:center;padding:24px 0 8px;">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -4233,8 +4229,6 @@ function disputesShowReverseMarkdown() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-success btn-sm" onclick="disputesSubmitReverseMarkdown()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitReverseMarkdown() {
@@ -4286,12 +4280,7 @@ async function disputesSubmitReverseMarkdown() {
 // ===== LV3: QA Decision Accepted Popout =====
 
 function disputesShowQADecisionAccepted() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  titleEl.textContent = 'Accept Decision';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Accept Decision');
   bodyEl.innerHTML = `
     <div style="text-align:center;padding:24px 0 8px;">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -4304,8 +4293,6 @@ function disputesShowQADecisionAccepted() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-success btn-sm" onclick="disputesSubmitQADecisionAccepted()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitQADecisionAccepted() {
@@ -4351,14 +4338,7 @@ async function disputesSubmitQADecisionAccepted() {
 // ===== LV3: QA Decision Rejected Popout (with Remarks + Attachments) =====
 
 function disputesShowQADecisionRejected() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Reject Decision';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Reject Decision');
   bodyEl.innerHTML = `
     <div style="padding:8px 0;">
       <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -4380,8 +4360,6 @@ function disputesShowQADecisionRejected() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-danger btn-sm" onclick="disputesSubmitQADecisionRejected()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 function disputeHandleFileSelect(input) {
@@ -4475,12 +4453,7 @@ async function disputesSubmitQADecisionRejected() {
 // ===== LV5: SME-Trainer Decision — Accept Decision (confirmation → Trainer Decision Accepted) =====
 
 function disputesShowLV5AcceptDecision() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  titleEl.textContent = 'Accept Decision';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Accept Decision');
   bodyEl.innerHTML = `
     <div style="text-align:center;padding:24px 0 8px;">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -4493,8 +4466,6 @@ function disputesShowLV5AcceptDecision() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-success btn-sm" onclick="disputesSubmitLV5AcceptDecision()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV5AcceptDecision() {
@@ -4540,16 +4511,8 @@ async function disputesSubmitLV5AcceptDecision() {
 }
 
 // ===== LV5: SME-Trainer Decision — Reject Decision (popout with Remarks + Attachments → LV6) =====
-
 function disputesShowLV5RejectDecision() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Reject Decision';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Reject Decision');
   bodyEl.innerHTML = `
     <div style="padding:8px 0;">
       <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -4571,11 +4534,9 @@ function disputesShowLV5RejectDecision() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-danger btn-sm" onclick="disputesSubmitLV5RejectDecision()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
-async function disputesSubmitLV5RejectDecision() {
+async function disputesSubmitQADecisionRejected(){
   const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
   if (!remarks) {
     showToast('Remarks are required', 'error');
@@ -4652,14 +4613,7 @@ async function disputesSubmitLV5RejectDecision() {
 // ===== LV4: Trainer Decision — Retain Markdown (popout with Remarks + Attachments) =====
 
 function disputesShowLV4RetainMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Retain Markdown';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Retain Markdown');
   bodyEl.innerHTML = `
     <div style="padding:8px 0;">
       <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -4681,8 +4635,6 @@ function disputesShowLV4RetainMarkdown() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV4RetainMarkdown()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 function disputeLV4RetainFilesChanged(input) {
@@ -4767,13 +4719,8 @@ async function disputesSubmitLV4RetainMarkdown() {
 
 // ===== LV4: Trainer Decision — Reverse Markdown (popout confirmation → Coachee acknowledgement) =====
 
-function disputesShowLV4ReverseMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  titleEl.textContent = 'Reverse Markdown';
+function disputesShowLV6ReverseMarkdown() {
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Reverse Markdown');
   bodyEl.innerHTML = `
     <div style="text-align:center;padding:24px 0 8px;">
       <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -4786,8 +4733,6 @@ function disputesShowLV4ReverseMarkdown() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-success btn-sm" onclick="disputesSubmitLV4ReverseMarkdown()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV4ReverseMarkdown() {
@@ -4833,15 +4778,8 @@ async function disputesSubmitLV4ReverseMarkdown() {
 
 // ===== LV6: QTP Manager Decision — Reverse Markdown (confirmation → Markdown Reversed - QTP Manager) =====
 
-function disputesShowLV6ReverseMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Reverse Markdown';
+function disputesShowLV4ReverseMarkdown() {
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Reverse Markdown');
   bodyEl.innerHTML = `
     <div style="padding:8px 0;">
       <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -4864,8 +4802,6 @@ function disputesShowLV6ReverseMarkdown() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV6ReverseMarkdown()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV6ReverseMarkdown() {
@@ -4951,14 +4887,7 @@ async function disputesSubmitLV6ReverseMarkdown() {
 // ===== LV6: QTP Manager Decision — Retain Markdown (popout with Remarks + Attachments → Markdown Retained - QTP Manager) =====
 
 function disputesShowLV6RetainMarkdown() {
-  const titleEl = document.getElementById('disputes-action-title');
-  const bodyEl = document.getElementById('disputes-action-body');
-  const footerEl = document.getElementById('disputes-action-footer');
-  const overlay = document.getElementById('disputes-action-overlay');
-
-  _disputeAttachedFiles = [];
-
-  titleEl.textContent = 'Retain Markdown';
+  const { bodyEl, footerEl } = _disputesOpenInlineAction('Retain Markdown');
   bodyEl.innerHTML = `
     <div style="padding:8px 0;">
       <label style="font-size:13px;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Remarks <span style="color:var(--error);">*</span></label>
@@ -4981,8 +4910,6 @@ function disputesShowLV6RetainMarkdown() {
     <button class="btn btn-outline btn-sm" onclick="disputesCloseAction()">Cancel</button>
     <button class="btn btn-primary btn-sm" onclick="disputesSubmitLV6RetainMarkdown()">Save</button>
   `;
-
-  overlay.classList.add('active');
 }
 
 async function disputesSubmitLV6RetainMarkdown() {

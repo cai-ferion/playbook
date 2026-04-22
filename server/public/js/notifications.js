@@ -100,13 +100,29 @@ async function markAllNotificationsRead() {
 }
 
 async function clearAllNotifications() {
-  await fetch(`${IO_API_BASE}/notifications/clear-all`, {
-    method: 'DELETE',
-  });
+  // Optimistic: clear UI immediately so user sees feedback
+  const backup = [...notifState.notifications];
+  const backupCount = notifState.unreadCount;
   notifState.notifications = [];
   notifState.unreadCount = 0;
   renderSidebarNotifBadge();
   renderSidebarNotifList();
+  try {
+    const resp = await fetch(`${IO_API_BASE}/notifications/clear-all`, {
+      method: 'DELETE',
+    });
+    if (!resp.ok) {
+      throw new Error(`Server returned ${resp.status}`);
+    }
+  } catch (err) {
+    console.error('[Notifications] Clear all failed:', err);
+    // Rollback on failure
+    notifState.notifications = backup;
+    notifState.unreadCount = backupCount;
+    renderSidebarNotifBadge();
+    renderSidebarNotifList();
+    showToast('Failed to clear notifications. Please try again.', 'error');
+  }
 }
 
 // ===== Load & Poll =====
