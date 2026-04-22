@@ -1723,10 +1723,7 @@ function compassToggleAddMenu() {
   typesContainer.innerHTML = types.map(t => `
     <div class="compass-type-chip" data-type="${escapeAttr(t.id)}" onclick="compassInlineSelectType('${escapeAttr(t.id)}')">
       <span class="compass-type-chip-icon">${t.icon}</span>
-      <div>
-        <div class="compass-type-chip-label">${escapeHtml(t.label)}</div>
-        <div class="compass-type-chip-desc">${escapeHtml(t.desc)}</div>
-      </div>
+      <span class="compass-type-chip-label">${escapeHtml(t.label)}</span>
     </div>
   `).join('');
 

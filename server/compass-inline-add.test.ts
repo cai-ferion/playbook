@@ -108,6 +108,15 @@ describe("Inline Add Panel JavaScript Functions", () => {
     expect(compassJs).toContain("compass-type-chip-label");
   });
 
+  it("should render compact chips without description text", () => {
+    // The chip template should NOT contain the desc div (compact mode)
+    const chipTemplate = compassJs.slice(
+      compassJs.indexOf('typesContainer.innerHTML'),
+      compassJs.indexOf('.join(\'\')') + 20
+    );
+    expect(chipTemplate).not.toContain('compass-type-chip-desc');
+  });
+
   it("should have all 7 coaching types in _compassGetAllowedTypes", () => {
     const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
     const fnBlock = compassJs.slice(fnStart, fnStart + 1000);
