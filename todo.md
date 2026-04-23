@@ -2799,3 +2799,8 @@
 
 ### Sidebar Navigation
 - [x] Simplify sidebar for agents: show "Compass" instead of "Coaching Profile" sub-tab, show "Helm" instead of "Task Board" sub-tab (since agents only have one tab in each)
+
+### Bug Fix
+- [x] Fix Compass nav simplification: only flatten for agents, non-agents keep full expandable group with all sub-tabs
+- [x] Grant nav.compass + compass sub-section permissions to all non-agent roles (TL, Manager, QA, SME, Trainer)
+- [x] Agents get nav.compass too but with flattened nav (direct link to Coaching Profile only, no sub-items)
