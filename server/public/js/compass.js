@@ -353,15 +353,24 @@ function compassApplyFilters() {
     }
   }
 
-  // Hide Given panel for agents
+  // Hide Given panel for agents; hide Received panel for Managers
+  const isManagerRole = isAdmin740 || (currentUser && currentUser.actual_role === 'Manager');
   const dualTables = document.getElementById('compass-dual-tables');
   if (dualTables) {
     const panels = dualTables.querySelectorAll('.compass-table-panel');
     if (isAgent && panels[0]) {
+      // Agents: hide Given, show Received only
       panels[0].style.display = 'none';
+      if (panels[1]) panels[1].style.display = '';
       dualTables.style.gridTemplateColumns = '1fr';
-    } else if (panels[0]) {
-      panels[0].style.display = '';
+    } else if (isManagerRole && panels[1]) {
+      // Managers: hide Received (they see all logs in Given)
+      panels[1].style.display = 'none';
+      if (panels[0]) panels[0].style.display = '';
+      dualTables.style.gridTemplateColumns = '1fr';
+    } else {
+      if (panels[0]) panels[0].style.display = '';
+      if (panels[1]) panels[1].style.display = '';
       dualTables.style.gridTemplateColumns = '';
     }
   }
@@ -1192,17 +1201,17 @@ async function compassOpenDetail(coachingId) {
   html += `<div id="compass-ack-form" style="display:none;margin-top:12px;padding:14px;background:var(--bg-inset);border-radius:var(--radius);border:1px solid var(--border);">
     <div style="font-size:12px;color:var(--fg-subtle);padding:8px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;">Saving will record your acknowledgement automatically.</div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Commitments <span style="color:var(--error);">*</span></label>
+      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;text-align:left;">Commitments <span style="color:var(--error);">*</span></label>
       <textarea id="compass-ack-commitments" class="form-input" style="width:100%;min-height:60px;resize:vertical;font-size:13px;" placeholder="Enter your commitments..." required></textarea>
     </div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Rating (1-5) <span style="color:var(--error);">*</span></label>
+      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;text-align:left;">Rating (1-5) <span style="color:var(--error);">*</span></label>
       <div id="compass-ack-rating" style="display:flex;gap:4px;">
         ${[1,2,3,4,5].map(n => `<button type="button" class="compass-star-btn" data-val="${n}" onclick="compassSetAckRating(${n})" style="background:none;border:1px solid var(--border);border-radius:4px;width:36px;height:36px;cursor:pointer;font-size:18px;color:var(--fg-subtle);transition:all 0.15s;">★</button>`).join('')}
       </div>
     </div>
     <div style="margin-bottom:10px;">
-      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;">Sentiments <span style="color:var(--error);">*</span></label>
+      <label style="font-size:12px;font-weight:500;color:var(--fg-muted);display:block;margin-bottom:4px;text-align:left;">Sentiments <span style="color:var(--error);">*</span></label>
       <textarea id="compass-ack-sentiments" class="form-input" style="width:100%;min-height:60px;resize:vertical;font-size:13px;" placeholder="Share your sentiments..." required></textarea>
     </div>
   </div>`;

@@ -1238,24 +1238,38 @@ function irDebouncedApply() {
 }
 
 function irRenderFilterBar() {
+  // === Toolbar row: search + count + clear (matches Roster layout) ===
+  const toolbar = document.getElementById('ir-filter-toolbar');
+  if (toolbar) {
+    let tbHtml = '';
+    // Export CSV for IR
+    tbHtml += '<button class="btn btn-outline btn-sm" id="ir-export-btn" onclick="irExportCSV()" style="white-space:nowrap;">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export'
+      + '</button>';
+    // Search box
+    tbHtml += '<div class="regimen-search-box">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+      + '<input type="text" id="ir-search-input" placeholder="Search OHR / Name..." '
+      + 'value="' + escapeAttr(IR_STATE.searchQuery) + '" '
+      + 'oninput="IR_STATE.searchQuery=this.value;irDebouncedApply();">'
+      + '</div>';
+    // Count + Clear
+    tbHtml += '<span class="regimen-filter-count" id="ir-filter-count"></span>';
+    tbHtml += '<button class="btn btn-ghost btn-xs" onclick="irClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
+    toolbar.innerHTML = tbHtml;
+  }
+
+  // === Filter pills row ===
   const container = document.getElementById('ir-filter-pills');
   if (!container) return;
 
   let html = '';
   IR_FILTER_FIELDS.forEach(field => {
-    if (field.type === 'search') {
-      html += '<div class="regimen-search-box" style="min-width:180px;">'
-        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
-        + '<input type="text" id="ir-search-input" placeholder="Search OHR / Name..." '
-        + 'value="' + escapeAttr(IR_STATE.searchQuery) + '" '
-        + 'oninput="IR_STATE.searchQuery=this.value;irDebouncedApply();">'
-        + '</div>';
-      return;
-    }
+    if (field.type === 'search') return; // search is now in toolbar
 
     const summary = irGetFilterSummary(field);
     const isActive = irIsFiltered(field);
-    html += '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="ir-pill-' + field.key + '" onclick="irToggleDropdown(\'' + field.key + '\')">'
+    html += '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="ir-pill-' + field.key + '" onclick="irToggleDropdown(\'' + field.key + '\')">' 
       + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span> '
       + '<span class="filter-pill-value">' + escapeHtml(summary) + '</span>'
       + '<span class="filter-pill-icon">▾</span>'
@@ -1263,7 +1277,6 @@ function irRenderFilterBar() {
       + '</div>';
   });
 
-  html += '<button class="filter-bar-clear" onclick="irClearAllFilters()" title="Clear all filters">✕ Clear</button>';
   container.innerHTML = html;
 }
 
@@ -1423,6 +1436,13 @@ window.incompleteRosteringRenderTable = function() {
     return (a.full_name || '').localeCompare(b.full_name || '');
   });
 
+  // Update filter count
+  const irCountEl = document.getElementById('ir-filter-count');
+  if (irCountEl) {
+    const totalEmps = ROSTER.employees.length;
+    irCountEl.textContent = allData.length + ' of ' + totalEmps + ' incomplete';
+  }
+
   thead.innerHTML = '<tr>'
     + '<th>OHR ID</th>'
     + '<th>Full Name</th>'
@@ -1480,6 +1500,28 @@ function irRenderPagination(total) {
     + '<span class="regimen-page-num">Page ' + _irPage + ' / ' + totalPages + '</span>'
     + '<button class="regimen-page-btn" ' + (_irPage >= totalPages ? 'disabled' : '') + ' onclick="_irPage++;incompleteRosteringRenderTable();">Next »</button>';
 }
+
+// IR Export CSV
+window.irExportCSV = function() {
+  let data = incompleteRosteringGetData().filter(e => !e.isComplete);
+  data.sort((a, b) => b.missingFields.length - a.missingFields.length || (a.full_name || '').localeCompare(b.full_name || ''));
+  if (data.length === 0) { showToast('No incomplete records to export.', 'info'); return; }
+  const headers = ['OHR ID','Full Name','Status','Role','Completion Rate','Missing Count','Missing Fields'];
+  const rows = data.map(e => [
+    e.ohr_id, e.full_name, e.employement_status, e.actual_role,
+    e.completionRate + '%', e.missingFields.length,
+    e.missingFields.map(f => IR_LABELS[f] || f).join('; ')
+  ]);
+  let csv = headers.join(',') + '\n';
+  rows.forEach(r => { csv += r.map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(',') + '\n'; });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'incomplete_rostering_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Exported ' + data.length + ' records.', 'success');
+};
 
 // Backward compat
 function onboardingRenderDashboard() { incompleteRosteringRenderDashboard(); }

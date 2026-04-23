@@ -968,6 +968,39 @@ function applyNavPermissions(user) {
   if (onboardingTab) onboardingTab.style.display = p['regimen.onboarding_tab'] ? '' : 'none';
   const permissionsTab = document.getElementById('regimen-tab-permissions');
   if (permissionsTab) permissionsTab.style.display = p['regimen.permissions_tab'] ? '' : 'none';
+
+  // Agent nav simplification: agents only have one sub-tab in Compass (Coaching Profile)
+  // and one in Helm (Task Board), so flatten to a direct nav item (no expandable group)
+  const isAgent = user.actual_role === 'Agent' && user.ohr_id !== '740045023';
+  if (isAgent) {
+    // Compass: convert group to direct link to compass-input
+    const compassGroup = document.getElementById('nav-group-compass');
+    const compassToggle = document.getElementById('nav-compass');
+    const compassItems = document.getElementById('nav-group-items-compass');
+    if (compassGroup && compassToggle && compassItems) {
+      // Hide the sub-items container
+      compassItems.style.display = 'none';
+      // Remove the chevron from the toggle
+      const chevron = compassToggle.querySelector('.nav-group-chevron');
+      if (chevron) chevron.style.display = 'none';
+      // Make the toggle act as a direct nav link
+      compassToggle.setAttribute('onclick', "switchView('compass-input')");
+      compassToggle.setAttribute('data-view', 'compass-input');
+      compassToggle.classList.remove('nav-group-toggle');
+    }
+    // Helm: convert group to direct link to helm-board
+    const helmGroup = document.getElementById('nav-group-helm');
+    const helmToggle = document.getElementById('nav-helm');
+    const helmItems = document.getElementById('nav-group-items-helm');
+    if (helmGroup && helmToggle && helmItems) {
+      helmItems.style.display = 'none';
+      const chevron = helmToggle.querySelector('.nav-group-chevron');
+      if (chevron) chevron.style.display = 'none';
+      helmToggle.setAttribute('onclick', "switchView('helm-board')");
+      helmToggle.setAttribute('data-view', 'helm-board');
+      helmToggle.classList.remove('nav-group-toggle');
+    }
+  }
 }
 
 // ===== View Switching =====

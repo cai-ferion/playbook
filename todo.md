@@ -2787,3 +2787,15 @@
 - [x] Match Playbook dark-header aesthetic
 - [x] Overhaul both tabs: Roster Table and Incomplete Rostering
 - [x] Latency reduction: lazy load details only on expansion
+
+## UI Fixes Batch (April 23, 2026)
+
+### Incomplete Rostering
+- [x] Fix filter bar alignment on Incomplete Rostering tab (match Roster tab layout)
+
+### Coaching Profile
+- [x] Hide Coaching Received table for Managers (they don't receive coaching)
+- [x] Left-align field titles (COMMITMENTS, RATING, SENTIMENTS) in coaching acknowledgement form
+
+### Sidebar Navigation
+- [x] Simplify sidebar for agents: show "Compass" instead of "Coaching Profile" sub-tab, show "Helm" instead of "Task Board" sub-tab (since agents only have one tab in each)

@@ -2151,6 +2151,7 @@
   letter-spacing: 0.4px;
   display: block;
   margin-bottom: 3px;
+  text-align: left;
 }
 .cdp-ack-form textarea {
   width: 100%;
