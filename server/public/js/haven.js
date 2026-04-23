@@ -137,8 +137,8 @@ function havenRenderReviewArea() {
   if (!container) return;
 
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const role = user ? user.actual_role : '';
-  const isAdmin = user && user.ohr_id === '740045023';
+  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (user ? user.actual_role : '');
+  const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (user && user.ohr_id === '740045023');
 
   let pendingTL = HAVEN.leaves.filter(l => l.status === 'Pending TL');
   if (role === 'Team Lead' && !isAdmin) {
@@ -390,8 +390,8 @@ function havenOpenDetail(leaveId) {
   let footerHtml = '';
 
   if (typeof currentUser !== 'undefined' && currentUser) {
-    const role = currentUser.actual_role;
-    const isAdmin = currentUser.ohr_id === '740045023';
+    const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : currentUser.actual_role;
+    const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser.ohr_id === '740045023');
 
     if ((role === 'Team Lead' || isAdmin) && lv.status === 'Pending TL') {
       const myAgents = HAVEN.employees.filter(e => e.supervisor_name === currentUser.full_name).map(e => e.ohr_id);
@@ -401,7 +401,7 @@ function havenOpenDetail(leaveId) {
       }
     }
 
-    if ((role === 'Manager' || isAdmin) && lv.status === 'Pending OM') {
+    if ((role === 'Manager' || isAdmin) && lv.status === 'Pending OM') { // Only admin/manager can approve OM-level
       footerHtml += '<button class="btn btn-success btn-sm" onclick="havenQuickApprove(\'' + escapeAttr(lv.leave_id) + '\',\'om\');havenCloseForm();">Approve (OM)</button>';
       footerHtml += ' <button class="btn btn-danger btn-sm" onclick="havenQuickReject(\'' + escapeAttr(lv.leave_id) + '\',\'om\');havenCloseForm();">Reject (OM)</button>';
     }

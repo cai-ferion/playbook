@@ -8,68 +8,97 @@ const ADMIN_OHR = '740045023';
 const MAINTENANCE_KEY = 'site_maintenance';
 
 // ---- Role Preview System ----
-// Allows admin (740045023) to preview the app as a Team Lead.
-// When active, all isAdmin740 checks return false and role resolves to 'Team Lead'.
-window.PLAYBOOK_ROLE_PREVIEW = null; // null = normal admin, 'tl' = viewing as Team Lead
+// Allows admin (740045023) to preview the app as any role.
+// Supported modes: null (admin), 'tl', 'qa', 'sme', 'agent'
+window.PLAYBOOK_ROLE_PREVIEW = null;
+
+const ROLE_PREVIEW_MAP = {
+  tl:    { label: 'Team Lead',                  role: 'Team Lead',                badgeBg: '#fef3c7', badgeColor: '#d97706' },
+  qa:    { label: 'Quality & Policy Expert',     role: 'Quality & Policy Expert',  badgeBg: '#ede9fe', badgeColor: '#7c3aed' },
+  sme:   { label: 'Operational SME',             role: 'Operational SME',          badgeBg: '#e0f2fe', badgeColor: '#0284c7' },
+  agent: { label: 'Agent',                       role: 'Agent',                    badgeBg: '#fce7f3', badgeColor: '#db2777' },
+};
 
 /**
  * Returns the effective role for the current user, respecting the role preview toggle.
- * When preview is active, admin sees the app as 'Team Lead'.
  */
 function getEffectiveRole() {
   if (!window.currentUser) return '';
-  if (window.currentUser.ohr_id === ADMIN_OHR && window.PLAYBOOK_ROLE_PREVIEW === 'tl') {
-    return 'Team Lead';
+  if (window.currentUser.ohr_id === ADMIN_OHR && window.PLAYBOOK_ROLE_PREVIEW) {
+    const entry = ROLE_PREVIEW_MAP[window.PLAYBOOK_ROLE_PREVIEW];
+    return entry ? entry.role : (window.currentUser.actual_role || '');
   }
   return window.currentUser.actual_role || '';
 }
 
 /**
  * Returns true if the current user should be treated as admin (740045023).
- * Returns false when role preview is active (viewing as TL).
+ * Returns false when any role preview is active.
  */
 function isEffectiveAdmin() {
   if (!window.currentUser) return false;
   if (window.currentUser.ohr_id !== ADMIN_OHR) return false;
-  // If previewing as TL, suppress admin privileges
-  return window.PLAYBOOK_ROLE_PREVIEW !== 'tl';
+  return !window.PLAYBOOK_ROLE_PREVIEW;
 }
 
 /**
  * Toggle the role preview mode. Called from Admin Tools.
+ * @param {string} mode - 'admin', 'tl', 'qa', 'sme', or 'agent'
  */
 function setRolePreview(mode) {
-  if (mode === 'tl') {
-    window.PLAYBOOK_ROLE_PREVIEW = 'tl';
-  } else {
+  if (mode === 'admin' || !mode) {
     window.PLAYBOOK_ROLE_PREVIEW = null;
+  } else {
+    window.PLAYBOOK_ROLE_PREVIEW = mode;
   }
-  // Update Admin Tools toggle buttons
-  const btnAdmin = document.getElementById('role-preview-admin');
-  const btnTL = document.getElementById('role-preview-tl');
+
+  // Update all toggle buttons
+  const allBtns = document.querySelectorAll('.role-preview-btn');
+  allBtns.forEach(btn => {
+    btn.style.background = 'transparent';
+    btn.style.color = 'var(--fg-muted)';
+  });
+  const activeBtn = document.getElementById('role-preview-' + (mode || 'admin'));
+  if (activeBtn) {
+    activeBtn.style.background = '#1a365d';
+    activeBtn.style.color = '#fff';
+  }
+
+  // Update badge
   const badge = document.getElementById('role-preview-badge');
-  const banner = document.getElementById('role-preview-banner');
-  if (btnAdmin && btnTL) {
-    if (mode === 'tl') {
-      btnTL.style.background = '#1a365d'; btnTL.style.color = '#fff';
-      btnAdmin.style.background = 'transparent'; btnAdmin.style.color = 'var(--fg-muted)';
-    } else {
-      btnAdmin.style.background = '#1a365d'; btnAdmin.style.color = '#fff';
-      btnTL.style.background = 'transparent'; btnTL.style.color = 'var(--fg-muted)';
-    }
-  }
   if (badge) {
-    if (mode === 'tl') {
-      badge.textContent = 'Team Lead';
-      badge.style.background = '#fef3c7'; badge.style.color = '#d97706';
+    const entry = ROLE_PREVIEW_MAP[mode];
+    if (entry) {
+      badge.textContent = entry.label;
+      badge.style.background = entry.badgeBg;
+      badge.style.color = entry.badgeColor;
     } else {
       badge.textContent = 'Admin';
-      badge.style.background = '#f0fdf4'; badge.style.color = '#16a34a';
+      badge.style.background = '#f0fdf4';
+      badge.style.color = '#16a34a';
     }
   }
+
+  // Update banner
+  const banner = document.getElementById('role-preview-banner');
+  const bannerRole = document.getElementById('role-preview-banner-role');
   if (banner) {
-    banner.style.display = mode === 'tl' ? '' : 'none';
+    const entry = ROLE_PREVIEW_MAP[mode];
+    if (entry) {
+      banner.style.display = '';
+      if (bannerRole) bannerRole.textContent = entry.label;
+    } else {
+      banner.style.display = 'none';
+    }
   }
+
+  // Persist in sessionStorage
+  if (window.PLAYBOOK_ROLE_PREVIEW) {
+    sessionStorage.setItem('playbook_role_preview', window.PLAYBOOK_ROLE_PREVIEW);
+  } else {
+    sessionStorage.removeItem('playbook_role_preview');
+  }
+
   // Re-apply filters in currently active modules
   _rolePreviewRefreshModules();
 }
@@ -85,18 +114,48 @@ function _rolePreviewRefreshModules() {
   if (typeof caApplyFilters === 'function') {
     caApplyFilters();
   }
+  // Refresh Haven (Leave Requests)
+  if (typeof havenInit === 'function') {
+    try { havenInit(); } catch(e) { /* ignore if haven not loaded */ }
+  }
+  // Refresh Anchor (Dashboard / Input Portal)
+  if (typeof loadAttendanceData === 'function') {
+    try { loadAttendanceData(); } catch(e) { /* ignore */ }
+  }
   // Refresh view toggle visibility in Compass
-  if (typeof initCompass === 'undefined') return; // Compass not loaded yet
   const viewToggle = document.getElementById('compass-view-toggle');
   if (viewToggle) {
     viewToggle.style.display = isEffectiveAdmin() ? 'flex' : 'none';
   }
-  // Reset view mode when switching to TL (TL doesn't have All/My Team toggle)
-  if (window.PLAYBOOK_ROLE_PREVIEW === 'tl' && typeof COMPASS !== 'undefined') {
-    COMPASS.viewMode = 'tl';
-  } else if (typeof COMPASS !== 'undefined') {
-    COMPASS.viewMode = 'all';
+  // Reset view mode based on preview
+  if (typeof COMPASS !== 'undefined') {
+    if (window.PLAYBOOK_ROLE_PREVIEW) {
+      COMPASS.viewMode = 'tl'; // Non-admin roles use team-scoped view
+    } else {
+      COMPASS.viewMode = 'all';
+    }
   }
+  // Refresh sidebar nav visibility for role-gated pages
+  _rolePreviewUpdateNav();
+}
+
+/**
+ * Show/hide sidebar nav items based on effective role.
+ * Admin sees everything; non-admin roles see restricted nav.
+ */
+function _rolePreviewUpdateNav() {
+  if (!window.currentUser || window.currentUser.ohr_id !== ADMIN_OHR) return;
+  const adminOnlyGroups = ['nav-group-horizon', 'nav-group-helm'];
+  const adminOnlyItems = ['nav-admin-tools'];
+  const isAdmin = isEffectiveAdmin();
+  adminOnlyGroups.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? '' : 'none';
+  });
+  adminOnlyItems.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? '' : 'none';
+  });
 }
 
 // ---- API helpers ----

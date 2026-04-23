@@ -1221,9 +1221,9 @@ function updateAlertNavBadge() {
   const weekFilter = appState.alertFilters.weekEnding;
 
   // Apply same role-based filtering as renderAlerts
-  const role = currentUser ? currentUser.actual_role : '';
+  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
   const userOhr = currentUser ? currentUser.ohr_id : '';
-  const isAdmin = currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance'];
+  const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance']);
 
   function filterByRole(alerts) {
     if (!currentUser) return alerts;
@@ -1642,7 +1642,9 @@ function renderInputPagination(currentPage, totalPages) {
  */
 function isRowLocked(record) {
   // Exempt users with edit_attendance permission and Managers — never locked
-  if (currentUser && (currentUser.actual_role === 'Manager' || (currentUser.permissions && currentUser.permissions['anchor.edit_attendance']))) {
+  const _effRole = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
+  const _effAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance']);
+  if (currentUser && (_effRole === 'Manager' || _effAdmin)) {
     return false;
   }
 
@@ -2579,9 +2581,9 @@ function renderAlerts() {
   const weekFilter = appState.alertFilters.weekEnding;
 
   // Role-based filtering: Team Lead sees only their agents, Manager sees their planning group
-  const role = typeof currentUser !== 'undefined' ? currentUser?.actual_role : '';
+  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (typeof currentUser !== 'undefined' ? currentUser?.actual_role : '');
   const userOhr = typeof currentUser !== 'undefined' ? currentUser?.ohr_id : '';
-  const isAdmin = currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance'];
+  const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance']);
 
   function filterAlertsByRole(alerts) {
     if (isAdmin || role === 'Trainer') return alerts; // Admin and Trainer see all

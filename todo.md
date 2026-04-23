@@ -2720,3 +2720,15 @@
 - [x] Re-initializes current module on toggle (Compass, CA, etc.)
 - [x] Cache versions bumped: maintenance.js v=103, compass.js v=115, corrective-actions.js v=11, compass-omnibar.js v=103
 - [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue)
+
+## Extended Role Preview — All 5 Roles + Haven & Anchor (April 2026)
+- [x] Extended toggle UI to 5 roles: Admin, Team Lead, QA, SME, Agent — each with distinct badge color
+- [x] Updated setRolePreview() with ROLE_PREVIEW_MAP, getEffectiveRole() handles all 5 modes
+- [x] Banner shows role-specific label via #role-preview-banner-role; sessionStorage persists
+- [x] Wired role preview into Haven (havenRenderReviewArea, havenShowForm action buttons)
+- [x] Wired role preview into Anchor — app.js (2x filterByRole, isRowLocked)
+- [x] Wired role preview into Anchor — billing.js (canEditTargets, canSaveTargets)
+- [x] _rolePreviewUpdateNav() hides admin-only sidebar groups when previewing non-admin roles
+- [x] _rolePreviewRefreshModules() triggers Haven/Anchor re-init on toggle
+- [x] Cache versions bumped: maintenance.js v=104, app.js v=125, billing.js v=133, haven.js v=103
+- [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue)
