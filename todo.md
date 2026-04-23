@@ -2811,3 +2811,14 @@
 - [x] Rename Kanban column title 'LV1 - SME REVIEW' to 'LV1 - SUPPORT REVIEW' (also LV3 and LV5)
 - [x] Audit and rename all 'SME' references in notification/email text to 'Support'
 - [x] Rename 'SME Joiner' form field labels in new coaching log creation form to 'Support Joiner'
+
+## Sandbox UI/UX Overhaul (April 24, 2026)
+- [x] Create dedicated sandbox-redesign.css with Playbook design system tokens
+- [x] Convert New Insight modal to inline expansion panel (like Compass inline add)
+- [x] Convert Detail View modal to inline row expansion (like Regimen roster)
+- [x] Agent-only review history: show status changes + comments only, hide reviewer names
+- [x] Compact Job IDs: 2x5 grid instead of 10 stacked inputs
+- [x] Polish table: expand arrows, status badges, hover states, alternating rows
+- [x] Refresh omnibar: tighter pill styling, better spacing
+- [x] Overhaul Review Area Kanban board styling
+- [x] Update tests and bump cache versions

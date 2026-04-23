@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/compass-redesign.css?v=110">
   <link rel="stylesheet" href="css/regimen-redesign.css?v=100">
+  <link rel="stylesheet" href="css/sandbox-redesign.css?v=100">
   <link rel="stylesheet" href="css/corrective-actions.css?v=6">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1224,73 +1225,77 @@
       <!-- ===== View 7a: Sandbox — Input Portal ===== -->
       <div class="view-container view-hidden" id="view-sandbox-input">
         <div class="module-page">
-          <!-- Sub-page: Input Portal -->
-          <div id="sandbox-sub-input">
-            <!-- Sandbox Omnibar -->
-            <div class="omnibar" id="sandbox-omnibar">
-              <div class="omnibar-top" style="flex-wrap:nowrap;">
-                <button class="btn btn-primary btn-sm" id="sandbox-new-btn" onclick="sandboxShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  New Insight
+          <!-- Stats Strip -->
+          <div class="sandbox-stats-strip" id="sandbox-stats-strip"></div>
+
+          <!-- Sandbox Omnibar -->
+          <div class="sandbox-omnibar" id="sandbox-omnibar">
+            <div class="omnibar-top" style="flex-wrap:nowrap;">
+              <button class="btn btn-primary btn-sm" id="sandbox-new-btn" onclick="sandboxShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Insight
+              </button>
+              <div class="omnibar-chips" id="sandbox-omnibar-chips" style="flex:1;min-width:0;"></div>
+              <div class="omnibar-actions" style="flex-shrink:0;display:flex;gap:6px;">
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();sandboxOmnibarOpenMenu('filter')" title="Add Filter">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                  Filter
                 </button>
-                <div class="omnibar-chips" id="sandbox-omnibar-chips" style="flex:1;min-width:0;"></div>
-                <div class="omnibar-actions" style="flex-shrink:0;">
-                  <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();sandboxOmnibarOpenMenu('filter')" title="Add Filter">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                    Add Filter
-                  </button>
-                  <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();sandboxOmnibarOpenMenu('sort')" title="Add Sort">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-                    Add Sort
-                  </button>
-                  <button class="btn btn-ghost btn-sm" onclick="sandboxOmnibarClearAll()" title="Clear All">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    Clear
-                  </button>
-                </div>
-                <div class="omnibar-meta" style="flex-shrink:0;">
-                  <span id="sandbox-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Filtered Records: 0</span>
-                </div>
+                <button class="btn btn-outline btn-sm omnibar-btn" onclick="event.stopPropagation();sandboxOmnibarOpenMenu('sort')" title="Add Sort">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                  Sort
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="sandboxOmnibarClearAll()" title="Clear All">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Clear
+                </button>
               </div>
-              <div class="omnibar-menu" id="sandbox-omnibar-menu" style="display:none;"></div>
+              <div class="omnibar-meta" style="flex-shrink:0;">
+                <span id="sandbox-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Filtered: 0</span>
+              </div>
             </div>
-            <div class="loading-overlay" id="sandbox-loading" style="display:none;">
-              <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
-              <div class="loading-text">Loading Insights...</div>
-            </div>
-            <div class="module-table-wrapper">
-              <table class="data-table module-table" id="sandbox-table">
-                <thead id="sandbox-table-head"></thead>
-                <tbody id="sandbox-table-body"></tbody>
-              </table>
-            </div>
-            <div class="module-pagination" id="sandbox-pagination"></div>
+            <div class="omnibar-menu" id="sandbox-omnibar-menu" style="display:none;"></div>
           </div>
 
-          <!-- New/Edit Form -->
-          <div class="module-form-overlay" id="sandbox-form-overlay" style="display:none;">
-            <div class="module-form-panel">
-              <div class="module-form-header">
-                <h3 id="sandbox-form-title">New Insight</h3>
-                <button class="module-form-close" onclick="sandboxCloseForm()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="module-form-body" id="sandbox-form-body"></div>
-              <div class="module-form-footer" id="sandbox-form-footer"></div>
-            </div>
+          <!-- Inline New Insight Form Container -->
+          <div id="sandbox-inline-form-container" style="display:none;"></div>
+
+          <!-- Loading Overlay -->
+          <div class="loading-overlay" id="sandbox-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Insights...</div>
           </div>
+
+          <!-- Table -->
+          <div class="sandbox-table-wrapper">
+            <table class="sandbox-table" id="sandbox-table">
+              <thead id="sandbox-table-head"></thead>
+              <tbody id="sandbox-table-body"></tbody>
+            </table>
+          </div>
+          <div class="sandbox-pagination" id="sandbox-pagination"></div>
         </div>
       </div>
 
       <!-- ===== View 7b: Sandbox — Review Area ===== -->
       <div class="view-container view-hidden" id="view-sandbox-review">
         <div class="module-page">
+          <!-- Review Area Header -->
+          <div class="sandbox-review-header">
+            <div>
+              <div class="sandbox-review-title">Review Area</div>
+              <div class="sandbox-review-subtitle">Manage and review submitted insights across all stages</div>
+            </div>
+          </div>
+
+          <!-- Loading Overlay -->
           <div class="loading-overlay" id="sandbox-review-loading" style="display:none;">
             <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
             <div class="loading-text">Loading Review Queue...</div>
           </div>
-          <div id="sandbox-kanban-board" class="kanban-board"></div>
+
+          <!-- Kanban Board -->
+          <div class="sandbox-kanban-board" id="sandbox-kanban-board"></div>
 
           <!-- Review Area Form Overlay -->
           <div class="module-form-overlay" id="sandbox-review-form-overlay" style="display:none;">
@@ -1710,7 +1715,7 @@
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=12" defer></script>
   <script src="js/compass-omnibar.js?v=104" defer></script>
-  <script src="js/sandbox.js?v=103" defer></script>
+  <script src="js/sandbox.js?v=104" defer></script>
   <script src="js/haven.js?v=104" defer></script>
   <script src="js/helm.js?v=111" defer></script>
   <script src="js/roster.js?v=201" defer></script>

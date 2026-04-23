@@ -1,7 +1,11 @@
 /**
  * Sandbox — Insights Tracker (2 Sub-pages)
- * Sub-page 1: Input Portal — submit & browse insights (My Submissions only)
- * Sub-page 2: Review Area — Kanban board for SME/Trainer review workflow
+ * Sub-page 1: Input Portal — submit & browse insights (My Submissions / Team view)
+ * Sub-page 2: Review Area — Kanban board for Support/Trainer review workflow
+ *
+ * Overhaul: inline New Insight panel, inline row expansion detail,
+ *           refreshed Kanban, agent-only status+comments review history,
+ *           compact 2x5 Job IDs grid, stats strip, polished omnibar
  */
 
 const SANDBOX_MOD = {
@@ -12,7 +16,9 @@ const SANDBOX_MOD = {
   page: 1,
   pageSize: 25,
   editingId: null,
-  _context: 'input', // 'input' or 'review' — where detail was opened from
+  expandedId: null,       // inline row expansion tracking
+  _context: 'input',
+  _inlineFormOpen: false,  // inline new insight form state
 
   STATUSES: [
     'Pending Initial Review',
@@ -51,10 +57,10 @@ const SANDBOX_MOD = {
 };
 
 function sandboxGetStatusColor(status) {
-  if (!status) return 'var(--text-secondary)';
+  if (!status) return 'var(--fg-subtle)';
   if (SANDBOX_MOD.STATUS_COLORS[status]) return SANDBOX_MOD.STATUS_COLORS[status];
   if (status.startsWith('Rejected')) return '#EF4444';
-  return 'var(--text-secondary)';
+  return 'var(--fg-subtle)';
 }
 
 // ===== Omnibar for Input Portal =====
@@ -194,17 +200,15 @@ function sandboxOmniCloseMenu() {
 function sandboxOmniEditFilter(idx) {
   const f = sandboxOmniState.filters[idx];
   if (!f) return;
-  const fieldDef = SANDBOX_OMNI_FIELDS.find(fd => fd.key === f.field);
-  if (!fieldDef) return;
   sandboxOmniState.pendingField = f.field;
   sandboxOmniState.menuOpen = true;
   sandboxOmniState.menuType = 'filter';
-  sandboxOmniState.menuStep = 'values';
+  sandboxOmniState.menuStep = 'value';
   sandboxOmniState._editingIdx = idx;
   sandboxRenderOmniMenu();
   setTimeout(() => {
     if (f.op === 'contains') {
-      const inp = document.getElementById('sandbox-omni-text-input');
+      const inp = document.getElementById('sandbox-omni-text-val');
       if (inp) inp.value = f.value || '';
     } else if (f.op === 'dateRange' && f.value) {
       const fromEl = document.getElementById('sandbox-omni-date-from');
@@ -234,7 +238,7 @@ function sandboxOmniRenderChips() {
   sandboxOmniState.sorts.forEach((s, i) => {
     const field = SANDBOX_SORT_FIELDS.find(fd => fd.key === s.key);
     const label = field ? field.label : s.key;
-    html += `<span class="omnibar-chip sort-chip"><span class="chip-text-editable" onclick="sandboxOmniEditSort(${i})" title="Click to toggle direction">${escapeHtml(label)} ${s.dir === 'asc' ? '(A-Z)' : '(Z-A)'}</span> <button class="chip-remove" onclick="sandboxOmniRemoveSort(${i})">&times;</button></span>`;
+    html += `<span class="omnibar-chip sort-chip"><span class="chip-text-editable" onclick="sandboxOmniEditSort(${i})" title="Click to toggle direction">${escapeHtml(label)} ${s.dir === 'asc' ? '↑' : '↓'}</span> <button class="chip-remove" onclick="sandboxOmniRemoveSort(${i})">&times;</button></span>`;
   });
   container.innerHTML = html;
 }
@@ -245,16 +249,15 @@ function sandboxOmniRemoveFilter(idx) {
   sandboxOmniApply();
 }
 
-function sandboxOmniEditSort(idx) {
-  const sort = sandboxOmniState.sorts[idx];
-  if (!sort) return;
-  sort.dir = sort.dir === 'asc' ? 'desc' : 'asc';
+function sandboxOmniRemoveSort(idx) {
+  sandboxOmniState.sorts.splice(idx, 1);
   sandboxOmniRenderChips();
   sandboxOmniApply();
 }
 
-function sandboxOmniRemoveSort(idx) {
-  sandboxOmniState.sorts.splice(idx, 1);
+function sandboxOmniEditSort(idx) {
+  const s = sandboxOmniState.sorts[idx];
+  if (s) s.dir = s.dir === 'asc' ? 'desc' : 'asc';
   sandboxOmniRenderChips();
   sandboxOmniApply();
 }
@@ -266,43 +269,26 @@ function sandboxOmnibarClearAll() {
   sandboxOmniApply();
 }
 
+// ===== Omnibar Apply (filter + sort) =====
+
 function sandboxOmniApply() {
   let data = [...SANDBOX_MOD.insights];
 
-  // Role-based visibility for Input Portal
-  // Agents: own submissions only
-  // TLs: their team's + own submissions
-  // SMEs: their TL's team's + own submissions
-  // Managers/Admin: all submissions
+  // Role-based filtering: agents see own, TLs see team, managers see all
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
-    const isAdmin = currentUser.ohr_id === '740045023';
-    const isManager = role === 'Manager';
-    if (!isAdmin && !isManager) {
-      const isTL = role === 'Team Lead';
-      const isSME = role === 'Operational SME' || role === 'Content Reviewer';
-      if (isTL || isSME) {
-        // TLs see insights from agents they supervise + own
-        // SMEs see insights from agents under their TL + own
-        const teamOhrs = new Set();
-        teamOhrs.add(currentUser.ohr_id);
-        const emps = SANDBOX_MOD.employees || [];
-        if (isTL) {
-          emps.forEach(e => {
-            if (e.supervisor === currentUser.full_name || e.flm === currentUser.full_name) teamOhrs.add(e.ohr_id);
-          });
-        } else if (isSME) {
-          // Find the SME's TL (supervisor), then get all agents under that TL
-          const myTL = currentUser.supervisor || currentUser.flm || '';
-          emps.forEach(e => {
-            if (e.supervisor === myTL || e.flm === myTL) teamOhrs.add(e.ohr_id);
-          });
-        }
-        data = data.filter(i => teamOhrs.has(i.ohr_id));
-      } else {
-        // Agents, QAs, Trainers: own submissions only
-        data = data.filter(i => i.ohr_id === currentUser.ohr_id);
+    if (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer') {
+      const teamOhrs = new Set();
+      if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
+        ROSTER_DATA.forEach(r => {
+          if (r.supervisor_email === currentUser.meta_email) teamOhrs.add(r.ohr_id);
+        });
       }
+      teamOhrs.add(currentUser.ohr_id);
+      data = data.filter(i => teamOhrs.has(i.ohr_id));
+    } else if (role !== 'Manager' && currentUser.ohr_id !== '740045023' && currentUser.ohr_id !== '740044909') {
+      // Agents, QAs, Trainers: own submissions only
+      data = data.filter(i => i.ohr_id === currentUser.ohr_id);
     }
     // Managers and admin see all — no filter
   }
@@ -311,7 +297,6 @@ function sandboxOmniApply() {
   sandboxOmniState.filters.forEach(f => {
     data = data.filter(row => {
       let val = row[f.field];
-      // Handle category field mapping
       if (f.field === 'category') val = row.category || row.insight_category;
       if (f.op === 'contains') return val && String(val).toLowerCase().includes(f.value.toLowerCase());
       if (f.op === 'in') return f.value.includes(val);
@@ -326,7 +311,7 @@ function sandboxOmniApply() {
     });
   });
 
-  // Apply sorts (default: newest first by created_at)
+  // Apply sorts
   const activeSorts = sandboxOmniState.sorts.length > 0 ? sandboxOmniState.sorts : [SANDBOX_DEFAULT_SORT];
   activeSorts.forEach(s => {
     data.sort((a, b) => {
@@ -345,9 +330,46 @@ function sandboxOmniApply() {
 
   // Update record count
   const countEl = document.getElementById('sandbox-record-count');
-  if (countEl) countEl.textContent = `Filtered Records: ${data.length}`;
+  if (countEl) countEl.textContent = `Filtered: ${data.length}`;
 
+  // Update stats strip
+  sandboxRenderStats();
   sandboxRenderTable();
+}
+
+// ===== Stats Strip =====
+
+function sandboxRenderStats() {
+  const strip = document.getElementById('sandbox-stats-strip');
+  if (!strip) return;
+
+  const all = SANDBOX_MOD.filtered;
+  const total = all.length;
+  const pending = all.filter(i => i.status && i.status.startsWith('Pending')).length;
+  const elevated = all.filter(i => i.status && i.status.startsWith('Elevated')).length;
+  const implemented = all.filter(i => i.status === 'Implemented').length;
+
+  strip.innerHTML = `
+    <div class="sandbox-stat-card stat-total">
+      <div class="sandbox-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div>
+      <div class="sandbox-stat-value">${total}</div>
+      <div class="sandbox-stat-label">Total Insights</div>
+    </div>
+    <div class="sandbox-stat-card stat-pending">
+      <div class="sandbox-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="sandbox-stat-value">${pending}</div>
+      <div class="sandbox-stat-label">Pending Review</div>
+    </div>
+    <div class="sandbox-stat-card stat-elevated">
+      <div class="sandbox-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <div class="sandbox-stat-value">${elevated}</div>
+      <div class="sandbox-stat-label">Elevated</div>
+    </div>
+    <div class="sandbox-stat-card stat-implemented">
+      <div class="sandbox-stat-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="sandbox-stat-value">${implemented}</div>
+      <div class="sandbox-stat-label">Implemented</div>
+    </div>`;
 }
 
 // ===== Data Fetching =====
@@ -381,7 +403,7 @@ async function sandboxFetchEmployees() {
   }
 }
 
-// ===== Input Portal: Table (My Submissions only) =====
+// ===== Input Portal: Table with Inline Row Expansion =====
 
 function sandboxRenderTable() {
   const thead = document.getElementById('sandbox-table-head');
@@ -396,8 +418,9 @@ function sandboxRenderTable() {
     currentUser.actual_role === 'Operational SME' ||
     currentUser.actual_role === 'Content Reviewer'
   );
-  const colSpan = showSubmitter ? 7 : 6;
+  const colSpan = showSubmitter ? 8 : 7; // +1 for expand arrow column
   thead.innerHTML = `<tr>
+    <th style="width:30px;"></th>
     <th>Insight ID</th>${showSubmitter ? '<th>Submitter</th>' : ''}<th>Title</th><th>Category</th><th>Proposal Type</th><th>Status</th><th>Created Date</th>
   </tr>`;
 
@@ -405,30 +428,203 @@ function sandboxRenderTable() {
   const pageData = SANDBOX_MOD.filtered.slice(start, start + SANDBOX_MOD.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No insights found</div><div class="empty-subtitle">Submit a new insight or adjust filters</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colSpan}"><div class="sandbox-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="sandbox-empty-title">No insights found</div><div class="sandbox-empty-subtitle">Submit a new insight or adjust filters</div></div></td></tr>`;
     sandboxRenderPagination();
     return;
   }
 
-  tbody.innerHTML = pageData.map(ins => {
+  let html = '';
+  pageData.forEach(ins => {
     const statusColor = sandboxGetStatusColor(ins.status);
-    const date = ins.created_at ? new Date(ins.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—';
+    const date = ins.created_at ? new Date(ins.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '\u2014';
     const shortStatus = (ins.status || '').replace('Rejected - Initial Review ', 'Rej-IR ').replace('Rejected - Final Review ', 'Rej-FR ').replace('Pending - ', 'Pend. ').replace('Approved - ', 'Appr. ');
-    const cat = ins.category || ins.insight_category || '—';
+    const cat = ins.category || ins.insight_category || '\u2014';
+    const isExpanded = SANDBOX_MOD.expandedId === ins.insight_id;
 
-    return `<tr class="module-row" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','input')">
-      <td><span class="module-id">${escapeHtml(ins.insight_id || '')}</span></td>
-      ${showSubmitter ? `<td>${escapeHtml(ins.submitter || ins.ohr_id || '—')}</td>` : ''}
-      <td class="module-title-cell">${escapeHtml(ins.title || ins.insight_title || '—')}</td>
+    html += `<tr class="sandbox-row${isExpanded ? ' expanded' : ''}" onclick="sandboxToggleDetail('${escapeAttr(ins.insight_id)}')">
+      <td><span class="sandbox-expand-icon">\u25B6</span></td>
+      <td><span class="sandbox-id-pill">${escapeHtml(ins.insight_id || '')}</span></td>
+      ${showSubmitter ? `<td>${escapeHtml(ins.submitter || ins.ohr_id || '\u2014')}</td>` : ''}
+      <td class="sandbox-title-cell">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</td>
       <td>${escapeHtml(cat)}</td>
-      <td>${escapeHtml(ins.proposal_type || '—')}</td>
-      <td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(shortStatus)}</span></td>
+      <td>${escapeHtml(ins.proposal_type || '\u2014')}</td>
+      <td><span class="sandbox-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(shortStatus)}</span></td>
       <td>${date}</td>
     </tr>`;
-  }).join('');
 
+    // Inline detail expansion row
+    if (isExpanded) {
+      html += `<tr class="sandbox-detail-row"><td colspan="${colSpan}" class="sandbox-detail-cell">${sandboxBuildDetailPanel(ins)}</td></tr>`;
+    }
+  });
+
+  tbody.innerHTML = html;
   sandboxRenderPagination();
 }
+
+function sandboxToggleDetail(insightId) {
+  if (SANDBOX_MOD.expandedId === insightId) {
+    SANDBOX_MOD.expandedId = null;
+  } else {
+    SANDBOX_MOD.expandedId = insightId;
+  }
+  sandboxRenderTable();
+}
+
+function sandboxBuildDetailPanel(ins) {
+  const statusColor = sandboxGetStatusColor(ins.status);
+  const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' }) : '\u2014';
+  const cat = ins.category || ins.insight_category || '\u2014';
+
+  // Determine if current user is an agent (show limited review history)
+  const isAgent = typeof currentUser !== 'undefined' && currentUser &&
+    currentUser.actual_role !== 'Manager' &&
+    currentUser.actual_role !== 'Team Lead' &&
+    currentUser.actual_role !== 'Operational SME' &&
+    currentUser.actual_role !== 'Trainer' &&
+    currentUser.actual_role !== 'Content Reviewer' &&
+    currentUser.ohr_id !== '740045023' &&
+    currentUser.ohr_id !== '740044909';
+
+  let html = `<div class="sandbox-detail-panel">`;
+
+  // Section: Insight Details
+  html += `<div class="sandbox-detail-section">
+    <div class="sandbox-detail-section-title">INSIGHT DETAILS</div>
+    <div class="sandbox-detail-grid">
+      <div class="sandbox-detail-field">
+        <div class="sandbox-detail-field-label">Status</div>
+        <div class="sandbox-detail-field-value"><span class="sandbox-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status || '')}</span></div>
+      </div>
+      <div class="sandbox-detail-field">
+        <div class="sandbox-detail-field-label">Submission Date</div>
+        <div class="sandbox-detail-field-value">${date}</div>
+      </div>
+      <div class="sandbox-detail-field">
+        <div class="sandbox-detail-field-label">Category</div>
+        <div class="sandbox-detail-field-value">${escapeHtml(cat)}</div>
+      </div>
+      <div class="sandbox-detail-field">
+        <div class="sandbox-detail-field-label">Proposal Type</div>
+        <div class="sandbox-detail-field-value">${escapeHtml(ins.proposal_type || '\u2014')}</div>
+      </div>
+      <div class="sandbox-detail-field">
+        <div class="sandbox-detail-field-label">Impact</div>
+        <div class="sandbox-detail-field-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</div>
+      </div>
+      <div class="sandbox-detail-field">
+        <div class="sandbox-detail-field-label">Reach</div>
+        <div class="sandbox-detail-field-value">${escapeHtml(ins.reach || '\u2014')}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Section: Title & Content
+  html += `<div class="sandbox-detail-section">
+    <div class="sandbox-detail-section-title">CONTENT</div>
+    <div class="sandbox-detail-grid two-col">
+      <div class="sandbox-detail-field full-width">
+        <div class="sandbox-detail-field-label">Title</div>
+        <div class="sandbox-detail-field-value">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</div>
+      </div>
+      <div class="sandbox-detail-field full-width">
+        <div class="sandbox-detail-field-label">Problem Statement</div>
+        <div class="sandbox-detail-field-value multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</div>
+      </div>
+      <div class="sandbox-detail-field full-width">
+        <div class="sandbox-detail-field-label">Proposed Changes</div>
+        <div class="sandbox-detail-field-value multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Section: Implementation Standards
+  if (ins.implementation_standards) {
+    html += `<div class="sandbox-detail-section">
+      <div class="sandbox-detail-section-title">IMPLEMENTATION</div>
+      <div class="sandbox-detail-grid two-col">
+        <div class="sandbox-detail-field full-width">
+          <div class="sandbox-detail-field-label">Implementation Standards</div>
+          <div class="sandbox-detail-field-value">${escapeHtml(ins.implementation_standards)}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Section: Job IDs (if any)
+  const jobIdEntries = [];
+  for (let i = 1; i <= 10; i++) {
+    if (ins[`job_id_${i}`]) jobIdEntries.push({ num: i, val: ins[`job_id_${i}`] });
+  }
+  if (jobIdEntries.length > 0) {
+    html += `<div class="sandbox-detail-section">
+      <div class="sandbox-detail-section-title">JOB IDS</div>
+      <div class="sandbox-detail-grid">
+        ${jobIdEntries.map(j => `<div class="sandbox-detail-field"><div class="sandbox-detail-field-label">Job ID ${j.num}</div><div class="sandbox-detail-field-value" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;">${escapeHtml(j.val)}</div></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Section: Review History
+  html += `<div class="sandbox-detail-section">
+    <div class="sandbox-detail-section-title">REVIEW HISTORY</div>
+    ${sandboxRenderReviewTrail(ins, isAgent)}
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+// ===== Review Trail (agent-aware: agents see status+comments only, no reviewer names) =====
+
+function sandboxRenderReviewTrail(ins, isAgent) {
+  const entries = [];
+
+  if (ins.initial_reviewer) {
+    entries.push({
+      date: ins.initial_review_date,
+      actor: ins.initial_reviewer,
+      action: ins.status && ins.status.startsWith('Rejected - Initial') ? 'Rejected (Initial Review)' : 'Approved (Initial Review)',
+      comments: ins.initial_review_comments || null
+    });
+  }
+
+  if (ins.final_reviewer) {
+    let action = 'Reviewed (Final)';
+    if (ins.status && ins.status.startsWith('Elevated')) action = 'Approved (Final Review) \u2192 ' + ins.status;
+    else if (ins.status && ins.status.startsWith('Rejected - Final')) action = 'Rejected (Final Review)';
+    else if (ins.status === 'Implemented') action = 'Marked as Implemented';
+
+    entries.push({
+      date: ins.final_review_date || ins.implementation_date,
+      actor: ins.final_reviewer,
+      action: action,
+      comments: ins.final_review_comments || null
+    });
+  }
+
+  if (entries.length === 0) {
+    return '<div class="sandbox-trail-empty">No review activity yet.</div>';
+  }
+
+  let trailHtml = '<div style="border-top:3px solid var(--sandbox-accent);margin-bottom:12px;"></div>';
+  trailHtml += '<div class="sandbox-trail"><div class="sandbox-trail-line"></div>';
+  trailHtml += entries.map(e => {
+    const d = e.date ? new Date(e.date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }) : '';
+    // Agents: show status change + comments only, hide reviewer name
+    const actorDisplay = isAgent ? '' : ` \u2014 <strong style="color:var(--sandbox-text);">${escapeHtml(e.actor)}</strong>`;
+    return `<div class="sandbox-trail-entry">
+      <div class="sandbox-trail-dot"></div>
+      <div class="sandbox-trail-date">${escapeHtml(d)}${actorDisplay}</div>
+      <div class="sandbox-trail-action">${escapeHtml(e.action)}</div>
+      ${e.comments ? `<div class="sandbox-trail-comment">"${escapeHtml(e.comments)}"</div>` : ''}
+    </div>`;
+  }).join('');
+  trailHtml += '</div>';
+  return trailHtml;
+}
+
+// ===== Pagination =====
 
 function sandboxRenderPagination() {
   const el = document.getElementById('sandbox-pagination');
@@ -439,16 +635,21 @@ function sandboxRenderPagination() {
   const end = Math.min(SANDBOX_MOD.page * SANDBOX_MOD.pageSize, total);
 
   el.innerHTML = `
-    <span class="module-page-info">${total > 0 ? `${start}-${end} of ${total}` : '0 records'}</span>
-    <button class="btn btn-ghost btn-xs" ${SANDBOX_MOD.page <= 1 ? 'disabled' : ''} onclick="SANDBOX_MOD.page--;sandboxRenderTable();">&laquo; Prev</button>
-    <span class="module-page-num">Page ${SANDBOX_MOD.page} of ${totalPages}</span>
-    <button class="btn btn-ghost btn-xs" ${SANDBOX_MOD.page >= totalPages ? 'disabled' : ''} onclick="SANDBOX_MOD.page++;sandboxRenderTable();">Next &raquo;</button>
-  `;
+    <span class="sandbox-page-info">${total > 0 ? `${start}\u2013${end} of ${total}` : '0 records'}</span>
+    <div class="sandbox-page-controls">
+      <select class="sandbox-page-size-select" onchange="SANDBOX_MOD.pageSize=+this.value;SANDBOX_MOD.page=1;sandboxRenderTable();">
+        <option value="25" ${SANDBOX_MOD.pageSize===25?'selected':''}>25/page</option>
+        <option value="50" ${SANDBOX_MOD.pageSize===50?'selected':''}>50/page</option>
+        <option value="100" ${SANDBOX_MOD.pageSize===100?'selected':''}>100/page</option>
+      </select>
+      <button class="btn btn-ghost btn-xs" ${SANDBOX_MOD.page <= 1 ? 'disabled' : ''} onclick="SANDBOX_MOD.page--;sandboxRenderTable();">&laquo; Prev</button>
+      <span class="sandbox-page-num">Page ${SANDBOX_MOD.page} / ${totalPages}</span>
+      <button class="btn btn-ghost btn-xs" ${SANDBOX_MOD.page >= totalPages ? 'disabled' : ''} onclick="SANDBOX_MOD.page++;sandboxRenderTable();">Next &raquo;</button>
+    </div>`;
 }
 
-// ===== Review Area: Kanban Board =====
+// ===== Review Area: Kanban Board (Refreshed) =====
 
-// Sandbox kanban pagination state
 if (!SANDBOX_MOD._kanbanPages) SANDBOX_MOD._kanbanPages = {};
 const SANDBOX_KANBAN_PAGE_SIZE = 10;
 
@@ -490,46 +691,45 @@ function sandboxRenderKanban() {
     const start = (page - 1) * SANDBOX_KANBAN_PAGE_SIZE;
     const pageCards = cards.slice(start, start + SANDBOX_KANBAN_PAGE_SIZE);
 
-    html += `
-      <div class="kanban-column">
-        <div class="kanban-column-header">
-          <span class="kanban-column-title">${escapeHtml(col.title)}</span>
-          <span class="kanban-column-count">${cards.length}</span>
-        </div>
-        <div class="kanban-column-body">`;
+    const colClass = `col-${col.id}`;
+
+    html += `<div class="sandbox-kanban-col ${colClass}">
+      <div class="sandbox-kanban-col-header">
+        <span class="sandbox-kanban-col-title">${escapeHtml(col.title)}</span>
+        <span class="sandbox-kanban-col-count">${cards.length}</span>
+      </div>
+      <div class="sandbox-kanban-col-body">`;
 
     if (cards.length === 0) {
-      html += '<div class="kanban-empty">No items</div>';
+      html += '<div class="sandbox-kanban-empty">No items</div>';
     } else {
       pageCards.forEach(ins => {
         const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
-        html += `
-          <div class="kanban-card kanban-card-styled" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','review')">
-            <div class="kanban-card-id-row">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-              <span class="kanban-card-id">${escapeHtml(ins.insight_id || '')}</span>
-            </div>
-            <div class="kanban-card-coachee-row">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <span>${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span>
-            </div>
-            <div class="kanban-card-coachee-row" style="font-size:12px;color:var(--fg-muted);">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-              <span>${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span>
-            </div>
-            <div class="kanban-card-date-row">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <span>${date}</span>
-            </div>
-          </div>`;
+        const statusColor = sandboxGetStatusColor(ins.status);
+        // For Trainer's Area, show the specific elevated status
+        const showSubStatus = col.id === 'trainers-area' && ins.status;
+
+        html += `<div class="sandbox-kanban-card" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','review')">
+          <div class="sandbox-kanban-card-id">${escapeHtml(ins.insight_id || '')}</div>
+          <div class="sandbox-kanban-card-title">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</div>
+          <div class="sandbox-kanban-card-meta">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span>
+          </div>
+          <div class="sandbox-kanban-card-meta">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>${date}</span>
+          </div>
+          ${showSubStatus ? `<div class="sandbox-kanban-card-status" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status.replace('Elevated - ', ''))}</div>` : ''}
+        </div>`;
       });
     }
 
-    // Pagination controls
+    // Pagination
     if (totalPages > 1) {
-      html += `<div class="kanban-pagination" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 0;font-size:12px;">
+      html += `<div class="sandbox-kanban-pagination">
         <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="sandboxKanbanPage('${col.id}',-1)" ${page <= 1 ? 'disabled' : ''}>&laquo; Prev</button>
-        <span style="color:var(--text-secondary);">Page ${page} of ${totalPages}</span>
+        <span>Page ${page} / ${totalPages}</span>
         <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="sandboxKanbanPage('${col.id}',1)" ${page >= totalPages ? 'disabled' : ''}>Next &raquo;</button>
       </div>`;
     }
@@ -540,7 +740,7 @@ function sandboxRenderKanban() {
   board.innerHTML = html;
 }
 
-// ===== Detail View (shared between Input Portal and Review Area) =====
+// ===== Detail View (Review Area — modal overlay, shared with review actions) =====
 
 function sandboxOpenDetail(insightId, context) {
   const ins = SANDBOX_MOD.insights.find(i => i.insight_id === insightId);
@@ -548,19 +748,23 @@ function sandboxOpenDetail(insightId, context) {
   SANDBOX_MOD.editingId = insightId;
   SANDBOX_MOD._context = context || 'input';
 
-  // Use the correct overlay based on context
-  const isReview = (context === 'review');
-  const formTitle = document.getElementById(isReview ? 'sandbox-review-form-title' : 'sandbox-form-title');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
-  const formFooter = document.getElementById(isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer');
-  const overlay = document.getElementById(isReview ? 'sandbox-review-form-overlay' : 'sandbox-form-overlay');
+  // For Input Portal, use inline expansion instead of modal
+  if (context !== 'review') {
+    sandboxToggleDetail(insightId);
+    return;
+  }
 
-  // Title is just the Insight ID
+  // Review Area: use modal overlay
+  const formTitle = document.getElementById('sandbox-review-form-title');
+  const formBody = document.getElementById('sandbox-review-form-body');
+  const formFooter = document.getElementById('sandbox-review-form-footer');
+  const overlay = document.getElementById('sandbox-review-form-overlay');
+
   formTitle.textContent = ins.insight_id;
 
   const statusColor = sandboxGetStatusColor(ins.status);
-  const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—';
-  const cat = ins.category || ins.insight_category || '—';
+  const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '\u2014';
+  const cat = ins.category || ins.insight_category || '\u2014';
 
   let html = `
     <div class="detail-section">
@@ -572,34 +776,28 @@ function sandboxOpenDetail(insightId, context) {
       <div class="detail-row">
         <span class="detail-label">Submission Date</span>
         <span class="detail-value">${date}</span>
-      </div>`;
-
-  // Show Submitter field only in Review Area context
-  if (context === 'review') {
-    html += `<div class="detail-row"><span class="detail-label">Submitter</span><span class="detail-value">${escapeHtml(ins.full_name || ins.submitter || '—')}</span></div>`;
-  }
-
-  html += `
-      <div class="detail-row"><span class="detail-label">Title</span><span class="detail-value">${escapeHtml(ins.title || ins.insight_title || '—')}</span></div>
+      </div>
+      <div class="detail-row"><span class="detail-label">Submitter</span><span class="detail-value">${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span></div>
+      <div class="detail-row"><span class="detail-label">Title</span><span class="detail-value">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span></div>
       <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">${escapeHtml(cat)}</span></div>
-      <div class="detail-row"><span class="detail-label">Proposal Type</span><span class="detail-value">${escapeHtml(ins.proposal_type || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Problem Statement</span><span class="detail-value detail-multiline">${escapeHtml(ins.description || ins.problem_statement || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Proposed Changes</span><span class="detail-value detail-multiline">${escapeHtml(ins.proposed_change || ins.impact || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Impact</span><span class="detail-value">${escapeHtml(ins.impact_level || ins.impact || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Reach</span><span class="detail-value">${escapeHtml(ins.reach || '—')}</span></div>
+      <div class="detail-row"><span class="detail-label">Proposal Type</span><span class="detail-value">${escapeHtml(ins.proposal_type || '\u2014')}</span></div>
+      <div class="detail-row"><span class="detail-label">Problem Statement</span><span class="detail-value detail-multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</span></div>
+      <div class="detail-row"><span class="detail-label">Proposed Changes</span><span class="detail-value detail-multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</span></div>
+      <div class="detail-row"><span class="detail-label">Impact</span><span class="detail-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</span></div>
+      <div class="detail-row"><span class="detail-label">Reach</span><span class="detail-value">${escapeHtml(ins.reach || '\u2014')}</span></div>
     </div>`;
 
-  // Review History as a trail (like Dispute Trail)
+  // Review History (full trail for reviewers)
   html += `<div class="detail-section"><h4 class="detail-section-title">REVIEW HISTORY</h4>`;
-  html += sandboxRenderReviewTrail(ins);
+  html += sandboxRenderReviewTrail(ins, false);
   html += `</div>`;
 
   formBody.innerHTML = html;
 
-  // Footer: no Close button (X exists), show review actions only in Review Area context
+  // Footer: review actions
   let footerHtml = '';
 
-  if (context === 'review' && typeof currentUser !== 'undefined' && currentUser) {
+  if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
     const userPg = currentUser.complete_planning_group || currentUser.planning_group || '';
     const userPgs = userPg.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
@@ -614,10 +812,9 @@ function sandboxOpenDetail(insightId, context) {
 
     if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending Final Review') {
       footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowFinalApprovePopout()">Approve</button>';
-      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')"  >Reject</button>';
+      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')">Reject</button>';
     }
 
-    // Trainer's Area: interchange between 4 elevated statuses + Implemented
     const elevatedStatuses = ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
     if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && elevatedStatuses.includes(ins.status)) {
       footerHtml += '<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="sandboxShowTrainerStatusPopout()">Change Status</button>';
@@ -627,56 +824,6 @@ function sandboxOpenDetail(insightId, context) {
   formFooter.innerHTML = footerHtml;
   formFooter.style.display = footerHtml ? '' : 'none';
   overlay.style.display = 'flex';
-}
-
-function sandboxRenderReviewTrail(ins) {
-  const entries = [];
-
-  if (ins.initial_reviewer) {
-    entries.push({
-      date: ins.initial_review_date,
-      actor: ins.initial_reviewer,
-      action: ins.status && ins.status.startsWith('Rejected - Initial') ? 'Rejected (Initial Review)' : 'Approved (Initial Review)',
-      comments: ins.initial_review_comments || null
-    });
-  }
-
-  if (ins.final_reviewer) {
-    let action = 'Reviewed (Final)';
-    if (ins.status && ins.status.startsWith('Elevated')) action = 'Approved (Final Review) → ' + ins.status;
-    else if (ins.status && ins.status.startsWith('Rejected - Final')) action = 'Rejected (Final Review)';
-    else if (ins.status === 'Implemented') action = 'Marked as Implemented';
-
-    entries.push({
-      date: ins.final_review_date || ins.implementation_date,
-      actor: ins.final_reviewer,
-      action: action,
-      comments: ins.final_review_comments || null
-    });
-  }
-
-  if (entries.length === 0) {
-    return '<div style="color:var(--text-secondary);font-size:13px;padding:8px 0;">No review activity yet.</div>';
-  }
-
-  // Dispute Trail style: header bar + timeline with dots
-  let trailHtml = '<div style="border-top:3px solid var(--accent-primary);margin-bottom:12px;"></div>';
-  trailHtml += '<div style="position:relative;padding-left:24px;">';
-  // Vertical line
-  trailHtml += '<div style="position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border-primary);"></div>';
-  trailHtml += entries.map(e => {
-    const d = e.date ? new Date(e.date).toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }) : '';
-    const attachText = e.attachments ? e.attachments : 'No Attachment';
-    return `<div style="position:relative;padding:8px 0 16px 0;">
-      <div style="position:absolute;left:-20px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--accent-primary);"></div>
-      <div style="font-size:13px;color:var(--text-secondary);">${escapeHtml(d)} — <strong style="color:var(--text-primary);">${escapeHtml(e.actor)}</strong></div>
-      <div style="font-size:13px;color:var(--text-primary);margin-top:4px;">${escapeHtml(e.action)}</div>
-      ${e.comments ? `<div style="font-size:13px;color:var(--text-primary);margin-top:2px;">${escapeHtml(e.comments)}</div>` : ''}
-      <div style="font-size:12px;color:var(--accent-primary);margin-top:2px;">${attachText}</div>
-    </div>`;
-  }).join('');
-  trailHtml += '</div>';
-  return trailHtml;
 }
 
 // ===== Accept Popout (confirmation) =====
@@ -690,11 +837,15 @@ function sandboxShowAcceptPopout(tier) {
   formBody.innerHTML = `
     <div style="padding:24px;text-align:center;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      <h3 style="margin-bottom:8px;">Approve Insight</h3>
-      <p style="color:var(--text-secondary);font-size:14px;">Are you sure you want to approve this insight for ${tierLabel}?</p>
-      <div style="margin-top:20px;display:flex;gap:8px;justify-content:center;">
+      <h3 style="margin-bottom:4px;font-size:16px;">Approve Insight (${tierLabel})</h3>
+      <p style="color:var(--fg-muted);font-size:13px;margin-bottom:16px;">This will move the insight to the next stage.</p>
+      <div style="margin-bottom:12px;text-align:left;">
+        <label style="font-size:12px;font-weight:600;color:var(--fg-muted);">Comments (optional)</label>
+        <textarea class="form-textarea" id="sandbox-accept-comments" rows="3" placeholder="Add review comments..." style="width:100%;margin-top:4px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;">
         <button class="btn btn-outline btn-sm" onclick="sandboxCloseAcceptPopout()">Cancel</button>
-        <button class="btn btn-success btn-sm" onclick="sandboxCloseAcceptPopout();sandboxReview('approve-${tier}')">Save</button>
+        <button class="btn btn-success btn-sm" onclick="sandboxSubmitAccept('${tier}')">Confirm Approval</button>
       </div>
     </div>`;
   const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
@@ -706,42 +857,87 @@ function sandboxCloseAcceptPopout() {
   const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
-    delete formBody._prevHtml;
+    formBody._prevHtml = null;
   }
   const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
   document.getElementById(footerId).style.display = '';
 }
 
-// ===== Final Approve Popout (status choice) =====
+async function sandboxSubmitAccept(tier) {
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const comments = document.getElementById('sandbox-accept-comments')?.value?.trim() || '';
+
+  const updates = { updated_at: new Date().toISOString() };
+
+  if (tier === 'initial') {
+    updates.status = 'Pending Final Review';
+    updates.initial_reviewer = user ? user.full_name : '';
+    updates.initial_review_date = new Date().toISOString();
+    if (comments) updates.initial_review_comments = comments;
+  } else {
+    updates.status = 'Elevated - Task in Progress';
+    updates.final_reviewer = user ? user.full_name : '';
+    updates.final_review_date = new Date().toISOString();
+    if (comments) updates.final_review_comments = comments;
+  }
+
+  try {
+    const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Failed to approve insight');
+
+    showToast('Insight approved', 'success');
+    sandboxCloseForm();
+    await sandboxFetchInsights();
+    sandboxRenderKanban();
+  } catch (e) {
+    console.error('Failed to approve insight:', e);
+    showToast('Failed to approve: ' + e.message, 'error');
+  }
+}
+
+// ===== Final Approve Popout (with elevated status selection) =====
 
 function sandboxShowFinalApprovePopout() {
   const isReview = (SANDBOX_MOD._context === 'review');
   const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
-  const statusChoices = [
-    { value: 'Elevated - Task in Progress', label: 'Elevated - Task in Progress', color: '#8B5CF6' },
-    { value: 'Elevated - POC Rejected', label: 'Elevated - POC Rejected', color: '#EF4444' },
-    { value: 'Elevated - Pending POC Discussion', label: 'Elevated - Pending POC Discussion', color: '#EC4899' },
-    { value: 'Elevated - No POC', label: 'Elevated - No POC', color: '#6B7280' }
+  const choices = [
+    { value: 'Elevated - Task in Progress', label: 'Task in Progress', color: '#8B5CF6' },
+    { value: 'Elevated - POC Rejected', label: 'POC Rejected', color: '#EF4444' },
+    { value: 'Elevated - Pending POC Discussion', label: 'Pending POC Discussion', color: '#EC4899' },
+    { value: 'Elevated - No POC', label: 'No POC', color: '#6B7280' }
   ];
 
   formBody.innerHTML = `
     <div style="padding:16px 20px;">
       <div style="text-align:center;margin-bottom:16px;">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <h3 style="margin-bottom:4px;font-size:16px;">Approve Insight</h3>
-        <p style="color:var(--text-secondary);font-size:13px;">Select the next status for this insight:</p>
+        <h3 style="margin-bottom:4px;font-size:16px;">Approve Insight (Final Review)</h3>
+        <p style="color:var(--fg-muted);font-size:13px;">Select the elevated status for this insight.</p>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        ${statusChoices.map(s => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border-primary);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
-          <input type="radio" name="sandbox-approve-status" value="${escapeAttr(s.value)}" style="accent-color:${s.color};">
-          <span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>${escapeHtml(s.label)}</span>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
+        ${choices.map((c, i) => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-surface-hover)'" onmouseout="this.style.background=''">
+          <input type="radio" name="sandbox-approve-status" value="${c.value}" ${i===0?'checked':''} style="accent-color:${c.color};">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};"></span>
+          ${c.label}
         </label>`).join('')}
       </div>
-      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;color:var(--fg-muted);">Comments (optional)</label>
+        <textarea class="form-textarea" id="sandbox-final-approve-comments" rows="3" placeholder="Add review comments..." style="width:100%;margin-top:4px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-outline btn-sm" onclick="sandboxCloseFinalApprovePopout()">Cancel</button>
-        <button class="btn btn-success btn-sm" onclick="sandboxSubmitFinalApprove()">Save</button>
+        <button class="btn btn-success btn-sm" onclick="sandboxSubmitFinalApprove()">Confirm Approval</button>
       </div>
     </div>`;
   const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
@@ -753,7 +949,7 @@ function sandboxCloseFinalApprovePopout() {
   const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
-    delete formBody._prevHtml;
+    formBody._prevHtml = null;
   }
   const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
   document.getElementById(footerId).style.display = '';
@@ -763,17 +959,19 @@ async function sandboxSubmitFinalApprove() {
   const selected = document.querySelector('input[name="sandbox-approve-status"]:checked');
   if (!selected) { showToast('Please select a status', 'error'); return; }
 
-  const newStatus = selected.value;
   const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
   if (!ins) return;
 
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const comments = document.getElementById('sandbox-final-approve-comments')?.value?.trim() || '';
+
   const updates = {
-    status: newStatus,
+    status: selected.value,
     final_reviewer: user ? user.full_name : '',
     final_review_date: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
+  if (comments) updates.final_review_comments = comments;
 
   try {
     const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
@@ -782,9 +980,9 @@ async function sandboxSubmitFinalApprove() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
-    if (!resp.ok) throw new Error('Failed to update insight');
+    if (!resp.ok) throw new Error('Failed to approve insight');
 
-    showToast(`Insight approved → ${newStatus}`, 'success');
+    showToast('Insight approved (Final)', 'success');
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();
@@ -794,39 +992,42 @@ async function sandboxSubmitFinalApprove() {
   }
 }
 
-// ===== Reject Modal (with aligned reasons) =====
+// ===== Reject Modal =====
 
 function sandboxShowRejectModal(tier) {
-  const reasons = ['Duplicate', 'Insufficient Context/Details', 'Out of Scope', 'Pitched Already'];
-  const prefix = tier === 'initial' ? 'Rejected - Initial Review' : 'Rejected - Final Review';
-
   const isReview = (SANDBOX_MOD._context === 'review');
   const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
+  const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
+  const reasons = tier === 'initial'
+    ? ['Duplicate', 'Insufficient Context/Details', 'Out of Scope', 'Pitched Already']
+    : ['Duplicate', 'Insufficient Context/Details', 'Out of Scope', 'Pitched Already'];
+
   formBody.innerHTML = `
     <div style="padding:16px 20px;">
-      <h4 style="margin-bottom:10px;font-size:15px;">Select Rejection Reason</h4>
-      <div style="display:flex;flex-direction:column;gap:4px;">
-        ${reasons.map(r => `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border-primary);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
-          <input type="radio" name="sandbox-reject-reason" value="${escapeAttr(prefix)} [${escapeAttr(r)}]" style="accent-color:var(--accent-primary);">
-          <span>${escapeHtml(r)}</span>
+      <div style="text-align:center;margin-bottom:16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <h3 style="margin-bottom:4px;font-size:16px;">Reject Insight (${tierLabel})</h3>
+        <p style="color:var(--fg-muted);font-size:13px;">Select a reason for rejection.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">
+        ${reasons.map(r => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-surface-hover)'" onmouseout="this.style.background=''">
+          <input type="radio" name="sandbox-reject-reason" value="${r}" style="accent-color:#EF4444;">
+          ${r}
         </label>`).join('')}
       </div>
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;color:var(--fg-muted);">Comments (optional)</label>
+        <textarea class="form-textarea" id="sandbox-reject-comments" rows="3" placeholder="Add rejection comments..." style="width:100%;margin-top:4px;"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-outline btn-sm" onclick="sandboxCloseRejectModal()">Cancel</button>
-        <button class="btn btn-danger btn-sm" onclick="sandboxSubmitReject()">Save</button>
+        <button class="btn btn-danger btn-sm" onclick="sandboxSubmitReject('${tier}')">Confirm Rejection</button>
       </div>
     </div>`;
   const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
   document.getElementById(footerId).style.display = 'none';
-}
-
-function sandboxSubmitReject() {
-  const selected = document.querySelector('input[name="sandbox-reject-reason"]:checked');
-  if (!selected) { showToast('Please select a rejection reason', 'error'); return; }
-  sandboxCloseRejectModal();
-  sandboxRejectWith(selected.value);
 }
 
 function sandboxCloseRejectModal() {
@@ -834,63 +1035,37 @@ function sandboxCloseRejectModal() {
   const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
-    delete formBody._prevHtml;
+    formBody._prevHtml = null;
   }
   const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
   document.getElementById(footerId).style.display = '';
 }
 
-// ===== Review Actions =====
+async function sandboxSubmitReject(tier) {
+  const selected = document.querySelector('input[name="sandbox-reject-reason"]:checked');
+  if (!selected) { showToast('Please select a rejection reason', 'error'); return; }
 
-async function sandboxReview(action) {
   const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
   if (!ins) return;
 
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const updates = { updated_at: new Date().toISOString() };
+  const reason = selected.value;
+  const comments = document.getElementById('sandbox-reject-comments')?.value?.trim() || '';
+  const prefix = tier === 'initial' ? 'Rejected - Initial Review' : 'Rejected - Final Review';
 
-  if (action === 'approve-initial') {
-    updates.status = 'Pending Final Review';
-    updates.initial_reviewer = user ? user.full_name : '';
-    updates.initial_review_date = new Date().toISOString();
-  }
-
-  try {
-    const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-    if (!resp.ok) throw new Error('Failed to update insight');
-
-    showToast('Insight updated successfully', 'success');
-    sandboxCloseForm();
-    await sandboxFetchInsights();
-    sandboxRenderKanban();
-  } catch (e) {
-    console.error('Failed to update insight:', e);
-    showToast('Failed to update: ' + e.message, 'error');
-  }
-}
-
-async function sandboxRejectWith(statusValue) {
-  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
-  if (!ins) return;
-
-  const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const isFinal = statusValue.startsWith('Rejected - Final');
   const updates = {
-    status: statusValue,
+    status: `${prefix} [${reason}]`,
     updated_at: new Date().toISOString()
   };
 
-  if (isFinal) {
-    updates.final_reviewer = user ? user.full_name : '';
-    updates.final_review_date = new Date().toISOString();
-  } else {
+  if (tier === 'initial') {
     updates.initial_reviewer = user ? user.full_name : '';
     updates.initial_review_date = new Date().toISOString();
+    if (comments) updates.initial_review_comments = comments;
+  } else {
+    updates.final_reviewer = user ? user.full_name : '';
+    updates.final_review_date = new Date().toISOString();
+    if (comments) updates.final_review_comments = comments;
   }
 
   try {
@@ -930,7 +1105,7 @@ function sandboxShowTrainerStatusPopout() {
     { value: 'Implemented', label: 'Implemented', color: '#7C3AED' }
   ];
 
-  // Filter out the current status so the user only sees options they can change to
+  // Filter out the current status
   const choices = allChoices.filter(c => c.value !== ins.status);
 
   formBody.innerHTML = `
@@ -938,10 +1113,10 @@ function sandboxShowTrainerStatusPopout() {
       <div style="text-align:center;margin-bottom:16px;">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
         <h3 style="margin-bottom:4px;font-size:16px;">Change Status</h3>
-        <p style="color:var(--text-secondary);font-size:13px;">Current: <strong>${ins.status}</strong></p>
+        <p style="color:var(--fg-muted);font-size:13px;">Current: <strong>${ins.status}</strong></p>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;">
-        ${choices.map(c => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border-primary);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+        ${choices.map(c => `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-surface-hover)'" onmouseout="this.style.background=''">
           <input type="radio" name="sandbox-trainer-status" value="${c.value}" style="accent-color:${c.color};">
           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};"></span>
           ${c.label}
@@ -995,7 +1170,7 @@ async function sandboxSubmitTrainerStatus() {
     });
     if (!resp.ok) throw new Error('Failed to update insight');
 
-    showToast(`Status changed → ${newStatus}`, 'success');
+    showToast(`Status changed \u2192 ${newStatus}`, 'success');
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();
@@ -1005,20 +1180,18 @@ async function sandboxSubmitTrainerStatus() {
   }
 }
 
-// ===== New Insight Form =====
+// ===== New Insight Form (Inline Expansion Panel) =====
 
 async function sandboxShowNewForm() {
   await sandboxFetchEmployees();
   SANDBOX_MOD.editingId = null;
+  SANDBOX_MOD._inlineFormOpen = true;
 
-  const formTitle = document.getElementById('sandbox-form-title');
-  const formBody = document.getElementById('sandbox-form-body');
-  const formFooter = document.getElementById('sandbox-form-footer');
-  const overlay = document.getElementById('sandbox-form-overlay');
+  const container = document.getElementById('sandbox-inline-form-container');
+  if (!container) return;
 
   const insightId = 'INS-' + Date.now().toString(36).toUpperCase();
   SANDBOX_MOD._pendingInsightId = insightId;
-  formTitle.textContent = insightId;
 
   const IMPL_STANDARDS = [
     'Adult Sexual Solicitation & Sexually Explicit Language',
@@ -1052,80 +1225,94 @@ async function sandboxShowNewForm() {
 
   const implOptions = IMPL_STANDARDS.map(s => `<option value="${s}">${s}</option>`).join('');
 
-  formBody.innerHTML = `
-    <div class="form-section">
-      <div class="form-field">
-        <label class="form-label">Title <span class="required">*</span></label>
-        <input type="text" class="form-input" id="sandbox-new-title" placeholder="Enter a brief, descriptive title for your insight">
+  container.innerHTML = `
+    <div class="sandbox-inline-form">
+      <div class="sandbox-inline-form-header">
+        <div class="sandbox-inline-form-title">New Insight &mdash; ${insightId}</div>
+        <button class="sandbox-inline-form-close" onclick="sandboxCloseInlineForm()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div class="form-field">
-        <label class="form-label">Insight Category <span class="required">*</span></label>
-        <select class="form-select" id="sandbox-new-insight-category">
-          <option value="">— Select Insight Category —</option>
-          <option value="Efficiency">Efficiency</option>
-          <option value="Effectiveness">Effectiveness</option>
-        </select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Proposal Type <span class="required">*</span></label>
-        <select class="form-select" id="sandbox-new-proposal-type" onchange="sandboxOnProposalTypeChange()">
-          <option value="">— Select Proposal Type —</option>
-          <option value="IS Impacting">IS Impacting</option>
-          <option value="Process/Workflow Related">Process/Workflow Related</option>
-          <option value="Tooling">Tooling</option>
-        </select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Implementation Standards <span class="required">*</span></label>
-        <select class="form-select" id="sandbox-new-impl-standards">
-          <option value="">— Select Implementation Standard —</option>
-          ${implOptions}
-        </select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Problem Statement <span class="required">*</span></label>
-        <textarea class="form-textarea" id="sandbox-new-desc" rows="5" placeholder="Describe the problem or opportunity in detail..."></textarea>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Proposed Changes <span class="required">*</span></label>
-        <textarea class="form-textarea" id="sandbox-new-proposed" rows="5" placeholder="Describe your proposed changes..."></textarea>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Impact <span class="required">*</span></label>
-        <select class="form-select" id="sandbox-new-impact">
-          <option value="">— Select Impact Level —</option>
-          <option value="High">High</option>
-          <option value="Medium">Medium</option>
-          <option value="Low">Low</option>
-        </select>
-      </div>
-      <div class="form-field">
-        <label class="form-label">Reach <span class="required">*</span></label>
-        <select class="form-select" id="sandbox-new-reach">
-          <option value="">— Select Reach Level —</option>
-          <option value="High">High</option>
-          <option value="Medium">Medium</option>
-          <option value="Low">Low</option>
-        </select>
-      </div>
-      <div id="sandbox-job-ids-section" style="display:none;">
-        <label class="form-label" style="margin-bottom:8px;">Job IDs <span class="required">*</span> <span style="font-weight:normal;color:var(--fg-muted);font-size:0.8em;">(10 required, must be unique)</span></label>
-        ${Array.from({length:10}, (_,i) => `
-          <div class="form-field" style="margin-bottom:6px;">
-            <input type="text" class="form-input" id="sandbox-new-jobid-${i+1}" placeholder="Job ID ${i+1}">
+      <div class="sandbox-form-grid">
+        <div class="form-field full-width">
+          <label class="form-label">Title <span class="required">*</span></label>
+          <input type="text" class="form-input" id="sandbox-new-title" placeholder="Enter a brief, descriptive title for your insight">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Insight Category <span class="required">*</span></label>
+          <select class="form-select" id="sandbox-new-insight-category">
+            <option value="">\u2014 Select Category \u2014</option>
+            <option value="Efficiency">Efficiency</option>
+            <option value="Effectiveness">Effectiveness</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Proposal Type <span class="required">*</span></label>
+          <select class="form-select" id="sandbox-new-proposal-type" onchange="sandboxOnProposalTypeChange()">
+            <option value="">\u2014 Select Proposal Type \u2014</option>
+            <option value="IS Impacting">IS Impacting</option>
+            <option value="Process/Workflow Related">Process/Workflow Related</option>
+            <option value="Tooling">Tooling</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Implementation Standards <span class="required">*</span></label>
+          <select class="form-select" id="sandbox-new-impl-standards">
+            <option value="">\u2014 Select Standard \u2014</option>
+            ${implOptions}
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Impact <span class="required">*</span></label>
+          <select class="form-select" id="sandbox-new-impact">
+            <option value="">\u2014 Select Impact \u2014</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Reach <span class="required">*</span></label>
+          <select class="form-select" id="sandbox-new-reach">
+            <option value="">\u2014 Select Reach \u2014</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="form-field full-width">
+          <label class="form-label">Problem Statement <span class="required">*</span></label>
+          <textarea class="form-textarea" id="sandbox-new-desc" rows="3" placeholder="Describe the problem or opportunity in detail..."></textarea>
+        </div>
+        <div class="form-field full-width">
+          <label class="form-label">Proposed Changes <span class="required">*</span></label>
+          <textarea class="form-textarea" id="sandbox-new-proposed" rows="3" placeholder="Describe your proposed changes..."></textarea>
+        </div>
+        <div class="form-field full-width" id="sandbox-job-ids-section" style="display:none;">
+          <label class="form-label">Job IDs <span class="required">*</span> <span style="font-weight:normal;color:var(--fg-muted);font-size:0.85em;">(10 required, must be unique)</span></label>
+          <div class="sandbox-jobids-grid">
+            ${Array.from({length:10}, (_,i) => `<input type="text" class="form-input" id="sandbox-new-jobid-${i+1}" placeholder="Job ID ${i+1}">`).join('')}
           </div>
-        `).join('')}
+        </div>
       </div>
-    </div>
-  `;
+      <div class="sandbox-inline-form-footer">
+        <button class="btn btn-outline btn-sm" onclick="sandboxCloseInlineForm()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="sandboxSubmitNew()">Submit Insight</button>
+      </div>
+    </div>`;
 
-  formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="sandboxCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="sandboxSubmitNew()">Submit Insight</button>
-  `;
-  formFooter.style.display = '';
+  container.style.display = 'block';
+  // Focus the title field
+  setTimeout(() => document.getElementById('sandbox-new-title')?.focus(), 100);
+}
 
-  overlay.style.display = 'flex';
+function sandboxCloseInlineForm() {
+  SANDBOX_MOD._inlineFormOpen = false;
+  const container = document.getElementById('sandbox-inline-form-container');
+  if (container) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+  }
 }
 
 function sandboxOnProposalTypeChange() {
@@ -1210,7 +1397,7 @@ async function sandboxSubmitNew() {
     if (!resp.ok) throw new Error('Failed to submit insight');
 
     showToast('Insight submitted successfully', 'success');
-    sandboxCloseForm();
+    sandboxCloseInlineForm();
     await sandboxFetchInsights();
   } catch (e) {
     console.error('Failed to submit insight:', e);
@@ -1219,10 +1406,11 @@ async function sandboxSubmitNew() {
 }
 
 function sandboxCloseForm() {
-  const overlay = document.getElementById('sandbox-form-overlay');
-  if (overlay) overlay.style.display = 'none';
+  // Close the review area modal overlay
   const reviewOverlay = document.getElementById('sandbox-review-form-overlay');
   if (reviewOverlay) reviewOverlay.style.display = 'none';
+  // Close inline form if open
+  sandboxCloseInlineForm();
   SANDBOX_MOD.editingId = null;
 }
 

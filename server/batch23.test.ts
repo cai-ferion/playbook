@@ -213,11 +213,14 @@ describe('Batch 23 — Sandbox Review Flow', () => {
     expect(sandbox).not.toContain("sandboxReview('implement')");
   });
 
-  it('sandboxReview only handles approve-initial (no approve-final or implement)', () => {
-    const fnStart = sandbox.indexOf('async function sandboxReview(');
-    const fnBlock = sandbox.substring(fnStart, fnStart + 500);
-    expect(fnBlock).toContain("action === 'approve-initial'");
-    expect(fnBlock).not.toContain("action === 'approve-final'");
-    expect(fnBlock).not.toContain("action === 'implement'");
+  it('review actions are split into dedicated functions (no monolithic sandboxReview)', () => {
+    // The old monolithic sandboxReview function is replaced by dedicated functions
+    expect(sandbox).not.toContain('async function sandboxReview(');
+    // Dedicated accept/reject/finalApprove functions exist
+    expect(sandbox).toContain('sandboxSubmitAccept');
+    expect(sandbox).toContain('sandboxSubmitFinalApprove');
+    expect(sandbox).toContain('sandboxSubmitReject');
+    // No implement action exists
+    expect(sandbox).not.toContain("sandboxReview('implement')");
   });
 });

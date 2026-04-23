@@ -44,11 +44,11 @@ describe("Batch 17 — Revisions", () => {
 
     it("should render trail with timeline dots", () => {
       expect(sandboxJs).toContain("border-radius:50%");
-      expect(sandboxJs).toContain("border-top:3px solid var(--accent-primary)");
+      expect(sandboxJs).toContain("border-top:3px solid var(--sandbox-accent)");
     });
 
-    it("should show 'No Attachment' text in trail entries", () => {
-      expect(sandboxJs).toContain("No Attachment");
+    it("should show 'No review activity' text when trail is empty", () => {
+      expect(sandboxJs).toContain("No review activity yet");
     });
   });
 

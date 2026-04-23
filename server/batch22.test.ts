@@ -164,9 +164,9 @@ describe('Batch 22 — Sandbox Approve Popout', () => {
     expect(sandbox).toContain('sandbox-approve-status');
   });
 
-  it('old elevate action is removed from sandboxReview', () => {
-    // The elevate action branch should no longer exist
-    const reviewFn = sandbox.substring(sandbox.indexOf('async function sandboxReview('));
-    expect(reviewFn).not.toContain("action === 'elevate'");
+  it('old elevate action is removed from sandbox', () => {
+    // The old sandboxReview function with elevate branch should no longer exist
+    expect(sandbox).not.toContain("action === 'elevate'");
+    expect(sandbox).not.toContain("onclick=\"sandboxReview('elevate')\"");
   });
 });
