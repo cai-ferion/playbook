@@ -254,8 +254,8 @@ function compassApplyFilters() {
     );
   }
 
-  const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
-  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
+  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+  const role = currentUser ? currentUser.actual_role : '';
 
   if (isAdmin740 || role === 'Manager') {
     // Admin + Managers — see ALL coaching logs
@@ -722,8 +722,8 @@ function compassRenderKanban() {
   let qaLogs = COMPASS.logs.filter(l => l.coaching_type === 'QA Feedback');
 
   // ---- Role-based data scoping for Disputes Area ----
-  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
-  const isOwner = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
+  const role = currentUser ? currentUser.actual_role : '';
+  const isOwner = currentUser && currentUser.ohr_id === '740045023';
   const qaMode = COMPASS._disputesQaMode || 'all';
 
   if (isOwner || role === 'Manager') {
@@ -1051,7 +1051,7 @@ async function compassOpenDetail(coachingId) {
       if (supEmployee) isCoachSup = cu.ohr_id === supEmployee.ohr_id;
     }
   }
-  const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (cu && cu.ohr_id === '740045023');
+  const isAdmin = cu && cu.ohr_id === '740045023';
   const canSeeAckDetails = isCoachSup || isAdmin; // Rating & Sentiments visible ONLY to Coach's 1-up Supervisor and admin
   const isAcknowledged = compassIsAcknowledged(log);
 
@@ -1492,7 +1492,7 @@ function _compassBuildInlineDetailHtml(log) {
       if (supEmployee) isCoachSup = cu.ohr_id === supEmployee.ohr_id;
     }
   }
-  const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (cu && cu.ohr_id === '740045023');
+  const isAdmin = cu && cu.ohr_id === '740045023';
   const canSeeAckDetails = isCoachSup || isAdmin;
   const isAcknowledged = compassIsAcknowledged(log);
   const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '\u2014';
@@ -2005,8 +2005,8 @@ function _compassGetAllowedTypes() {
     { id: 'ZTP Coaching', icon: '\u{1F512}', label: 'ZTP Coaching', desc: 'Zero Tolerance Policy infraction', accent: '#DC2626' },
   ];
 
-  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
-  const isOwner = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
+  const role = currentUser ? currentUser.actual_role : '';
+  const isOwner = currentUser && currentUser.ohr_id === '740045023';
   if (isOwner || role === 'Manager') return allTypes;
   if (role === 'Quality & Policy Expert') {
     const qaAllowed = ['QA Feedback', 'ZTP Coaching', 'Follow-Up Session'];
@@ -2503,7 +2503,7 @@ function compassSearchParentLogs() {
 
   // Search through logs where current user is the coach (admin sees all)
   const coach = typeof currentUser !== 'undefined' ? currentUser : null;
-  const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (coach && coach.ohr_id === '740045023');
+  const isAdmin740 = coach && coach.ohr_id === '740045023';
   const myLogs = COMPASS.logs.filter(l => {
     if (!coach) return false;
     if (isAdmin740) return true;
@@ -3085,8 +3085,8 @@ async function initCompass() {
   // Performance: prefetch ZTP + RCA catalogs in background (no await — non-blocking)
   compassPrefetchCatalogs();
 
-  const isAgent = currentUser && (typeof getEffectiveRole === 'function' ? getEffectiveRole() : currentUser.actual_role) === 'Agent' && currentUser.ohr_id !== '740045023';
-  const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
+  const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
+  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
 
   // Initialize dual-table pagination
   COMPASS.pageGiven = 1;
@@ -3109,7 +3109,7 @@ async function initCompass() {
   const exportWrapper = document.getElementById('compass-export-wrapper');
   const exportBtn = document.getElementById('compass-export-btn');
   const exportDropdown = document.getElementById('compass-export-dropdown');
-  const isManager = isAdmin740 || (currentUser && (typeof getEffectiveRole === 'function' ? getEffectiveRole() : currentUser.actual_role) === 'Manager');
+  const isManager = isAdmin740 || (currentUser && currentUser.actual_role === 'Manager');
   if (exportWrapper && exportBtn) {
     if (isAgent) {
       // Agents don't see the export button
@@ -3152,8 +3152,8 @@ async function initCompassDisputes() {
   await compassFetchLogs();
 
   // Show QA toggle only for QA role
-  const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
-  const isOwner = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
+  const role = currentUser ? currentUser.actual_role : '';
+  const isOwner = currentUser && currentUser.ohr_id === '740045023';
   const qaToggle = document.getElementById('disputes-qa-toggle');
   if (qaToggle) {
     qaToggle.style.display = (role === 'Quality & Policy Expert') ? 'inline-flex' : 'none';
@@ -3609,8 +3609,8 @@ async function disputesOpenDetail(coachingId) {
   let footerHtml = '';
 
   if (cu) {
-    const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : cu.actual_role;
-    const isAdmin = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (cu.ohr_id === '740045023');
+    const role = cu.actual_role;
+    const isAdmin = cu.ohr_id === '740045023';
     // Angelo Nieva (QTP Manager) — override access to ALL dispute levels
     const isQTPManager = cu.ohr_id === '740049863';
 

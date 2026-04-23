@@ -2732,3 +2732,17 @@
 - [x] _rolePreviewRefreshModules() triggers Haven/Anchor re-init on toggle
 - [x] Cache versions bumped: maintenance.js v=104, app.js v=125, billing.js v=133, haven.js v=103
 - [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue)
+
+## Remove Role Preview Mechanism (April 2026)
+- [x] Removed role preview system from maintenance.js (ROLE_PREVIEW_MAP, getEffectiveRole, isEffectiveAdmin, setRolePreview, clearRolePreview, _rolePreviewUpdateNav, _rolePreviewRefreshModules)
+- [x] Reverted compass.js — 8 checks back to direct isAdmin740/actual_role
+- [x] Reverted corrective-actions.js — 3 checks back to direct
+- [x] Reverted compass-omnibar.js — 2 checks back to direct
+- [x] Reverted haven.js — 2 checks back to direct
+- [x] Reverted app.js — 3 checks back to direct
+- [x] Reverted billing.js — 2 checks back to direct
+- [x] Removed role preview toggle card from Admin Tools HTML
+- [x] Removed role preview banner from main-content HTML
+- [x] Zero references to role preview remain in /server/public/
+- [x] Cache versions bumped: maintenance.js v=105, compass.js v=116, corrective-actions.js v=12, compass-omnibar.js v=104, haven.js v=104, app.js v=126, billing.js v=134
+- [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue)

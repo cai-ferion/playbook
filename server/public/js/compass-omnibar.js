@@ -464,8 +464,8 @@
     }
 
     // Split into given/received based on current user role
-    const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
-    const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : (currentUser ? currentUser.actual_role : '');
+    const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+    const role = currentUser ? currentUser.actual_role : '';
 
     if (isAdmin740 && COMPASS.viewMode === 'tl') {
       // Admin in TL mode — scope to their team like a Team Lead
@@ -567,7 +567,7 @@
     if (recvUnackCountEl) recvUnackCountEl.textContent = unackRecv.length;
 
     // Hide Given panel for agents
-    const isAgent = role === 'Agent' && !isAdmin740 && !(typeof isEffectiveAdmin === 'function' && isEffectiveAdmin());
+    const isAgent = role === 'Agent' && !isAdmin740;
     const dualTables = document.getElementById('compass-dual-tables');
     if (dualTables) {
       const panels = dualTables.querySelectorAll('.compass-table-panel');
