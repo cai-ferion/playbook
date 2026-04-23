@@ -1052,3 +1052,26 @@ ol.kb-list {
   .ca-inline-detail-panel.open { padding: 0 12px 12px; }
   /* CA responsive handled by shared cdp-* classes in compass-redesign.css */
 }
+
+/* ---- Manual CA Log Button ---- */
+.ca-btn-manual-log {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+.ca-btn-manual-log:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}

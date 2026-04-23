@@ -2832,3 +2832,8 @@
 - [x] Review Area: all other section cards actionable only by Trainers (read-only for others)
 - [x] Input Portal: "All | My Team" toggle for admin (740045023) only
 - [x] Input Portal: pagination at 25 per page
+
+## Corrective Actions Fixes & Manual CA Log (April 24, 2026)
+- [x] Fix: NTE document missing logo — restore logo reference in generated document
+- [x] Fix: Remove "NTE Type" section from UI (table, detail panel, header, history)
+- [x] Feature: Manual CA Log tab beside Document Build Assist — TLs can log NTEs and CAP 1-3 they manually created

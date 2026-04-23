@@ -1,0 +1,13 @@
+Logo file exists at /home/ubuntu/playbook/server/genpact-logo.png (20798 bytes, valid PNG).
+The buildHeader() function in nte-docx-generator.ts reads from path.resolve(__dirname, "genpact-logo.png").
+__dirname is derived from import.meta.url via fileURLToPath.
+
+PROBLEM: When TypeScript is compiled, __dirname resolves to the COMPILED output directory,
+not the source directory. The compiled JS file is likely in a different location (e.g., dist/)
+so the logo file is not found at runtime. The catch block silently returns an empty header.
+
+FIX: The logo path needs to resolve relative to the project root or use an absolute path
+that works in both dev and compiled contexts.
+
+Also need to check: the io-routes.ts imports "./nte-docx-generator.js" — this is a dynamic import.
+The __dirname in the compiled version may not point to server/ where the PNG lives.

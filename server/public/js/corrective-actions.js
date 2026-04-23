@@ -165,7 +165,11 @@ function caRenderFilterBar() {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Policy Reference
     </button>
-    ${canCreate ? `<div style="position:relative;flex-shrink:0;" id="ca-dba-wrapper">
+    ${canCreate ? `<button class="ca-btn-manual-log" onclick="caOpenManualLog()" title="Log an NTE or CAP that was manually created outside Playbook">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Manual CA Log
+    </button>
+    <div style="position:relative;flex-shrink:0;" id="ca-dba-wrapper">
       <button class="ca-btn-create" id="ca-dba-trigger" onclick="caToggleDocBuildMenu()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
         Document Build Assist
@@ -319,7 +323,6 @@ function caRenderTable() {
   let html = `<table class="ca-table">
     <thead><tr>
       <th>Employee</th>
-      <th>NTE Type</th>
       <th>Incident Date</th>
       <th>Status</th>
       <th>CAP Level</th>
@@ -341,7 +344,6 @@ function caRenderTable() {
         <div class="ca-name-cell">${escapeHtml(r.employee_name || '')}</div>
         <div class="ca-ohr-cell">${escapeHtml(r.ohr_id || '')}</div>
       </td>
-      <td>${escapeHtml(r.nte_type || '\u2014')}</td>
       <td>${r.date_of_incident ? caFormatDate(r.date_of_incident) : '\u2014'}</td>
       <td>${agingInfo.dot}<span class="ca-status-badge ${statusClass}">${escapeHtml(r.status)}</span></td>
       <td>${capBadge}</td>
@@ -349,7 +351,7 @@ function caRenderTable() {
       <td style="position:relative;">${servedDisplay}<span class="ca-expand-indicator"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg></span></td>
     </tr>`;
     if (isExpanded) {
-      html += `<tr class="ca-detail-panel-row"><td colspan="7"><div class="ca-inline-detail-panel open" id="ca-inline-detail-${r.id}"><div style="text-align:center;padding:20px;color:var(--compass-text-muted);">Loading...</div></div></td></tr>`;
+      html += `<tr class="ca-detail-panel-row"><td colspan="6"><div class="ca-inline-detail-panel open" id="ca-inline-detail-${r.id}"><div style="text-align:center;padding:20px;color:var(--compass-text-muted);">Loading...</div></div></td></tr>`;
     }
   }
 
@@ -437,7 +439,7 @@ function _caBuildInlineDetailHtml(record, history) {
   html += `<div class="cdp-header-icon" style="background:${statusBg};">${nteIcon}</div>`;
   html += `<div class="cdp-header-info">`;
   html += `<div class="cdp-header-title">${escapeHtml(record.employee_name || 'Employee')}</div>`;
-  html += `<div class="cdp-header-sub">${escapeHtml(record.nte_type || 'NTE')} &middot; ${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'} &middot; ID: ${escapeHtml(String(record.id).slice(0,8))}</div>`;
+  html += `<div class="cdp-header-sub">${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'} &middot; ID: ${escapeHtml(String(record.id).slice(0,8))}</div>`;
   html += `</div>`;
   html += `<div class="cdp-header-actions">`;
   html += `<span class="ca-status-badge ${CA_STATUS_COLORS[record.status] || ''}">${escapeHtml(record.status)}</span>`;
@@ -460,7 +462,6 @@ function _caBuildInlineDetailHtml(record, history) {
   // ===== NTE DETAILS CARD =====
   html += `<div class="cdp-section"><div class="cdp-section-title">Notice to Explain</div>`;
   html += `<div class="cdp-grid">`;
-  html += `<div class="cdp-field"><div class="cdp-field-label">NTE Type</div><div class="cdp-field-value">${escapeHtml(record.nte_type || '\u2014')}</div></div>`;
   html += `<div class="cdp-field"><div class="cdp-field-label">Date of Incident</div><div class="cdp-field-value">${record.date_of_incident ? caFormatDate(record.date_of_incident) : '\u2014'}</div></div>`;
   html += `<div class="cdp-field"><div class="cdp-field-label">Response Deadline</div><div class="cdp-field-value">${record.response_deadline ? caFormatDateTime(record.response_deadline) : '\u2014'}</div></div>`;
   html += `<div class="cdp-field"><div class="cdp-field-label">Served Date</div><div class="cdp-field-value">${record.served_date ? caFormatDateTime(record.served_date) : '\u2014'}</div></div>`;
@@ -522,7 +523,7 @@ function _caBuildInlineDetailHtml(record, history) {
       const itemClass = h.status === 'CAP Issued' ? 'active' : h.status === 'Dismissed' ? 'dismissed' : h.status === 'Expired' ? 'expired' : '';
       html += `<div class="ca-history-item ${itemClass}">`;
       html += `<div class="ca-history-date">${h.served_date ? caFormatDate(h.served_date) : '\u2014'}</div>`;
-      html += `<div class="ca-history-title">${escapeHtml(h.nte_type || 'NTE')} ${h.cap_level ? `\u2192 ${escapeHtml(h.cap_level)}` : ''}</div>`;
+      html += `<div class="ca-history-title">NTE ${h.cap_level ? `\u2192 ${escapeHtml(h.cap_level)}` : ''}</div>`;
       html += `<div class="ca-history-sub">${escapeHtml(h.status)} ${h.cap_expiry_date ? `\u00B7 Expires ${caFormatDate(h.cap_expiry_date)}` : ''}</div>`;
       html += `</div>`;
     }
@@ -2791,4 +2792,332 @@ function caKbBackToList() {
   const articleEl = document.getElementById('ca-kb-article');
   if (listEl) listEl.style.display = '';
   if (articleEl) articleEl.style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MANUAL CA LOG — Log externally-created NTEs and CAPs
+// ═══════════════════════════════════════════════════════════════
+
+var CA_MANUAL_LOG = {
+  employee: null,
+  caType: '',       // 'NTE', 'CAP 1', 'CAP 2', 'CAP 3'
+  status: '',       // 'Served', 'CAP Issued', 'Dismissed', 'Expired'
+  dateOfIncident: '',
+  servedDate: '',
+  description: '',
+  capStartDate: '',
+  capExpiryDate: '',
+  remarks: '',
+  _empSearch: '',
+  _empResults: [],
+};
+
+function caOpenManualLog() {
+  // Close Document Build Assist if open
+  caCollapseInlineAdd();
+
+  var panel = document.getElementById('ca-inline-add');
+  if (!panel) return;
+
+  // Reset state
+  CA_MANUAL_LOG = {
+    employee: null, caType: '', status: 'Served', dateOfIncident: new Date().toISOString().slice(0,10),
+    servedDate: new Date().toISOString().slice(0,10), description: '', capStartDate: '', capExpiryDate: '',
+    remarks: '', _empSearch: '', _empResults: [],
+  };
+
+  panel.style.display = 'block';
+  var typesEl = document.getElementById('ca-inline-add-types');
+  var formPanel = document.getElementById('ca-inline-add-form');
+  if (typesEl) typesEl.style.display = 'none';
+  if (formPanel) formPanel.style.display = 'block';
+
+  _caManualLogRender();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function _caManualLogRender() {
+  var formTitle = document.getElementById('ca-inline-form-title');
+  var formBody = document.getElementById('ca-inline-form-body');
+  var formFooter = document.getElementById('ca-inline-form-footer');
+
+  if (formTitle) formTitle.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+    'Manual CA Log' +
+    '<span style="font-size:11px; color:var(--fg-muted); font-weight:400;">Log an NTE or CAP created outside Playbook</span>' +
+    '</span>';
+
+  if (!formBody || !formFooter) return;
+
+  // Employee display
+  var empDisplay = CA_MANUAL_LOG.employee
+    ? '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+        '<span style="font-weight:600;">' + escapeHtml(CA_MANUAL_LOG.employee.full_name) + '</span>' +
+        '<span style="color:var(--fg-muted);">(' + escapeHtml(CA_MANUAL_LOG.employee.ohr_id) + ')</span>' +
+        '<button onclick="CA_MANUAL_LOG.employee=null;_caManualLogRender();" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#EF4444;font-size:14px;" title="Change">&times;</button>' +
+      '</div>'
+    : '<div style="position:relative;">' +
+        '<input type="text" id="ca-ml-emp-search" placeholder="Search employee by name or OHR..." ' +
+          'value="' + escapeHtml(CA_MANUAL_LOG._empSearch) + '" ' +
+          'oninput="CA_MANUAL_LOG._empSearch=this.value;_caManualLogEmpSearch(this.value);" ' +
+          'autocomplete="off" ' +
+          'style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+        '<div id="ca-ml-emp-results" style="position:absolute;top:100%;left:0;right:0;z-index:100;max-height:180px;overflow-y:auto;background:var(--bg-card,#fff);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);box-shadow:0 4px 12px rgba(0,0,0,0.1);display:' + (CA_MANUAL_LOG._empResults.length > 0 ? 'block' : 'none') + ';">' +
+          CA_MANUAL_LOG._empResults.map(function(e) {
+            return '<div onclick="caManualLogSelectEmp(\'' + e.ohr_id + '\')" style="padding:6px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg-inset)\'" onmouseout="this.style.background=\'transparent\'">' +
+              '<strong>' + escapeHtml(e.full_name) + '</strong> <span style="color:var(--fg-muted);">(' + escapeHtml(e.ohr_id) + ')</span>' +
+              (e.planning_group ? ' <span style="color:var(--fg-muted);font-size:10px;">· ' + escapeHtml(e.planning_group) + '</span>' : '') +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+
+  // CA Type chips
+  var caTypes = [
+    { id: 'NTE', label: 'NTE', color: '#F59E0B' },
+    { id: 'CAP 1', label: 'CAP 1', color: '#3B82F6' },
+    { id: 'CAP 2', label: 'CAP 2', color: '#F97316' },
+    { id: 'CAP 3', label: 'CAP 3', color: '#EF4444' },
+  ];
+  var typeChipsHtml = caTypes.map(function(t) {
+    var isActive = CA_MANUAL_LOG.caType === t.id;
+    return '<button onclick="CA_MANUAL_LOG.caType=\'' + t.id + '\';_caManualLogUpdateStatus();_caManualLogRender();" ' +
+      'style="padding:5px 14px;border-radius:999px;border:2px solid ' + (isActive ? t.color : '#e2e8f0') + ';' +
+      'background:' + (isActive ? t.color + '15' : '#fff') + ';cursor:pointer;font-size:12px;font-weight:600;' +
+      'color:' + (isActive ? t.color : '#475569') + ';transition:all 0.15s;">' + t.label + '</button>';
+  }).join('');
+
+  // Status options depend on CA type
+  var statusOptions = CA_MANUAL_LOG.caType === 'NTE'
+    ? ['Served', 'Dismissed']
+    : ['CAP Issued', 'Expired', 'Dismissed'];
+
+  // CAP-specific fields
+  var capFieldsHtml = '';
+  if (CA_MANUAL_LOG.caType && CA_MANUAL_LOG.caType !== 'NTE') {
+    var activeDays = CA_CAP_ACTIVE_DAYS[CA_MANUAL_LOG.caType] || 60;
+    capFieldsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">' +
+      '<div class="ca-form-group" style="margin-bottom:0;">' +
+        '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CAP Start Date</label>' +
+        '<input type="date" id="ca-ml-cap-start" value="' + (CA_MANUAL_LOG.capStartDate || CA_MANUAL_LOG.servedDate || '') + '" ' +
+          'onchange="CA_MANUAL_LOG.capStartDate=this.value;_caManualLogAutoExpiry();" ' +
+          'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+      '</div>' +
+      '<div class="ca-form-group" style="margin-bottom:0;">' +
+        '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CAP Expiry Date <span style="color:var(--fg-muted);font-weight:400;">(' + activeDays + ' days)</span></label>' +
+        '<input type="date" id="ca-ml-cap-expiry" value="' + (CA_MANUAL_LOG.capExpiryDate || '') + '" ' +
+          'onchange="CA_MANUAL_LOG.capExpiryDate=this.value;" ' +
+          'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+      '</div>' +
+    '</div>';
+  }
+
+  formBody.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">' +
+      // Left column
+      '<div>' +
+        '<div class="ca-form-group">' +
+          '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Employee *</label>' +
+          empDisplay +
+        '</div>' +
+        '<div class="ca-form-group">' +
+          '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CA Type *</label>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + typeChipsHtml + '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+          '<div class="ca-form-group">' +
+            '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Date of Incident *</label>' +
+            '<input type="date" id="ca-ml-incident-date" value="' + (CA_MANUAL_LOG.dateOfIncident || '') + '" ' +
+              'onchange="CA_MANUAL_LOG.dateOfIncident=this.value;" ' +
+              'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+          '</div>' +
+          '<div class="ca-form-group">' +
+            '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Served Date</label>' +
+            '<input type="date" id="ca-ml-served-date" value="' + (CA_MANUAL_LOG.servedDate || '') + '" ' +
+              'onchange="CA_MANUAL_LOG.servedDate=this.value;" ' +
+              'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+          '</div>' +
+        '</div>' +
+        '<div class="ca-form-group">' +
+          '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Status</label>' +
+          '<select id="ca-ml-status" onchange="CA_MANUAL_LOG.status=this.value;" ' +
+            'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
+            statusOptions.map(function(s) { return '<option value="' + s + '"' + (CA_MANUAL_LOG.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+        capFieldsHtml +
+      '</div>' +
+      // Right column
+      '<div>' +
+        '<div class="ca-form-group">' +
+          '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Brief Description / Reason *</label>' +
+          '<textarea id="ca-ml-description" rows="4" placeholder="Brief description of the incident or reason for the corrective action..." ' +
+            'oninput="CA_MANUAL_LOG.description=this.value;" ' +
+            'style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;resize:vertical;min-height:80px;">' + escapeHtml(CA_MANUAL_LOG.description) + '</textarea>' +
+        '</div>' +
+        '<div class="ca-form-group">' +
+          '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Remarks (optional)</label>' +
+          '<textarea id="ca-ml-remarks" rows="3" placeholder="Additional notes, context, or follow-up actions..." ' +
+            'oninput="CA_MANUAL_LOG.remarks=this.value;" ' +
+            'style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;resize:vertical;min-height:60px;">' + escapeHtml(CA_MANUAL_LOG.remarks) + '</textarea>' +
+        '</div>' +
+        '<div style="padding:8px 12px;background:#059669' + '08;border:1px solid #05966920;border-radius:var(--radius);font-size:11px;color:var(--fg-muted);line-height:1.5;">' +
+          '<strong style="color:#059669;">Manual Log</strong> — This records an NTE or CAP that was created and served outside of Playbook. ' +
+          'No document will be generated. The record will appear in the Corrective Actions table for tracking purposes.' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  formFooter.innerHTML =
+    '<button class="btn btn-outline btn-sm" onclick="caCloseManualLog()">Cancel</button>' +
+    '<button class="btn btn-primary btn-sm" id="ca-ml-submit-btn" onclick="caSubmitManualLog()" style="display:flex;align-items:center;gap:6px;background:#059669;border-color:#059669;">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
+      'Save Log Entry' +
+    '</button>';
+}
+
+function _caManualLogUpdateStatus() {
+  // Auto-set status based on CA type
+  if (CA_MANUAL_LOG.caType === 'NTE') {
+    CA_MANUAL_LOG.status = 'Served';
+  } else {
+    CA_MANUAL_LOG.status = 'CAP Issued';
+    // Auto-fill CAP start date from served date
+    if (!CA_MANUAL_LOG.capStartDate && CA_MANUAL_LOG.servedDate) {
+      CA_MANUAL_LOG.capStartDate = CA_MANUAL_LOG.servedDate;
+    }
+    _caManualLogAutoExpiry();
+  }
+}
+
+function _caManualLogAutoExpiry() {
+  if (CA_MANUAL_LOG.caType && CA_MANUAL_LOG.caType !== 'NTE' && CA_MANUAL_LOG.capStartDate) {
+    var activeDays = CA_CAP_ACTIVE_DAYS[CA_MANUAL_LOG.caType] || 60;
+    var start = new Date(CA_MANUAL_LOG.capStartDate);
+    var expiry = new Date(start.getTime() + activeDays * 24 * 60 * 60 * 1000);
+    CA_MANUAL_LOG.capExpiryDate = expiry.toISOString().slice(0, 10);
+  }
+}
+
+var _caManualLogEmpTimer = null;
+function _caManualLogEmpSearch(query) {
+  clearTimeout(_caManualLogEmpTimer);
+  if (!query || query.length < 2) {
+    CA_MANUAL_LOG._empResults = [];
+    _caManualLogRender();
+    return;
+  }
+  _caManualLogEmpTimer = setTimeout(function() {
+    var q = query.toLowerCase();
+    var results = (CA.employees || []).filter(function(e) {
+      return (e.full_name || '').toLowerCase().includes(q) || (e.ohr_id || '').includes(q);
+    }).slice(0, 8);
+    CA_MANUAL_LOG._empResults = results;
+    // Update just the results dropdown without full re-render
+    var resultsEl = document.getElementById('ca-ml-emp-results');
+    if (resultsEl) {
+      resultsEl.style.display = results.length > 0 ? 'block' : 'none';
+      resultsEl.innerHTML = results.map(function(e) {
+        return '<div onclick="caManualLogSelectEmp(\'' + e.ohr_id + '\')" style="padding:6px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg-inset)\'" onmouseout="this.style.background=\'transparent\'">' +
+          '<strong>' + escapeHtml(e.full_name) + '</strong> <span style="color:var(--fg-muted);">(' + escapeHtml(e.ohr_id) + ')</span>' +
+          (e.planning_group ? ' <span style="color:var(--fg-muted);font-size:10px;">· ' + escapeHtml(e.planning_group) + '</span>' : '') +
+        '</div>';
+      }).join('');
+    }
+  }, 150);
+}
+
+function caManualLogSelectEmp(ohrId) {
+  var emp = (CA.employees || []).find(function(e) { return e.ohr_id === ohrId; });
+  if (emp) {
+    CA_MANUAL_LOG.employee = emp;
+    CA_MANUAL_LOG._empSearch = '';
+    CA_MANUAL_LOG._empResults = [];
+    _caManualLogRender();
+  }
+}
+
+function caCloseManualLog() {
+  var panel = document.getElementById('ca-inline-add');
+  var formPanel = document.getElementById('ca-inline-add-form');
+  var typesEl = document.getElementById('ca-inline-add-types');
+  if (panel) panel.style.display = 'none';
+  if (formPanel) formPanel.style.display = 'none';
+  if (typesEl) typesEl.style.display = 'flex';
+  CA_MANUAL_LOG = { employee: null, caType: '', status: '', dateOfIncident: '', servedDate: '', description: '', capStartDate: '', capExpiryDate: '', remarks: '', _empSearch: '', _empResults: [] };
+}
+
+async function caSubmitManualLog() {
+  // Validation
+  if (!CA_MANUAL_LOG.employee) { showToast('Please select an employee', 'error'); return; }
+  if (!CA_MANUAL_LOG.caType) { showToast('Please select a CA type (NTE, CAP 1, CAP 2, or CAP 3)', 'error'); return; }
+  if (!CA_MANUAL_LOG.dateOfIncident) { showToast('Please enter the date of incident', 'error'); return; }
+  if (!CA_MANUAL_LOG.description.trim()) { showToast('Please enter a brief description', 'error'); return; }
+
+  var submitBtn = document.getElementById('ca-ml-submit-btn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-sm"></span> Saving...'; }
+
+  var coach = typeof currentUser !== 'undefined' ? currentUser : null;
+  var emp = CA_MANUAL_LOG.employee;
+
+  try {
+    var payload = {
+      employee_name: emp.full_name,
+      ohr_id: emp.ohr_id,
+      employee_email: emp.meta_email || null,
+      supervisor_name: emp.supervisor_name || (coach ? coach.full_name : ''),
+      supervisor_ohr: emp.supervisor_ohr || (coach ? coach.ohr_id : ''),
+      supervisor_email: emp.supervisor_email || null,
+      planning_group: emp.planning_group || null,
+      actual_role: emp.actual_role || null,
+      nte_type: 'Manual Log',
+      date_of_incident: CA_MANUAL_LOG.dateOfIncident,
+      incident_description: CA_MANUAL_LOG.description.trim() + (CA_MANUAL_LOG.remarks.trim() ? '\n\nRemarks: ' + CA_MANUAL_LOG.remarks.trim() : ''),
+      policy_violated: CA_MANUAL_LOG.caType + ' — Manually logged',
+      indicated_cap_level: CA_MANUAL_LOG.caType === 'NTE' ? '' : CA_MANUAL_LOG.caType,
+      created_by: coach ? coach.full_name : '',
+      created_by_ohr: coach ? coach.ohr_id : '',
+    };
+
+    var resp = await fetch(IO_API_BASE + '/corrective-actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return {}; });
+      throw new Error(errData.error || 'Failed to create record');
+    }
+    var created = await resp.json();
+
+    // If CAP type, immediately update the record with CAP details
+    if (CA_MANUAL_LOG.caType !== 'NTE' && created.id) {
+      var capPatch = {
+        status: CA_MANUAL_LOG.status || 'CAP Issued',
+        cap_level: CA_MANUAL_LOG.caType,
+        cap_decision_date: CA_MANUAL_LOG.servedDate || new Date().toISOString().slice(0, 10),
+        cap_decision_by: coach ? coach.full_name : '',
+        cap_decision_by_ohr: coach ? coach.ohr_id : '',
+        cap_start_date: CA_MANUAL_LOG.capStartDate || CA_MANUAL_LOG.servedDate || new Date().toISOString().slice(0, 10),
+        cap_expiry_date: CA_MANUAL_LOG.capExpiryDate || '',
+        cap_active_days: CA_CAP_ACTIVE_DAYS[CA_MANUAL_LOG.caType] || 60,
+        decision_by_ohr: coach ? coach.ohr_id : '',
+      };
+      await fetch(IO_API_BASE + '/corrective-actions/' + created.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(capPatch)
+      });
+    }
+
+    showToast('Manual CA log entry created successfully!', 'success');
+    caCloseManualLog();
+    await Promise.all([caFetchRecords(), caFetchStats()]);
+    caRenderSummaryCards();
+    caApplyFilters();
+  } catch (err) {
+    console.error('CA Manual Log submission error:', err);
+    showToast('Failed to create log entry: ' + err.message, 'error');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Log Entry'; }
+  }
 }

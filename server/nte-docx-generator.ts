@@ -135,11 +135,23 @@ function emptyLine(): Paragraph {
 
 // ── Build shared header (Genpact logo top-right) ────────────────
 function buildHeader(): Header {
-  const logoPath = path.resolve(__dirname, "genpact-logo.png");
-  let logoBuffer: Buffer;
-  try {
-    logoBuffer = fs.readFileSync(logoPath);
-  } catch {
+  // Try multiple candidate paths — handles both tsx dev (server/) and esbuild prod (dist/)
+  const candidates = [
+    path.resolve(__dirname, "genpact-logo.png"),                   // dev: server/genpact-logo.png
+    path.resolve(__dirname, "..", "server", "genpact-logo.png"),   // prod: dist/../server/genpact-logo.png
+    path.resolve(process.cwd(), "server", "genpact-logo.png"),     // fallback: cwd/server/genpact-logo.png
+  ];
+  let logoBuffer: Buffer | null = null;
+  for (const candidate of candidates) {
+    try {
+      logoBuffer = fs.readFileSync(candidate);
+      break;
+    } catch {
+      // try next candidate
+    }
+  }
+  if (!logoBuffer) {
+    console.warn("[NTE-DOCX] Logo not found at any candidate path:", candidates);
     return new Header({ children: [emptyLine()] });
   }
 
