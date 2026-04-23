@@ -1098,26 +1098,35 @@ body {
   width: 16px;
   height: 16px;
   min-width: 16px;
-  border: none;
-  background: transparent;
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-surface);
   position: relative;
   cursor: pointer;
   margin: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+.multi-coachee-option input[type="checkbox"]:hover {
+  border-color: var(--primary);
+}
+.multi-coachee-option input[type="checkbox"]:checked {
+  border-color: var(--primary);
+  background: var(--primary);
 }
 .multi-coachee-option input[type="checkbox"]::after {
   content: '';
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
 }
 .multi-coachee-option input[type="checkbox"]:checked::after {
   content: '\2713';
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--primary);
+  color: #fff;
   line-height: 1;
 }
 

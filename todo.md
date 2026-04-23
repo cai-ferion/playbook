@@ -2852,3 +2852,6 @@
 - [x] Coaching Profile: Add date field to all coaching type forms, default to today
 - [x] Sandbox Review Area: Replace downward card expansion with right-side detail panel (like Disputes)
 - [x] Sandbox Review Area: Inline action buttons in the right-side detail panel
+
+## Group Coaching Multi-Select Fix (April 24, 2026)
+- [x] Fix: Group Coaching employee selection checkboxes now have visible borders/squares (were invisible due to CSS appearance:none without border)
