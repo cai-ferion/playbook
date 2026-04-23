@@ -219,7 +219,7 @@ describe("Dispute Resolution Notifications in compass.js", () => {
     expect(l6RetainSection).toContain("Retained");
   });
 
-  it("should send dispute_resolved on L2 SME accept", () => {
+  it("should send dispute_resolved on L2 Support accept", () => {
     const l2AcceptSection = compassJs.slice(
       compassJs.indexOf("#5 Notification"),
       compassJs.indexOf("#5 Notification") + 1500
@@ -260,8 +260,8 @@ describe("Cache Version Bumps", () => {
     expect(indexHtml).toContain('notifications.js?v=104');
   });
 
-  it("should have compass.js at v=118", () => {
-    expect(indexHtml).toContain('compass.js?v=118');
+  it("should have compass.js at v=119", () => {
+    expect(indexHtml).toContain('compass.js?v=119');
   });
 
   it("should have corrective-actions.js at v=12", () => {

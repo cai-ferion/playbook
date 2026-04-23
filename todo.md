@@ -2808,3 +2808,6 @@
 ## QA Feedback Status Rename (April 24, 2026)
 - [x] Replace all 'Pending SME Review' with 'Pending Support Review' in QA Feedback coaching logs
 - [x] Rename 'SME Joiner' label to 'Support Joiner 1' in compass-coaching.js detail panel
+- [x] Rename Kanban column title 'LV1 - SME REVIEW' to 'LV1 - SUPPORT REVIEW' (also LV3 and LV5)
+- [x] Audit and rename all 'SME' references in notification/email text to 'Support'
+- [x] Rename 'SME Joiner' form field labels in new coaching log creation form to 'Support Joiner'

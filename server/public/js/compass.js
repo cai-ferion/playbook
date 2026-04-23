@@ -119,11 +119,11 @@ const COMPASS = {
 
   // Kanban columns for QA Feedback dispute flow
   KANBAN_COLUMNS: [
-    { id: 'pending-sme', title: 'LV1 - SME REVIEW', statuses: ['Pending Support Review', ''] },
+    { id: 'pending-sme', title: 'LV1 - SUPPORT REVIEW', statuses: ['Pending Support Review', ''] },
     { id: 'sme-disputed', title: 'LV2 - QA DECISION', statuses: ['Markdown Disputed', 'Markdown Disputed - SME'] },
-    { id: 'qa-decision', title: 'LV3 - SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
+    { id: 'qa-decision', title: 'LV3 - SUPPORT-QA DECISION', statuses: ['Markdown Retained - QA'] },
     { id: 'trainer-review', title: 'LV4 - TRAINER DECISION', statuses: ['QA Decision Rejected', 'QA Decision Rejected - SME'] },
-    { id: 'sme-trainer', title: 'LV5 - SME-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
+    { id: 'sme-trainer', title: 'LV5 - SUPPORT-TRAINER DECISION', statuses: ['Markdown Retained - Trainer'] },
     { id: 'qtp-review', title: 'LV6 - QTP MANAGER DECISION', statuses: ['Trainer Decision Rejected', 'Trainer Decision Rejected - SME'] }
   ],
 
@@ -1149,9 +1149,9 @@ async function compassOpenDetail(coachingId) {
       html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title">Dispute Trail</h4>';
       if (log.dispute_comments) html += `<div class="detail-row"><span class="detail-label">Dispute Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.dispute_comments)}</span></div>`;
       if (log.qa_comments) html += `<div class="detail-row"><span class="detail-label">QA Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.qa_comments)}</span></div>`;
-      if (log.sme_qa_dispute_comments) html += `<div class="detail-row"><span class="detail-label">SME QA Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_qa_dispute_comments)}</span></div>`;
+      if (log.sme_qa_dispute_comments) html += `<div class="detail-row"><span class="detail-label">Support QA Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_qa_dispute_comments)}</span></div>`;
       if (log.trainer_comments) html += `<div class="detail-row"><span class="detail-label">Trainer Comments</span><span class="detail-value detail-multiline">${escapeHtml(log.trainer_comments)}</span></div>`;
-      if (log.sme_trainer_comments) html += `<div class="detail-row"><span class="detail-label">SME Trainer Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_trainer_comments)}</span></div>`;
+      if (log.sme_trainer_comments) html += `<div class="detail-row"><span class="detail-label">Support Trainer Dispute</span><span class="detail-value detail-multiline">${escapeHtml(log.sme_trainer_comments)}</span></div>`;
       if (log.qtp_manager_comments) html += `<div class="detail-row"><span class="detail-label">QTP Manager</span><span class="detail-value detail-multiline">${escapeHtml(log.qtp_manager_comments)}</span></div>`;
       html += '</div>'; // close Dispute Trail section
       // Re-open wrapper for attachments/related
@@ -1607,9 +1607,9 @@ function _compassBuildInlineDetailHtml(log) {
       const disputes = [
         ['Dispute Comments', log.dispute_comments],
         ['QA Comments', log.qa_comments],
-        ['SME QA Dispute', log.sme_qa_dispute_comments],
+        ['Support QA Dispute', log.sme_qa_dispute_comments],
         ['Trainer Comments', log.trainer_comments],
-        ['SME Trainer Dispute', log.sme_trainer_comments],
+        ['Support Trainer Dispute', log.sme_trainer_comments],
         ['QTP Manager', log.qtp_manager_comments]
       ].filter(d => d[1]);
       disputes.forEach(d => {
@@ -2261,7 +2261,7 @@ async function compassShowNewFormInline(preselectedType) {
         <label class="form-label">Support Joiner 1 <span class="required">*</span></label>
         <div class="searchable-select" id="compass-joiner1-wrapper">
           <input type="hidden" id="compass-new-joiner1" value="">
-          <input type="text" class="form-input" id="compass-joiner1-search" placeholder="Search SME or Team Lead..." autocomplete="off" onclick="compassToggleJoinerDropdown(1, true)" oninput="_compassFilterJoiner1Debounced()">
+          <input type="text" class="form-input" id="compass-joiner1-search" placeholder="Search Support or Team Lead..." autocomplete="off" onclick="compassToggleJoinerDropdown(1, true)" oninput="_compassFilterJoiner1Debounced()">
           <div class="searchable-select-dropdown" id="compass-joiner1-dropdown" style="display:none;"></div>
         </div>
       </div>
@@ -2269,7 +2269,7 @@ async function compassShowNewFormInline(preselectedType) {
         <label class="form-label">Support Joiner 2 <span class="required">*</span></label>
         <div class="searchable-select" id="compass-joiner2-wrapper">
           <input type="hidden" id="compass-new-joiner2" value="">
-          <input type="text" class="form-input" id="compass-joiner2-search" placeholder="Search SME or Team Lead..." autocomplete="off" onclick="compassToggleJoinerDropdown(2, true)" oninput="_compassFilterJoiner2Debounced()">
+          <input type="text" class="form-input" id="compass-joiner2-search" placeholder="Search Support or Team Lead..." autocomplete="off" onclick="compassToggleJoinerDropdown(2, true)" oninput="_compassFilterJoiner2Debounced()">
           <div class="searchable-select-dropdown" id="compass-joiner2-dropdown" style="display:none;"></div>
         </div>
       </div>
@@ -3947,7 +3947,7 @@ async function disputesSubmitAcceptMarkdown() {
 
   const update = {
     status: 'Markdown Accepted',
-    dispute_comments: (log.dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown accepted by SME.'
+    dispute_comments: (log.dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Markdown accepted by Support.'
   };
 
   try {
@@ -3963,7 +3963,7 @@ async function disputesSubmitAcceptMarkdown() {
 
     // #5 Notification: L2 accept → notify coachee (markdown accepted, sent for ack)
     const cid = log.coaching_id || log.id;
-    disputeNotify(log, 'dispute_l2_decision', `Your coaching ${cid} was accepted by the SME. Please acknowledge.`, [
+    disputeNotify(log, 'dispute_l2_decision', `Your coaching ${cid} was accepted by Support. Please acknowledge.`, [
       log.coachee_ohr
     ]);
     // Dispute Resolution Summary → notify TL
@@ -3971,7 +3971,7 @@ async function disputesSubmitAcceptMarkdown() {
       const coacheeName = log.coachee || 'Coachee';
       const tlOhr = log.coach_sup ? (appState.employees || []).find(e => e.full_name === log.coach_sup)?.ohr_id : null;
       if (tlOhr) {
-        createNotification({ type: 'dispute_resolved', title: `Dispute Resolved — ${coacheeName}`, message: `Dispute on ${cid} resolved at L2: SME accepted markdown. Sent to coachee for acknowledgement.`, target_ohr: tlOhr, metadata: { coaching_id: cid, outcome: 'Accepted', level: 'L2' } });
+        createNotification({ type: 'dispute_resolved', title: `Dispute Resolved — ${coacheeName}`, message: `Dispute on ${cid} resolved at L2: Support accepted markdown. Sent to coachee for acknowledgement.`, target_ohr: tlOhr, metadata: { coaching_id: cid, outcome: 'Accepted', level: 'L2' } });
       }
     } catch (e) { console.error('[Notif] dispute_resolved error:', e); }
 
@@ -4217,7 +4217,7 @@ async function disputesSubmitRetainMarkdown() {
 
     // #7 Notification: L2 retain → notify coachee + coach (escalated to LV3)
     const cid7 = log.coaching_id || log.id;
-    disputeNotify(log, 'dispute_l3_decision', `Dispute on ${cid7} was retained by the SME. Escalated to LV3.`, [
+    disputeNotify(log, 'dispute_l3_decision', `Dispute on ${cid7} was retained by Support. Escalated to LV3.`, [
       log.coachee_ohr,
       log.coach_ohr
     ]);
@@ -4323,7 +4323,7 @@ async function disputesSubmitQADecisionAccepted() {
 
   const update = {
     status: 'QA Decision Accepted',
-    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] QA decision accepted by SME.'
+    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] QA decision accepted by Support.'
   };
 
   try {
@@ -4339,7 +4339,7 @@ async function disputesSubmitQADecisionAccepted() {
 
     // #8 Notification: L3 QA decision accepted → notify coachee + coach
     const cid8 = log.coaching_id || log.id;
-    disputeNotify(log, 'dispute_l3_decision', `QA decision on ${cid8} was accepted by the SME. Sent for acknowledgement.`, [
+    disputeNotify(log, 'dispute_l3_decision', `QA decision on ${cid8} was accepted by Support. Sent for acknowledgement.`, [
       log.coachee_ohr,
       log.coach_ohr
     ]);
@@ -4450,7 +4450,7 @@ async function disputesSubmitQADecisionRejected() {
 
     showToast('QA decision rejected. Card moved to LV4 — Pending Trainer Decision.', 'success');
 
-    // #9 Notification: L3 QA decision rejected → notify coachee + coach + SME joiner (escalated to LV4)
+    // #9 Notification: L3 QA decision rejected → notify coachee + coach + Support joiner (escalated to LV4)
     const cid9 = log.coaching_id || log.id;
     disputeNotify(log, 'dispute_l4_decision', `QA decision on ${cid9} was rejected. Escalated to LV4 — Pending Trainer Decision.`, [
       log.coachee_ohr,
@@ -4468,7 +4468,7 @@ async function disputesSubmitQADecisionRejected() {
 }
 
 
-// ===== LV5: SME-Trainer Decision — Accept Decision (confirmation → Trainer Decision Accepted) =====
+// ===== LV5: Support-Trainer Decision — Accept Decision (confirmation → Trainer Decision Accepted) =====
 
 function disputesShowLV5AcceptDecision() {
   const { bodyEl, footerEl } = _disputesOpenInlineAction('Accept Decision');
@@ -4496,7 +4496,7 @@ async function disputesSubmitLV5AcceptDecision() {
 
   const update = {
     status: 'Trainer Decision Accepted',
-    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Trainer decision accepted by SME.'
+    sme_qa_dispute_comments: (log.sme_qa_dispute_comments || '') + '\n[' + timestamp + ' — ' + actorName + '] Trainer decision accepted by Support.'
   };
 
   try {
@@ -4510,7 +4510,7 @@ async function disputesSubmitLV5AcceptDecision() {
 
     showToast('Trainer decision accepted.', 'success');
 
-    // #10 Notification: L5 trainer decision accepted → notify coachee + coach + SME joiner + QA
+    // #10 Notification: L5 trainer decision accepted → notify coachee + coach + Support joiner + QA
     const cid10 = log.coaching_id || log.id;
     disputeNotify(log, 'dispute_l5_decision', `Trainer decision on ${cid10} was accepted. Sent for acknowledgement.`, [
       log.coachee_ohr,
@@ -4528,7 +4528,7 @@ async function disputesSubmitLV5AcceptDecision() {
   }
 }
 
-// ===== LV5: SME-Trainer Decision — Reject Decision (popout with Remarks + Attachments → LV6) =====
+// ===== LV5: Support-Trainer Decision — Reject Decision (popout with Remarks + Attachments → LV6) =====
 function disputesShowLV5RejectDecision() {
   const { bodyEl, footerEl } = _disputesOpenInlineAction('Reject Decision');
   bodyEl.innerHTML = `
@@ -4609,7 +4609,7 @@ async function disputesSubmitQADecisionRejected(){
 
     showToast('Trainer decision rejected. Card moved to LV6 — Pending QTP Manager Decision.', 'success');
 
-    // #10b Notification: L5 trainer decision rejected → notify coachee + coach + SME joiner + QA (escalated to LV6)
+    // #10b Notification: L5 trainer decision rejected → notify coachee + coach + Support joiner + QA (escalated to LV6)
     const cid10b = log.coaching_id || log.id;
     disputeNotify(log, 'dispute_l5_decision', `Trainer decision on ${cid10b} was rejected. Escalated to LV6 — Pending QTP Manager Decision.`, [
       log.coachee_ohr,
@@ -4718,9 +4718,9 @@ async function disputesSubmitLV4RetainMarkdown() {
 
     showToast('Markdown retained by Trainer. Card moved to LV5.', 'success');
 
-    // #9b Notification: L4 trainer retains → notify coachee + coach + SME joiner (escalated to LV5)
+    // #9b Notification: L4 trainer retains → notify coachee + coach + Support joiner (escalated to LV5)
     const cid9b = log.coaching_id || log.id;
-    disputeNotify(log, 'dispute_l4_decision', `Trainer retained markdown on ${cid9b}. Escalated to LV5 — Pending SME-Trainer Decision.`, [
+    disputeNotify(log, 'dispute_l4_decision', `Trainer retained markdown on ${cid9b}. Escalated to LV5 — Pending Support-Trainer Decision.`, [
       log.coachee_ohr,
       log.coach_ohr,
       resolveOhr(log.sme_joiner)
@@ -4777,7 +4777,7 @@ async function disputesSubmitLV4ReverseMarkdown() {
 
     showToast('Markdown reversed by Trainer.', 'success');
 
-    // #9c Notification: L4 trainer reverses → notify coachee + coach + SME joiner
+    // #9c Notification: L4 trainer reverses → notify coachee + coach + Support joiner
     const cid9c = log.coaching_id || log.id;
     disputeNotify(log, 'dispute_l4_decision', `Trainer reversed markdown on ${cid9c}. Sent for acknowledgement.`, [
       log.coachee_ohr,
@@ -5342,7 +5342,7 @@ var _compassFilterJoiner1Debounced = _compassDebounce(function() { compassFilter
 var _compassFilterJoiner2Debounced = _compassDebounce(function() { compassFilterJoinerDropdown(2); }, 120);
 
 function compassGetJoinerEligible() {
-  // SMEs and Team Leads only
+  // Support (Operational SME) and Team Leads only
   return COMPASS.employees.filter(e => {
     const role = (e.actual_role || '').toLowerCase();
     return role === 'operational sme' || role === 'team lead';
@@ -5396,7 +5396,7 @@ function compassFilterJoinerDropdown(num) {
   }
 
   if (limited.length === 0 && !html) {
-    dropdown.innerHTML = '<div style="padding:8px 10px; font-size:12px; color:var(--fg-muted);">No matching SMEs or Team Leads found</div>';
+    dropdown.innerHTML = '<div style="padding:8px 10px; font-size:12px; color:var(--fg-muted);">No matching Support or Team Leads found</div>';
   } else {
     html += limited.map(e => {
       const display = `${e.full_name || 'Unknown'} (${e.ohr_id || ''}) \u2014 ${e.actual_role || ''}`;

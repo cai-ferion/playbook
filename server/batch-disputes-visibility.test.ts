@@ -6,20 +6,20 @@ const compassJs = readFileSync(join(__dirname, 'public', 'js', 'compass.js'), 'u
 const ioRoutesTs = readFileSync(join(__dirname, 'io-routes.ts'), 'utf-8');
 
 describe('Disputes Area — Renamed Kanban Columns', () => {
-  it('LV1 renamed to SME REVIEW (no PENDING prefix)', () => {
-    expect(compassJs).toContain("title: 'LV1 - SME REVIEW'");
+  it('LV1 renamed to SUPPORT REVIEW', () => {
+    expect(compassJs).toContain("title: 'LV1 - SUPPORT REVIEW'");
   });
   it('LV2 renamed to QA DECISION', () => {
     expect(compassJs).toContain("title: 'LV2 - QA DECISION'");
   });
-  it('LV3 renamed to SME-QA DECISION', () => {
-    expect(compassJs).toContain("title: 'LV3 - SME-QA DECISION'");
+  it('LV3 renamed to SUPPORT-QA DECISION', () => {
+    expect(compassJs).toContain("title: 'LV3 - SUPPORT-QA DECISION'");
   });
   it('LV4 renamed to TRAINER DECISION', () => {
     expect(compassJs).toContain("title: 'LV4 - TRAINER DECISION'");
   });
-  it('LV5 renamed to SME-TRAINER DECISION', () => {
-    expect(compassJs).toContain("title: 'LV5 - SME-TRAINER DECISION'");
+  it('LV5 renamed to SUPPORT-TRAINER DECISION', () => {
+    expect(compassJs).toContain("title: 'LV5 - SUPPORT-TRAINER DECISION'");
   });
   it('LV6 renamed to QTP MANAGER DECISION', () => {
     expect(compassJs).toContain("title: 'LV6 - QTP MANAGER DECISION'");
