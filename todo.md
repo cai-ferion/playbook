@@ -2746,3 +2746,28 @@
 - [x] Zero references to role preview remain in /server/public/
 - [x] Cache versions bumped: maintenance.js v=105, compass.js v=116, corrective-actions.js v=12, compass-omnibar.js v=104, haven.js v=104, app.js v=126, billing.js v=134
 - [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue)
+
+## Comprehensive Agent View + Coaching Types + Regimen Overhaul (April 2026)
+
+### Database
+- [x] Converged 14 "Content Reviewer" actual_role values to "Agent" in io_employees
+
+### Coaching Profile
+- [x] Removed KPI stats strip for all users (compassRenderStatsStrip now hides element)
+- [x] Hidden "Coaching Given" table for agents (isAgent check in compassApplyFilters)
+- [x] Hidden "Add" button for agents (isAgent check hides compass-add-btn)
+- [x] QA coaching types: QA Feedback, Incident Report, ZTP Coaching only (qaAllowed)
+- [x] SME coaching types: all except QA Feedback, ZTP Coaching, Triad Coaching (smeExcluded)
+- [x] Team Lead coaching types: all except QA Feedback, ZTP Coaching (tlExcluded)
+- [x] Manager + Admin: all coaching types
+- [x] Trainer coaching types: all except QA Feedback, Triad Coaching (trainerExcluded)
+
+### Regimen
+- [x] OHR column hidden for roles other than Operational SME, Team Lead, Manager, and admin
+- [x] DOB added to date filter line as date range picker (dob_from, dob_to)
+- [x] Removed 12 filters: personal_email, primary_address, supervisor_email, workday_id, meta_email, macbook_asset, chromebook_asset, badge_id, srt_id, badge_serial, locker_floor, locker_number
+- [x] Fixed "Related PG" filter to map to complete_planning_group column
+- [x] Table columns slimmed to: OHR ID, Full Name, Employment Status, Supervisor, Role, Planning Group (via getTableColumns)
+- [x] Replaced modal with inline expansion (rosterToggleInlineDetail) with grouped detail fields, edit/save, and inline audit trail
+- [x] Cache versions bumped: compass.js v=117, roster.js v=104
+- [x] 761 tests passing (2 supabase-sync failures are pre-existing infra issue)

@@ -256,6 +256,7 @@ function compassApplyFilters() {
 
   const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
   const role = currentUser ? currentUser.actual_role : '';
+  const isAgent = currentUser && role === 'Agent' && !isAdmin740;
 
   if (isAdmin740 || role === 'Manager') {
     // Admin + Managers — see ALL coaching logs
@@ -455,9 +456,11 @@ function compassGoalBadge(goalText) {
 // ===== Input Portal: Stats =====
 
 function compassRenderStats() {
-  // Try new stats strip first, fall back to legacy element
+  // KPI cards removed per user request — hide the element
   const el = document.getElementById('compass-stats-strip') || document.getElementById('compass-stats');
   if (!el) return;
+  el.style.display = 'none';
+  return;
   const total = COMPASS.filtered.length;
   const pending = COMPASS.filtered.filter(l => l.status === 'Pending Acknowledgement').length;
   const acked = COMPASS.filtered.filter(l => l.status === 'Acknowledged').length;
@@ -2008,15 +2011,27 @@ function _compassGetAllowedTypes() {
   const role = currentUser ? currentUser.actual_role : '';
   const isOwner = currentUser && currentUser.ohr_id === '740045023';
   if (isOwner || role === 'Manager') return allTypes;
+  // QAs: QA Feedback, Incident Reporting, ZTP Coaching only
   if (role === 'Quality & Policy Expert') {
-    const qaAllowed = ['QA Feedback', 'ZTP Coaching', 'Follow-Up Session'];
+    const qaAllowed = ['QA Feedback', 'Incident Report', 'ZTP Coaching'];
     return allTypes.filter(t => qaAllowed.includes(t.id));
   }
+  // SMEs: all except QA Feedback, ZTP Coaching, Triad Coaching
   if (role === 'Operational SME') {
-    const smeExcluded = ['QA Feedback', 'Triad Coaching'];
+    const smeExcluded = ['QA Feedback', 'ZTP Coaching', 'Triad Coaching'];
     return allTypes.filter(t => !smeExcluded.includes(t.id));
   }
-  if (role === 'Team Lead') return allTypes.filter(t => t.id !== 'QA Feedback');
+  // Team Leads: all except QA Feedback, ZTP Coaching
+  if (role === 'Team Lead') {
+    const tlExcluded = ['QA Feedback', 'ZTP Coaching'];
+    return allTypes.filter(t => !tlExcluded.includes(t.id));
+  }
+  // Trainers: all except QA Feedback, Triad Coaching
+  if (role === 'Trainer') {
+    const trainerExcluded = ['QA Feedback', 'Triad Coaching'];
+    return allTypes.filter(t => !trainerExcluded.includes(t.id));
+  }
+  // Fallback (Agent or unknown) — should not reach here since Add is hidden for agents
   return allTypes.filter(t => t.id !== 'QA Feedback');
 }
 

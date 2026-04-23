@@ -139,16 +139,30 @@ describe("Inline Add Panel JavaScript Functions", () => {
 
   it("should apply role-based restrictions for QA", () => {
     const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
-    const fnBlock = compassJs.slice(fnStart, fnStart + 2000);
+    const fnBlock = compassJs.slice(fnStart, fnStart + 3000);
     expect(fnBlock).toContain("Quality & Policy Expert");
     expect(fnBlock).toContain("qaAllowed");
   });
 
   it("should apply role-based restrictions for SME", () => {
     const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
-    const fnBlock = compassJs.slice(fnStart, fnStart + 2000);
+    const fnBlock = compassJs.slice(fnStart, fnStart + 3000);
     expect(fnBlock).toContain("Operational SME");
     expect(fnBlock).toContain("smeExcluded");
+  });
+
+  it("should apply role-based restrictions for Trainer", () => {
+    const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
+    const fnBlock = compassJs.slice(fnStart, fnStart + 3000);
+    expect(fnBlock).toContain("Trainer");
+    expect(fnBlock).toContain("trainerExcluded");
+  });
+
+  it("should apply role-based restrictions for TL", () => {
+    const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
+    const fnBlock = compassJs.slice(fnStart, fnStart + 3000);
+    expect(fnBlock).toContain("Team Lead");
+    expect(fnBlock).toContain("tlExcluded");
   });
 });
 
@@ -217,8 +231,8 @@ describe("Inline Add Panel CSS", () => {
 // 4. Cache Version Bumps
 // ═══════════════════════════════════════════════════════════════════════
 describe("Inline Panel Cache Versions", () => {
-  it("should have compass.js at v=116", () => {
-    expect(indexHtml).toContain("compass.js?v=116");
+  it("should have compass.js at v=117", () => {
+    expect(indexHtml).toContain("compass.js?v=117");
   });
 
   it("should have compass-redesign.css at v=110", () => {

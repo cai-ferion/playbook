@@ -21,7 +21,7 @@ const ALL_COLUMNS = [
   { key: 'suffix', label: 'Suffix', group: 'identity' },
   { key: 'billing_name', label: 'Billing Name', group: 'identity' },
   { key: 'srt_name', label: 'SRT Name', group: 'identity' },
-  { key: 'dob', label: 'DOB', group: 'identity' },
+  { key: 'dob', label: 'DOB', group: 'dates', isDate: true },
   { key: 'personal_email', label: 'Personal Email', group: 'identity' },
   { key: 'contact_number', label: 'Contact Number', group: 'identity' },
   { key: 'primary_address', label: 'Primary Address', group: 'identity' },
@@ -35,7 +35,7 @@ const ALL_COLUMNS = [
   { key: 'shift_time', label: 'Shift Time', group: 'role' },
   { key: 'work_off', label: 'Work Off', group: 'role' },
   { key: 'planning_group', label: 'Planning Group', group: 'role' },
-  { key: 'related_planning_group', label: 'Related PG', group: 'role' },
+  { key: 'complete_planning_group', label: 'Related PG', group: 'role' },
   { key: 'srt_status', label: 'SRT Status', group: 'role' },
   { key: 'platform', label: 'Platform', group: 'role' },
   { key: 'srt_id', label: 'SRT ID', group: 'system' },
@@ -64,9 +64,9 @@ const ALL_COLUMNS = [
 const LIMITED_COLUMNS = [
   'ohr_id','full_name','last_name','given_name','middle_name','suffix',
   'employement_status','actual_role','supervisor_name','shift_time','work_off',
-  'planning_group','related_planning_group','srt_status','platform',
+  'planning_group','complete_planning_group','srt_status','platform',
   'srt_id','workday_id','meta_email','hire_date','regular_date',
-  'meta_onboarding_date','go_live_date','department'
+  'meta_onboarding_date','go_live_date','department','dob'
 ];
 
 // Date columns for date-range filter type
@@ -89,7 +89,20 @@ const ROSTER = {
   getVisibleColumns() {
     const base = this.tier === 'full' ? ALL_COLUMNS : ALL_COLUMNS.filter(c => LIMITED_COLUMNS.includes(c.key));
     // Filter out ownerOnly columns for non-owner users
-    return base.filter(c => !c.ownerOnly || this.isOwner);
+    let cols = base.filter(c => !c.ownerOnly || this.isOwner);
+    // OHR visibility: only SMEs, Team Leads, Managers, and admin can see OHR ID
+    const ohrAllowedRoles = ['Operational SME', 'Team Lead', 'Manager'];
+    const userRole = (typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role) || '';
+    const isAdmin = (typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023');
+    if (!isAdmin && !ohrAllowedRoles.includes(userRole)) {
+      cols = cols.filter(c => c.key !== 'ohr_id');
+    }
+    return cols;
+  },
+  // Slim table columns — only these show in the main table; details are inline
+  getTableColumns() {
+    const allowed = ['ohr_id', 'full_name', 'employement_status', 'supervisor_name', 'actual_role', 'planning_group'];
+    return this.getVisibleColumns().filter(c => allowed.includes(c.key));
   }
 };
 
@@ -98,12 +111,20 @@ const ROSTER = {
 // Name columns replaced by a single Full Name filter pill
 const REPLACED_NAME_KEYS = new Set(['last_name', 'given_name', 'middle_name', 'suffix', 'billing_name', 'srt_name']);
 
+// Filters to exclude from the filter bar per user request
+const EXCLUDED_FILTER_KEYS = new Set([
+  'personal_email', 'primary_address', 'supervisor_email',
+  'workday_id', 'meta_email', 'macbook_asset', 'chromebook_asset',
+  'badge_id', 'srt_id', 'badge_serial', 'locker_floor', 'locker_number'
+]);
+
 function buildFilterFields() {
   const fields = [];
   const visibleCols = ROSTER.getVisibleColumns();
   let fullNameAdded = false;
   visibleCols.forEach(col => {
     if (col.key === 'ohr_id') return; // handled by search
+    if (EXCLUDED_FILTER_KEYS.has(col.key)) return; // removed filters
     // Collapse the 6 name columns into a single Full Name filter
     if (REPLACED_NAME_KEYS.has(col.key)) {
       if (!fullNameAdded) {
@@ -539,12 +560,13 @@ function rosterRenderTable() {
   const tbody = document.getElementById('roster-table-body');
   if (!thead || !tbody) return;
 
-  const cols = ROSTER.getVisibleColumns();
+  // Use slim table columns for the main table
+  const cols = ROSTER.getTableColumns();
   const data = ROSTER.filtered;
 
   // Header
   thead.innerHTML = '<tr>' + cols.map(c =>
-    '<th style="white-space:nowrap;cursor:pointer;" onclick="rosterSetSort(\'' + c.key + '\', ROSTER.sortKey===\'' + c.key + '\'&&ROSTER.sortDir===\'asc\'?\'desc\':\'asc\')">'
+    '<th style="white-space:nowrap;cursor:pointer;" onclick="rosterSetSort(\'' + c.key + '\', ROSTER.sortKey===\'' + c.key + '\'&&ROSTER.sortDir===\'asc\'?\'desc\':\'asc\')">' 
     + escapeHtml(c.label)
     + (ROSTER.sortKey === c.key ? (ROSTER.sortDir === 'asc' ? ' ↑' : ' ↓') : '')
     + '</th>'
@@ -562,16 +584,22 @@ function rosterRenderTable() {
 
   tbody.innerHTML = pageData.map(emp => {
     const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
-    return '<tr class="module-row" onclick="rosterOpenDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
+    const rowId = 'roster-row-' + emp.ohr_id;
+    const detailId = 'roster-detail-' + emp.ohr_id;
+    return '<tr class="module-row" id="' + rowId + '" onclick="rosterToggleInlineDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
       + cols.map(c => {
         let val = emp[c.key];
         if (c.key === 'srt_id') val = formatSrtId(val);
         if (c.key === 'employement_status') {
           return '<td><span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(val || '') + '</span></td>';
         }
+        if (c.key === 'full_name') {
+          return '<td style="white-space:nowrap;"><span class="roster-expand-indicator" id="roster-expand-' + emp.ohr_id + '" style="display:inline-block;width:14px;font-size:10px;color:var(--fg-muted);transition:transform 0.2s;">▶</span> ' + escapeHtml(val || '') + '</td>';
+        }
         return '<td style="white-space:nowrap;">' + escapeHtml(val != null ? val : '') + '</td>';
       }).join('')
-      + '</tr>';
+      + '</tr>'
+      + '<tr id="' + detailId + '" style="display:none;"><td colspan="' + cols.length + '" style="padding:0;border-top:none;"></td></tr>';
   }).join('');
 
   rosterRenderPagination();
@@ -592,6 +620,189 @@ function rosterRenderPagination() {
 }
 
 // ===== Detail Panel with Inline Audit Trail =====
+// ===== Inline Detail Expansion =====
+window.rosterToggleInlineDetail = function(ohrId) {
+  const detailRow = document.getElementById('roster-detail-' + ohrId);
+  const indicator = document.getElementById('roster-expand-' + ohrId);
+  if (!detailRow) return;
+
+  // If already open, close it
+  if (detailRow.style.display !== 'none') {
+    detailRow.style.display = 'none';
+    if (indicator) indicator.style.transform = 'rotate(0deg)';
+    return;
+  }
+
+  // Close any other open detail rows
+  document.querySelectorAll('tr[id^="roster-detail-"]').forEach(r => {
+    if (r.id !== detailRow.id) r.style.display = 'none';
+  });
+  document.querySelectorAll('.roster-expand-indicator').forEach(i => {
+    i.style.transform = 'rotate(0deg)';
+  });
+
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  if (!emp) return;
+
+  const cols = ROSTER.getVisibleColumns();
+  // Exclude the slim table columns from the detail (they're already visible)
+  const tableKeys = new Set(ROSTER.getTableColumns().map(c => c.key));
+  const detailCols = cols.filter(c => !tableKeys.has(c.key));
+
+  const groups = [
+    { label: 'Identity', keys: detailCols.filter(c => c.group === 'identity') },
+    { label: 'Role & Assignment', keys: detailCols.filter(c => c.group === 'role') },
+    { label: 'System IDs', keys: detailCols.filter(c => c.group === 'system') },
+    { label: 'Assets & Logistics', keys: detailCols.filter(c => c.group === 'asset') },
+    { label: 'Dates', keys: detailCols.filter(c => c.group === 'dates') },
+    { label: 'Attrition', keys: detailCols.filter(c => c.group === 'attrition') }
+  ];
+
+  let html = '<div style="background:var(--bg-raised);padding:16px 20px;border:1px solid var(--border);border-radius:0 0 8px 8px;">';
+
+  if (ROSTER.canEdit) {
+    // Editable form
+    groups.forEach(g => {
+      if (g.keys.length === 0) return;
+      html += '<div style="margin-bottom:12px;">';
+      html += '<div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:3px;">' + g.label + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 12px;">';
+      g.keys.forEach(c => {
+        const val = emp[c.key] != null ? emp[c.key] : '';
+        const privilegedOhrs = ['740045023', '740044909'];
+        const currentOhr = window._currentUser?.ohr_id || '';
+        const isReadOnly = (c.key === 'ohr_id' || c.key === 'full_name') && !privilegedOhrs.includes(currentOhr);
+        html += '<div>'
+          + '<label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:1px;">' + escapeHtml(c.label) + '</label>'
+          + '<input type="text" class="form-input form-input-sm" data-field="' + c.key + '" data-ohr="' + escapeAttr(ohrId) + '" value="' + escapeAttr(val) + '"'
+          + (isReadOnly ? ' readonly style="opacity:0.6;font-size:12px;"' : ' style="font-size:12px;"')
+          + '></div>';
+      });
+      html += '</div></div>';
+    });
+    html += '<div style="display:flex;gap:8px;margin-top:8px;">'
+      + '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();rosterSaveInlineDetail(\'' + escapeAttr(ohrId) + '\');">Save Changes</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();rosterToggleInlineDetail(\'' + escapeAttr(ohrId) + '\');">Cancel</button>'
+      + '</div>';
+  } else {
+    // Read-only view
+    groups.forEach(g => {
+      if (g.keys.length === 0) return;
+      html += '<div style="margin-bottom:12px;">';
+      html += '<div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:3px;">' + g.label + '</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 12px;">';
+      g.keys.forEach(c => {
+        let val = emp[c.key];
+        if (c.key === 'srt_id') val = formatSrtId(val);
+        html += '<div style="display:flex;gap:6px;padding:3px 0;">'
+          + '<span style="font-size:10px;font-weight:600;color:var(--fg-muted);min-width:100px;">' + escapeHtml(c.label) + '</span>'
+          + '<span style="font-size:11px;color:var(--fg);">' + escapeHtml(val != null ? val : '\u2014') + '</span>'
+          + '</div>';
+      });
+      html += '</div></div>';
+    });
+  }
+
+  // Audit trail section
+  html += '<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px;">'
+    + '<div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Audit Trail</div>'
+    + '<div id="roster-inline-audit-' + ohrId + '" style="font-size:11px;color:var(--fg-muted);">Loading audit trail...</div>'
+    + '</div>';
+
+  html += '</div>';
+
+  const td = detailRow.querySelector('td');
+  if (td) td.innerHTML = html;
+  detailRow.style.display = '';
+  if (indicator) indicator.style.transform = 'rotate(90deg)';
+
+  // Load audit trail
+  rosterLoadInlineAuditTrailFor(ohrId);
+};
+
+// Save from inline detail
+window.rosterSaveInlineDetail = async function(ohrId) {
+  const inputs = document.querySelectorAll('input[data-ohr="' + ohrId + '"][data-field]');
+  const updates = {};
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  inputs.forEach(input => {
+    const field = input.getAttribute('data-field');
+    if (field === 'ohr_id' || field === 'full_name') return;
+    const newVal = input.value.trim();
+    const oldVal = emp[field] != null ? String(emp[field]).trim() : '';
+    if (newVal !== oldVal) updates[field] = newVal;
+  });
+  if (Object.keys(updates).length === 0) {
+    showToast('No changes to save', 'info');
+    return;
+  }
+  try {
+    updates._actor_ohr = currentUser ? currentUser.ohr_id : '';
+    updates._actor_name = currentUser ? currentUser.full_name : '';
+    const resp = await fetch('/api/io/employees/' + encodeURIComponent(ohrId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Save failed');
+    showToast('Employee updated successfully', 'success');
+    // Close inline detail and refresh
+    const detailRow = document.getElementById('roster-detail-' + ohrId);
+    if (detailRow) detailRow.style.display = 'none';
+    await rosterFetchEmployees();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+};
+
+async function rosterLoadInlineAuditTrailFor(ohrId) {
+  const body = document.getElementById('roster-inline-audit-' + ohrId);
+  if (!body) return;
+  try {
+    const resp = await fetch('/api/io/audit-log?record_type=employee&record_id=' + encodeURIComponent(ohrId));
+    if (!resp.ok) throw new Error('Failed to load');
+    const logs = await resp.json();
+    if (!logs || logs.length === 0) {
+      body.innerHTML = '<div style="color:var(--fg-muted);padding:4px 0;">No changes recorded.</div>';
+      return;
+    }
+    let html = '<div style="max-height:200px;overflow-y:auto;">';
+    logs.forEach(log => {
+      const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : '';
+      let changes = '';
+      try {
+        const diff = typeof log.changes === 'string' ? JSON.parse(log.changes) : log.changes;
+        if (diff && typeof diff === 'object') {
+          changes = Object.entries(diff).map(([k, v]) => {
+            const colDef = ALL_COLUMNS.find(c => c.key === k);
+            const label = colDef ? colDef.label : k;
+            if (v && typeof v === 'object' && 'from' in v && 'to' in v) {
+              return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: '
+                + '<span style="color:#EF4444;text-decoration:line-through;">' + escapeHtml(v.from || '(empty)') + '</span>'
+                + ' &rarr; <span style="color:#22C55E;">' + escapeHtml(v.to || '(empty)') + '</span>';
+            }
+            return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: ' + escapeHtml(JSON.stringify(v));
+          }).join('<br>');
+        }
+      } catch (e) {
+        changes = escapeHtml(String(log.changes || ''));
+      }
+      html += '<div style="padding:6px 0;border-bottom:1px solid var(--border-muted);">'
+        + '<div style="display:flex;justify-content:space-between;margin-bottom:2px;">'
+        + '<span style="font-weight:600;color:var(--fg);">' + escapeHtml(log.changed_by || 'System') + '</span>'
+        + '<span style="color:var(--fg-muted);font-size:10px;">' + escapeHtml(ts) + '</span>'
+        + '</div>'
+        + '<div>' + changes + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = '<div style="color:var(--danger);padding:4px 0;">Failed to load audit trail.</div>';
+  }
+}
+
+// Legacy modal opener (kept for Add Employee and other uses)
 window.rosterOpenDetail = function(ohrId) {
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
