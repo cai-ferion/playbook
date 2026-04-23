@@ -2840,3 +2840,7 @@
 
 ## Historical Incident Report Import (April 24, 2026)
 - [x] Import 14 historical incident report records into Coaching Profile as "Incident Report" coaching type
+
+## Sandbox Nav Visibility Fix (April 24, 2026)
+- [x] Agents see "Sandbox" as direct link to Input Portal (no sub-items)
+- [x] Non-agents see "Sandbox" expandable group with "Input Portal" + "Review Area"

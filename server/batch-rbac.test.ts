@@ -21,7 +21,7 @@ const ALL_PERMISSION_KEYS = [
 function getPermissionDefaults(role: string, ohrId: string): Record<string, boolean> {
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
-  if (role === 'Agent') { b['nav.helm'] = true; b['nav.sandbox'] = true; return b; }
+  if (role === 'Agent') { b['nav.helm'] = true; b['nav.compass'] = true; b['nav.sandbox'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
   b['anchor.dashboard'] = true;
@@ -96,10 +96,11 @@ describe('RBAC Permission System', () => {
 
     describe('Agent role', () => {
       const perms = getPermissionDefaults('Agent', '999999999');
-      it('gets nav.helm and nav.sandbox = true', () => {
+      it('gets nav.helm, nav.compass, and nav.sandbox = true', () => {
         const granted = Object.entries(perms).filter(([, v]) => v === true);
-        expect(granted.length).toBe(2);
+        expect(granted.length).toBe(3);
         expect(perms['nav.helm']).toBe(true);
+        expect(perms['nav.compass']).toBe(true);
         expect(perms['nav.sandbox']).toBe(true);
       });
       it('has nav.anchor = false', () => expect(perms['nav.anchor']).toBe(false));
