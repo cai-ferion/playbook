@@ -2822,3 +2822,13 @@
 - [x] Refresh omnibar: tighter pill styling, better spacing
 - [x] Overhaul Review Area Kanban board styling
 - [x] Update tests and bump cache versions
+
+## Sandbox Comprehensive Update (April 24, 2026)
+- [x] Nav simplification: agents see "Sandbox" (direct link to Input Portal), non-agents see expandable group with Input Portal + Review Area
+- [x] Review Area: inline card expansion (like Compass Disputes Area) instead of modal
+- [x] Review Area: search bar + planning group filter
+- [x] Review Area: pagination per Kanban column (10 cards per column)
+- [x] Review Area: Pending Initial Review cards actionable only by Operational SMEs (read-only for others)
+- [x] Review Area: all other section cards actionable only by Trainers (read-only for others)
+- [x] Input Portal: "All | My Team" toggle for admin (740045023) only
+- [x] Input Portal: pagination at 25 per page

@@ -19,6 +19,10 @@ const SANDBOX_MOD = {
   expandedId: null,       // inline row expansion tracking
   _context: 'input',
   _inlineFormOpen: false,  // inline new insight form state
+  _reviewExpandedId: null, // inline card expansion in Review Area
+  _reviewSearch: '',       // Review Area search query
+  _reviewPgFilter: '',     // Review Area Planning Group filter
+  _inputTeamToggle: 'all', // Input Portal All|My Team toggle (admin only)
 
   STATUSES: [
     'Pending Initial Review',
@@ -277,7 +281,10 @@ function sandboxOmniApply() {
   // Role-based filtering: agents see own, TLs see team, managers see all
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
-    if (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer') {
+    const isAdmin = currentUser.ohr_id === '740045023';
+
+    // Admin "My Team" toggle: filter to admin's direct reports only
+    if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'team') {
       const teamOhrs = new Set();
       if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
         ROSTER_DATA.forEach(r => {
@@ -286,11 +293,20 @@ function sandboxOmniApply() {
       }
       teamOhrs.add(currentUser.ohr_id);
       data = data.filter(i => teamOhrs.has(i.ohr_id));
-    } else if (role !== 'Manager' && currentUser.ohr_id !== '740045023' && currentUser.ohr_id !== '740044909') {
+    } else if (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer') {
+      const teamOhrs = new Set();
+      if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
+        ROSTER_DATA.forEach(r => {
+          if (r.supervisor_email === currentUser.meta_email) teamOhrs.add(r.ohr_id);
+        });
+      }
+      teamOhrs.add(currentUser.ohr_id);
+      data = data.filter(i => teamOhrs.has(i.ohr_id));
+    } else if (role !== 'Manager' && !isAdmin && currentUser.ohr_id !== '740044909') {
       // Agents, QAs, Trainers: own submissions only
       data = data.filter(i => i.ohr_id === currentUser.ohr_id);
     }
-    // Managers and admin see all — no filter
+    // Managers and admin (All mode) see all — no filter
   }
 
   // Apply omnibar filters
@@ -335,6 +351,26 @@ function sandboxOmniApply() {
   // Update stats strip
   sandboxRenderStats();
   sandboxRenderTable();
+}
+
+// ===== All | My Team Toggle (admin only) =====
+
+function sandboxToggleTeamFilter(mode) {
+  SANDBOX_MOD._inputTeamToggle = mode;
+  sandboxRenderTeamToggle();
+  sandboxOmniApply();
+}
+
+function sandboxRenderTeamToggle() {
+  const container = document.getElementById('sandbox-team-toggle');
+  if (!container) return;
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  if (!isAdmin) { container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+  const mode = SANDBOX_MOD._inputTeamToggle;
+  container.innerHTML = `
+    <button class="sandbox-toggle-btn ${mode === 'all' ? 'active' : ''}" onclick="sandboxToggleTeamFilter('all')">All</button>
+    <button class="sandbox-toggle-btn ${mode === 'team' ? 'active' : ''}" onclick="sandboxToggleTeamFilter('team')">My Team</button>`;
 }
 
 // ===== Stats Strip =====
@@ -660,27 +696,101 @@ function sandboxKanbanPage(colId, dir) {
   sandboxRenderKanban();
 }
 
+// ===== Review Area: Search & Planning Group Filter =====
+
+function sandboxReviewSearch(val) {
+  SANDBOX_MOD._reviewSearch = (val || '').trim().toLowerCase();
+  // Reset pagination when search changes
+  SANDBOX_MOD._kanbanPages = {};
+  sandboxRenderKanban();
+}
+
+function sandboxReviewPgFilter(val) {
+  SANDBOX_MOD._reviewPgFilter = val || '';
+  SANDBOX_MOD._kanbanPages = {};
+  sandboxRenderKanban();
+}
+
+function sandboxRenderReviewToolbar() {
+  const toolbar = document.getElementById('sandbox-review-toolbar');
+  if (!toolbar) return;
+
+  // Collect unique planning groups from all insights
+  const pgSet = new Set();
+  SANDBOX_MOD.insights.forEach(i => {
+    if (i.planning_group) pgSet.add(i.planning_group);
+  });
+  const pgOptions = [...pgSet].sort();
+
+  toolbar.innerHTML = `
+    <div class="sandbox-review-search-bar">
+      <div class="sandbox-review-search-input-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="sandbox-review-search-input" id="sandbox-review-search"
+          placeholder="Search by title, submitter, or insight ID..."
+          value="${escapeAttr(SANDBOX_MOD._reviewSearch)}"
+          oninput="sandboxReviewSearch(this.value)">
+      </div>
+      <select class="sandbox-review-pg-select" id="sandbox-review-pg-filter"
+        onchange="sandboxReviewPgFilter(this.value)">
+        <option value="">All Planning Groups</option>
+        ${pgOptions.map(pg => `<option value="${escapeAttr(pg)}" ${SANDBOX_MOD._reviewPgFilter === pg ? 'selected' : ''}>${escapeHtml(pg)}</option>`).join('')}
+      </select>
+    </div>`;
+}
+
 function sandboxRenderKanban() {
   const board = document.getElementById('sandbox-kanban-board');
   if (!board) return;
 
+  // Render the search/filter toolbar
+  sandboxRenderReviewToolbar();
+
   let filteredInsights = [...SANDBOX_MOD.insights];
 
+  // Role-based PG filtering for SME/Trainer
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
     const cpg = currentUser.complete_planning_group || currentUser.planning_group || '';
     const pgList = cpg.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    if (role === 'SME') {
-      filteredInsights = filteredInsights.filter(i => {
-        const iPg = (i.planning_group || '').toLowerCase();
-        return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
-      });
-    } else if (role === 'Trainer') {
+    if (role === 'SME' || role === 'Trainer') {
       filteredInsights = filteredInsights.filter(i => {
         const iPg = (i.planning_group || '').toLowerCase();
         return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
       });
     }
+  }
+
+  // Apply search filter
+  const searchQ = SANDBOX_MOD._reviewSearch;
+  if (searchQ) {
+    filteredInsights = filteredInsights.filter(i => {
+      const title = (i.title || i.insight_title || '').toLowerCase();
+      const submitter = (i.full_name || i.submitter || '').toLowerCase();
+      const insId = (i.insight_id || '').toLowerCase();
+      return title.includes(searchQ) || submitter.includes(searchQ) || insId.includes(searchQ);
+    });
+  }
+
+  // Apply PG filter
+  if (SANDBOX_MOD._reviewPgFilter) {
+    filteredInsights = filteredInsights.filter(i => i.planning_group === SANDBOX_MOD._reviewPgFilter);
+  }
+
+  // Determine role-based action permissions
+  let canActionInitial = false;
+  let canActionFinal = false;
+  let canActionElevated = false;
+  let pgMatch = false;
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+
+  if (typeof currentUser !== 'undefined' && currentUser) {
+    const role = currentUser.actual_role;
+    const userPg = currentUser.complete_planning_group || currentUser.planning_group || '';
+    const userPgs = userPg.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+    // pgMatch is computed per-card below
+    if (role === 'Operational SME' || isAdmin) canActionInitial = true;
+    if (role === 'Trainer' || isAdmin) { canActionFinal = true; canActionElevated = true; }
   }
 
   let html = '';
@@ -706,10 +816,10 @@ function sandboxRenderKanban() {
       pageCards.forEach(ins => {
         const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
         const statusColor = sandboxGetStatusColor(ins.status);
-        // For Trainer's Area, show the specific elevated status
         const showSubStatus = col.id === 'trainers-area' && ins.status;
+        const isExpanded = SANDBOX_MOD._reviewExpandedId === ins.insight_id;
 
-        html += `<div class="sandbox-kanban-card" onclick="sandboxOpenDetail('${escapeAttr(ins.insight_id)}','review')">
+        html += `<div class="sandbox-kanban-card${isExpanded ? ' expanded' : ''}" onclick="sandboxToggleKanbanCard('${escapeAttr(ins.insight_id)}')">
           <div class="sandbox-kanban-card-id">${escapeHtml(ins.insight_id || '')}</div>
           <div class="sandbox-kanban-card-title">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</div>
           <div class="sandbox-kanban-card-meta">
@@ -722,15 +832,20 @@ function sandboxRenderKanban() {
           </div>
           ${showSubStatus ? `<div class="sandbox-kanban-card-status" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status.replace('Elevated - ', ''))}</div>` : ''}
         </div>`;
+
+        // Inline expansion panel below the card
+        if (isExpanded) {
+          html += sandboxBuildKanbanExpansion(ins, col);
+        }
       });
     }
 
     // Pagination
     if (totalPages > 1) {
       html += `<div class="sandbox-kanban-pagination">
-        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="sandboxKanbanPage('${col.id}',-1)" ${page <= 1 ? 'disabled' : ''}>&laquo; Prev</button>
+        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();sandboxKanbanPage('${col.id}',-1)" ${page <= 1 ? 'disabled' : ''}>&laquo; Prev</button>
         <span>Page ${page} / ${totalPages}</span>
-        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="sandboxKanbanPage('${col.id}',1)" ${page >= totalPages ? 'disabled' : ''}>Next &raquo;</button>
+        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();sandboxKanbanPage('${col.id}',1)" ${page >= totalPages ? 'disabled' : ''}>Next &raquo;</button>
       </div>`;
     }
 
@@ -740,62 +855,68 @@ function sandboxRenderKanban() {
   board.innerHTML = html;
 }
 
-// ===== Detail View (Review Area — modal overlay, shared with review actions) =====
+// ===== Inline Card Expansion: Toggle =====
 
-function sandboxOpenDetail(insightId, context) {
-  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === insightId);
-  if (!ins) return;
-  SANDBOX_MOD.editingId = insightId;
-  SANDBOX_MOD._context = context || 'input';
-
-  // For Input Portal, use inline expansion instead of modal
-  if (context !== 'review') {
-    sandboxToggleDetail(insightId);
-    return;
+function sandboxToggleKanbanCard(insightId) {
+  if (SANDBOX_MOD._reviewExpandedId === insightId) {
+    SANDBOX_MOD._reviewExpandedId = null;
+  } else {
+    SANDBOX_MOD._reviewExpandedId = insightId;
+    SANDBOX_MOD.editingId = insightId;
+    SANDBOX_MOD._context = 'review';
   }
+  sandboxRenderKanban();
+}
 
-  // Review Area: use modal overlay
-  const formTitle = document.getElementById('sandbox-review-form-title');
-  const formBody = document.getElementById('sandbox-review-form-body');
-  const formFooter = document.getElementById('sandbox-review-form-footer');
-  const overlay = document.getElementById('sandbox-review-form-overlay');
+// ===== Inline Card Expansion: Build Panel =====
 
-  formTitle.textContent = ins.insight_id;
-
+function sandboxBuildKanbanExpansion(ins, col) {
   const statusColor = sandboxGetStatusColor(ins.status);
-  const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '\u2014';
+  const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' }) : '\u2014';
   const cat = ins.category || ins.insight_category || '\u2014';
 
-  let html = `
-    <div class="detail-section">
-      <h4 class="detail-section-title">INSIGHT DETAILS</h4>
-      <div class="detail-row">
-        <span class="detail-label">Status</span>
-        <span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status || '')}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Submission Date</span>
-        <span class="detail-value">${date}</span>
-      </div>
-      <div class="detail-row"><span class="detail-label">Submitter</span><span class="detail-value">${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span></div>
-      <div class="detail-row"><span class="detail-label">Title</span><span class="detail-value">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span></div>
-      <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value">${escapeHtml(cat)}</span></div>
-      <div class="detail-row"><span class="detail-label">Proposal Type</span><span class="detail-value">${escapeHtml(ins.proposal_type || '\u2014')}</span></div>
-      <div class="detail-row"><span class="detail-label">Problem Statement</span><span class="detail-value detail-multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</span></div>
-      <div class="detail-row"><span class="detail-label">Proposed Changes</span><span class="detail-value detail-multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</span></div>
-      <div class="detail-row"><span class="detail-label">Impact</span><span class="detail-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</span></div>
-      <div class="detail-row"><span class="detail-label">Reach</span><span class="detail-value">${escapeHtml(ins.reach || '\u2014')}</span></div>
-    </div>`;
+  let html = `<div class="sandbox-kanban-expansion" onclick="event.stopPropagation()">`;
 
-  // Review History (full trail for reviewers)
-  html += `<div class="detail-section"><h4 class="detail-section-title">REVIEW HISTORY</h4>`;
+  // Close button
+  html += `<div class="sandbox-kanban-expansion-header">
+    <span class="sandbox-kanban-expansion-title">${escapeHtml(ins.insight_id || '')}</span>
+    <button class="sandbox-kanban-expansion-close" onclick="event.stopPropagation();sandboxToggleKanbanCard('${escapeAttr(ins.insight_id)}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>`;
+
+  // Detail fields
+  html += `<div class="sandbox-kanban-expansion-body">`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Status</span><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;font-size:11px;">${escapeHtml(ins.status || '')}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Date</span><span class="sandbox-kanban-exp-value">${date}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Submitter</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Planning Group</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.planning_group || '\u2014')}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Category</span><span class="sandbox-kanban-exp-value">${escapeHtml(cat)}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Proposal Type</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.proposal_type || '\u2014')}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Title</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row full-width"><span class="sandbox-kanban-exp-label">Problem Statement</span><div class="sandbox-kanban-exp-value multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</div></div>`;
+  html += `<div class="sandbox-kanban-exp-row full-width"><span class="sandbox-kanban-exp-label">Proposed Changes</span><div class="sandbox-kanban-exp-value multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</div></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Impact</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</span></div>`;
+  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Reach</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.reach || '\u2014')}</span></div>`;
+
+  // Review History
+  html += `<div class="sandbox-kanban-exp-section-title">REVIEW HISTORY</div>`;
   html += sandboxRenderReviewTrail(ins, false);
-  html += `</div>`;
 
-  formBody.innerHTML = html;
+  html += `</div>`; // end body
 
-  // Footer: review actions
+  // Action buttons — role-based
+  html += sandboxBuildKanbanActions(ins, col);
+
+  html += `</div>`; // end expansion
+  return html;
+}
+
+// ===== Inline Card Expansion: Role-Based Action Buttons =====
+
+function sandboxBuildKanbanActions(ins, col) {
   let footerHtml = '';
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
 
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
@@ -803,34 +924,63 @@ function sandboxOpenDetail(insightId, context) {
     const userPgs = userPg.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
     const iPg = (ins.planning_group || '').toLowerCase();
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
-    const isAdmin = currentUser.ohr_id === '740045023';
 
-    if ((role === 'SME' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending Initial Review') {
-      footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowAcceptPopout(\'initial\')">Approve</button>';
-      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'initial\')">Reject</button>';
+    // Pending Initial Review: ONLY Operational SME (with PG match) OR admin
+    if (ins.status === 'Pending Initial Review' && (isAdmin || (role === 'Operational SME' && pgMatch))) {
+      footerHtml += `<div class="sandbox-kanban-expansion-actions">
+        <button class="btn btn-success btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowAcceptPopout('initial')">Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('initial')">Reject</button>
+      </div>`;
     }
 
-    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && ins.status === 'Pending Final Review') {
-      footerHtml += '<button class="btn btn-success btn-sm" onclick="sandboxShowFinalApprovePopout()">Approve</button>';
-      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="sandboxShowRejectModal(\'final\')">Reject</button>';
+    // Pending Final Review: ONLY Trainer (with PG match) OR admin
+    if (ins.status === 'Pending Final Review' && (isAdmin || (role === 'Trainer' && pgMatch))) {
+      footerHtml += `<div class="sandbox-kanban-expansion-actions">
+        <button class="btn btn-success btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowFinalApprovePopout()">Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('final')">Reject</button>
+      </div>`;
     }
 
+    // Elevated statuses (Trainer's Area): ONLY Trainer (with PG match) OR admin
     const elevatedStatuses = ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
-    if ((role === 'Trainer' && pgMatch || role === 'Manager' || isAdmin) && elevatedStatuses.includes(ins.status)) {
-      footerHtml += '<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="sandboxShowTrainerStatusPopout()">Change Status</button>';
+    if (elevatedStatuses.includes(ins.status) && (isAdmin || (role === 'Trainer' && pgMatch))) {
+      footerHtml += `<div class="sandbox-kanban-expansion-actions">
+        <button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>
+      </div>`;
     }
   }
 
-  formFooter.innerHTML = footerHtml;
-  formFooter.style.display = footerHtml ? '' : 'none';
-  overlay.style.display = 'flex';
+  return footerHtml;
+}
+
+// ===== Detail View (dispatches to inline expansion for both contexts) =====
+
+function sandboxOpenDetail(insightId, context) {
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === insightId);
+  if (!ins) return;
+  SANDBOX_MOD.editingId = insightId;
+  SANDBOX_MOD._context = context || 'input';
+
+  // For Input Portal, use inline row expansion
+  if (context !== 'review') {
+    sandboxToggleDetail(insightId);
+    return;
+  }
+
+  // Review Area: use inline card expansion (replaces old modal)
+  sandboxToggleKanbanCard(insightId);
 }
 
 // ===== Accept Popout (confirmation) =====
 
 function sandboxShowAcceptPopout(tier) {
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  // For review context with inline expansion, use a temporary overlay
+  if (isReview) {
+    sandboxShowInlineActionOverlay('accept', tier);
+    return;
+  }
+  const formBody = document.getElementById('sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
   const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
@@ -854,12 +1004,13 @@ function sandboxShowAcceptPopout(tier) {
 
 function sandboxCloseAcceptPopout() {
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (isReview) { sandboxCloseInlineActionOverlay(); return; }
+  const formBody = document.getElementById('sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
     formBody._prevHtml = null;
   }
-  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  const footerId = 'sandbox-form-footer';
   document.getElementById(footerId).style.display = '';
 }
 
@@ -907,7 +1058,8 @@ async function sandboxSubmitAccept(tier) {
 
 function sandboxShowFinalApprovePopout() {
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (isReview) { sandboxShowInlineActionOverlay('final-approve', null); return; }
+  const formBody = document.getElementById('sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
   const choices = [
@@ -946,6 +1098,8 @@ function sandboxShowFinalApprovePopout() {
 
 function sandboxCloseFinalApprovePopout() {
   const isReview = (SANDBOX_MOD._context === 'review');
+  if (isReview) { sandboxCloseInlineActionOverlay(); return; }
+  const isReview2 = (SANDBOX_MOD._context === 'review');
   const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
@@ -996,7 +1150,8 @@ async function sandboxSubmitFinalApprove() {
 
 function sandboxShowRejectModal(tier) {
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (isReview) { sandboxShowInlineActionOverlay('reject', tier); return; }
+  const formBody = document.getElementById('sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
   const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
@@ -1032,12 +1187,13 @@ function sandboxShowRejectModal(tier) {
 
 function sandboxCloseRejectModal() {
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (isReview) { sandboxCloseInlineActionOverlay(); return; }
+  const formBody = document.getElementById('sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
     formBody._prevHtml = null;
   }
-  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  const footerId = 'sandbox-form-footer';
   document.getElementById(footerId).style.display = '';
 }
 
@@ -1094,7 +1250,8 @@ function sandboxShowTrainerStatusPopout() {
   if (!ins) return;
 
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (isReview) { sandboxShowInlineActionOverlay('trainer-status', null); return; }
+  const formBody = document.getElementById('sandbox-form-body');
   formBody._prevHtml = formBody.innerHTML;
 
   const allChoices = [
@@ -1133,12 +1290,13 @@ function sandboxShowTrainerStatusPopout() {
 
 function sandboxCloseTrainerStatusPopout() {
   const isReview = (SANDBOX_MOD._context === 'review');
-  const formBody = document.getElementById(isReview ? 'sandbox-review-form-body' : 'sandbox-form-body');
+  if (isReview) { sandboxCloseInlineActionOverlay(); return; }
+  const formBody = document.getElementById('sandbox-form-body');
   if (formBody._prevHtml) {
     formBody.innerHTML = formBody._prevHtml;
     formBody._prevHtml = null;
   }
-  const footerId = isReview ? 'sandbox-review-form-footer' : 'sandbox-form-footer';
+  const footerId = 'sandbox-form-footer';
   document.getElementById(footerId).style.display = '';
 }
 
@@ -1178,6 +1336,132 @@ async function sandboxSubmitTrainerStatus() {
     console.error('Failed to update insight:', e);
     showToast('Failed to update: ' + e.message, 'error');
   }
+}
+
+// ===== Inline Action Overlay (for Review Area actions within inline expansion) =====
+
+function sandboxShowInlineActionOverlay(action, tier) {
+  // Remove any existing overlay
+  sandboxCloseInlineActionOverlay();
+
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+
+  let overlayHtml = '';
+
+  if (action === 'accept') {
+    const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
+    overlayHtml = `
+      <div class="sandbox-action-overlay" id="sandbox-inline-action-overlay">
+        <div class="sandbox-action-overlay-inner">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <h3 style="margin-bottom:4px;font-size:15px;">Approve Insight (${tierLabel})</h3>
+          <p style="color:var(--fg-muted);font-size:12px;margin-bottom:12px;">This will move the insight to the next stage.</p>
+          <div style="margin-bottom:10px;text-align:left;">
+            <label style="font-size:11px;font-weight:600;color:var(--fg-muted);">Comments (optional)</label>
+            <textarea class="form-textarea" id="sandbox-accept-comments" rows="2" placeholder="Add review comments..." style="width:100%;margin-top:4px;font-size:12px;"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;">
+            <button class="btn btn-outline btn-sm" onclick="sandboxCloseInlineActionOverlay()">Cancel</button>
+            <button class="btn btn-success btn-sm" onclick="sandboxSubmitAccept('${tier}')">Confirm Approval</button>
+          </div>
+        </div>
+      </div>`;
+  } else if (action === 'final-approve') {
+    const choices = [
+      { value: 'Elevated - Task in Progress', label: 'Task in Progress', color: '#8B5CF6' },
+      { value: 'Elevated - POC Rejected', label: 'POC Rejected', color: '#EF4444' },
+      { value: 'Elevated - Pending POC Discussion', label: 'Pending POC Discussion', color: '#EC4899' },
+      { value: 'Elevated - No POC', label: 'No POC', color: '#6B7280' }
+    ];
+    overlayHtml = `
+      <div class="sandbox-action-overlay" id="sandbox-inline-action-overlay">
+        <div class="sandbox-action-overlay-inner">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <h3 style="margin-bottom:4px;font-size:15px;">Approve Insight (Final Review)</h3>
+          <p style="color:var(--fg-muted);font-size:12px;margin-bottom:10px;">Select the elevated status.</p>
+          <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">
+            ${choices.map((c, i) => `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;">
+              <input type="radio" name="sandbox-approve-status" value="${c.value}" ${i===0?'checked':''} style="accent-color:${c.color};">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};"></span>
+              ${c.label}
+            </label>`).join('')}
+          </div>
+          <div style="margin-bottom:10px;text-align:left;">
+            <label style="font-size:11px;font-weight:600;color:var(--fg-muted);">Comments (optional)</label>
+            <textarea class="form-textarea" id="sandbox-final-approve-comments" rows="2" placeholder="Add review comments..." style="width:100%;margin-top:4px;font-size:12px;"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-outline btn-sm" onclick="sandboxCloseInlineActionOverlay()">Cancel</button>
+            <button class="btn btn-success btn-sm" onclick="sandboxSubmitFinalApprove()">Confirm Approval</button>
+          </div>
+        </div>
+      </div>`;
+  } else if (action === 'reject') {
+    const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
+    const reasons = ['Duplicate', 'Insufficient Context/Details', 'Out of Scope', 'Pitched Already'];
+    overlayHtml = `
+      <div class="sandbox-action-overlay" id="sandbox-inline-action-overlay">
+        <div class="sandbox-action-overlay-inner">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          <h3 style="margin-bottom:4px;font-size:15px;">Reject Insight (${tierLabel})</h3>
+          <p style="color:var(--fg-muted);font-size:12px;margin-bottom:10px;">Select a reason for rejection.</p>
+          <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">
+            ${reasons.map(r => `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;">
+              <input type="radio" name="sandbox-reject-reason" value="${r}" style="accent-color:#EF4444;">
+              ${r}
+            </label>`).join('')}
+          </div>
+          <div style="margin-bottom:10px;text-align:left;">
+            <label style="font-size:11px;font-weight:600;color:var(--fg-muted);">Comments (optional)</label>
+            <textarea class="form-textarea" id="sandbox-reject-comments" rows="2" placeholder="Add rejection comments..." style="width:100%;margin-top:4px;font-size:12px;"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-outline btn-sm" onclick="sandboxCloseInlineActionOverlay()">Cancel</button>
+            <button class="btn btn-danger btn-sm" onclick="sandboxSubmitReject('${tier}')">Confirm Rejection</button>
+          </div>
+        </div>
+      </div>`;
+  } else if (action === 'trainer-status') {
+    const allChoices = [
+      { value: 'Elevated - Task in Progress', label: 'Elevated - Task in Progress', color: '#8B5CF6' },
+      { value: 'Elevated - POC Rejected', label: 'Elevated - POC Rejected', color: '#EF4444' },
+      { value: 'Elevated - Pending POC Discussion', label: 'Elevated - Pending POC Discussion', color: '#EC4899' },
+      { value: 'Elevated - No POC', label: 'Elevated - No POC', color: '#6B7280' },
+      { value: 'Implemented', label: 'Implemented', color: '#7C3AED' }
+    ];
+    const choices = allChoices.filter(c => c.value !== ins.status);
+    overlayHtml = `
+      <div class="sandbox-action-overlay" id="sandbox-inline-action-overlay">
+        <div class="sandbox-action-overlay-inner">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>
+          <h3 style="margin-bottom:4px;font-size:15px;">Change Status</h3>
+          <p style="color:var(--fg-muted);font-size:12px;margin-bottom:10px;">Current: <strong>${escapeHtml(ins.status)}</strong></p>
+          <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;">
+            ${choices.map(c => `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--border);border-radius:5px;cursor:pointer;font-size:12px;">
+              <input type="radio" name="sandbox-trainer-status" value="${c.value}" style="accent-color:${c.color};">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};"></span>
+              ${c.label}
+            </label>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn btn-outline btn-sm" onclick="sandboxCloseInlineActionOverlay()">Cancel</button>
+            <button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="sandboxSubmitTrainerStatus()">Save</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Insert the overlay into the review area view
+  const reviewView = document.getElementById('view-sandbox-review');
+  if (reviewView) {
+    reviewView.insertAdjacentHTML('beforeend', overlayHtml);
+  }
+}
+
+function sandboxCloseInlineActionOverlay() {
+  const overlay = document.getElementById('sandbox-inline-action-overlay');
+  if (overlay) overlay.remove();
 }
 
 // ===== New Insight Form (Inline Expansion Panel) =====
@@ -1406,11 +1690,15 @@ async function sandboxSubmitNew() {
 }
 
 function sandboxCloseForm() {
-  // Close the review area modal overlay
+  // Close the review area modal overlay (legacy, kept for safety)
   const reviewOverlay = document.getElementById('sandbox-review-form-overlay');
   if (reviewOverlay) reviewOverlay.style.display = 'none';
+  // Close inline action overlay if open
+  sandboxCloseInlineActionOverlay();
   // Close inline form if open
   sandboxCloseInlineForm();
+  // Collapse inline kanban expansion
+  SANDBOX_MOD._reviewExpandedId = null;
   SANDBOX_MOD.editingId = null;
 }
 
@@ -1419,5 +1707,9 @@ function sandboxCloseForm() {
 async function initSandbox(view) {
   await sandboxFetchEmployees();
   await sandboxFetchInsights();
-  if (view === 'sandbox-review') sandboxRenderKanban();
+  if (view === 'sandbox-review') {
+    sandboxRenderKanban();
+  } else {
+    sandboxRenderTeamToggle();
+  }
 }

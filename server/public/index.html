@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/compass-redesign.css?v=110">
   <link rel="stylesheet" href="css/regimen-redesign.css?v=100">
-  <link rel="stylesheet" href="css/sandbox-redesign.css?v=100">
+  <link rel="stylesheet" href="css/sandbox-redesign.css?v=101">
   <link rel="stylesheet" href="css/corrective-actions.css?v=6">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1228,6 +1228,9 @@
           <!-- Stats Strip -->
           <div class="sandbox-stats-strip" id="sandbox-stats-strip"></div>
 
+          <!-- All | My Team Toggle (admin only) -->
+          <div class="sandbox-team-toggle" id="sandbox-team-toggle" style="display:none;"></div>
+
           <!-- Sandbox Omnibar -->
           <div class="sandbox-omnibar" id="sandbox-omnibar">
             <div class="omnibar-top" style="flex-wrap:nowrap;">
@@ -1293,6 +1296,9 @@
             <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
             <div class="loading-text">Loading Review Queue...</div>
           </div>
+
+          <!-- Review Area Toolbar (Search + PG Filter) -->
+          <div class="sandbox-review-toolbar" id="sandbox-review-toolbar"></div>
 
           <!-- Kanban Board -->
           <div class="sandbox-kanban-board" id="sandbox-kanban-board"></div>
@@ -1697,7 +1703,7 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
   <script src="js/data.js?v=106"></script>
-  <script src="js/app.js?v=127"></script>
+  <script src="js/app.js?v=128"></script>
   <script src="js/dashboard-anim.js?v=121b"></script>
   <script src="js/input-portal.js?v=121"></script>
   <script src="js/input-compact.js?v=121"></script>
@@ -1715,7 +1721,7 @@
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=12" defer></script>
   <script src="js/compass-omnibar.js?v=104" defer></script>
-  <script src="js/sandbox.js?v=104" defer></script>
+  <script src="js/sandbox.js?v=105" defer></script>
   <script src="js/haven.js?v=104" defer></script>
   <script src="js/helm.js?v=111" defer></script>
   <script src="js/roster.js?v=201" defer></script>

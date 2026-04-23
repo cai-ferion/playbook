@@ -824,3 +824,240 @@
   color: var(--sandbox-text-muted);
   margin-top: 4px;
 }
+
+/* ===== ALL | MY TEAM TOGGLE (admin only) ===== */
+#view-sandbox-input .sandbox-team-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 10px;
+  background: var(--bg-inset);
+  border: 1px solid var(--sandbox-border);
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+
+#view-sandbox-input .sandbox-toggle-btn {
+  padding: 5px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--sandbox-text-muted);
+  transition: all 0.15s ease;
+}
+
+#view-sandbox-input .sandbox-toggle-btn:hover {
+  color: var(--sandbox-text);
+  background: var(--sandbox-surface);
+}
+
+#view-sandbox-input .sandbox-toggle-btn.active {
+  background: var(--sandbox-accent);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* ===== REVIEW AREA TOOLBAR (Search + PG Filter) ===== */
+#view-sandbox-review .sandbox-review-toolbar {
+  margin-bottom: 14px;
+  animation: sandboxFadeUp 0.25s ease-out;
+}
+
+#view-sandbox-review .sandbox-review-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#view-sandbox-review .sandbox-review-search-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--sandbox-surface);
+  border: 1px solid var(--sandbox-border);
+  border-radius: var(--sandbox-radius-sm);
+  padding: 7px 12px;
+  transition: border-color 0.15s ease;
+}
+
+#view-sandbox-review .sandbox-review-search-input-wrap:focus-within {
+  border-color: var(--sandbox-accent);
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.12);
+}
+
+#view-sandbox-review .sandbox-review-search-input-wrap svg {
+  flex-shrink: 0;
+  color: var(--sandbox-text-muted);
+}
+
+#view-sandbox-review .sandbox-review-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--sandbox-text);
+}
+
+#view-sandbox-review .sandbox-review-search-input::placeholder {
+  color: var(--sandbox-text-subtle);
+}
+
+#view-sandbox-review .sandbox-review-pg-select {
+  padding: 7px 12px;
+  border: 1px solid var(--sandbox-border);
+  border-radius: var(--sandbox-radius-sm);
+  font-size: 13px;
+  color: var(--sandbox-text);
+  background: var(--sandbox-surface);
+  min-width: 180px;
+  cursor: pointer;
+}
+
+#view-sandbox-review .sandbox-review-pg-select:focus {
+  border-color: var(--sandbox-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.12);
+}
+
+/* ===== INLINE KANBAN CARD EXPANSION ===== */
+#view-sandbox-review .sandbox-kanban-card.expanded {
+  border-color: var(--sandbox-accent);
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.15);
+}
+
+#view-sandbox-review .sandbox-kanban-expansion {
+  background: var(--sandbox-surface);
+  border: 1px solid var(--sandbox-accent);
+  border-radius: var(--sandbox-radius-sm);
+  margin-top: 4px;
+  padding: 0;
+  box-shadow: var(--sandbox-shadow);
+  animation: sandboxFadeUp 0.2s ease-out;
+}
+
+#view-sandbox-review .sandbox-kanban-expansion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px 12px;
+  border-bottom: 1px solid var(--sandbox-border-subtle);
+}
+
+#view-sandbox-review .sandbox-kanban-expansion-title {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sandbox-accent);
+}
+
+#view-sandbox-review .sandbox-kanban-expansion-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sandbox-text-muted);
+  padding: 2px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+#view-sandbox-review .sandbox-kanban-expansion-close:hover {
+  background: var(--bg-inset);
+  color: var(--sandbox-text);
+}
+
+#view-sandbox-review .sandbox-kanban-expansion-body {
+  padding: 10px 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+#view-sandbox-review .sandbox-kanban-exp-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+#view-sandbox-review .sandbox-kanban-exp-row.full-width {
+  flex-direction: column;
+  gap: 2px;
+}
+
+#view-sandbox-review .sandbox-kanban-exp-label {
+  font-weight: 600;
+  color: var(--sandbox-text-muted);
+  min-width: 100px;
+  flex-shrink: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+#view-sandbox-review .sandbox-kanban-exp-value {
+  color: var(--sandbox-text);
+  word-break: break-word;
+}
+
+#view-sandbox-review .sandbox-kanban-exp-value.multiline {
+  white-space: pre-wrap;
+  background: var(--bg-inset);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--sandbox-border-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+  width: 100%;
+}
+
+#view-sandbox-review .sandbox-kanban-exp-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sandbox-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--sandbox-border-subtle);
+}
+
+#view-sandbox-review .sandbox-kanban-expansion-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid var(--sandbox-border-subtle);
+}
+
+/* ===== INLINE ACTION OVERLAY (replaces modal for Review Area) ===== */
+.sandbox-action-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: sandboxFadeUp 0.2s ease-out;
+}
+
+.sandbox-action-overlay-inner {
+  background: var(--sandbox-surface);
+  border: 1px solid var(--sandbox-border);
+  border-radius: var(--sandbox-radius);
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: var(--sandbox-shadow-lg);
+  text-align: center;
+}

@@ -1000,6 +1000,18 @@ function applyNavPermissions(user) {
       helmToggle.setAttribute('data-view', 'helm-board');
       helmToggle.classList.remove('nav-group-toggle');
     }
+    // Sandbox: agents only see Input Portal, flatten to direct link
+    const sandboxGroup = document.getElementById('nav-group-sandbox');
+    const sandboxToggle = document.getElementById('nav-sandbox');
+    const sandboxItems = document.getElementById('nav-group-items-sandbox');
+    if (sandboxGroup && sandboxToggle && sandboxItems) {
+      sandboxItems.style.display = 'none';
+      const chevron = sandboxToggle.querySelector('.nav-group-chevron');
+      if (chevron) chevron.style.display = 'none';
+      sandboxToggle.setAttribute('onclick', "switchView('sandbox-input')");
+      sandboxToggle.setAttribute('data-view', 'sandbox-input');
+      sandboxToggle.classList.remove('nav-group-toggle');
+    }
   }
 }
 
