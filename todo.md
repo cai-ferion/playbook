@@ -2689,3 +2689,17 @@
 - [x] Managers and admin (740045023) unchanged — see all logs
 - [x] Cache version bumped: compass.js v=113
 - [x] All 761 tests passing
+
+## Bug: My Team filter shows stale agents for 740045023 (April 2026)
+- [x] Root cause: stale supervisor_name data in io_employees — Montallana/Castañeda still had Arvin as supervisor
+- [x] 740045023 admin bypass was not the issue — the data was wrong
+- [x] Fixed via roster update: 257 employees updated with correct supervisor_name from VMO + RECALL roster files
+
+## Roster Update: Supervisor Realignment + Field Sync (April 2026)
+- [x] Update io_employees supervisor_name from File 1 (non-RECALL, 166 agents matched in DB) using Supervisor OHR lookup
+- [x] Update io_employees supervisor_name from File 2 (RECALL, 91 agents matched in DB) using name matching
+- [x] Update supervisor_email for 61 affected agents
+- [x] Update shift_time (150), planning_group (166) from roster files
+- [x] Regimen reads from io_employees — same table, no separate update needed
+- [x] Verified: Arvin now has 22 agents (21 from File 1 + 1 existing SME). Montallana/Castañeda correctly reassigned.
+- [x] 257 total updates executed, 0 failures. 174 agents skipped (not in io_employees).
