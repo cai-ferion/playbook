@@ -1123,6 +1123,38 @@ router.patch("/insights/:insight_id", async (req: Request, res: Response) => {
   }
 });
 
+router.delete("/insights/:insight_id", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    await db.delete(ioInsights).where(eq(ioInsights.insight_id, req.params.insight_id));
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] insights DELETE error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/insights-bulk-delete", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: "ids array required" });
+    // Delete in batches of 100 to avoid query size limits
+    let deleted = 0;
+    for (let i = 0; i < ids.length; i += 100) {
+      const batch = ids.slice(i, i + 100);
+      await db.delete(ioInsights).where(inArray(ioInsights.insight_id, batch));
+      deleted += batch.length;
+    }
+    res.json({ ok: true, deleted });
+  } catch (err: any) {
+    console.error("[IO API] insights bulk-delete error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // io_leaves
 // ============================================================

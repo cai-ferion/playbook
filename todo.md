@@ -2855,3 +2855,10 @@
 
 ## Group Coaching Multi-Select Fix (April 24, 2026)
 - [x] Fix: Group Coaching employee selection checkboxes now have visible borders/squares (were invisible due to CSS appearance:none without border)
+
+## Google Sheet Insights Import (April 24, 2026)
+- [x] Read INSIGHTS sheet from Google Sheets (1,802 rows across 3 batches)
+- [x] Compare with existing Sandbox insights for duplicates
+- [x] Delete all 2025 insights from DB (1,104 deleted)
+- [x] Insert only 2026 insights from sheet into Sandbox (217 new)
+- [x] Update approval statuses from sheet (69 status changes applied)
