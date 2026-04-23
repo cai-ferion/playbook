@@ -2837,3 +2837,6 @@
 - [x] Fix: NTE document missing logo — restore logo reference in generated document
 - [x] Fix: Remove "NTE Type" section from UI (table, detail panel, header, history)
 - [x] Feature: Manual CA Log tab beside Document Build Assist — TLs can log NTEs and CAP 1-3 they manually created
+
+## Historical Incident Report Import (April 24, 2026)
+- [x] Import 14 historical incident report records into Coaching Profile as "Incident Report" coaching type
