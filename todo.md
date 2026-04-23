@@ -2844,3 +2844,6 @@
 ## Sandbox Nav Visibility Fix (April 24, 2026)
 - [x] Agents see "Sandbox" as direct link to Input Portal (no sub-items)
 - [x] Non-agents see "Sandbox" expandable group with "Input Portal" + "Review Area"
+
+## Bug: Agents cannot see Sandbox nav (April 24, 2026)
+- [x] Fix: Agents cannot see Sandbox in nav after publish — DB rows had nav.sandbox=false from pre-Sandbox seeding, bulk-updated to true

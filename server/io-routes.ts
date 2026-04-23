@@ -3872,6 +3872,32 @@ router.post("/permissions/seed/:ohr_id", async (req: Request, res: Response) => 
   }
 });
 
+// POST /api/io/permissions/bulk-key-update — update a single permission key for all employees (admin only)
+router.post("/permissions/bulk-key-update", async (req: Request, res: Response) => {
+  try {
+    const { permission_key, granted, actor_ohr } = req.body;
+    if (!permission_key || typeof granted !== 'boolean') {
+      return res.status(400).json({ error: "permission_key (string) and granted (boolean) required" });
+    }
+    if (!ALL_PERMISSION_KEYS.includes(permission_key)) {
+      return res.status(400).json({ error: `Invalid permission key: ${permission_key}` });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    // Single UPDATE statement for all rows with this key
+    const result = await db.update(ioPermissions)
+      .set({ granted, updated_by: actor_ohr || 'SYSTEM' })
+      .where(eq(ioPermissions.permission_key, permission_key));
+
+    console.log(`[PERMISSIONS] Bulk update: ${permission_key} = ${granted} by ${actor_ohr}`);
+    res.json({ ok: true, permission_key, granted });
+  } catch (err: any) {
+    console.error("[PERMISSIONS] Bulk key update error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // WFM Temporary User — Session Logging
 // ============================================================
