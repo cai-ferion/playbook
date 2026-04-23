@@ -2807,3 +2807,4 @@
 
 ## QA Feedback Status Rename (April 24, 2026)
 - [x] Replace all 'Pending SME Review' with 'Pending Support Review' in QA Feedback coaching logs
+- [x] Rename 'SME Joiner' label to 'Support Joiner 1' in compass-coaching.js detail panel

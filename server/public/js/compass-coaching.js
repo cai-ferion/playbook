@@ -206,7 +206,7 @@ function ccBuildDetailHTML(log) {
       <h4 style="font-size:13px;color:var(--fg-muted);margin:0 0 12px;text-transform:uppercase;letter-spacing:0.5px;">Participants</h4>
       ${field('Coach', `${log.coach_name} (${log.coach_ohr})`)}
       ${field('Coachee', `${log.coachee_name} (${log.coachee_ohr})`)}
-      ${field('SME Joiner', log.sme_joiner_name)}
+      ${field('Support Joiner 1', log.sme_joiner_name)}
       ${field('Planning Group', log.coachee_pg)}
     </div>
   </div>`;
