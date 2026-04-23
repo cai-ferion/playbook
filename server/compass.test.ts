@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 // ---------------------------------------------------------------------------
 
 const DISPUTE_STATUSES = {
-  PENDING_SME_REVIEW: "Pending SME Review",
+  PENDING_SME_REVIEW: "Pending Support Review",
   MARKDOWN_DISPUTED: "Markdown Disputed",
   MARKDOWN_RETAINED_QA: "Markdown Retained - QA",
   QA_DECISION_REJECTED: "QA Decision Rejected",
@@ -134,8 +134,8 @@ function getScopeType(role: string, isAdmin: boolean): string {
 // ===========================================================================
 
 describe("Compass — Dispute Level Resolution", () => {
-  it("resolves Pending SME Review to level 1", () => {
-    expect(getDisputeLevel("Pending SME Review")).toBe(1);
+  it("resolves Pending Support Review to level 1", () => {
+    expect(getDisputeLevel("Pending Support Review")).toBe(1);
   });
 
   it("resolves Markdown Disputed to level 2", () => {
@@ -168,7 +168,7 @@ describe("Compass — Dispute Level Resolution", () => {
 describe("Compass — Dispute Action Validation", () => {
   it("LV1: SME accepts markdown → Pending Ack", () => {
     const result = validateDisputeAction(
-      "Pending SME Review",
+      "Pending Support Review",
       "accept_markdown",
       "Operational SME",
       false
@@ -179,7 +179,7 @@ describe("Compass — Dispute Action Validation", () => {
 
   it("LV1: SME disputes markdown → Markdown Disputed", () => {
     const result = validateDisputeAction(
-      "Pending SME Review",
+      "Pending Support Review",
       "dispute_markdown",
       "Operational SME",
       false
@@ -190,7 +190,7 @@ describe("Compass — Dispute Action Validation", () => {
 
   it("LV1: QA cannot act at level 1", () => {
     const result = validateDisputeAction(
-      "Pending SME Review",
+      "Pending Support Review",
       "accept_markdown",
       "Quality & Policy Expert",
       false
@@ -289,7 +289,7 @@ describe("Compass — Dispute Action Validation", () => {
 
   it("Invalid action for level is rejected", () => {
     const result = validateDisputeAction(
-      "Pending SME Review",
+      "Pending Support Review",
       "retain_markdown",
       "Operational SME",
       false
@@ -312,7 +312,7 @@ describe("Compass — Dispute Action Validation", () => {
 
 describe("Compass — Full Dispute Escalation Path", () => {
   it("traces the worst-case 6-level escalation to manager final decision", () => {
-    let status = "Pending SME Review";
+    let status = "Pending Support Review";
 
     // LV1: SME disputes
     let r = validateDisputeAction(status, "dispute_markdown", "Operational SME", false);
@@ -353,7 +353,7 @@ describe("Compass — Full Dispute Escalation Path", () => {
 
   it("early resolution at LV1 (SME accepts) goes directly to Pending Ack", () => {
     const r = validateDisputeAction(
-      "Pending SME Review",
+      "Pending Support Review",
       "accept_markdown",
       "Operational SME",
       false

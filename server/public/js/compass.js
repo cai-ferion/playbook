@@ -77,7 +77,7 @@ const COMPASS = {
   COACHING_TYPES: ['General Coaching', 'Incident Report', 'Follow-Up Session', 'Group Coaching', 'Triad Coaching', 'QA Feedback', 'ZTP Coaching'],
 
   QA_STATUSES: [
-    'Pending SME Review',
+    'Pending Support Review',
     'Markdown Accepted',
     'Markdown Disputed',
     'Markdown Reversed - QA',
@@ -102,7 +102,7 @@ const COMPASS = {
     'Pending Acknowledgement': '#F59E0B',
     'Acknowledged': '#22C55E',
     'Issued': '#6366F1',
-    'Pending SME Review': '#3B82F6',
+    'Pending Support Review': '#3B82F6',
     'Markdown Accepted': '#22C55E',
     'Markdown Disputed': '#EF4444',
     'Markdown Reversed - QA': '#8B5CF6',
@@ -119,7 +119,7 @@ const COMPASS = {
 
   // Kanban columns for QA Feedback dispute flow
   KANBAN_COLUMNS: [
-    { id: 'pending-sme', title: 'LV1 - SME REVIEW', statuses: ['Pending SME Review', ''] },
+    { id: 'pending-sme', title: 'LV1 - SME REVIEW', statuses: ['Pending Support Review', ''] },
     { id: 'sme-disputed', title: 'LV2 - QA DECISION', statuses: ['Markdown Disputed', 'Markdown Disputed - SME'] },
     { id: 'qa-decision', title: 'LV3 - SME-QA DECISION', statuses: ['Markdown Retained - QA'] },
     { id: 'trainer-review', title: 'LV4 - TRAINER DECISION', statuses: ['QA Decision Rejected', 'QA Decision Rejected - SME'] },
@@ -2753,7 +2753,7 @@ async function compassSubmitNew() {
     coachee_pg: coachee ? coachee.planning_group : (parentLog ? (parentLog.coachee_pg || '') : ''),
     session_goal: sessionGoal,
     coaching_details: document.getElementById('compass-new-details')?.innerHTML || '',
-    status: type === 'QA Feedback' ? 'Pending SME Review' : (COMPASS.AWARENESS_ONLY_TYPES.includes(type) ? 'Issued' : 'Pending Acknowledgement'),
+    status: type === 'QA Feedback' ? 'Pending Support Review' : (COMPASS.AWARENESS_ONLY_TYPES.includes(type) ? 'Issued' : 'Pending Acknowledgement'),
     cap_level: capLevel || null,
     coachee_list: coacheeList.length > 0 ? coacheeList : []
   };
@@ -3654,7 +3654,7 @@ async function disputesOpenDetail(coachingId) {
 
     // LV1 - Support Joiner 1 & 2 only: Accept Markdown / Dispute Markdown
     if (isSupportJoiner || isQTPManager || isAdmin) {
-      if (log.status === 'Pending SME Review') {
+      if (log.status === 'Pending Support Review') {
         footerHtml += ' <button class="btn btn-success btn-sm" onclick="disputesShowAcceptMarkdown()">Accept Markdown</button>';
         footerHtml += ' <button class="btn btn-danger btn-sm" onclick="disputesShowDisputeMarkdown()">Dispute Markdown</button>';
       }

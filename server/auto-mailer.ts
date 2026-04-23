@@ -718,7 +718,7 @@ export function registerAutoMailer(app: Express): void {
     // Active dispute statuses and who needs to act next
     const DISPUTE_STATUS_MAP: Record<string, { level: string; nextActorField: 'coach_ohr' | 'sme_joiner' | 'sme_joiner_2' | 'coachee_ohr' }> = {
       'Markdown Disputed - SME': { level: 'LV1', nextActorField: 'coach_ohr' },
-      'Pending SME Review': { level: 'LV2', nextActorField: 'sme_joiner' },
+      'Pending Support Review': { level: 'LV2', nextActorField: 'sme_joiner' },
       'Markdown Retained - SME': { level: 'LV3', nextActorField: 'sme_joiner' },
       'QA Decision Rejected': { level: 'LV4', nextActorField: 'sme_joiner_2' },
       'Markdown Retained - Trainer': { level: 'LV5', nextActorField: 'sme_joiner' },

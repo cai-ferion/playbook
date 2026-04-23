@@ -36,7 +36,7 @@ const COACHING_TYPES = [
 
 // QA Feedback dispute statuses
 const DISPUTE_STATUSES = {
-  PENDING_SME_REVIEW: "Pending SME Review",
+  PENDING_SME_REVIEW: "Pending Support Review",
   MARKDOWN_DISPUTED: "Markdown Disputed",
   MARKDOWN_RETAINED_QA: "Markdown Retained - QA",
   QA_DECISION_REJECTED: "QA Decision Rejected",

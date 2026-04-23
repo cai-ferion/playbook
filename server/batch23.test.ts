@@ -33,8 +33,8 @@ describe('Batch 23 — Compass 6-Level Dispute Flow', () => {
   const compass = readPublicJS('compass.js');
 
   // Kanban columns use correct statuses
-  it('LV1 kanban filters Pending SME Review', () => {
-    expect(compass).toContain("statuses: ['Pending SME Review', '']");
+  it('LV1 kanban filters Pending Support Review', () => {
+    expect(compass).toContain("statuses: ['Pending Support Review', '']");
   });
 
   it('LV2 kanban filters Markdown Disputed (both variants)', () => {

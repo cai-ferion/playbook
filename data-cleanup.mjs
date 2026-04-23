@@ -1,6 +1,6 @@
 /**
  * Batch 43: Data Cleanup
- * 1) Update blank statuses to "Pending SME Review" for QA Feedback coaching logs
+ * 1) Update blank statuses to "Pending Support Review" for QA Feedback coaching logs
  * 2) Delete all 2025-dated records from all tables
  */
 import mysql from 'mysql2/promise';
@@ -22,9 +22,9 @@ console.log(`  QA Feedback logs with blank status: ${qaAudit[0].cnt}`);
 
 if (qaAudit[0].cnt > 0) {
   const [updateResult] = await conn.execute(
-    "UPDATE io_coaching SET status = 'Pending SME Review' WHERE coaching_type = 'QA Feedback' AND (status IS NULL OR status = '')"
+    "UPDATE io_coaching SET status = 'Pending Support Review' WHERE coaching_type = 'QA Feedback' AND (status IS NULL OR status = '')"
   );
-  console.log(`  Updated ${updateResult.affectedRows} rows to "Pending SME Review"`);
+  console.log(`  Updated ${updateResult.affectedRows} rows to "Pending Support Review"`);
 } else {
   console.log("  No rows to update.");
 }

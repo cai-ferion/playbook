@@ -2804,3 +2804,6 @@
 - [x] Fix Compass nav simplification: only flatten for agents, non-agents keep full expandable group with all sub-tabs
 - [x] Grant nav.compass + compass sub-section permissions to all non-agent roles (TL, Manager, QA, SME, Trainer)
 - [x] Agents get nav.compass too but with flattened nav (direct link to Coaching Profile only, no sub-items)
+
+## QA Feedback Status Rename (April 24, 2026)
+- [x] Replace all 'Pending SME Review' with 'Pending Support Review' in QA Feedback coaching logs

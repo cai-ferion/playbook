@@ -106,7 +106,7 @@ describe("Batch 15 Changes", () => {
 
   // 5. Compass Disputes LV1 blank status
   describe("Compass - Disputes LV1 Blank Status", () => {
-    it("should include blank/null status in LV1 Pending SME Review filter", () => {
+    it("should include blank/null status in LV1 Pending Support Review filter", () => {
       const compassJs = fs.readFileSync(
         path.join(__dirname, "public/js/compass.js"),
         "utf-8"
