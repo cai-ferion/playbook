@@ -219,9 +219,9 @@ describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", (
       expect(rosterJs).toContain(".csv");
     });
 
-    it("should have Export CSV button in HTML", () => {
-      expect(indexHtml).toContain("roster-export-btn");
-      expect(indexHtml).toContain("Export CSV");
+    it("should have Export CSV button rendered dynamically in JS", () => {
+      expect(rosterJs).toContain("roster-export-btn");
+      expect(rosterJs).toContain("Export");
     });
 
     it("should properly escape CSV values", () => {
@@ -296,6 +296,110 @@ describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", (
 
     it("should sort by most missing fields first", () => {
       expect(rosterJs).toContain("b.missingFields.length - a.missingFields.length");
+    });
+  });
+
+  // ===== Regimen UI/UX Redesign =====
+  describe("Regimen UI/UX Redesign (April 2026)", () => {
+    const regimenCss = fs.readFileSync(path.join(__dirname, "../server/public/css/regimen-redesign.css"), "utf-8");
+
+    it("should have regimen-redesign.css linked in HTML", () => {
+      expect(indexHtml).toContain("regimen-redesign.css");
+    });
+
+    it("should scope all redesign CSS to #view-regimen", () => {
+      expect(regimenCss).toContain("#view-regimen");
+    });
+
+    it("should use new regimen-table class instead of module-table", () => {
+      expect(indexHtml).toContain('class="regimen-table"');
+      expect(regimenCss).toContain(".regimen-table");
+    });
+
+    it("should use new regimen-table-wrapper class", () => {
+      expect(indexHtml).toContain('class="regimen-table-wrapper"');
+      expect(regimenCss).toContain(".regimen-table-wrapper");
+    });
+
+    it("should have sticky filter bar", () => {
+      expect(regimenCss).toContain(".regimen-filter-bar");
+      expect(regimenCss).toContain("position: sticky");
+    });
+
+    it("should have regimen-filter-toolbar for buttons + search + count", () => {
+      expect(indexHtml).toContain("roster-filter-toolbar");
+      expect(rosterJs).toContain("roster-filter-toolbar");
+    });
+
+    it("should have regimen-filter-pills container", () => {
+      expect(indexHtml).toContain('class="regimen-filter-pills"');
+      expect(rosterJs).toContain("roster-filter-pills");
+    });
+
+    it("should have status badges with active/inactive classes", () => {
+      expect(regimenCss).toContain(".regimen-status-active");
+      expect(regimenCss).toContain(".regimen-status-inactive");
+      expect(rosterJs).toContain("regimen-status-badge");
+    });
+
+    it("should have inline detail panel with click-to-edit fields", () => {
+      expect(regimenCss).toContain(".regimen-detail-panel");
+      expect(regimenCss).toContain(".regimen-field-value.editable");
+      expect(rosterJs).toContain("rosterStartFieldEdit");
+    });
+
+    it("should have expand indicator on rows", () => {
+      expect(regimenCss).toContain(".regimen-expand-icon");
+      expect(rosterJs).toContain("regimen-expand-icon");
+    });
+
+    it("should have detail section titles with accent bar", () => {
+      expect(regimenCss).toContain(".regimen-detail-section-title");
+      expect(regimenCss).toContain(".regimen-detail-section-title::before");
+    });
+
+    it("should have 3-column detail grid", () => {
+      expect(regimenCss).toContain("grid-template-columns: repeat(3, 1fr)");
+    });
+
+    it("should have unsaved changes indicator", () => {
+      expect(regimenCss).toContain(".regimen-unsaved-indicator");
+      expect(rosterJs).toContain("roster-unsaved-");
+    });
+
+    it("should have redesigned pagination", () => {
+      expect(regimenCss).toContain(".regimen-pagination");
+      expect(regimenCss).toContain(".regimen-page-btn");
+      expect(indexHtml).toContain('class="regimen-pagination"');
+    });
+
+    it("should have page size selector", () => {
+      expect(regimenCss).toContain(".regimen-page-size-select");
+      expect(rosterJs).toContain("regimen-page-size-select");
+    });
+
+    it("should have completion bar for IR tab", () => {
+      expect(regimenCss).toContain(".ir-completion-bar");
+      expect(regimenCss).toContain(".ir-bar-fill");
+      expect(rosterJs).toContain("ir-completion-bar");
+    });
+
+    it("should have missing field tags for IR tab", () => {
+      expect(regimenCss).toContain(".ir-missing-tag");
+      expect(rosterJs).toContain("ir-missing-tag");
+    });
+
+    it("should have slide-down animation for detail panel", () => {
+      expect(regimenCss).toContain("regimen-slide-down");
+    });
+
+    it("should track pending edits per employee", () => {
+      expect(rosterJs).toContain("_pendingEdits");
+    });
+
+    it("should have tab styling in redesign CSS", () => {
+      expect(regimenCss).toContain(".regimen-tab");
+      expect(regimenCss).toContain(".regimen-tab.active");
     });
   });
 

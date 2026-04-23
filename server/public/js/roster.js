@@ -77,7 +77,7 @@ const ROSTER = {
   employees: [],
   filtered: [],
   page: 1,
-  pageSize: 25,
+  pageSize: 50,
   tier: 'limited', // 'full' or 'limited'
   canEdit: false,
   sortKey: null,
@@ -86,6 +86,8 @@ const ROSTER = {
   searchQuery: '',
   ALL_COLUMNS: ALL_COLUMNS,
   isOwner: false,
+  // Track pending inline edits: { ohrId: { field: newValue, ... } }
+  _pendingEdits: {},
   getVisibleColumns() {
     const base = this.tier === 'full' ? ALL_COLUMNS : ALL_COLUMNS.filter(c => LIMITED_COLUMNS.includes(c.key));
     // Filter out ownerOnly columns for non-owner users
@@ -200,18 +202,15 @@ function rosterDebouncedApply() {
 
 function rosterRenderFilterBar() {
   _rosterFilterFields = buildFilterFields();
-  const container = document.getElementById('roster-filter-pills');
-  if (!container) return;
 
   // Separate fields into groups: search, non-date (multi), date
-  const searchField = _rosterFilterFields.find(f => f.type === 'search');
   const multiFields = _rosterFilterFields.filter(f => f.type === 'multi');
   const dateFields = _rosterFilterFields.filter(f => f.type === 'date_range');
 
   function renderPill(field) {
     const summary = rosterGetFilterSummary(field);
     const isActive = rosterIsFiltered(field);
-    return '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="roster-pill-' + field.key + '" onclick="rosterToggleDropdown(\'' + field.key + '\')">' 
+    return '<div class="filter-pill' + (isActive ? ' active' : '') + '" id="roster-pill-' + field.key + '" onclick="rosterToggleDropdown(\'' + field.key + '\')">'
       + '<span class="filter-pill-label">' + escapeHtml(field.label) + '</span> '
       + '<span class="filter-pill-value">' + escapeHtml(summary) + '</span>'
       + '<span class="filter-pill-icon">▾</span>'
@@ -224,43 +223,47 @@ function rosterRenderFilterBar() {
   const identityFields = multiFields.filter(f => identityKeys.includes(f.key));
   const restFields = multiFields.filter(f => !identityKeys.includes(f.key));
 
-  // === Left column: search bar + count ===
-  const searchContainer = document.getElementById('roster-search-container');
-  if (searchContainer) {
-    searchContainer.innerHTML = '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">'
-      + '<input type="text" class="form-input form-input-sm" id="roster-search-input" placeholder="Search OHR / Name..." '
+  // === Toolbar row: buttons + search + count ===
+  const toolbar = document.getElementById('roster-filter-toolbar');
+  if (toolbar) {
+    let tbHtml = '';
+    // Add Employee button (hidden by default, shown via permission)
+    tbHtml += '<button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add'
+      + '</button>';
+    // Export CSV
+    tbHtml += '<button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export'
+      + '</button>';
+    // Sync to Sheet
+    tbHtml += '<button class="btn btn-outline btn-sm" id="roster-sync-sheet-btn" onclick="rosterSyncToSheet()" style="display:none;white-space:nowrap;">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync'
+      + '</button>';
+    // Search box
+    tbHtml += '<div class="regimen-search-box">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+      + '<input type="text" id="roster-search-input" placeholder="Search OHR / Name..." '
       + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
-      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();" '
-      + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;">'
+      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();">'
       + '</div>';
-  }
-  const countContainer = document.getElementById('roster-count-container');
-  if (countContainer) {
-    countContainer.innerHTML = '<span class="filter-bar-meta" id="roster-filter-count" style="flex:1;"></span>'
-      + '<button class="btn btn-outline btn-sm" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
+    // Count + Clear
+    tbHtml += '<span class="regimen-filter-count" id="roster-filter-count"></span>';
+    tbHtml += '<button class="btn btn-ghost btn-xs" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
+    toolbar.innerHTML = tbHtml;
   }
 
-  // === Right column: 3 stacked rows of pills ===
+  // === Filter pills row ===
+  const container = document.getElementById('roster-filter-pills');
+  if (!container) return;
+
   let html = '';
 
   // Row 1: Date filters
-  html += '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
   dateFields.forEach(f => { html += renderPill(f); });
-  html += '</div>';
-
   // Row 2: Identity filters
-  if (identityFields.length > 0) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
-    identityFields.forEach(f => { html += renderPill(f); });
-    html += '</div>';
-  }
-
+  identityFields.forEach(f => { html += renderPill(f); });
   // Row 3: Rest (role, system, asset, attrition non-date)
-  if (restFields.length > 0) {
-    html += '<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">';
-    restFields.forEach(f => { html += renderPill(f); });
-    html += '</div>';
-  }
+  restFields.forEach(f => { html += renderPill(f); });
 
   container.innerHTML = html;
 }
@@ -564,42 +567,43 @@ function rosterRenderTable() {
   const cols = ROSTER.getTableColumns();
   const data = ROSTER.filtered;
 
-  // Header
-  thead.innerHTML = '<tr>' + cols.map(c =>
-    '<th style="white-space:nowrap;cursor:pointer;" onclick="rosterSetSort(\'' + c.key + '\', ROSTER.sortKey===\'' + c.key + '\'&&ROSTER.sortDir===\'asc\'?\'desc\':\'asc\')">' 
-    + escapeHtml(c.label)
-    + (ROSTER.sortKey === c.key ? (ROSTER.sortDir === 'asc' ? ' ↑' : ' ↓') : '')
-    + '</th>'
-  ).join('') + '</tr>';
+  // Header with sort indicators
+  thead.innerHTML = '<tr>' + cols.map(c => {
+    const isSorted = ROSTER.sortKey === c.key;
+    const arrow = isSorted ? (ROSTER.sortDir === 'asc' ? ' <span class="sort-indicator">↑</span>' : ' <span class="sort-indicator">↓</span>') : '';
+    return '<th onclick="rosterSetSort(\'' + c.key + '\', ROSTER.sortKey===\'' + c.key + '\'&&ROSTER.sortDir===\'asc\'?\'desc\':\'asc\')">'
+      + escapeHtml(c.label) + arrow + '</th>';
+  }).join('') + '</tr>';
 
   // Paginate
   const start = (ROSTER.page - 1) * ROSTER.pageSize;
   const pageData = data.slice(start, start + ROSTER.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="' + cols.length + '" style="text-align:center;padding:32px;color:var(--fg-muted);">No employees match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + cols.length + '" class="regimen-empty">No employees match the current filters.</td></tr>';
     rosterRenderPagination();
     return;
   }
 
   tbody.innerHTML = pageData.map(emp => {
-    const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+    const isActive = emp.employement_status === 'Active';
+    const statusClass = isActive ? 'regimen-status-active' : 'regimen-status-inactive';
     const rowId = 'roster-row-' + emp.ohr_id;
     const detailId = 'roster-detail-' + emp.ohr_id;
-    return '<tr class="module-row" id="' + rowId + '" onclick="rosterToggleInlineDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
+    return '<tr class="regimen-row" id="' + rowId + '" onclick="rosterToggleInlineDetail(\'' + escapeAttr(emp.ohr_id) + '\')">'
       + cols.map(c => {
         let val = emp[c.key];
         if (c.key === 'srt_id') val = formatSrtId(val);
         if (c.key === 'employement_status') {
-          return '<td><span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(val || '') + '</span></td>';
+          return '<td><span class="regimen-status-badge ' + statusClass + '">' + escapeHtml(val || '') + '</span></td>';
         }
         if (c.key === 'full_name') {
-          return '<td style="white-space:nowrap;"><span class="roster-expand-indicator" id="roster-expand-' + emp.ohr_id + '" style="display:inline-block;width:14px;font-size:10px;color:var(--fg-muted);transition:transform 0.2s;">▶</span> ' + escapeHtml(val || '') + '</td>';
+          return '<td><span class="regimen-expand-icon roster-expand-indicator" id="roster-expand-' + emp.ohr_id + '">▶</span>' + escapeHtml(val || '') + '</td>';
         }
-        return '<td style="white-space:nowrap;">' + escapeHtml(val != null ? val : '') + '</td>';
+        return '<td>' + escapeHtml(val != null ? val : '') + '</td>';
       }).join('')
       + '</tr>'
-      + '<tr id="' + detailId + '" style="display:none;"><td colspan="' + cols.length + '" style="padding:0;border-top:none;"></td></tr>';
+      + '<tr id="' + detailId + '" style="display:none;"><td colspan="' + cols.length + '" class="regimen-detail-cell"></td></tr>';
   }).join('');
 
   rosterRenderPagination();
@@ -613,23 +617,28 @@ function rosterRenderPagination() {
   const start = (ROSTER.page - 1) * ROSTER.pageSize + 1;
   const end = Math.min(ROSTER.page * ROSTER.pageSize, total);
 
-  el.innerHTML = '<span class="module-page-info">' + (total > 0 ? start + '-' + end + ' of ' + total : '0 records') + '</span>'
-    + '<button class="btn btn-ghost btn-xs" ' + (ROSTER.page <= 1 ? 'disabled' : '') + ' onclick="ROSTER.page--;rosterRenderTable();">« Prev</button>'
-    + '<span class="module-page-num">Page ' + ROSTER.page + ' of ' + totalPages + '</span>'
-    + '<button class="btn btn-ghost btn-xs" ' + (ROSTER.page >= totalPages ? 'disabled' : '') + ' onclick="ROSTER.page++;rosterRenderTable();">Next »</button>';
+  el.innerHTML = '<span class="regimen-page-info">' + (total > 0 ? start + '-' + end + ' of ' + total : '0 records') + '</span>'
+    + '<select class="regimen-page-size-select" onchange="ROSTER.pageSize=parseInt(this.value);ROSTER.page=1;rosterRenderTable();">'
+    + [25, 50, 100].map(n => '<option value="' + n + '"' + (ROSTER.pageSize === n ? ' selected' : '') + '>' + n + '/page</option>').join('')
+    + '</select>'
+    + '<button class="regimen-page-btn" ' + (ROSTER.page <= 1 ? 'disabled' : '') + ' onclick="ROSTER.page--;rosterRenderTable();">« Prev</button>'
+    + '<span class="regimen-page-num">Page ' + ROSTER.page + ' / ' + totalPages + '</span>'
+    + '<button class="regimen-page-btn" ' + (ROSTER.page >= totalPages ? 'disabled' : '') + ' onclick="ROSTER.page++;rosterRenderTable();">Next »</button>';
 }
 
 // ===== Detail Panel with Inline Audit Trail =====
 // ===== Inline Detail Expansion =====
 window.rosterToggleInlineDetail = function(ohrId) {
   const detailRow = document.getElementById('roster-detail-' + ohrId);
-  const indicator = document.getElementById('roster-expand-' + ohrId);
+  const mainRow = document.getElementById('roster-row-' + ohrId);
   if (!detailRow) return;
 
   // If already open, close it
   if (detailRow.style.display !== 'none') {
     detailRow.style.display = 'none';
-    if (indicator) indicator.style.transform = 'rotate(0deg)';
+    if (mainRow) mainRow.classList.remove('expanded');
+    // Clear pending edits for this row
+    delete ROSTER._pendingEdits[ohrId];
     return;
   }
 
@@ -637,9 +646,9 @@ window.rosterToggleInlineDetail = function(ohrId) {
   document.querySelectorAll('tr[id^="roster-detail-"]').forEach(r => {
     if (r.id !== detailRow.id) r.style.display = 'none';
   });
-  document.querySelectorAll('.roster-expand-indicator').forEach(i => {
-    i.style.transform = 'rotate(0deg)';
-  });
+  document.querySelectorAll('.regimen-row.expanded').forEach(r => r.classList.remove('expanded'));
+  // Clear all pending edits
+  ROSTER._pendingEdits = {};
 
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
@@ -658,45 +667,52 @@ window.rosterToggleInlineDetail = function(ohrId) {
     { label: 'Attrition', keys: detailCols.filter(c => c.group === 'attrition') }
   ];
 
-  let html = '<div style="background:var(--bg-raised);padding:16px 20px;border:1px solid var(--border);border-radius:0 0 8px 8px;">';
+  let html = '<div class="regimen-detail-panel">';
 
   if (ROSTER.canEdit) {
-    // Editable form
+    // Click-to-edit fields
     groups.forEach(g => {
       if (g.keys.length === 0) return;
-      html += '<div style="margin-bottom:12px;">';
-      html += '<div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:3px;">' + g.label + '</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 12px;">';
+      html += '<div class="regimen-detail-section">';
+      html += '<div class="regimen-detail-section-title">' + g.label + '</div>';
+      html += '<div class="regimen-detail-grid">';
       g.keys.forEach(c => {
         const val = emp[c.key] != null ? emp[c.key] : '';
         const privilegedOhrs = ['740045023', '740044909'];
         const currentOhr = window._currentUser?.ohr_id || '';
         const isReadOnly = (c.key === 'ohr_id' || c.key === 'full_name') && !privilegedOhrs.includes(currentOhr);
-        html += '<div>'
-          + '<label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:1px;">' + escapeHtml(c.label) + '</label>'
-          + '<input type="text" class="form-input form-input-sm" data-field="' + c.key + '" data-ohr="' + escapeAttr(ohrId) + '" value="' + escapeAttr(val) + '"'
-          + (isReadOnly ? ' readonly style="opacity:0.6;font-size:12px;"' : ' style="font-size:12px;"')
-          + '></div>';
+        html += '<div class="regimen-field">'
+          + '<span class="regimen-field-label">' + escapeHtml(c.label) + '</span>';
+        if (isReadOnly) {
+          html += '<input type="text" class="regimen-field-input" data-field="' + c.key + '" data-ohr="' + escapeAttr(ohrId) + '" value="' + escapeAttr(val) + '" readonly>';
+        } else {
+          html += '<div class="regimen-field-value editable" data-field="' + c.key + '" data-ohr="' + escapeAttr(ohrId) + '" onclick="rosterStartFieldEdit(this)" title="Click to edit">'
+            + escapeHtml(val || '\u2014')
+            + '</div>';
+        }
+        html += '</div>';
       });
       html += '</div></div>';
     });
-    html += '<div style="display:flex;gap:8px;margin-top:8px;">'
-      + '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();rosterSaveInlineDetail(\'' + escapeAttr(ohrId) + '\');">Save Changes</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();rosterToggleInlineDetail(\'' + escapeAttr(ohrId) + '\');">Cancel</button>'
+    html += '<div class="regimen-detail-actions">'
+      + '<button class="regimen-save-btn" onclick="event.stopPropagation();rosterSaveInlineDetail(\'' + escapeAttr(ohrId) + '\');">Save Changes</button>'
+      + '<button class="regimen-cancel-btn" onclick="event.stopPropagation();rosterToggleInlineDetail(\'' + escapeAttr(ohrId) + '\');">Cancel</button>'
+      + '<span class="regimen-unsaved-indicator" id="roster-unsaved-' + ohrId + '" style="display:none;">Unsaved changes</span>'
       + '</div>';
   } else {
     // Read-only view
     groups.forEach(g => {
       if (g.keys.length === 0) return;
-      html += '<div style="margin-bottom:12px;">';
-      html += '<div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);padding-bottom:3px;">' + g.label + '</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 12px;">';
+      html += '<div class="regimen-detail-section">';
+      html += '<div class="regimen-detail-section-title">' + g.label + '</div>';
+      html += '<div class="regimen-detail-grid">';
       g.keys.forEach(c => {
         let val = emp[c.key];
         if (c.key === 'srt_id') val = formatSrtId(val);
-        html += '<div style="display:flex;gap:6px;padding:3px 0;">'
-          + '<span style="font-size:10px;font-weight:600;color:var(--fg-muted);min-width:100px;">' + escapeHtml(c.label) + '</span>'
-          + '<span style="font-size:11px;color:var(--fg);">' + escapeHtml(val != null ? val : '\u2014') + '</span>'
+        const displayVal = val != null && String(val).trim() !== '' ? escapeHtml(val) : '<span class="regimen-field-readonly empty">\u2014</span>';
+        html += '<div class="regimen-field">'
+          + '<span class="regimen-field-label">' + escapeHtml(c.label) + '</span>'
+          + '<span class="regimen-field-readonly">' + displayVal + '</span>'
           + '</div>';
       });
       html += '</div></div>';
@@ -704,8 +720,8 @@ window.rosterToggleInlineDetail = function(ohrId) {
   }
 
   // Audit trail section
-  html += '<div style="margin-top:12px;border-top:2px solid var(--border);padding-top:12px;">'
-    + '<div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Audit Trail</div>'
+  html += '<div class="regimen-audit-section">'
+    + '<div class="regimen-audit-title">Audit Trail</div>'
     + '<div id="roster-inline-audit-' + ohrId + '" style="font-size:11px;color:var(--fg-muted);">Loading audit trail...</div>'
     + '</div>';
 
@@ -714,16 +730,92 @@ window.rosterToggleInlineDetail = function(ohrId) {
   const td = detailRow.querySelector('td');
   if (td) td.innerHTML = html;
   detailRow.style.display = '';
-  if (indicator) indicator.style.transform = 'rotate(90deg)';
+  if (mainRow) mainRow.classList.add('expanded');
 
   // Load audit trail
   rosterLoadInlineAuditTrailFor(ohrId);
 };
 
+// Click-to-edit: convert value display to input
+window.rosterStartFieldEdit = function(el) {
+  if (!el || el.classList.contains('editing')) return;
+  event.stopPropagation();
+
+  const field = el.getAttribute('data-field');
+  const ohrId = el.getAttribute('data-ohr');
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  if (!emp) return;
+
+  // Get current value (from pending edits or original)
+  const pending = ROSTER._pendingEdits[ohrId] || {};
+  const currentVal = pending[field] !== undefined ? pending[field] : (emp[field] != null ? String(emp[field]) : '');
+
+  // Replace with input
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'regimen-field-input';
+  input.value = currentVal;
+  input.setAttribute('data-field', field);
+  input.setAttribute('data-ohr', ohrId);
+
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  // On blur or Enter, save value and revert to display
+  const finishEdit = function() {
+    const newVal = input.value.trim();
+    const origVal = emp[field] != null ? String(emp[field]).trim() : '';
+
+    // Track pending edit
+    if (!ROSTER._pendingEdits[ohrId]) ROSTER._pendingEdits[ohrId] = {};
+    if (newVal !== origVal) {
+      ROSTER._pendingEdits[ohrId][field] = newVal;
+    } else {
+      delete ROSTER._pendingEdits[ohrId][field];
+      if (Object.keys(ROSTER._pendingEdits[ohrId]).length === 0) delete ROSTER._pendingEdits[ohrId];
+    }
+
+    // Show unsaved indicator
+    const indicator = document.getElementById('roster-unsaved-' + ohrId);
+    if (indicator) {
+      const hasPending = ROSTER._pendingEdits[ohrId] && Object.keys(ROSTER._pendingEdits[ohrId]).length > 0;
+      indicator.style.display = hasPending ? '' : 'none';
+    }
+
+    // Revert to display div
+    const div = document.createElement('div');
+    div.className = 'regimen-field-value editable' + (newVal !== origVal ? ' editing' : '');
+    div.setAttribute('data-field', field);
+    div.setAttribute('data-ohr', ohrId);
+    div.setAttribute('onclick', 'rosterStartFieldEdit(this)');
+    div.setAttribute('title', 'Click to edit');
+    div.textContent = newVal || '\u2014';
+    if (newVal !== origVal) {
+      div.style.borderColor = 'var(--warning)';
+      div.style.background = 'rgba(217, 119, 6, 0.06)';
+    }
+    input.replaceWith(div);
+  };
+
+  input.addEventListener('blur', finishEdit);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') {
+      // Revert without saving
+      const origVal = emp[field] != null ? String(emp[field]).trim() : '';
+      input.value = origVal;
+      input.blur();
+    }
+  });
+};
+
 // Save from inline detail
 window.rosterSaveInlineDetail = async function(ohrId) {
-  const inputs = document.querySelectorAll('input[data-ohr="' + ohrId + '"][data-field]');
-  const updates = {};
+  const updates = ROSTER._pendingEdits[ohrId] || {};
+
+  // Also check any active inputs still in the DOM
+  const inputs = document.querySelectorAll('input.regimen-field-input[data-ohr="' + ohrId + '"]:not([readonly])');
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   inputs.forEach(input => {
     const field = input.getAttribute('data-field');
@@ -732,6 +824,7 @@ window.rosterSaveInlineDetail = async function(ohrId) {
     const oldVal = emp[field] != null ? String(emp[field]).trim() : '';
     if (newVal !== oldVal) updates[field] = newVal;
   });
+
   if (Object.keys(updates).length === 0) {
     showToast('No changes to save', 'info');
     return;
@@ -747,8 +840,11 @@ window.rosterSaveInlineDetail = async function(ohrId) {
     if (!resp.ok) throw new Error('Save failed');
     showToast('Employee updated successfully', 'success');
     // Close inline detail and refresh
+    delete ROSTER._pendingEdits[ohrId];
     const detailRow = document.getElementById('roster-detail-' + ohrId);
     if (detailRow) detailRow.style.display = 'none';
+    const mainRow = document.getElementById('roster-row-' + ohrId);
+    if (mainRow) mainRow.classList.remove('expanded');
     await rosterFetchEmployees();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -766,7 +862,7 @@ async function rosterLoadInlineAuditTrailFor(ohrId) {
       body.innerHTML = '<div style="color:var(--fg-muted);padding:4px 0;">No changes recorded.</div>';
       return;
     }
-    let html = '<div style="max-height:200px;overflow-y:auto;">';
+    let html = '<div class="regimen-audit-list">';
     logs.forEach(log => {
       const ts = log.timestamp ? new Date(log.timestamp).toLocaleString() : '';
       let changes = '';
@@ -778,8 +874,8 @@ async function rosterLoadInlineAuditTrailFor(ohrId) {
             const label = colDef ? colDef.label : k;
             if (v && typeof v === 'object' && 'from' in v && 'to' in v) {
               return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: '
-                + '<span style="color:#EF4444;text-decoration:line-through;">' + escapeHtml(v.from || '(empty)') + '</span>'
-                + ' &rarr; <span style="color:#22C55E;">' + escapeHtml(v.to || '(empty)') + '</span>';
+                + '<span class="regimen-audit-change-from">' + escapeHtml(v.from || '(empty)') + '</span>'
+                + ' &rarr; <span class="regimen-audit-change-to">' + escapeHtml(v.to || '(empty)') + '</span>';
             }
             return '<span style="font-weight:600;">' + escapeHtml(label) + '</span>: ' + escapeHtml(JSON.stringify(v));
           }).join('<br>');
@@ -787,10 +883,10 @@ async function rosterLoadInlineAuditTrailFor(ohrId) {
       } catch (e) {
         changes = escapeHtml(String(log.changes || ''));
       }
-      html += '<div style="padding:6px 0;border-bottom:1px solid var(--border-muted);">'
-        + '<div style="display:flex;justify-content:space-between;margin-bottom:2px;">'
-        + '<span style="font-weight:600;color:var(--fg);">' + escapeHtml(log.changed_by || 'System') + '</span>'
-        + '<span style="color:var(--fg-muted);font-size:10px;">' + escapeHtml(ts) + '</span>'
+      html += '<div class="regimen-audit-entry">'
+        + '<div class="regimen-audit-header">'
+        + '<span class="regimen-audit-actor">' + escapeHtml(log.changed_by || 'System') + '</span>'
+        + '<span class="regimen-audit-time">' + escapeHtml(ts) + '</span>'
         + '</div>'
         + '<div>' + changes + '</div>'
         + '</div>';
@@ -798,7 +894,7 @@ async function rosterLoadInlineAuditTrailFor(ohrId) {
     html += '</div>';
     body.innerHTML = html;
   } catch (e) {
-    body.innerHTML = '<div style="color:var(--danger);padding:4px 0;">Failed to load audit trail.</div>';
+    body.innerHTML = '<div style="color:var(--error);padding:4px 0;">Failed to load audit trail.</div>';
   }
 }
 
@@ -922,7 +1018,7 @@ async function rosterLoadInlineAuditTrail(ohrId) {
     html += '</div>';
     body.innerHTML = html;
   } catch (e) {
-    body.innerHTML = '<div style="color:var(--danger);padding:8px 0;">Failed to load audit trail: ' + escapeHtml(e.message) + '</div>';
+    body.innerHTML = '<div style="color:var(--danger);padding:4px 0;">Failed to load audit trail.</div>';
   }
 }
 
@@ -1068,8 +1164,6 @@ window.rosterSwitchTab = function(tab) {
     if (panel) panel.style.display = 'none';
     const tabBtn = document.getElementById('regimen-tab-' + p);
     if (tabBtn) {
-      tabBtn.style.borderBottomColor = 'transparent';
-      tabBtn.style.color = 'var(--fg-muted)';
       tabBtn.classList.remove('active');
     }
   });
@@ -1078,8 +1172,6 @@ window.rosterSwitchTab = function(tab) {
   if (activePanel) activePanel.style.display = '';
   const activeTab = document.getElementById('regimen-tab-' + tab);
   if (activeTab) {
-    activeTab.style.borderBottomColor = 'var(--primary)';
-    activeTab.style.color = 'var(--primary)';
     activeTab.classList.add('active');
   }
 
@@ -1152,11 +1244,11 @@ function irRenderFilterBar() {
   let html = '';
   IR_FILTER_FIELDS.forEach(field => {
     if (field.type === 'search') {
-      html += '<div class="filter-pill" style="padding:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;min-width:180px;">'
-        + '<input type="text" class="form-input form-input-sm" id="ir-search-input" placeholder="Search OHR / Name..." '
+      html += '<div class="regimen-search-box" style="min-width:180px;">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+        + '<input type="text" id="ir-search-input" placeholder="Search OHR / Name..." '
         + 'value="' + escapeAttr(IR_STATE.searchQuery) + '" '
-        + 'oninput="IR_STATE.searchQuery=this.value;irDebouncedApply();" '
-        + 'style="border:none;font-size:12px;padding:5px 10px;background:transparent;width:100%;min-width:160px;">'
+        + 'oninput="IR_STATE.searchQuery=this.value;irDebouncedApply();">'
         + '</div>';
       return;
     }
@@ -1194,6 +1286,11 @@ window.irToggleDropdown = function(key) {
   if (!field) return;
 
   // Render multi dropdown
+  irRenderMultiDropdown(dd, field);
+  dd.onclick = function(e) { e.stopPropagation(); };
+};
+
+function irRenderMultiDropdown(dd, field) {
   const values = irGetAllValues(field);
   const f = IR_STATE.filters[field.key];
   const selected = f ? f.values : values.slice();
@@ -1213,8 +1310,7 @@ window.irToggleDropdown = function(key) {
   });
   ddHtml += '</div>';
   dd.innerHTML = ddHtml;
-  dd.onclick = function(e) { e.stopPropagation(); };
-};
+}
 
 window.irFilterDropdownSearch = function(input, key) {
   const q = input.value.toLowerCase();
@@ -1328,39 +1424,43 @@ window.incompleteRosteringRenderTable = function() {
   });
 
   thead.innerHTML = '<tr>'
-    + '<th style="white-space:nowrap;">OHR ID</th>'
-    + '<th style="white-space:nowrap;">Full Name</th>'
-    + '<th style="white-space:nowrap;">Status</th>'
-    + '<th style="white-space:nowrap;">Role</th>'
-    + '<th style="white-space:nowrap;">Completion Rate</th>'
-    + '<th style="white-space:nowrap;">Missing Count</th>'
-    + '<th style="white-space:nowrap;">Missing Fields</th>'
+    + '<th>OHR ID</th>'
+    + '<th>Full Name</th>'
+    + '<th>Status</th>'
+    + '<th>Role</th>'
+    + '<th>Completion Rate</th>'
+    + '<th>Missing Count</th>'
+    + '<th>Missing Fields</th>'
     + '</tr>';
 
   const start = (_irPage - 1) * _irPageSize;
   const pageData = allData.slice(start, start + _irPageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--fg-muted);">All employees are fully rostered!</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="regimen-empty">All employees are fully rostered!</td></tr>';
     irRenderPagination(allData.length);
     return;
   }
 
   tbody.innerHTML = pageData.map(emp => {
-    const statusColor = emp.employement_status === 'Active' ? '#22C55E' : '#EF4444';
+    const isActive = emp.employement_status === 'Active';
+    const statusClass = isActive ? 'regimen-status-active' : 'regimen-status-inactive';
     const rate = parseFloat(emp.completionRate);
     const rateColor = rate >= 90 ? '#22C55E' : rate >= 70 ? '#F59E0B' : '#EF4444';
     const missingHtml = emp.missingFields.map(f =>
-      '<span style="background:#F5E6D3;color:#8B6914;padding:1px 6px;border-radius:4px;font-size:11px;margin:1px 2px;display:inline-block;">' + escapeHtml(IR_LABELS[f] || f) + '</span>'
+      '<span class="ir-missing-tag">' + escapeHtml(IR_LABELS[f] || f) + '</span>'
     ).join('');
 
-    return '<tr class="module-row" onclick="rosterOpenDetail(\'' + escapeAttr(emp.ohr_id) + '\')" style="cursor:pointer;">'
-      + '<td style="white-space:nowrap;font-weight:600;">' + escapeHtml(emp.ohr_id || '') + '</td>'
-      + '<td style="white-space:nowrap;">' + escapeHtml(emp.full_name || '') + '</td>'
-      + '<td><span class="module-status-badge" style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;">' + escapeHtml(emp.employement_status || '') + '</span></td>'
-      + '<td style="white-space:nowrap;">' + escapeHtml(emp.actual_role || '') + '</td>'
-      + '<td style="text-align:center;font-weight:600;color:' + rateColor + ';">' + emp.completionRate + '%</td>'
-      + '<td style="text-align:center;font-weight:600;color:#B8860B;">' + emp.missingFields.length + '</td>'
+    return '<tr class="regimen-row" onclick="rosterOpenDetail(\'' + escapeAttr(emp.ohr_id) + '\')">'
+      + '<td style="font-weight:600;font-family:\'SF Mono\',\'Fira Code\',monospace;font-size:12px;">' + escapeHtml(emp.ohr_id || '') + '</td>'
+      + '<td>' + escapeHtml(emp.full_name || '') + '</td>'
+      + '<td><span class="regimen-status-badge ' + statusClass + '">' + escapeHtml(emp.employement_status || '') + '</span></td>'
+      + '<td>' + escapeHtml(emp.actual_role || '') + '</td>'
+      + '<td><div class="ir-completion-bar">'
+      + '<div class="ir-bar-track"><div class="ir-bar-fill" style="width:' + rate + '%;background:' + rateColor + ';"></div></div>'
+      + '<span class="ir-bar-label" style="color:' + rateColor + ';">' + emp.completionRate + '%</span>'
+      + '</div></td>'
+      + '<td style="text-align:center;font-weight:600;color:#B45309;">' + emp.missingFields.length + '</td>'
       + '<td style="max-width:500px;">' + missingHtml + '</td>'
       + '</tr>';
   }).join('');
@@ -1375,10 +1475,10 @@ function irRenderPagination(total) {
   const start = (_irPage - 1) * _irPageSize + 1;
   const end = Math.min(_irPage * _irPageSize, total);
 
-  el.innerHTML = '<span class="module-page-info">' + (total > 0 ? start + '-' + end + ' of ' + total : '0 records') + '</span>'
-    + '<button class="btn btn-ghost btn-xs" ' + (_irPage <= 1 ? 'disabled' : '') + ' onclick="_irPage--;incompleteRosteringRenderTable();">« Prev</button>'
-    + '<span class="module-page-num">Page ' + _irPage + ' of ' + totalPages + '</span>'
-    + '<button class="btn btn-ghost btn-xs" ' + (_irPage >= totalPages ? 'disabled' : '') + ' onclick="_irPage++;incompleteRosteringRenderTable();">Next »</button>';
+  el.innerHTML = '<span class="regimen-page-info">' + (total > 0 ? start + '-' + end + ' of ' + total : '0 records') + '</span>'
+    + '<button class="regimen-page-btn" ' + (_irPage <= 1 ? 'disabled' : '') + ' onclick="_irPage--;incompleteRosteringRenderTable();">« Prev</button>'
+    + '<span class="regimen-page-num">Page ' + _irPage + ' / ' + totalPages + '</span>'
+    + '<button class="regimen-page-btn" ' + (_irPage >= totalPages ? 'disabled' : '') + ' onclick="_irPage++;incompleteRosteringRenderTable();">Next »</button>';
 }
 
 // Backward compat
@@ -1481,7 +1581,7 @@ window.rosterSyncToSheet = async function() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync to Sheet';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync';
     }
   }
 };

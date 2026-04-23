@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/compass-redesign.css?v=110">
+  <link rel="stylesheet" href="css/regimen-redesign.css?v=100">
   <link rel="stylesheet" href="css/corrective-actions.css?v=6">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1553,46 +1554,16 @@
       <div class="view-container view-hidden" id="view-regimen">
         <div class="module-page">
           <!-- Regimen Tab Bar -->
-          <div class="regimen-tabs" id="regimen-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;align-items:center;">
-            <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Roster</button>
-            <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);display:none;">Incomplete Rostering</button>
-            <!-- Refresh Data + Logout inline with tabs -->
-            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding-right:4px;">
-              <button class="btn btn-outline btn-sm" onclick="forceSync()" style="white-space:nowrap;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                Refresh Data
-              </button>
-              <button class="btn btn-outline btn-sm" onclick="handleLogout()" title="Logout" style="white-space:nowrap;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Logout
-              </button>
-            </div>
+          <div class="regimen-tabs" id="regimen-tabs">
+            <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')">Roster</button>
+            <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="display:none;">Incomplete Rostering</button>
           </div>
           <!-- Roster Tab Content -->
           <div id="regimen-panel-roster">
-          <!-- Pill-based Filter Bar -->
-          <div class="filter-bar" id="roster-filter-bar" style="margin-top:8px;z-index:4;position:relative;display:inline-flex;gap:12px;align-items:flex-start;max-width:100%;">
-            <!-- Left column: buttons, search, count -->
-            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;min-width:200px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <button class="btn btn-primary btn-sm" id="roster-add-btn" onclick="rosterShowAddForm()" style="display:none;white-space:nowrap;flex-shrink:0;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add Employee
-                </button>
-                <button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;flex-shrink:0;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Export CSV
-                </button>
-                <button class="btn btn-outline btn-sm" id="roster-sync-sheet-btn" onclick="rosterSyncToSheet()" style="display:none;white-space:nowrap;flex-shrink:0;">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  Sync to Sheet
-                </button>
-              </div>
-              <div id="roster-search-container"></div>
-              <div id="roster-count-container" style="display:flex;align-items:center;gap:6px;"></div>
-            </div>
-            <!-- Right column: 3 stacked rows of filter pills -->
-            <div id="roster-filter-pills" style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0;"></div>
+          <!-- Sticky Filter Bar -->
+          <div class="regimen-filter-bar" id="roster-filter-bar">
+            <div class="regimen-filter-toolbar" id="roster-filter-toolbar"></div>
+            <div class="regimen-filter-pills" id="roster-filter-pills"></div>
           </div>
           <!-- Loading -->
           <div class="loading-overlay" id="roster-loading" style="display:none;">
@@ -1600,14 +1571,14 @@
             <div class="loading-text">Loading Roster...</div>
           </div>
           <!-- Table -->
-          <div class="module-table-wrapper">
-            <table class="data-table module-table" id="roster-table">
+          <div class="regimen-table-wrapper">
+            <table class="regimen-table" id="roster-table">
               <thead id="roster-table-head"></thead>
               <tbody id="roster-table-body"></tbody>
             </table>
           </div>
-          <div class="module-pagination" id="roster-pagination"></div>
-          <!-- Edit Form -->
+          <div class="regimen-pagination" id="roster-pagination"></div>
+          <!-- Add/Edit Form Modal -->
           <div class="module-form-overlay" id="roster-form-overlay" style="display:none;">
             <div class="module-form-panel">
               <div class="module-form-header">
@@ -1623,21 +1594,19 @@
           </div><!-- /regimen-panel-roster -->
           <!-- Onboarding Tab Content -->
           <div id="regimen-panel-onboarding" style="display:none;">
-            <div style="padding:16px 0;">
-              <!-- Pill-based Filter Bar for Incomplete Rostering -->
-              <div class="filter-bar" id="ir-filter-bar" style="z-index:4;position:relative;margin-bottom:8px;">
-                <div class="filter-bar-row" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
-                  <div id="ir-filter-pills" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1;"></div>
-                </div>
+            <div style="padding:12px 0;">
+              <!-- Filter Bar for Incomplete Rostering -->
+              <div class="regimen-filter-bar" id="ir-filter-bar">
+                <div class="regimen-filter-pills" id="ir-filter-pills"></div>
               </div>
               <!-- Table -->
-              <div class="module-table-wrapper">
-                <table class="data-table module-table" id="onboarding-table">
+              <div class="regimen-table-wrapper">
+                <table class="regimen-table" id="onboarding-table">
                   <thead id="onboarding-table-head"></thead>
                   <tbody id="onboarding-table-body"></tbody>
                 </table>
               </div>
-              <div class="module-pagination" id="onboarding-pagination"></div>
+              <div class="regimen-pagination" id="onboarding-pagination"></div>
             </div>
           </div>
           </div>
@@ -1743,7 +1712,7 @@
   <script src="js/sandbox.js?v=103" defer></script>
   <script src="js/haven.js?v=104" defer></script>
   <script src="js/helm.js?v=111" defer></script>
-  <script src="js/roster.js?v=104" defer></script>
+  <script src="js/roster.js?v=200" defer></script>
   <script src="js/permissions.js?v=2" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
 

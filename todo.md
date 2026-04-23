@@ -2771,3 +2771,19 @@
 - [x] Replaced modal with inline expansion (rosterToggleInlineDetail) with grouped detail fields, edit/save, and inline audit trail
 - [x] Cache versions bumped: compass.js v=117, roster.js v=104
 - [x] 761 tests passing (2 supabase-sync failures are pre-existing infra issue)
+
+## Fix Duplicate Buttons + Regimen UI/UX Overhaul (April 2026)
+
+### Bug Fix
+- [x] Remove duplicate Refresh Data / Logout buttons (bottom copies)
+
+### Regimen UI/UX Overhaul
+- [x] Sticky horizontal filter bar at top of table
+- [x] Filter layout: date filters on top line, identity filters on second line, remaining on third line
+- [x] Add Employee + Export CSV buttons retained
+- [x] Search bar below buttons, filtered count below search
+- [x] Inline editable fields (click field to edit directly in expanded row)
+- [x] Paginated table (50 per page) for load efficiency
+- [x] Match Playbook dark-header aesthetic
+- [x] Overhaul both tabs: Roster Table and Incomplete Rostering
+- [x] Latency reduction: lazy load details only on expansion
