@@ -389,6 +389,12 @@
 
     <!-- ===== Main Content ===== -->
     <div class="main-content">
+      <!-- Role Preview Banner (hidden by default, shown when viewing as TL) -->
+      <div id="role-preview-banner" style="display:none;background:linear-gradient(90deg,#f59e0b,#d97706);color:#fff;padding:8px 16px;font-size:13px;font-weight:600;text-align:center;position:sticky;top:0;z-index:100;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Viewing as <strong>Team Lead</strong> &mdash; filtering, visibility, and permissions reflect TL perspective.
+        <button onclick="setRolePreview('admin')" style="margin-left:12px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;">Switch Back to Admin</button>
+      </div>
       <!-- Top Header -->
       <header class="top-header">
         <div class="header-left">
@@ -744,6 +750,21 @@
         <!-- Tools Tab Content -->
         <div id="admin-panel-tools">
         <div class="admin-tools-container">
+
+          <!-- Role Preview Toggle -->
+          <div class="card admin-card" style="margin-bottom:20px;border-left:3px solid #f59e0b;">
+            <div class="card-header">
+              <span class="card-title">ROLE PREVIEW</span>
+              <span id="role-preview-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;background:#f0fdf4;color:#16a34a;">Admin</span>
+            </div>
+            <div class="admin-card-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+              <p style="margin:0;font-size:13px;color:var(--text-secondary);flex:1;min-width:200px;">Switch your view to see the app as a <strong>Team Lead</strong> would. All filtering, visibility, and permissions will reflect the TL perspective. Toggle back to restore full admin access.</p>
+              <div style="display:flex;gap:4px;background:var(--bg-secondary);border-radius:8px;padding:3px;">
+                <button class="btn btn-sm" id="role-preview-admin" onclick="setRolePreview('admin')" style="white-space:nowrap;border-radius:6px;font-size:12px;font-weight:600;padding:6px 16px;background:#1a365d;color:#fff;border:none;cursor:pointer;">Admin</button>
+                <button class="btn btn-sm" id="role-preview-tl" onclick="setRolePreview('tl')" style="white-space:nowrap;border-radius:6px;font-size:12px;font-weight:600;padding:6px 16px;background:transparent;color:var(--fg-muted);border:none;cursor:pointer;">Team Lead</button>
+              </div>
+            </div>
+          </div>
 
           <!-- Pause Site -->
           <div class="card admin-card" style="margin-bottom:20px;">
@@ -1726,7 +1747,7 @@
   <script src="js/input-compact.js?v=121"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
   <script src="js/notifications.js?v=104"></script>
-  <script src="js/maintenance.js?v=102g"></script>
+  <script src="js/maintenance.js?v=103"></script>
   <script src="js/admin.js?v=107"></script>
   <script src="js/billing.js?v=132"></script>
   <script src="js/billing-v2.js?v=122"></script>
@@ -1734,10 +1755,10 @@
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
-  <script src="js/compass.js?v=114" defer></script>
+  <script src="js/compass.js?v=115" defer></script>
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
-  <script src="js/corrective-actions.js?v=10" defer></script>
-  <script src="js/compass-omnibar.js?v=102h" defer></script>
+  <script src="js/corrective-actions.js?v=11" defer></script>
+  <script src="js/compass-omnibar.js?v=103" defer></script>
   <script src="js/sandbox.js?v=103" defer></script>
   <script src="js/haven.js?v=102g" defer></script>
   <script src="js/helm.js?v=111" defer></script>

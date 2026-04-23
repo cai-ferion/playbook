@@ -57,8 +57,8 @@ async function initCorrectiveActions() {
 
     await Promise.all([caFetchRecords(), caFetchStats()]);
     // Set default view mode: admin/managers see all, others see team
-    const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
-    const isManager = currentUser && currentUser.actual_role === 'Manager';
+    const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
+    const isManager = currentUser && (typeof getEffectiveRole === 'function' ? getEffectiveRole() : currentUser.actual_role) === 'Manager';
     CA.viewMode = (isAdmin740 || isManager) ? 'all' : 'team';
     caRenderSummaryCards();
     caRenderFilterBar();
@@ -134,8 +134,8 @@ function caRenderFilterBar() {
   const canCreate = currentUser && (currentUser.permissions && currentUser.permissions['compass.corrective_actions']);
 
   // Show view toggle for admin (740045023) and Managers
-  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
-  const isManager = currentUser && currentUser.actual_role === 'Manager';
+  const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser && currentUser.ohr_id === '740045023');
+  const isManager = currentUser && (typeof getEffectiveRole === 'function' ? getEffectiveRole() : currentUser.actual_role) === 'Manager';
   const showToggle = isAdmin740 || isManager;
 
   container.innerHTML = `
@@ -195,8 +195,8 @@ function caApplyFilters() {
   // Role-based visibility (mirrors Coaching Profile rules)
   // Admin (740045023) and Managers respect the All/My Team toggle
   if (currentUser) {
-    const isAdmin740 = currentUser.ohr_id === '740045023';
-    const role = currentUser.actual_role;
+    const isAdmin740 = typeof isEffectiveAdmin === 'function' ? isEffectiveAdmin() : (currentUser.ohr_id === '740045023');
+    const role = typeof getEffectiveRole === 'function' ? getEffectiveRole() : currentUser.actual_role;
 
     if (isAdmin740 || role === 'Manager') {
       // Admin + Managers: 'all' = everything, 'team' = TL-scoped view

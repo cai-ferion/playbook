@@ -7,6 +7,98 @@
 const ADMIN_OHR = '740045023';
 const MAINTENANCE_KEY = 'site_maintenance';
 
+// ---- Role Preview System ----
+// Allows admin (740045023) to preview the app as a Team Lead.
+// When active, all isAdmin740 checks return false and role resolves to 'Team Lead'.
+window.PLAYBOOK_ROLE_PREVIEW = null; // null = normal admin, 'tl' = viewing as Team Lead
+
+/**
+ * Returns the effective role for the current user, respecting the role preview toggle.
+ * When preview is active, admin sees the app as 'Team Lead'.
+ */
+function getEffectiveRole() {
+  if (!window.currentUser) return '';
+  if (window.currentUser.ohr_id === ADMIN_OHR && window.PLAYBOOK_ROLE_PREVIEW === 'tl') {
+    return 'Team Lead';
+  }
+  return window.currentUser.actual_role || '';
+}
+
+/**
+ * Returns true if the current user should be treated as admin (740045023).
+ * Returns false when role preview is active (viewing as TL).
+ */
+function isEffectiveAdmin() {
+  if (!window.currentUser) return false;
+  if (window.currentUser.ohr_id !== ADMIN_OHR) return false;
+  // If previewing as TL, suppress admin privileges
+  return window.PLAYBOOK_ROLE_PREVIEW !== 'tl';
+}
+
+/**
+ * Toggle the role preview mode. Called from Admin Tools.
+ */
+function setRolePreview(mode) {
+  if (mode === 'tl') {
+    window.PLAYBOOK_ROLE_PREVIEW = 'tl';
+  } else {
+    window.PLAYBOOK_ROLE_PREVIEW = null;
+  }
+  // Update Admin Tools toggle buttons
+  const btnAdmin = document.getElementById('role-preview-admin');
+  const btnTL = document.getElementById('role-preview-tl');
+  const badge = document.getElementById('role-preview-badge');
+  const banner = document.getElementById('role-preview-banner');
+  if (btnAdmin && btnTL) {
+    if (mode === 'tl') {
+      btnTL.style.background = '#1a365d'; btnTL.style.color = '#fff';
+      btnAdmin.style.background = 'transparent'; btnAdmin.style.color = 'var(--fg-muted)';
+    } else {
+      btnAdmin.style.background = '#1a365d'; btnAdmin.style.color = '#fff';
+      btnTL.style.background = 'transparent'; btnTL.style.color = 'var(--fg-muted)';
+    }
+  }
+  if (badge) {
+    if (mode === 'tl') {
+      badge.textContent = 'Team Lead';
+      badge.style.background = '#fef3c7'; badge.style.color = '#d97706';
+    } else {
+      badge.textContent = 'Admin';
+      badge.style.background = '#f0fdf4'; badge.style.color = '#16a34a';
+    }
+  }
+  if (banner) {
+    banner.style.display = mode === 'tl' ? '' : 'none';
+  }
+  // Re-apply filters in currently active modules
+  _rolePreviewRefreshModules();
+}
+
+function _rolePreviewRefreshModules() {
+  // Refresh Compass (Coaching Profile + Disputes)
+  if (typeof compassApplyNow === 'function') {
+    compassApplyNow();
+  } else if (typeof compassApplyFilters === 'function') {
+    compassApplyFilters();
+  }
+  // Refresh Corrective Actions
+  if (typeof caApplyFilters === 'function') {
+    caApplyFilters();
+  }
+  // Refresh view toggle visibility in Compass
+  if (typeof initCompass === 'undefined') return; // Compass not loaded yet
+  const viewToggle = document.getElementById('compass-view-toggle');
+  if (viewToggle) {
+    viewToggle.style.display = isEffectiveAdmin() ? 'flex' : 'none';
+  }
+  // Reset view mode when switching to TL (TL doesn't have All/My Team toggle)
+  if (window.PLAYBOOK_ROLE_PREVIEW === 'tl' && typeof COMPASS !== 'undefined') {
+    COMPASS.viewMode = 'tl';
+  } else if (typeof COMPASS !== 'undefined') {
+    COMPASS.viewMode = 'all';
+  }
+}
+
 // ---- API helpers ----
 
 // ---- Check / Get maintenance state ----

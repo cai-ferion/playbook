@@ -2710,3 +2710,13 @@
 - [x] Search/filter bar already existed on both dropdowns (verified working)
 - [x] Cache version bumped: compass.js v=114
 - [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue, unrelated)
+
+## Admin Role-Switching Toggle (April 2026)
+- [x] Add Admin/Team Lead toggle card in Admin Tools page (only for 740045023) with styled toggle buttons
+- [x] Store active role in window.PLAYBOOK_ROLE_PREVIEW + sessionStorage (persists across page navigations)
+- [x] Global helpers: isEffectiveAdmin(), getEffectiveRole(), setRolePreview(), clearRolePreview()
+- [x] Wired into compass.js (8 admin checks), corrective-actions.js (3 checks), compass-omnibar.js (2 checks)
+- [x] Persistent amber banner at top of page when viewing as Team Lead
+- [x] Re-initializes current module on toggle (Compass, CA, etc.)
+- [x] Cache versions bumped: maintenance.js v=103, compass.js v=115, corrective-actions.js v=11, compass-omnibar.js v=103
+- [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue)

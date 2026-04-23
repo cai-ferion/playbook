@@ -139,14 +139,14 @@ describe("Inline Add Panel JavaScript Functions", () => {
 
   it("should apply role-based restrictions for QA", () => {
     const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
-    const fnBlock = compassJs.slice(fnStart, fnStart + 1500);
+    const fnBlock = compassJs.slice(fnStart, fnStart + 2000);
     expect(fnBlock).toContain("Quality & Policy Expert");
     expect(fnBlock).toContain("qaAllowed");
   });
 
   it("should apply role-based restrictions for SME", () => {
     const fnStart = compassJs.indexOf("function _compassGetAllowedTypes()");
-    const fnBlock = compassJs.slice(fnStart, fnStart + 1500);
+    const fnBlock = compassJs.slice(fnStart, fnStart + 2000);
     expect(fnBlock).toContain("Operational SME");
     expect(fnBlock).toContain("smeExcluded");
   });
@@ -217,8 +217,8 @@ describe("Inline Add Panel CSS", () => {
 // 4. Cache Version Bumps
 // ═══════════════════════════════════════════════════════════════════════
 describe("Inline Panel Cache Versions", () => {
-  it("should have compass.js at v=114", () => {
-    expect(indexHtml).toContain("compass.js?v=114");
+  it("should have compass.js at v=115", () => {
+    expect(indexHtml).toContain("compass.js?v=115");
   });
 
   it("should have compass-redesign.css at v=110", () => {
