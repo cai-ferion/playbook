@@ -2847,3 +2847,8 @@
 
 ## Bug: Agents cannot see Sandbox nav (April 24, 2026)
 - [x] Fix: Agents cannot see Sandbox in nav after publish — DB rows had nav.sandbox=false from pre-Sandbox seeding, bulk-updated to true
+
+## Coaching Profile Date Field + Sandbox Review Panel (April 24, 2026)
+- [x] Coaching Profile: Add date field to all coaching type forms, default to today
+- [x] Sandbox Review Area: Replace downward card expansion with right-side detail panel (like Disputes)
+- [x] Sandbox Review Area: Inline action buttons in the right-side detail panel

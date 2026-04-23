@@ -1874,7 +1874,7 @@ function _compassCacheFormEls() {
     'compass-followup-field', 'compass-session-goal-section', 'compass-ztp-section',
     'compass-rca-section', 'compass-triad-coachee-field', 'compass-coachee-search',
     'compass-violation-section', 'compass-support-joiner-section', 'compass-job-id-section',
-    'compass-new-coachee', 'compass-triad-coachee', 'compass-triad-coachee-search',
+    'compass-new-coachee', 'compass-new-date', 'compass-triad-coachee', 'compass-triad-coachee-search',
     'compass-followup-search', 'compass-followup-dropdown', 'compass-followup-selected',
     'compass-multi-coachee-display', 'compass-multi-coachee-tags',
     'compass-multi-coachee-options', 'compass-new-details',
@@ -1913,6 +1913,8 @@ function _compassResetFormFields() {
   if (el['compass-multi-coachee-options']) {
     el['compass-multi-coachee-options'].querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
   }
+  // Date field — reset to today
+  if (el['compass-new-date']) el['compass-new-date'].value = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
   // Session goals — uncheck all
   if (el['compass-goal-dropdown']) {
     el['compass-goal-dropdown'].querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
@@ -2171,6 +2173,14 @@ async function compassShowNewFormInline(preselectedType) {
           </div>
           <div id="compass-followup-info" style="color:var(--fg-muted); line-height:1.5;"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Coaching Date (default: today) -->
+    <div class="form-section" id="compass-date-section">
+      <div class="form-field">
+        <label class="form-label">Coaching Date <span class="required">*</span></label>
+        <input type="date" class="form-input" id="compass-new-date" value="${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}">
       </div>
     </div>
 
@@ -2671,7 +2681,9 @@ async function compassSubmitNew() {
   const type = document.getElementById('compass-new-type')?.value;
   if (!type) { showToast('Please select a coaching type', 'error'); return; }
 
-  const date = new Date().toISOString();
+  // Use the date field value (defaults to today in Asia/Manila)
+  const dateFieldVal = document.getElementById('compass-new-date')?.value;
+  const date = dateFieldVal ? new Date(dateFieldVal + 'T00:00:00+08:00').toISOString() : new Date().toISOString();
 
   let coacheeOhr, coacheeList = [], sessionGoal = '';
 
@@ -4554,7 +4566,7 @@ function disputesShowLV5RejectDecision() {
   `;
 }
 
-async function disputesSubmitQADecisionRejected(){
+async function disputesSubmitLV5RejectDecision(){
   const remarks = (document.getElementById('dispute-remarks-input')?.value || '').trim();
   if (!remarks) {
     showToast('Remarks are required', 'error');

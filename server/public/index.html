@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
   <link rel="stylesheet" href="css/compass-redesign.css?v=110">
   <link rel="stylesheet" href="css/regimen-redesign.css?v=100">
-  <link rel="stylesheet" href="css/sandbox-redesign.css?v=101">
+  <link rel="stylesheet" href="css/sandbox-redesign.css?v=102">
   <link rel="stylesheet" href="css/corrective-actions.css?v=7">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
@@ -1717,11 +1717,11 @@
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
-  <script src="js/compass.js?v=119" defer></script>
+  <script src="js/compass.js?v=120" defer></script>
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=13" defer></script>
   <script src="js/compass-omnibar.js?v=104" defer></script>
-  <script src="js/sandbox.js?v=105" defer></script>
+  <script src="js/sandbox.js?v=106" defer></script>
   <script src="js/haven.js?v=104" defer></script>
   <script src="js/helm.js?v=111" defer></script>
   <script src="js/roster.js?v=201" defer></script>
@@ -1739,6 +1739,19 @@
       <p style="color:#8b949e;font-size:16px;max-width:400px;line-height:1.6;margin:0;">Playbook is currently undergoing scheduled maintenance. Please check back shortly.</p>
     </div>
   </div>
+<!-- Sandbox Review Side Panel (body-level for reliable position:fixed rendering) -->
+<div class="sandbox-side-panel" id="sandbox-review-panel" onclick="if(event.target===this)sandboxCloseReviewPanel()">
+  <div class="sandbox-side-panel-inner">
+    <div class="sandbox-side-panel-header">
+      <h3 id="sandbox-review-panel-title">Insight Detail</h3>
+      <button class="disputes-modal-close" onclick="sandboxCloseReviewPanel()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="sandbox-side-panel-body" id="sandbox-review-panel-body"></div>
+    <div class="sandbox-side-panel-footer" id="sandbox-review-panel-footer"></div>
+  </div>
+</div>
 <!-- Disputes Side Panel (body-level for reliable position:fixed rendering) -->
 <div class="disputes-side-panel" id="disputes-detail-overlay" onclick="if(event.target===this)disputesCloseDetail()">
   <div class="disputes-side-panel-inner">

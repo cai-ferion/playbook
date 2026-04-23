@@ -833,10 +833,7 @@ function sandboxRenderKanban() {
           ${showSubStatus ? `<div class="sandbox-kanban-card-status" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status.replace('Elevated - ', ''))}</div>` : ''}
         </div>`;
 
-        // Inline expansion panel below the card
-        if (isExpanded) {
-          html += sandboxBuildKanbanExpansion(ins, col);
-        }
+        // Side panel is used instead of inline expansion (opened via sandboxToggleKanbanCard)
       });
     }
 
@@ -855,66 +852,81 @@ function sandboxRenderKanban() {
   board.innerHTML = html;
 }
 
-// ===== Inline Card Expansion: Toggle =====
+// ===== Side Panel: Open =====
 
 function sandboxToggleKanbanCard(insightId) {
-  if (SANDBOX_MOD._reviewExpandedId === insightId) {
-    SANDBOX_MOD._reviewExpandedId = null;
-  } else {
-    SANDBOX_MOD._reviewExpandedId = insightId;
-    SANDBOX_MOD.editingId = insightId;
-    SANDBOX_MOD._context = 'review';
-  }
-  sandboxRenderKanban();
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === insightId);
+  if (!ins) return;
+  SANDBOX_MOD.editingId = insightId;
+  SANDBOX_MOD._context = 'review';
+  SANDBOX_MOD._reviewExpandedId = insightId;
+  sandboxOpenReviewPanel(ins);
 }
 
-// ===== Inline Card Expansion: Build Panel =====
+// ===== Side Panel: Build & Show =====
 
-function sandboxBuildKanbanExpansion(ins, col) {
+function sandboxOpenReviewPanel(ins) {
+  const panel = document.getElementById('sandbox-review-panel');
+  const titleEl = document.getElementById('sandbox-review-panel-title');
+  const bodyEl = document.getElementById('sandbox-review-panel-body');
+  const footerEl = document.getElementById('sandbox-review-panel-footer');
+  if (!panel || !titleEl || !bodyEl || !footerEl) return;
+
+  titleEl.innerHTML = `<span style="font-family:'SF Mono','Fira Code',monospace;font-size:14px;">${escapeHtml(ins.insight_id || '')}</span>`;
+
   const statusColor = sandboxGetStatusColor(ins.status);
   const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric' }) : '\u2014';
   const cat = ins.category || ins.insight_category || '\u2014';
 
-  let html = `<div class="sandbox-kanban-expansion" onclick="event.stopPropagation()">`;
+  // ===== HEADER CARD =====
+  let html = `<div class="cdp-header">`;
+  html += `<div class="cdp-header-icon" style="background:rgba(234,179,8,0.08);">\uD83D\uDCA1</div>`;
+  html += `<div class="cdp-header-info">`;
+  html += `<div class="cdp-header-title">${escapeHtml(ins.title || ins.insight_title || 'Insight')}</div>`;
+  html += `<div class="cdp-header-sub">${escapeHtml(ins.full_name || ins.submitter || '')} &middot; ${date}</div>`;
+  html += `</div>`;
+  html += `<div class="cdp-header-actions">`;
+  html += `<span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;color:${statusColor};background:${statusColor}14;">${escapeHtml(ins.status || '\u2014')}</span>`;
+  html += `</div></div>`;
 
-  // Close button
-  html += `<div class="sandbox-kanban-expansion-header">
-    <span class="sandbox-kanban-expansion-title">${escapeHtml(ins.insight_id || '')}</span>
-    <button class="sandbox-kanban-expansion-close" onclick="event.stopPropagation();sandboxToggleKanbanCard('${escapeAttr(ins.insight_id)}')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  </div>`;
+  // ===== SECTION 1: INSIGHT DETAILS =====
+  html += `<div class="cdp-section"><div class="cdp-section-title">Insight Details</div>`;
+  html += `<div class="cdp-grid">`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Submitter</div><div class="cdp-field-value">${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Planning Group</div><div class="cdp-field-value">${escapeHtml(ins.planning_group || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Category</div><div class="cdp-field-value">${escapeHtml(cat)}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Proposal Type</div><div class="cdp-field-value">${escapeHtml(ins.proposal_type || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Impact</div><div class="cdp-field-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field"><div class="cdp-field-label">Reach</div><div class="cdp-field-value">${escapeHtml(ins.reach || '\u2014')}</div></div>`;
+  html += `</div>`;
+  html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Problem Statement</div><div class="cdp-field-value multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</div></div>`;
+  html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Proposed Changes</div><div class="cdp-field-value multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</div></div>`;
+  html += '</div>';
 
-  // Detail fields
-  html += `<div class="sandbox-kanban-expansion-body">`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Status</span><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;font-size:11px;">${escapeHtml(ins.status || '')}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Date</span><span class="sandbox-kanban-exp-value">${date}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Submitter</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.full_name || ins.submitter || '\u2014')}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Planning Group</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.planning_group || '\u2014')}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Category</span><span class="sandbox-kanban-exp-value">${escapeHtml(cat)}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Proposal Type</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.proposal_type || '\u2014')}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Title</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row full-width"><span class="sandbox-kanban-exp-label">Problem Statement</span><div class="sandbox-kanban-exp-value multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</div></div>`;
-  html += `<div class="sandbox-kanban-exp-row full-width"><span class="sandbox-kanban-exp-label">Proposed Changes</span><div class="sandbox-kanban-exp-value multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</div></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Impact</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</span></div>`;
-  html += `<div class="sandbox-kanban-exp-row"><span class="sandbox-kanban-exp-label">Reach</span><span class="sandbox-kanban-exp-value">${escapeHtml(ins.reach || '\u2014')}</span></div>`;
-
-  // Review History
-  html += `<div class="sandbox-kanban-exp-section-title">REVIEW HISTORY</div>`;
+  // ===== SECTION 2: REVIEW HISTORY =====
+  html += `<div class="cdp-section"><div class="cdp-section-title">Review History</div>`;
   html += sandboxRenderReviewTrail(ins, false);
+  html += '</div>';
 
-  html += `</div>`; // end body
+  bodyEl.innerHTML = html;
 
-  // Action buttons — role-based
-  html += sandboxBuildKanbanActions(ins, col);
+  // ===== FOOTER: Role-based action buttons =====
+  footerEl.innerHTML = sandboxBuildPanelActions(ins);
 
-  html += `</div>`; // end expansion
-  return html;
+  panel.classList.add('active');
 }
 
-// ===== Inline Card Expansion: Role-Based Action Buttons =====
+function sandboxCloseReviewPanel() {
+  const panel = document.getElementById('sandbox-review-panel');
+  if (panel) panel.classList.remove('active');
+  SANDBOX_MOD._reviewExpandedId = null;
+  // Also remove any inline action overlays
+  sandboxCloseInlineActionOverlay();
+}
 
-function sandboxBuildKanbanActions(ins, col) {
+// ===== Side Panel: Role-Based Action Buttons =====
+
+function sandboxBuildPanelActions(ins) {
   let footerHtml = '';
   const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
 
@@ -927,26 +939,20 @@ function sandboxBuildKanbanActions(ins, col) {
 
     // Pending Initial Review: ONLY Operational SME (with PG match) OR admin
     if (ins.status === 'Pending Initial Review' && (isAdmin || (role === 'Operational SME' && pgMatch))) {
-      footerHtml += `<div class="sandbox-kanban-expansion-actions">
-        <button class="btn btn-success btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowAcceptPopout('initial')">Approve</button>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('initial')">Reject</button>
-      </div>`;
+      footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowAcceptPopout('initial')">Approve</button>`;
+      footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('initial')">Reject</button>`;
     }
 
     // Pending Final Review: ONLY Trainer (with PG match) OR admin
     if (ins.status === 'Pending Final Review' && (isAdmin || (role === 'Trainer' && pgMatch))) {
-      footerHtml += `<div class="sandbox-kanban-expansion-actions">
-        <button class="btn btn-success btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowFinalApprovePopout()">Approve</button>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('final')">Reject</button>
-      </div>`;
+      footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowFinalApprovePopout()">Approve</button>`;
+      footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('final')">Reject</button>`;
     }
 
     // Elevated statuses (Trainer's Area): ONLY Trainer (with PG match) OR admin
     const elevatedStatuses = ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
     if (elevatedStatuses.includes(ins.status) && (isAdmin || (role === 'Trainer' && pgMatch))) {
-      footerHtml += `<div class="sandbox-kanban-expansion-actions">
-        <button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="event.stopPropagation();SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>
-      </div>`;
+      footerHtml += `<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>`;
     }
   }
 
@@ -1452,10 +1458,10 @@ function sandboxShowInlineActionOverlay(action, tier) {
       </div>`;
   }
 
-  // Insert the overlay into the review area view
-  const reviewView = document.getElementById('view-sandbox-review');
-  if (reviewView) {
-    reviewView.insertAdjacentHTML('beforeend', overlayHtml);
+  // Insert the overlay into the side panel body (replaces detail content temporarily)
+  const panelBody = document.getElementById('sandbox-review-panel-body');
+  if (panelBody) {
+    panelBody.insertAdjacentHTML('beforeend', overlayHtml);
   }
 }
 
@@ -1695,6 +1701,8 @@ function sandboxCloseForm() {
   if (reviewOverlay) reviewOverlay.style.display = 'none';
   // Close inline action overlay if open
   sandboxCloseInlineActionOverlay();
+  // Close the review side panel if open
+  sandboxCloseReviewPanel();
   // Close inline form if open
   sandboxCloseInlineForm();
   // Collapse inline kanban expansion
