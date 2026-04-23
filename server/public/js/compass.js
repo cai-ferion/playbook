@@ -2764,13 +2764,18 @@ async function compassSubmitNew() {
     if (!joiner1Ohr) { showToast('Please select Support Joiner 1', 'error'); return; }
     if (!joiner2Ohr) { showToast('Please select Support Joiner 2', 'error'); return; }
     const joiner1Emp = COMPASS.employees.find(e => e.ohr_id === joiner1Ohr);
-    const joiner2Emp = COMPASS.employees.find(e => e.ohr_id === joiner2Ohr);
     // Legacy io_coaching uses sme_joiner + sme_meta_email for joiner 1
     record.sme_joiner = joiner1Emp ? joiner1Emp.full_name : joiner1Ohr;
     record.sme_meta_email = joiner1Emp ? (joiner1Emp.meta_email || '') : '';
-    // Joiner 2 uses the new columns
-    record.sme_joiner_2 = joiner2Emp ? joiner2Emp.full_name : joiner2Ohr;
-    record.sme_joiner_2_email = joiner2Emp ? (joiner2Emp.meta_email || '') : '';
+    // Joiner 2: handle "No Other Joining Support" (__none__)
+    if (joiner2Ohr === '__none__') {
+      record.sme_joiner_2 = '';
+      record.sme_joiner_2_email = '';
+    } else {
+      const joiner2Emp = COMPASS.employees.find(e => e.ohr_id === joiner2Ohr);
+      record.sme_joiner_2 = joiner2Emp ? joiner2Emp.full_name : joiner2Ohr;
+      record.sme_joiner_2_email = joiner2Emp ? (joiner2Emp.meta_email || '') : '';
+    }
   }
 
   if (type === 'Incident Report') {
@@ -5337,7 +5342,7 @@ function compassFilterJoinerDropdown(num) {
   // Exclude the other joiner's selection
   const otherNum = num === 1 ? 2 : 1;
   const otherVal = document.getElementById(`compass-new-joiner${otherNum}`)?.value || '';
-  if (otherVal) {
+  if (otherVal && otherVal !== '__none__') {
     eligible = eligible.filter(e => e.ohr_id !== otherVal);
   }
 
@@ -5355,13 +5360,25 @@ function compassFilterJoinerDropdown(num) {
   // Limit to 50 results
   const limited = filtered.slice(0, 50);
 
-  if (limited.length === 0) {
+  // Build dropdown HTML
+  let html = '';
+
+  // For Joiner 2: add "No Other Joining Support" at the top (only if no search or search matches)
+  if (num === 2) {
+    const noJoinerLabel = 'No Other Joining Support';
+    if (!search || noJoinerLabel.toLowerCase().includes(search)) {
+      html += '<div class="searchable-select-option" onclick="compassSelectJoiner(2, \'__none__\', \'No Other Joining Support\')" style="padding:6px 10px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border); font-style:italic; color:var(--fg-muted);">No Other Joining Support</div>';
+    }
+  }
+
+  if (limited.length === 0 && !html) {
     dropdown.innerHTML = '<div style="padding:8px 10px; font-size:12px; color:var(--fg-muted);">No matching SMEs or Team Leads found</div>';
   } else {
-    dropdown.innerHTML = limited.map(e => {
+    html += limited.map(e => {
       const display = `${e.full_name || 'Unknown'} (${e.ohr_id || ''}) \u2014 ${e.actual_role || ''}`;
       return `<div class="searchable-select-option" onclick="compassSelectJoiner(${num}, '${e.ohr_id}', '${escapeAttr(e.full_name || '')}')" style="padding:6px 10px; cursor:pointer; font-size:12px; border-bottom:1px solid var(--border);">${escapeHtml(display)}</div>`;
     }).join('');
+    dropdown.innerHTML = html;
   }
 
   dropdown.style.display = 'block';
@@ -5373,6 +5390,14 @@ function compassSelectJoiner(num, ohrId, displayText) {
   if (hidden) hidden.value = ohrId;
   if (search) search.value = displayText;
   compassToggleJoinerDropdown(num, false);
+
+  // When Joiner 1 changes, re-filter Joiner 2 to exclude the new selection
+  if (num === 1) {
+    const joiner2Dropdown = document.getElementById('compass-joiner2-dropdown');
+    if (joiner2Dropdown && joiner2Dropdown.style.display === 'block') {
+      compassFilterJoinerDropdown(2);
+    }
+  }
 }
 
 // Close joiner dropdowns when clicking outside

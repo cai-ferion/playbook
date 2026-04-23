@@ -2703,3 +2703,10 @@
 - [x] Regimen reads from io_employees — same table, no separate update needed
 - [x] Verified: Arvin now has 22 agents (21 from File 1 + 1 existing SME). Montallana/Castañeda correctly reassigned.
 - [x] 257 total updates executed, 0 failures. 174 agents skipped (not in io_employees).
+
+## Support Joiner Field Improvements (April 2026)
+- [x] Remove person selected in Support Joiner 1 from Support Joiner 2 options (cross-exclusion already existed, verified working + re-filter on Joiner 1 change)
+- [x] Add "No Other Joining Support" as first option in Support Joiner 2 (uses __none__ sentinel, stores empty string in DB)
+- [x] Search/filter bar already existed on both dropdowns (verified working)
+- [x] Cache version bumped: compass.js v=114
+- [x] 759 tests passing (2 supabase-sync failures are pre-existing infra issue, unrelated)
