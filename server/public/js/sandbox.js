@@ -287,25 +287,12 @@ function sandboxOmniApply() {
     const role = currentUser.actual_role;
     const isAdmin = currentUser.ohr_id === '740045023';
 
-    // Admin "My Team" toggle: filter to admin's direct reports only
+    // Admin "My Team" toggle: filter to admin's direct reports using insight's supervisor_email
     if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'team') {
-      const teamOhrs = new Set();
-      if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
-        ROSTER_DATA.forEach(r => {
-          if (r.supervisor_email === currentUser.meta_email) teamOhrs.add(r.ohr_id);
-        });
-      }
-      teamOhrs.add(currentUser.ohr_id);
-      data = data.filter(i => teamOhrs.has(i.ohr_id));
+      data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
     } else if (!isAdmin && (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer')) {
-      const teamOhrs = new Set();
-      if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
-        ROSTER_DATA.forEach(r => {
-          if (r.supervisor_email === currentUser.meta_email) teamOhrs.add(r.ohr_id);
-        });
-      }
-      teamOhrs.add(currentUser.ohr_id);
-      data = data.filter(i => teamOhrs.has(i.ohr_id));
+      // TLs/SMEs/CRs: filter to their direct reports using insight's supervisor_email
+      data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
     } else if (role !== 'Manager' && !isAdmin && currentUser.ohr_id !== '740044909') {
       // Agents, QAs, Trainers: own submissions only
       data = data.filter(i => i.ohr_id === currentUser.ohr_id);
@@ -897,17 +884,10 @@ function sandboxRenderKanban() {
 
   console.log('[Review Area] Total insights:', SANDBOX_MOD.insights.length, '| After role filter:', filteredInsights.length, '| Toggle:', SANDBOX_MOD._reviewTeamToggle);
 
-  // Admin "My Team" toggle for Review Area
+  // Admin "My Team" toggle for Review Area — use insight's supervisor_email directly
   const isAdminReview = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
   if (isAdminReview && SANDBOX_MOD._reviewTeamToggle === 'team') {
-    const teamOhrs = new Set();
-    if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
-      ROSTER_DATA.forEach(r => {
-        if (r.supervisor_email === currentUser.meta_email) teamOhrs.add(r.ohr_id);
-      });
-    }
-    teamOhrs.add(currentUser.ohr_id);
-    filteredInsights = filteredInsights.filter(i => teamOhrs.has(i.ohr_id));
+    filteredInsights = filteredInsights.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
   }
 
   // Apply search filter

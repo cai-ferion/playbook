@@ -2899,3 +2899,6 @@
 - [x] Add Trainer-only "Change Status" action on Approved - Final Review cards (choices: Elevated statuses only)
 - [x] One-way transition: once changed from Approved, cannot go back to Approved - Final Review
 - [x] Add search bar to Sandbox Input Portal
+
+## Review Area My Team Toggle Bug (April 24, 2026)
+- [x] Fix Review Area "My Team" toggle not showing admin's team insights (switched from ROSTER_DATA lookup to direct supervisor_email match on insights)
