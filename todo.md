@@ -2875,3 +2875,6 @@
 - [x] Restyle "All | My Team" toggle to match pill-style design of other controls
 - [x] Align toggle with "New Insight" button
 - [x] Fix "All" toggle not showing insights from other teams (admin was falling through to TL branch)
+
+## Sandbox Review Area Toggle (April 24, 2026)
+- [x] Add admin-only "All | My Team" toggle to Sandbox Review Area (same pill style, same filtering)

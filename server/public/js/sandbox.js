@@ -22,6 +22,7 @@ const SANDBOX_MOD = {
   _reviewExpandedId: null, // inline card expansion in Review Area
   _reviewSearch: '',       // Review Area search query
   _reviewPgFilter: '',     // Review Area Planning Group filter
+  _reviewTeamToggle: 'all', // Review Area All|My Team toggle (admin only)
   _inputTeamToggle: 'all', // Input Portal All|My Team toggle (admin only)
 
   STATUSES: [
@@ -813,8 +814,18 @@ function sandboxRenderReviewToolbar() {
   });
   const pgOptions = [...pgSet].sort();
 
+  // Build admin toggle HTML
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const reviewMode = SANDBOX_MOD._reviewTeamToggle;
+  const toggleHtml = isAdmin ? `
+    <div class="sandbox-team-toggle" style="display:inline-flex;flex-shrink:0;">
+      <button class="sandbox-toggle-btn ${reviewMode === 'all' ? 'active' : ''}" onclick="sandboxToggleReviewTeamFilter('all')">All</button>
+      <button class="sandbox-toggle-btn ${reviewMode === 'team' ? 'active' : ''}" onclick="sandboxToggleReviewTeamFilter('team')">My Team</button>
+    </div>` : '';
+
   toolbar.innerHTML = `
     <div class="sandbox-review-search-bar">
+      ${toggleHtml}
       <div class="sandbox-review-search-input-wrap">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" class="sandbox-review-search-input" id="sandbox-review-search"
@@ -832,6 +843,13 @@ function sandboxRenderReviewToolbar() {
         Export CSV
       </button>
     </div>`;
+}
+
+// ===== Review Area All | My Team Toggle (admin only) =====
+
+function sandboxToggleReviewTeamFilter(mode) {
+  SANDBOX_MOD._reviewTeamToggle = mode;
+  sandboxRenderKanban();
 }
 
 function sandboxRenderKanban() {
@@ -854,6 +872,19 @@ function sandboxRenderKanban() {
         return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
       });
     }
+  }
+
+  // Admin "My Team" toggle for Review Area
+  const isAdminReview = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  if (isAdminReview && SANDBOX_MOD._reviewTeamToggle === 'team') {
+    const teamOhrs = new Set();
+    if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
+      ROSTER_DATA.forEach(r => {
+        if (r.supervisor_email === currentUser.meta_email) teamOhrs.add(r.ohr_id);
+      });
+    }
+    teamOhrs.add(currentUser.ohr_id);
+    filteredInsights = filteredInsights.filter(i => teamOhrs.has(i.ohr_id));
   }
 
   // Apply search filter
