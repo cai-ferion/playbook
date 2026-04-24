@@ -59,8 +59,7 @@ const SANDBOX_MOD = {
     { id: 'rejected-initial', title: 'Rejected (Initial)', statuses: ['Rejected - Initial Review [Insufficient Context/Details]', 'Rejected - Initial Review [Duplicate]', 'Rejected - Initial Review [Out of Scope]', 'Rejected - Initial Review [Pitched Already]'] },
     { id: 'pending-final', title: 'Pending Final Review', statuses: ['Pending - Final Review'] },
     { id: 'rejected-final', title: 'Rejected (Final)', statuses: ['Rejected - Final Review [Insufficient Context/Details]', 'Rejected - Final Review [Pitched Already]', 'Rejected - Final Review [Out of Scope]', 'Rejected - Final Review [Duplicate]'] },
-    { id: 'trainers-area', title: "Trainer's Area", statuses: ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'] },
-    { id: 'approved', title: 'Approved', statuses: ['Approved - Final Review'] },
+    { id: 'trainers-area', title: "Trainer's Area", statuses: ['Approved - Final Review', 'Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'] },
     { id: 'implemented', title: 'Implemented', statuses: ['Implemented'] }
   ]
 };
@@ -314,6 +313,20 @@ function sandboxOmniApply() {
     // Managers and admin (All mode) see all — no filter
   }
 
+  // Apply search bar text filter
+  const searchEl = document.getElementById('sandbox-input-search');
+  const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  if (searchTerm) {
+    data = data.filter(i => {
+      const fields = [
+        i.insight_id, i.title, i.insight_title, i.full_name, i.submitter,
+        i.planning_group, i.category, i.insight_category, i.proposal_type,
+        i.status, i.description, i.problem_statement
+      ];
+      return fields.some(f => f && String(f).toLowerCase().includes(searchTerm));
+    });
+  }
+
   // Apply omnibar filters
   sandboxOmniState.filters.forEach(f => {
     data = data.filter(row => {
@@ -359,6 +372,10 @@ function sandboxOmniApply() {
 }
 
 // ===== All | My Team Toggle (admin only) =====
+
+function sandboxInputSearchApply() {
+  sandboxOmniApply();
+}
 
 function sandboxToggleTeamFilter(mode) {
   SANDBOX_MOD._inputTeamToggle = mode;
@@ -1085,9 +1102,9 @@ function sandboxBuildPanelActions(ins) {
       footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('final')">Reject</button>`;
     }
 
-    // Elevated statuses (Trainer's Area): ONLY Trainer (with PG match) OR admin
-    const elevatedStatuses = ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
-    if (elevatedStatuses.includes(ins.status) && (isAdmin || (role === 'Trainer' && pgMatch))) {
+    // Trainer's Area statuses (Approved + Elevated): ONLY Trainer (with PG match) OR admin
+    const trainerAreaStatuses = ['Approved - Final Review', 'Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
+    if (trainerAreaStatuses.includes(ins.status) && (isAdmin || (role === 'Trainer' && pgMatch))) {
       footerHtml += `<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>`;
     }
   }
@@ -1404,8 +1421,8 @@ function sandboxShowTrainerStatusPopout() {
     { value: 'Implemented', label: 'Implemented', color: '#7C3AED' }
   ];
 
-  // Filter out the current status
-  const choices = allChoices.filter(c => c.value !== ins.status);
+  // Filter out current status; Approved - Final Review is never a choice (one-way transition)
+  const choices = allChoices.filter(c => c.value !== ins.status && c.value !== 'Approved - Final Review');
 
   formBody.innerHTML = `
     <div style="padding:16px 20px;">
@@ -1572,7 +1589,8 @@ function sandboxShowInlineActionOverlay(action, tier) {
       { value: 'Elevated - No POC', label: 'Elevated - No POC', color: '#6B7280' },
       { value: 'Implemented', label: 'Implemented', color: '#7C3AED' }
     ];
-    const choices = allChoices.filter(c => c.value !== ins.status);
+    // Filter out current status; Approved - Final Review is never a choice (one-way transition)
+    const choices = allChoices.filter(c => c.value !== ins.status && c.value !== 'Approved - Final Review');
     overlayHtml = `
       <div class="sandbox-action-overlay" id="sandbox-inline-action-overlay">
         <div class="sandbox-action-overlay-inner">

@@ -146,27 +146,28 @@ describe('Batch 23 — Compass 6-Level Dispute Flow', () => {
 describe('Batch 23 — Sandbox Review Flow', () => {
   const sandbox = readPublicJS('sandbox.js');
 
-  it('Kanban has 7 columns: Pending Initial, Rejected Initial, Pending Final, Rejected Final, Trainers Area, Approved, Implemented', () => {
+  it('Kanban has 6 columns: Pending Initial, Rejected Initial, Pending Final, Rejected Final, Trainers Area, Implemented', () => {
     expect(sandbox).toContain("title: 'Pending Initial Review'");
     expect(sandbox).toContain("title: 'Rejected (Initial)'");
     expect(sandbox).toContain("title: 'Pending Final Review'");
     expect(sandbox).toContain("title: 'Rejected (Final)'");
     expect(sandbox).toContain("title: \"Trainer's Area\"");
-    expect(sandbox).toContain("title: 'Approved'");
     expect(sandbox).toContain("title: 'Implemented'");
   });
 
-  it('Approved - Final Review has its own kanban column', () => {
-    // Approved is now a separate column, not in Trainers Area
-    const approvedCol = sandbox.match(/id:\s*'approved'.*?statuses:\s*\[(.*?)\]/s);
-    expect(approvedCol).not.toBeNull();
-    expect(approvedCol![1]).toContain('Approved - Final Review');
+  it('Approved - Final Review is merged into Trainers Area (not a separate column)', () => {
+    // Approved is merged into Trainer's Area, no standalone approved column
+    expect(sandbox).not.toContain("id: 'approved'");
+    const trainersArea = sandbox.match(/Trainer's Area.*?statuses:\s*\[(.*?)\]/s);
+    expect(trainersArea).not.toBeNull();
+    expect(trainersArea![1]).toContain('Approved - Final Review');
   });
 
-  it('Trainers Area includes all 4 elevated statuses', () => {
+  it('Trainers Area includes Approved + all 4 elevated statuses', () => {
     const trainersArea = sandbox.match(/Trainer's Area.*?statuses:\s*\[(.*?)\]/s);
     expect(trainersArea).not.toBeNull();
     const statuses = trainersArea![1];
+    expect(statuses).toContain('Approved - Final Review');
     expect(statuses).toContain('Elevated - Task in Progress');
     expect(statuses).toContain('Elevated - POC Rejected');
     expect(statuses).toContain('Elevated - Pending POC Discussion');
@@ -208,8 +209,9 @@ describe('Batch 23 — Sandbox Review Flow', () => {
     expect(fnBlock).toContain('Implemented');
   });
 
-  it('Trainer Status Popout filters out current status', () => {
-    expect(sandbox).toContain('allChoices.filter(c => c.value !== ins.status)');
+  it('Trainer Status Popout filters out current status and excludes Approved (one-way)', () => {
+    // One-way transition: Approved - Final Review is never a choice once changed
+    expect(sandbox).toContain("allChoices.filter(c => c.value !== ins.status && c.value !== 'Approved - Final Review')");
   });
 
   it('Implemented column shows in kanban but has no action buttons in footer', () => {

@@ -2892,3 +2892,10 @@
 
 ## Review Area Pagination (April 24, 2026)
 - [x] Move kanban pagination to top of each column, matching Disputes Area style (btn-ghost btn-xs, compact page/total)
+
+## Review Area: Approved → Trainer's Area + Search Bar (April 24, 2026)
+- [x] Merge Approved column into Trainer's Area (show Approved - Final Review cards alongside Elevated statuses)
+- [x] Remove standalone Approved kanban column, update grid from 7 to 6 columns
+- [x] Add Trainer-only "Change Status" action on Approved - Final Review cards (choices: Elevated statuses only)
+- [x] One-way transition: once changed from Approved, cannot go back to Approved - Final Review
+- [x] Add search bar to Sandbox Input Portal
