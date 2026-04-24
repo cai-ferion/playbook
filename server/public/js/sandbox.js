@@ -293,7 +293,7 @@ function sandboxOmniApply() {
       }
       teamOhrs.add(currentUser.ohr_id);
       data = data.filter(i => teamOhrs.has(i.ohr_id));
-    } else if (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer') {
+    } else if (!isAdmin && (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer')) {
       const teamOhrs = new Set();
       if (typeof ROSTER_DATA !== 'undefined' && Array.isArray(ROSTER_DATA)) {
         ROSTER_DATA.forEach(r => {
@@ -366,7 +366,7 @@ function sandboxRenderTeamToggle() {
   if (!container) return;
   const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
   if (!isAdmin) { container.style.display = 'none'; return; }
-  container.style.display = 'flex';
+  container.style.display = 'inline-flex';
   const mode = SANDBOX_MOD._inputTeamToggle;
   container.innerHTML = `
     <button class="sandbox-toggle-btn ${mode === 'all' ? 'active' : ''}" onclick="sandboxToggleTeamFilter('all')">All</button>

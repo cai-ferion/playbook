@@ -2870,3 +2870,8 @@
 - [x] Fix coaching acknowledgement title text alignment (verified already left-aligned in CSS)
 - [x] Add CSV export to Sandbox Review Area (all insights data, respects PG filter + search)
 - [x] Remove Helm Analytics page and all related code (view, JS, CSS, permissions, tests cleaned)
+
+## Sandbox Input Portal Toggle Fix (April 24, 2026)
+- [x] Restyle "All | My Team" toggle to match pill-style design of other controls
+- [x] Align toggle with "New Insight" button
+- [x] Fix "All" toggle not showing insights from other teams (admin was falling through to TL branch)
