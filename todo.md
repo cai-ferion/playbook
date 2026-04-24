@@ -2919,3 +2919,16 @@
 - [x] Build server-side delete endpoint: DELETE /api/io/attendance-purge?ohr_id=X&from_date=Y (owner-only)
 - [x] Build client-side UI: owner-only button, modal with employee picker, date picker, preview summary, confirm dialog
 - [x] Add validation: employee not found in attendance, no rows to delete, etc.
+
+## Purge Modal Styling Fix (April 24, 2026)
+- [x] Fix Purge Attendance modal color palette — text not readable against dark background
+- [x] Align modal styling with app's existing dark theme (proper contrast, consistent colors)
+
+## Notification Simulation & Diagnosis (April 24, 2026)
+- [x] Audit all notification systems (automailer, compass notifications, helm task emails, etc.)
+- [x] Run full notification simulation across all components and all roles
+- [x] Diagnose and fix any notification errors found
+
+## Sandbox Notification Blueprint (April 24, 2026)
+- [x] Analyze Sandbox processes (Input Portal, Review Area) for notification triggers
+- [x] Create notification blueprint document with recommendations

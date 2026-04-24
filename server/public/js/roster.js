@@ -1656,33 +1656,36 @@ window.rosterShowPurgeModal = function() {
 
   const overlay = document.createElement('div');
   overlay.id = 'purge-modal-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '9999';
   overlay.innerHTML = `
-    <div style="background:var(--surface,#1e293b);border-radius:12px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,.4);padding:28px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <h3 style="margin:0;font-size:18px;color:#ef4444;display:flex;align-items:center;gap:8px;">
+    <div class="modal-dialog" style="max-width:640px;width:640px;flex-direction:column;">
+      <div class="modal-header">
+        <h3 style="display:flex;align-items:center;gap:8px;color:var(--error,#E53935);">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           Purge Attendance Records
         </h3>
-        <button onclick="document.getElementById('purge-modal-overlay').remove()" style="background:none;border:none;color:var(--text-secondary,#94a3b8);cursor:pointer;font-size:20px;">✕</button>
+        <button class="modal-close-btn" onclick="document.getElementById('purge-modal-overlay').remove()">✕</button>
       </div>
 
-      <div id="purge-form-section">
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-size:13px;color:var(--text-secondary,#94a3b8);margin-bottom:6px;text-align:left;">Employee</label>
-          <select id="purge-employee-select" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:14px;">
-            <option value="">-- Select Employee --</option>
-            ${empOptions}
-          </select>
+      <div class="modal-body">
+        <div id="purge-form-section">
+          <div style="margin-bottom:16px;">
+            <label class="filter-label" style="display:block;margin-bottom:6px;">Employee</label>
+            <select id="purge-employee-select" class="form-select" style="width:100%;padding:8px 12px;">
+              <option value="">-- Select Employee --</option>
+              ${empOptions}
+            </select>
+          </div>
+          <div style="margin-bottom:20px;">
+            <label class="filter-label" style="display:block;margin-bottom:6px;">Starting Date (inclusive)</label>
+            <input type="date" id="purge-from-date" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
+          </div>
+          <button onclick="rosterPurgePreview()" class="btn btn-primary btn-sm" style="width:100%;">Preview Affected Records</button>
         </div>
-        <div style="margin-bottom:20px;">
-          <label style="display:block;font-size:13px;color:var(--text-secondary,#94a3b8);margin-bottom:6px;text-align:left;">Starting Date (inclusive)</label>
-          <input type="date" id="purge-from-date" value="${today}" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:14px;">
-        </div>
-        <button onclick="rosterPurgePreview()" class="btn btn-primary btn-sm" style="width:100%;">Preview Affected Records</button>
-      </div>
 
-      <div id="purge-preview-section" style="display:none;margin-top:20px;"></div>
+        <div id="purge-preview-section" style="display:none;margin-top:20px;"></div>
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -1698,7 +1701,7 @@ window.rosterPurgePreview = async function() {
 
   const previewSection = document.getElementById('purge-preview-section');
   previewSection.style.display = 'block';
-  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary,#94a3b8);">Loading preview...</div>';
+  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted,#5E6C84);">Loading preview...</div>';
 
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
@@ -1707,14 +1710,14 @@ window.rosterPurgePreview = async function() {
     const data = await resp.json();
 
     if (!resp.ok) {
-      previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+      previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
         <strong>Error:</strong> ${escapeHtml(data.error || 'Unknown error')}
       </div>`;
       return;
     }
 
     if (data.error === 'employee_not_found') {
-      previewSection.innerHTML = `<div style="padding:16px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;">
+      previewSection.innerHTML = `<div style="padding:16px;background:var(--warning-bg,rgba(217,119,6,.1));border:1px solid var(--warning,#D97706);border-radius:var(--radius,6px);color:var(--warning,#D97706);">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         ${escapeHtml(data.message)}
       </div>`;
@@ -1722,7 +1725,7 @@ window.rosterPurgePreview = async function() {
     }
 
     if (data.error === 'no_attendance_rows') {
-      previewSection.innerHTML = `<div style="padding:16px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;">
+      previewSection.innerHTML = `<div style="padding:16px;background:var(--warning-bg,rgba(217,119,6,.1));border:1px solid var(--warning,#D97706);border-radius:var(--radius,6px);color:var(--warning,#D97706);">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         ${escapeHtml(data.message)}
       </div>`;
@@ -1732,23 +1735,23 @@ window.rosterPurgePreview = async function() {
     // Build preview HTML
     const emp = data.employee;
     const tagRows = (data.tag_distribution || []).map(t =>
-      `<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border,#334155);">${escapeHtml(t.tag_name)}</td><td style="padding:4px 10px;border-bottom:1px solid var(--border,#334155);text-align:right;">${t.cnt}</td></tr>`
+      `<tr><td style="padding:6px 10px;border-bottom:1px solid var(--border-muted,#EDF0F4);color:var(--fg,#1A1C1F);">${escapeHtml(t.tag_name)}</td><td style="padding:6px 10px;border-bottom:1px solid var(--border-muted,#EDF0F4);text-align:right;color:var(--fg,#1A1C1F);">${t.cnt}</td></tr>`
     ).join('');
 
     const previewRows = (data.preview || []).map(r =>
       `<tr>
-        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${r.log_date}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${escapeHtml(r.tag || '—')}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${r.ot_hours || '—'}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${escapeHtml(r.snap_planning_group || '—')}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${escapeHtml(r.wfm_tag || '—')}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border-muted,#EDF0F4);font-size:12px;color:var(--fg,#1A1C1F);">${r.log_date}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border-muted,#EDF0F4);font-size:12px;color:var(--fg,#1A1C1F);">${escapeHtml(r.tag || '—')}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border-muted,#EDF0F4);font-size:12px;color:var(--fg,#1A1C1F);">${r.ot_hours || '—'}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border-muted,#EDF0F4);font-size:12px;color:var(--fg,#1A1C1F);">${escapeHtml(r.snap_planning_group || '—')}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border-muted,#EDF0F4);font-size:12px;color:var(--fg,#1A1C1F);">${escapeHtml(r.wfm_tag || '—')}</td>
       </tr>`
     ).join('');
 
     previewSection.innerHTML = `
-      <div style="padding:16px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:600;color:#ef4444;margin-bottom:8px;">⚠ Destructive Operation</div>
-        <div style="font-size:13px;color:var(--text,#e2e8f0);line-height:1.6;">
+      <div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:600;color:var(--error,#E53935);margin-bottom:8px;">⚠ Destructive Operation</div>
+        <div style="font-size:13px;color:var(--fg,#1A1C1F);line-height:1.6;">
           This will <strong>permanently delete ${data.total_rows} attendance record${data.total_rows !== 1 ? 's' : ''}</strong> for:<br>
           <strong>${escapeHtml(emp.full_name)}</strong> (${emp.ohr_id}) — ${escapeHtml(emp.actual_role || '')} · ${escapeHtml(emp.planning_group || '')}<br>
           Date range: <strong>${data.date_range.from}</strong> → <strong>${data.date_range.to}</strong>
@@ -1756,27 +1759,27 @@ window.rosterPurgePreview = async function() {
       </div>
 
       <div style="margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:600;color:var(--text,#e2e8f0);margin-bottom:8px;">Tag Distribution</div>
+        <div style="font-size:13px;font-weight:600;color:var(--fg,#1A1C1F);margin-bottom:8px;">Tag Distribution</div>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead><tr style="color:var(--text-secondary,#94a3b8);"><th style="text-align:left;padding:4px 10px;border-bottom:1px solid var(--border,#334155);">Tag</th><th style="text-align:right;padding:4px 10px;border-bottom:1px solid var(--border,#334155);">Count</th></tr></thead>
+          <thead><tr><th style="text-align:left;padding:6px 10px;border-bottom:2px solid var(--border,#E0E6ED);color:var(--fg-muted,#5E6C84);font-weight:600;">Tag</th><th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border,#E0E6ED);color:var(--fg-muted,#5E6C84);font-weight:600;">Count</th></tr></thead>
           <tbody>${tagRows}</tbody>
         </table>
       </div>
 
       <div style="margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:600;color:var(--text,#e2e8f0);margin-bottom:8px;">Preview (first 20 rows)</div>
-        <div style="max-height:200px;overflow-y:auto;">
+        <div style="font-size:13px;font-weight:600;color:var(--fg,#1A1C1F);margin-bottom:8px;">Preview (first 20 rows)</div>
+        <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border,#E0E6ED);border-radius:var(--radius,6px);">
           <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead><tr style="color:var(--text-secondary,#94a3b8);"><th style="text-align:left;padding:4px 8px;">Date</th><th style="text-align:left;padding:4px 8px;">Tag</th><th style="text-align:left;padding:4px 8px;">OT</th><th style="text-align:left;padding:4px 8px;">PG</th><th style="text-align:left;padding:4px 8px;">WFM</th></tr></thead>
+            <thead><tr style="background:var(--bg-inset,#F2F4F7);"><th style="text-align:left;padding:6px 8px;color:var(--fg-muted,#5E6C84);font-weight:600;">Date</th><th style="text-align:left;padding:6px 8px;color:var(--fg-muted,#5E6C84);font-weight:600;">Tag</th><th style="text-align:left;padding:6px 8px;color:var(--fg-muted,#5E6C84);font-weight:600;">OT</th><th style="text-align:left;padding:6px 8px;color:var(--fg-muted,#5E6C84);font-weight:600;">PG</th><th style="text-align:left;padding:6px 8px;color:var(--fg-muted,#5E6C84);font-weight:600;">WFM</th></tr></thead>
             <tbody>${previewRows}</tbody>
           </table>
         </div>
-        ${data.total_rows > 20 ? `<div style="font-size:11px;color:var(--text-secondary,#94a3b8);margin-top:4px;">Showing 20 of ${data.total_rows} rows</div>` : ''}
+        ${data.total_rows > 20 ? `<div style="font-size:11px;color:var(--fg-muted,#5E6C84);margin-top:4px;">Showing 20 of ${data.total_rows} rows</div>` : ''}
       </div>
 
       <div style="display:flex;gap:12px;">
         <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
-        <button onclick="rosterExecutePurge('${emp.ohr_id}','${fromDate}',${data.total_rows})" class="btn btn-sm" style="flex:1;background:#ef4444;color:#fff;border:none;">
+        <button onclick="rosterExecutePurge('${emp.ohr_id}','${fromDate}',${data.total_rows})" class="btn btn-danger btn-sm" style="flex:1;">
           Delete ${data.total_rows} Record${data.total_rows !== 1 ? 's' : ''}
         </button>
       </div>
@@ -1785,7 +1788,7 @@ window.rosterPurgePreview = async function() {
     // Store for confirm
     window._purgeTarget = { ohr_id: ohrId, from_date: fromDate, total: data.total_rows, name: emp.full_name };
   } catch (err) {
-    previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+    previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
       <strong>Error:</strong> ${escapeHtml(err.message)}
     </div>`;
   }
@@ -1797,7 +1800,7 @@ window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
   if (!confirmed) return;
 
   const previewSection = document.getElementById('purge-preview-section');
-  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary,#94a3b8);">Deleting records...</div>';
+  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted,#5E6C84);">Deleting records...</div>';
 
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
@@ -1809,14 +1812,14 @@ window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
     const data = await resp.json();
 
     if (!resp.ok || !data.success) {
-      previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+      previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
         <strong>Error:</strong> ${escapeHtml(data.error || 'Delete failed')}
       </div>`;
       return;
     }
 
     previewSection.innerHTML = `
-      <div style="padding:16px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;">
+      <div style="padding:16px;background:var(--success-bg,rgba(34,197,94,.1));border:1px solid var(--success,#22C55E);border-radius:var(--radius,6px);color:var(--success,#22C55E);">
         <strong>✓ Purge Complete</strong><br>
         <span style="font-size:13px;">Successfully deleted <strong>${data.deleted}</strong> attendance record${data.deleted !== 1 ? 's' : ''} for OHR ${ohrId} from ${fromDate} onwards.</span>
       </div>
@@ -1824,7 +1827,7 @@ window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
     `;
     showToast(`Purged ${data.deleted} attendance records`, 'success');
   } catch (err) {
-    previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+    previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
       <strong>Error:</strong> ${escapeHtml(err.message)}
     </div>`;
   }
