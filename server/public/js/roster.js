@@ -1565,7 +1565,17 @@ async function rosterFetchEmployees() {
     ROSTER.isOwner = u.open_id === '740045023' || u.ohr_id === '740045023';
   } catch(e) { ROSTER.isOwner = false; }
 
-  // Show/hide add button — separate permission from edit
+  // Show/hide tabs
+  const onboardingTab = document.getElementById('regimen-tab-onboarding');
+  if (onboardingTab) onboardingTab.style.display = perms['regimen.onboarding_tab'] ? '' : 'none';
+  // Permissions tab moved to Admin Tools
+
+  // Render (must happen BEFORE button visibility checks since buttons are created here)
+  rosterRenderFilterBar();
+  rosterApplyFilters();
+  rosterRenderTable();
+
+  // Show/hide add button — AFTER render so DOM elements exist
   ROSTER.canAdd = !!perms['regimen.add_employee'];
   const addBtn = document.getElementById('roster-add-btn');
   if (addBtn) addBtn.style.display = ROSTER.canAdd ? '' : 'none';
@@ -1578,16 +1588,6 @@ async function rosterFetchEmployees() {
     const hasSyncPerm = !!perms['regimen.sync_sheet'];
     syncSheetBtn.style.display = (isWfm || hasSyncPerm) ? '' : 'none';
   }
-
-  // Show/hide tabs
-  const onboardingTab = document.getElementById('regimen-tab-onboarding');
-  if (onboardingTab) onboardingTab.style.display = perms['regimen.onboarding_tab'] ? '' : 'none';
-  // Permissions tab moved to Admin Tools
-
-  // Render
-  rosterRenderFilterBar();
-  rosterApplyFilters();
-  rosterRenderTable();
 }
 
 // ===== Sync to Google Sheet (WFM) =====

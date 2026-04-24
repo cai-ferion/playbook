@@ -2910,3 +2910,6 @@
 - [x] Import insights from CO sheet into the database (2 inserted, 5 updated to Implemented)
 - [x] Run TL simulation: 24/29 TLs can see team insights; 3 TLs have 0 insights (agents haven't submitted); 12 TLs have orphaned insights from supervisor reassignments
 - [x] No code fix needed — filtering logic is correct; orphaned insights are from supervisor reassignments
+
+## Regimen Add Employee Bug (April 24, 2026)
+- [x] Fix lost capability to add employee in Regimen (button visibility check ran before rosterRenderFilterBar created the DOM element)
