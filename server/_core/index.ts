@@ -97,14 +97,24 @@ async function startServer() {
       break;
     }
   }
+  // Ensure index.html is never stale-cached so ?v= busting always works
+  // These MUST be registered before express.static to take priority
+  app.get("/api/site", (_req, res) => {
+    res.redirect("/api/site/");
+  });
+  app.get("/api/site/index.html", (_req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+  app.get("/api/site/", (_req, res) => {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
   app.use("/api/site", express.static(publicDir, {
     maxAge: '1d',        // 86400s — versioned via ?v= query strings for cache-busting
     etag: true,
     lastModified: true,
   }));
-  app.get("/api/site", (_req, res) => {
-    res.redirect("/api/site/");
-  });
 
   // Debug endpoint for path diagnostics
   app.get("/api/debug-paths", (_req, res) => {

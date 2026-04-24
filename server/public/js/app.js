@@ -1109,6 +1109,7 @@ async function switchView(view) {
   if (view === 'compass-corrective') { if (typeof initCorrectiveActions === 'function') initCorrectiveActions(); }
   if (sandboxViews.includes(view)) { if (typeof initSandbox === 'function') initSandbox(view); }
   if (havenViews.includes(view)) { if (typeof initHaven === 'function') initHaven(view); }
+  const helmViews = ['helm-board'];
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
   if (view === 'productivity-hrs') { if (typeof initProductivityHrs === 'function') initProductivityHrs(); }

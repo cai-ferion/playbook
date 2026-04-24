@@ -2878,3 +2878,7 @@
 
 ## Sandbox Review Area Toggle (April 24, 2026)
 - [x] Add admin-only "All | My Team" toggle to Sandbox Review Area (same pill style, same filtering)
+
+## Bug Fixes (April 24, 2026 - batch 2)
+- [x] Fix Review Area "All" toggle not showing all insights (browser caching stale index.html; added no-cache headers)
+- [x] Fix Helm page showing nothing when clicked (helmViews array was removed during Analytics cleanup)
