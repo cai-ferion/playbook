@@ -146,15 +146,21 @@ describe('Batch 23 — Compass 6-Level Dispute Flow', () => {
 describe('Batch 23 — Sandbox Review Flow', () => {
   const sandbox = readPublicJS('sandbox.js');
 
-  it('Kanban has 4 columns: Pending Initial, Pending Final, Trainers Area, Implemented', () => {
+  it('Kanban has 7 columns: Pending Initial, Rejected Initial, Pending Final, Rejected Final, Trainers Area, Approved, Implemented', () => {
     expect(sandbox).toContain("title: 'Pending Initial Review'");
+    expect(sandbox).toContain("title: 'Rejected (Initial)'");
     expect(sandbox).toContain("title: 'Pending Final Review'");
+    expect(sandbox).toContain("title: 'Rejected (Final)'");
     expect(sandbox).toContain("title: \"Trainer's Area\"");
+    expect(sandbox).toContain("title: 'Approved'");
     expect(sandbox).toContain("title: 'Implemented'");
   });
 
-  it('Trainers Area does not include Approved - Final Review', () => {
-    expect(sandbox).not.toContain("'Approved - Final Review'");
+  it('Approved - Final Review has its own kanban column', () => {
+    // Approved is now a separate column, not in Trainers Area
+    const approvedCol = sandbox.match(/id:\s*'approved'.*?statuses:\s*\[(.*?)\]/s);
+    expect(approvedCol).not.toBeNull();
+    expect(approvedCol![1]).toContain('Approved - Final Review');
   });
 
   it('Trainers Area includes all 4 elevated statuses', () => {

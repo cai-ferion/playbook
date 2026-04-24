@@ -44,8 +44,9 @@ const SANDBOX_MOD = {
   ],
 
   STATUS_COLORS: {
-    'Pending Initial Review': '#3B82F6',
-    'Pending Final Review': '#F59E0B',
+    'Pending - Initial Review': '#3B82F6',
+    'Pending - Final Review': '#F59E0B',
+    'Approved - Final Review': '#10B981',
     'Implemented': '#7C3AED',
     'Elevated - Task in Progress': '#8B5CF6',
     'Elevated - POC Rejected': '#EF4444',
@@ -54,9 +55,12 @@ const SANDBOX_MOD = {
   },
 
   KANBAN_COLUMNS: [
-    { id: 'pending-initial', title: 'Pending Initial Review', statuses: ['Pending Initial Review'] },
-    { id: 'pending-final', title: 'Pending Final Review', statuses: ['Pending Final Review'] },
+    { id: 'pending-initial', title: 'Pending Initial Review', statuses: ['Pending - Initial Review'] },
+    { id: 'rejected-initial', title: 'Rejected (Initial)', statuses: ['Rejected - Initial Review [Insufficient Context/Details]', 'Rejected - Initial Review [Duplicate]', 'Rejected - Initial Review [Out of Scope]', 'Rejected - Initial Review [Pitched Already]'] },
+    { id: 'pending-final', title: 'Pending Final Review', statuses: ['Pending - Final Review'] },
+    { id: 'rejected-final', title: 'Rejected (Final)', statuses: ['Rejected - Final Review [Insufficient Context/Details]', 'Rejected - Final Review [Pitched Already]', 'Rejected - Final Review [Out of Scope]', 'Rejected - Final Review [Duplicate]'] },
     { id: 'trainers-area', title: "Trainer's Area", statuses: ['Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'] },
+    { id: 'approved', title: 'Approved', statuses: ['Approved - Final Review'] },
     { id: 'implemented', title: 'Implemented', statuses: ['Implemented'] }
   ]
 };
@@ -861,18 +865,20 @@ function sandboxRenderKanban() {
 
   let filteredInsights = [...SANDBOX_MOD.insights];
 
-  // Role-based PG filtering for SME/Trainer
+  // Role-based PG filtering for SME only (Trainers see all insights in Review Area)
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
     const cpg = currentUser.complete_planning_group || currentUser.planning_group || '';
     const pgList = cpg.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    if (role === 'SME' || role === 'Trainer') {
+    if (role === 'SME') {
       filteredInsights = filteredInsights.filter(i => {
         const iPg = (i.planning_group || '').toLowerCase();
         return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
       });
     }
   }
+
+  console.log('[Review Area] Total insights:', SANDBOX_MOD.insights.length, '| After role filter:', filteredInsights.length, '| Toggle:', SANDBOX_MOD._reviewTeamToggle);
 
   // Admin "My Team" toggle for Review Area
   const isAdminReview = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
@@ -942,7 +948,7 @@ function sandboxRenderKanban() {
       pageCards.forEach(ins => {
         const date = ins.created_at ? new Date(ins.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Manila', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
         const statusColor = sandboxGetStatusColor(ins.status);
-        const showSubStatus = col.id === 'trainers-area' && ins.status;
+        const showSubStatus = (col.id === 'trainers-area' || col.id === 'rejected-initial' || col.id === 'rejected-final') && ins.status;
         const isExpanded = SANDBOX_MOD._reviewExpandedId === ins.insight_id;
 
         html += `<div class="sandbox-kanban-card${isExpanded ? ' expanded' : ''}" onclick="sandboxToggleKanbanCard('${escapeAttr(ins.insight_id)}')">
@@ -956,7 +962,7 @@ function sandboxRenderKanban() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             <span>${date}</span>
           </div>
-          ${showSubStatus ? `<div class="sandbox-kanban-card-status" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status.replace('Elevated - ', ''))}</div>` : ''}
+          ${showSubStatus ? `<div class="sandbox-kanban-card-status" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status.replace('Elevated - ', '').replace(/^Rejected - (Initial|Final) Review /, ''))}</div>` : ''}
         </div>`;
 
         // Side panel is used instead of inline expansion (opened via sandboxToggleKanbanCard)

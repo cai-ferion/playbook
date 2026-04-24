@@ -630,9 +630,10 @@
 /* Kanban board */
 #view-sandbox-review .sandbox-kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(7, minmax(200px, 1fr));
   gap: 14px;
   animation: sandboxFadeUp 0.35s ease-out;
+  overflow-x: auto;
 }
 
 #view-sandbox-review .sandbox-kanban-col {
@@ -662,9 +663,12 @@
 }
 
 #view-sandbox-review .sandbox-kanban-col.col-pending-initial .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+#view-sandbox-review .sandbox-kanban-col.col-rejected-initial .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #EF4444, #F87171); }
 #view-sandbox-review .sandbox-kanban-col.col-pending-final .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+#view-sandbox-review .sandbox-kanban-col.col-rejected-final .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #DC2626, #EF4444); }
 #view-sandbox-review .sandbox-kanban-col.col-trainers-area .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
-#view-sandbox-review .sandbox-kanban-col.col-implemented .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #10B981, #34D399); }
+#view-sandbox-review .sandbox-kanban-col.col-approved .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #10B981, #34D399); }
+#view-sandbox-review .sandbox-kanban-col.col-implemented .sandbox-kanban-col-header::before { background: linear-gradient(90deg, #7C3AED, #A78BFA); }
 
 #view-sandbox-review .sandbox-kanban-col-title {
   font-size: 12px;
