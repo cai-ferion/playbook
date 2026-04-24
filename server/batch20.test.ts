@@ -117,7 +117,7 @@ describe('Cache Versions', () => {
     expect(indexHtml).toContain('compass.js?v=120');
   });
   it('sandbox.js bumped to v106', () => {
-    expect(indexHtml).toContain('sandbox.js?v=114');
+    expect(indexHtml).toContain('sandbox.js?v=115');
   });
 });
 

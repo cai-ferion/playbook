@@ -2932,3 +2932,13 @@
 ## Sandbox Notification Blueprint (April 24, 2026)
 - [x] Analyze Sandbox processes (Input Portal, Review Area) for notification triggers
 - [x] Create notification blueprint document with recommendations
+
+## Sandbox Attachment Issues (April 25, 2026)
+- [x] Diagnose attachment submission pipeline (form, upload, storage, DB persistence)
+- [x] Fix any broken attachment upload/storage logic
+- [x] Implement attachment preview in Input Portal detail panel
+- [x] Implement attachment preview in Review Area (Kanban card expansion + side panel)
+- [x] Diagnose and fix any other Sandbox issues found during audit
+- [x] Add missing DB columns: initial_review_date, initial_review_comments, final_reviewer, final_review_date, final_review_comments
+- [x] Add folder parameter to generic upload endpoint for S3 key organization
+- [x] Write 29 attachment pipeline tests (sandbox-attachments.test.ts)

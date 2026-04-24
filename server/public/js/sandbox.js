@@ -8,6 +8,8 @@
  *           compact 2x5 Job IDs grid, stats strip, polished omnibar
  */
 
+var _sandboxAttachedFiles = [];
+
 const SANDBOX_MOD = {
   insights: [],
   filtered: [],
@@ -610,6 +612,9 @@ function sandboxBuildDetailPanel(ins) {
     </div>`;
   }
 
+  // Section: Attachments
+  html += sandboxRenderAttachments(ins.attachments);
+
   // Section: Review History
   html += `<div class="sandbox-detail-section">
     <div class="sandbox-detail-section-title">REVIEW HISTORY</div>
@@ -1035,6 +1040,9 @@ function sandboxOpenReviewPanel(ins) {
   html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Problem Statement</div><div class="cdp-field-value multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</div></div>`;
   html += `<div class="cdp-field cdp-grid-full" style="margin-top:6px;border-top:1px solid rgba(0,0,0,0.06);padding-top:8px;"><div class="cdp-field-label">Proposed Changes</div><div class="cdp-field-value multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</div></div>`;
   html += '</div>';
+
+  // ===== SECTION: ATTACHMENTS =====
+  html += sandboxRenderAttachmentsCompact(ins.attachments);
 
   // ===== SECTION 2: REVIEW HISTORY =====
   html += `<div class="cdp-section"><div class="cdp-section-title">Review History</div>`;
@@ -1718,6 +1726,15 @@ async function sandboxShowNewForm() {
             ${Array.from({length:10}, (_,i) => `<input type="text" class="form-input" id="sandbox-new-jobid-${i+1}" placeholder="Job ID ${i+1}">`).join('')}
           </div>
         </div>
+        <div class="form-field full-width">
+          <label class="form-label">Attachments <span style="font-weight:normal;color:var(--fg-muted);font-size:0.85em;">(optional — images, PDFs, documents)</span></label>
+          <input type="file" id="sandbox-file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.gif,.bmp,.webp,.txt" style="display:none" onchange="sandboxUpdateFiles()">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('sandbox-file-input').click()" style="display:flex;align-items:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            Attach Files
+          </button>
+          <div id="sandbox-file-list" style="margin-top:6px;"></div>
+        </div>
       </div>
       <div class="sandbox-inline-form-footer">
         <button class="btn btn-outline btn-sm" onclick="sandboxCloseInlineForm()">Cancel</button>
@@ -1730,7 +1747,103 @@ async function sandboxShowNewForm() {
   setTimeout(() => document.getElementById('sandbox-new-title')?.focus(), 100);
 }
 
+// ===== Attachment helpers =====
+
+function sandboxUpdateFiles() {
+  const input = document.getElementById('sandbox-file-input');
+  if (!input || !input.files) return;
+  for (let i = 0; i < input.files.length; i++) {
+    _sandboxAttachedFiles.push(input.files[i]);
+  }
+  input.value = '';
+  sandboxRenderFileList();
+}
+
+function sandboxRemoveFile(index) {
+  _sandboxAttachedFiles.splice(index, 1);
+  sandboxRenderFileList();
+}
+
+function sandboxRenderFileList() {
+  const listEl = document.getElementById('sandbox-file-list');
+  if (!listEl) return;
+  if (_sandboxAttachedFiles.length === 0) { listEl.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 0; i < _sandboxAttachedFiles.length; i++) {
+    const f = _sandboxAttachedFiles[i];
+    const sizeKB = (f.size / 1024).toFixed(1);
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--fg);">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>${escapeHtml(f.name)}</span>
+      <span style="color:var(--fg-subtle);">(${sizeKB} KB)</span>
+      <button type="button" onclick="event.stopPropagation();sandboxRemoveFile(${i})" style="background:none;border:none;color:var(--error);cursor:pointer;font-size:14px;line-height:1;padding:0 4px;" title="Remove">&times;</button>
+    </div>`;
+  }
+  listEl.innerHTML = html;
+}
+
+function sandboxRenderAttachments(attachmentsJson) {
+  if (!attachmentsJson) return '';
+  let atts;
+  try { atts = JSON.parse(attachmentsJson); } catch { return ''; }
+  if (!Array.isArray(atts) || atts.length === 0) return '';
+
+  let html = '<div class="sandbox-detail-section"><div class="sandbox-detail-section-title">ATTACHMENTS</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+  atts.forEach(a => {
+    const name = a.name || 'file';
+    const url = a.url || '';
+    const ext = name.split('.').pop().toLowerCase();
+    const isImage = ['png','jpg','jpeg','gif','bmp','webp'].includes(ext);
+
+    if (isImage) {
+      html += `<a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="display:inline-block;border:1px solid var(--border);border-radius:6px;overflow:hidden;text-decoration:none;">
+        <img src="${escapeAttr(url)}" alt="${escapeAttr(name)}" style="max-width:160px;max-height:120px;display:block;object-fit:cover;" loading="lazy">
+        <div style="padding:4px 8px;font-size:11px;color:var(--fg-muted);background:var(--bg-surface);border-top:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">${escapeHtml(name)}</div>
+      </a>`;
+    } else {
+      html += `<a href="${escapeAttr(url)}" target="_blank" download="${escapeAttr(name)}" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--primary);text-decoration:none;background:var(--bg-surface);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        ${escapeHtml(name)}
+      </a>`;
+    }
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function sandboxRenderAttachmentsCompact(attachmentsJson) {
+  if (!attachmentsJson) return '';
+  let atts;
+  try { atts = JSON.parse(attachmentsJson); } catch { return ''; }
+  if (!Array.isArray(atts) || atts.length === 0) return '';
+
+  let html = '<div class="cdp-section"><div class="cdp-section-title">Attachments</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+  atts.forEach(a => {
+    const name = a.name || 'file';
+    const url = a.url || '';
+    const ext = name.split('.').pop().toLowerCase();
+    const isImage = ['png','jpg','jpeg','gif','bmp','webp'].includes(ext);
+
+    if (isImage) {
+      html += `<a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="display:inline-block;border:1px solid var(--border);border-radius:6px;overflow:hidden;text-decoration:none;">
+        <img src="${escapeAttr(url)}" alt="${escapeAttr(name)}" style="max-width:120px;max-height:90px;display:block;object-fit:cover;" loading="lazy">
+        <div style="padding:3px 6px;font-size:10px;color:var(--fg-muted);background:var(--bg-surface);border-top:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${escapeHtml(name)}</div>
+      </a>`;
+    } else {
+      html += `<a href="${escapeAttr(url)}" target="_blank" download="${escapeAttr(name)}" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--primary);text-decoration:none;background:var(--bg-surface);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        ${escapeHtml(name)}
+      </a>`;
+    }
+  });
+  html += '</div></div>';
+  return html;
+}
+
 function sandboxCloseInlineForm() {
+  _sandboxAttachedFiles = [];
   SANDBOX_MOD._inlineFormOpen = false;
   const container = document.getElementById('sandbox-inline-form-container');
   if (container) {
@@ -1787,6 +1900,27 @@ async function sandboxSubmitNew() {
 
   const emp = user ? SANDBOX_MOD.employees.find(e => e.ohr_id === user.ohr_id) : null;
 
+  // Upload attachments to S3 before creating the record
+  let attachmentUrls = [];
+  if (_sandboxAttachedFiles.length > 0) {
+    for (const file of _sandboxAttachedFiles) {
+      try {
+        const base64 = await fileToBase64(file);
+        const resp = await fetch(`${IO_API_BASE}/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64, folder: 'sandbox-insights' })
+        });
+        if (resp.ok) {
+          const result = await resp.json();
+          attachmentUrls.push({ name: file.name, url: result.url });
+        }
+      } catch (e) {
+        console.error('Failed to upload attachment:', e);
+      }
+    }
+  }
+
   const record = {
     insight_id: insightId,
     insight_title: title,
@@ -1808,6 +1942,7 @@ async function sandboxSubmitNew() {
     status: 'Pending Initial Review',
     created_date: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    attachments: attachmentUrls.length > 0 ? JSON.stringify(attachmentUrls) : '',
     ...jobIds
   };
 

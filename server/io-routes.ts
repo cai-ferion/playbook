@@ -1533,7 +1533,8 @@ router.post("/upload", async (req: Request, res: Response) => {
     }
     const { storagePut } = await import("./storage.js");
     const buffer = Buffer.from(data, "base64");
-    const key = `coaching-disputes/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const folder = req.body.folder || 'coaching-disputes';
+    const key = `${folder}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const result = await storagePut(key, buffer, contentType || "application/octet-stream");
     res.json({ ok: true, url: result.url, key: result.key });
   } catch (err: any) {
