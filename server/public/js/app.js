@@ -380,7 +380,9 @@ async function loginAsEmployee(emp) {
     planning_group: emp.planning_group || '',
     complete_planning_group: emp.complete_planning_group || '',
     actualPlanningGroup: emp.planning_group || '',
-    supervisor_name: emp.supervisor_name || ''
+    supervisor_name: emp.supervisor_name || '',
+    meta_email: emp.meta_email || '',
+    supervisor_email: emp.supervisor_email || ''
   };
 
   sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));

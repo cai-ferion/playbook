@@ -2902,3 +2902,6 @@
 
 ## Review Area My Team Toggle Bug (April 24, 2026)
 - [x] Fix Review Area "My Team" toggle not showing admin's team insights (switched from ROSTER_DATA lookup to direct supervisor_email match on insights)
+
+## My Team Toggle Root Cause Fix (April 24, 2026)
+- [x] Add meta_email and supervisor_email to currentUser object in loginAsEmployee() — was missing, causing undefined match
