@@ -691,7 +691,8 @@
   padding: 10px;
   flex: 1;
   overflow-y: auto;
-  max-height: 520px;
+  max-height: calc(100vh - 220px);
+  min-height: 500px;
   display: flex;
   flex-direction: column;
   gap: 8px;

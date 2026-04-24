@@ -2886,3 +2886,6 @@
 ## Review Area Filtering Bugs (April 24, 2026 - batch 3)
 - [x] Fix admin "All" toggle still not showing all insights in Review Area (root cause: KANBAN_COLUMNS status strings didn't match DB values — 'Pending Initial Review' vs 'Pending - Initial Review')
 - [x] Fix Trainers not seeing all insights in Review Area (removed Trainer from PG-restricted filter; only SMEs are PG-restricted now)
+
+## Review Area Column Height (April 24, 2026)
+- [x] Extend kanban column body height from 520px to calc(100vh - 220px) with min-height 500px

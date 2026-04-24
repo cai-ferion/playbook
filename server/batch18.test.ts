@@ -169,7 +169,7 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
     });
 
     it("should have bumped sandbox-redesign.css version", () => {
-      expect(indexHtml).toContain("sandbox-redesign.css?v=105");
+      expect(indexHtml).toContain("sandbox-redesign.css?v=106");
     });
 
     it("should have bumped app.js version", () => {
