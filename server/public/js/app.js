@@ -946,9 +946,8 @@ function applyNavPermissions(user) {
   vis('nav-group-horizon', 'nav.horizon');
   vis('nav-admin', 'nav.admin');
 
-  // Helm — always show group if nav.helm, but analytics sub-item gated separately
+  // Helm
   vis('nav-group-helm', 'nav.helm');
-  vis('nav-helm-analytics', 'helm.analytics');
 
   // Regimen
   vis('nav-regimen', 'nav.regimen');
@@ -1020,7 +1019,7 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-analytics', 'regimen', 'performance', 'productivity-hrs'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'regimen', 'performance', 'productivity-hrs'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -1052,8 +1051,7 @@ async function switchView(view) {
     const havenGroup = document.getElementById('nav-group-haven');
     if (havenGroup) havenGroup.classList.add('expanded');
   }
-  const helmViews = ['helm-board', 'helm-analytics'];
-  if (helmViews.includes(view)) {
+  if (view === 'helm-board') {
     const helmGroup = document.getElementById('nav-group-helm');
     if (helmGroup) helmGroup.classList.add('expanded');
   }
@@ -1069,7 +1067,7 @@ async function switchView(view) {
     'compass-input': 'Coaching Profile', 'compass-disputes': 'Disputes Area', 'compass-corrective': 'Corrective Actions',
     'sandbox-input': 'Input Portal', 'sandbox-review': 'Review Area', 'sandbox-analytics': 'Analytics',
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
-    'helm-board': 'Task Board', 'helm-analytics': 'Analytics',
+    'helm-board': 'Task Board',
     regimen: 'Regimen',
     performance: 'Main Metrics', 'productivity-hrs': 'Productivity Hrs.',
   };

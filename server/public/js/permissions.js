@@ -46,7 +46,6 @@ const PERM_GROUPS = [
     label: 'Helm',
     keys: [
       { key: 'nav.helm', label: 'Helm (entire module)' },
-      { key: 'helm.analytics', label: 'Helm Analytics' },
     ],
   },
   {
@@ -370,12 +369,10 @@ function computeRoleDefaults(role, ohrId) {
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
-    b['helm.analytics'] = true;
   }
   if (ohrId === '740044909') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
-    b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
     b['regimen.full_columns'] = true;

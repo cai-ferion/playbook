@@ -12,7 +12,6 @@ const ALL_PERMISSION_KEYS = [
   'anchor.input_portal', 'anchor.dashboard', 'anchor.billing_compliance',
   'anchor.risk_intelligence', 'anchor.sync_history',
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
-  'helm.analytics',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee', 'regimen.export_csv',
 ];
 
@@ -36,12 +35,10 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
-    b['helm.analytics'] = true;
   }
   if (ohrId === '740044909') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
-    b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
     b['regimen.full_columns'] = true;
@@ -55,8 +52,8 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
 describe('RBAC Permission System', () => {
 
   describe('Permission Key Taxonomy', () => {
-    it('has exactly 22 permission keys', () => {
-      expect(ALL_PERMISSION_KEYS.length).toBe(22);
+    it('has exactly 21 permission keys', () => {
+      expect(ALL_PERMISSION_KEYS.length).toBe(21);
     });
 
     it('all keys follow dot-notation format', () => {
@@ -85,9 +82,9 @@ describe('RBAC Permission System', () => {
 
     describe('Admin OHR 740045023', () => {
       const perms = getPermissionDefaults('Team Lead', '740045023');
-      it('gets all 22 permissions granted', () => {
+      it('gets all 21 permissions granted', () => {
         const granted = Object.values(perms).filter(v => v === true).length;
-        expect(granted).toBe(22);
+        expect(granted).toBe(21);
       });
       it('has nav.admin = true', () => expect(perms['nav.admin']).toBe(true));
       it('has anchor.sync_history = true', () => expect(perms['anchor.sync_history']).toBe(true));
@@ -123,14 +120,12 @@ describe('RBAC Permission System', () => {
       const perms = getPermissionDefaults('Team Lead', '222222222');
       it('has anchor.edit_attendance = true', () => expect(perms['anchor.edit_attendance']).toBe(true));
       it('has nav.compass = false', () => expect(perms['nav.compass']).toBe(false));
-      it('has helm.analytics = false', () => expect(perms['helm.analytics']).toBe(false));
     });
 
     describe('Manager role', () => {
       const perms = getPermissionDefaults('Manager', '333333333');
       it('has anchor.edit_attendance = true', () => expect(perms['anchor.edit_attendance']).toBe(true));
       it('has nav.compass = true', () => expect(perms['nav.compass']).toBe(true));
-      it('has helm.analytics = true', () => expect(perms['helm.analytics']).toBe(true));
       it('has anchor.sync_history = false', () => expect(perms['anchor.sync_history']).toBe(false));
       it('has nav.admin = false', () => expect(perms['nav.admin']).toBe(false));
     });
@@ -139,7 +134,6 @@ describe('RBAC Permission System', () => {
       const perms = getPermissionDefaults('Team Lead', '740044909');
       it('has anchor.edit_attendance = true', () => expect(perms['anchor.edit_attendance']).toBe(true));
       it('has nav.compass = true', () => expect(perms['nav.compass']).toBe(true));
-      it('has helm.analytics = true', () => expect(perms['helm.analytics']).toBe(true));
       it('has regimen.edit_employee = true', () => expect(perms['regimen.edit_employee']).toBe(true));
       it('has regimen.add_employee = true', () => expect(perms['regimen.add_employee']).toBe(true));
       it('has regimen.full_columns = true', () => expect(perms['regimen.full_columns']).toBe(true));
@@ -191,7 +185,6 @@ describe('RBAC Permission System', () => {
       'nav-group-horizon': 'nav.horizon',
       'nav-group-helm': 'nav.helm',
       'nav-admin': 'nav.admin',
-      'nav-helm-analytics': 'helm.analytics',
       'nav-regimen': 'nav.regimen',
       'nav-dashboard': 'anchor.dashboard',
       'nav-alerts': 'anchor.risk_intelligence',
@@ -199,8 +192,8 @@ describe('RBAC Permission System', () => {
       'nav-sync-history': 'anchor.sync_history',
     };
 
-    it('maps 13 nav elements to permission keys', () => {
-      expect(Object.keys(NAV_MAP).length).toBe(13);
+    it('maps 12 nav elements to permission keys', () => {
+      expect(Object.keys(NAV_MAP).length).toBe(12);
     });
 
     it('all permission keys in map are valid', () => {
@@ -215,14 +208,14 @@ describe('RBAC Permission System', () => {
       { label: 'Anchor — Navigation & Sub-sections', keys: ['nav.anchor', 'anchor.input_portal', 'anchor.dashboard', 'anchor.billing_compliance', 'anchor.risk_intelligence', 'anchor.sync_history'] },
       { label: 'Anchor — Actions', keys: ['anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster'] },
       { label: 'Compass', keys: ['nav.compass'] },
-      { label: 'Helm', keys: ['nav.helm', 'helm.analytics'] },
+      { label: 'Helm', keys: ['nav.helm'] },
       { label: 'Regimen', keys: ['nav.regimen', 'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee', 'regimen.export_csv'] },
       { label: 'Other Modules', keys: ['nav.haven', 'nav.sandbox', 'nav.horizon', 'nav.admin'] },
     ];
 
-    it('covers all 22 permission keys', () => {
+    it('covers all 21 permission keys', () => {
       const allGroupKeys = PERM_GROUPS.flatMap(g => g.keys);
-      expect(allGroupKeys.length).toBe(22);
+      expect(allGroupKeys.length).toBe(21);
       ALL_PERMISSION_KEYS.forEach(key => {
         expect(allGroupKeys).toContain(key);
       });

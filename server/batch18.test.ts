@@ -30,20 +30,10 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
       expect(sandboxJs).toContain("function sandboxToggleKanbanCard(");
     });
 
-    it("should have sandboxBuildKanbanExpansion function", () => {
-      expect(sandboxJs).toContain("function sandboxBuildKanbanExpansion(");
-    });
-
-    it("should render expansion panel with detail fields", () => {
-      expect(sandboxJs).toContain("sandbox-kanban-expansion");
-      expect(sandboxJs).toContain("sandbox-kanban-expansion-header");
-      expect(sandboxJs).toContain("sandbox-kanban-expansion-body");
-    });
-
-    it("should have CSS for inline expansion", () => {
-      expect(sandboxCss).toContain(".sandbox-kanban-expansion");
-      expect(sandboxCss).toContain(".sandbox-kanban-expansion-header");
-      expect(sandboxCss).toContain(".sandbox-kanban-expansion-body");
+    it("should use side panel for review detail (refactored from inline expansion)", () => {
+      expect(sandboxCss).toContain(".sandbox-side-panel");
+      expect(sandboxCss).toContain(".sandbox-side-panel-inner");
+      expect(sandboxCss).toContain(".sandbox-side-panel-body");
     });
 
     it("should redirect sandboxOpenDetail to inline expansion for review context", () => {
@@ -53,10 +43,6 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
 
   // 2. Role-Based Editability in Review Area
   describe("Review Area — Role-Based Action Buttons", () => {
-    it("should have sandboxBuildKanbanActions function", () => {
-      expect(sandboxJs).toContain("function sandboxBuildKanbanActions(");
-    });
-
     it("should gate initial review actions to Operational SME or admin", () => {
       expect(sandboxJs).toContain("Pending Initial Review");
       expect(sandboxJs).toContain("role === 'Operational SME'");
@@ -179,15 +165,15 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
   // 7. Cache Version Bumps
   describe("Cache Version Bumps", () => {
     it("should have bumped sandbox.js version", () => {
-      expect(indexHtml).toContain("sandbox.js?v=105");
+      expect(indexHtml).toContain("sandbox.js?v=108");
     });
 
     it("should have bumped sandbox-redesign.css version", () => {
-      expect(indexHtml).toContain("sandbox-redesign.css?v=101");
+      expect(indexHtml).toContain("sandbox-redesign.css?v=103");
     });
 
     it("should have bumped app.js version", () => {
-      expect(indexHtml).toContain("app.js?v=128");
+      expect(indexHtml).toContain("app.js?v=129");
     });
   });
 

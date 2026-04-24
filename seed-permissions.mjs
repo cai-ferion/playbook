@@ -9,7 +9,6 @@ const ALL_KEYS = [
   'anchor.input_portal', 'anchor.dashboard', 'anchor.billing_compliance',
   'anchor.risk_intelligence', 'anchor.sync_history',
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
-  'helm.analytics',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.edit_employee', 'regimen.export_csv',
 ];
 
@@ -34,12 +33,10 @@ function getDefaults(role, ohrId) {
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
-    b['helm.analytics'] = true;
   }
   if (ohrId === '740044909') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
-    b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
   }
   if (ohrId === '703212987') b['regimen.edit_employee'] = true;

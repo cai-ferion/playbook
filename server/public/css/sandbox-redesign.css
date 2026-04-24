@@ -1079,7 +1079,7 @@
   opacity: 1;
 }
 .sandbox-side-panel-inner {
-  width: 480px;
+  width: 1400px;
   max-width: 92vw;
   height: 100vh;
   background: var(--sandbox-surface, #fff);

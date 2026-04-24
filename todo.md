@@ -2862,3 +2862,11 @@
 - [x] Delete all 2025 insights from DB (1,104 deleted)
 - [x] Insert only 2026 insights from sheet into Sandbox (217 new)
 - [x] Update approval statuses from sheet (69 status changes applied)
+
+## Revisions Batch - April 24, 2026
+- [x] Widen side panels for Sandbox Review Area and Compass Disputes Area (960px → 1400px)
+- [x] Merge Task Board into Helm nav (already direct link; removed Analytics sub-page)
+- [x] Add filter system to Sandbox Input Portal (Submitter, PG, Insight Category, Proposal Type, Status, Date Range) — already wired via sandbox-omnibar.js pill filters
+- [x] Fix coaching acknowledgement title text alignment (verified already left-aligned in CSS)
+- [x] Add CSV export to Sandbox Review Area (all insights data, respects PG filter + search)
+- [x] Remove Helm Analytics page and all related code (view, JS, CSS, permissions, tests cleaned)

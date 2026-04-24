@@ -26,12 +26,12 @@ describe("Batch 25 — Fixes & Enhancements", () => {
     });
   });
 
-  // 2. Helm Analytics visibility (now RBAC-driven)
-  describe("Helm Analytics Visibility", () => {
-    it("controls Helm Analytics via RBAC applyNavPermissions", () => {
+  // 2. Helm Analytics removed — verify it's gone
+  describe("Helm Analytics Removed", () => {
+    it("no longer references helm-analytics in app.js", () => {
       const appJs = readPublicJS("app.js");
-      expect(appJs).toContain("nav-helm-analytics");
-      expect(appJs).toContain("vis('nav-helm-analytics', 'helm.analytics')");
+      expect(appJs).not.toContain("helm-analytics");
+      expect(appJs).not.toContain("helm.analytics");
     });
 
     it("fetches permissions on session restore for RBAC", () => {

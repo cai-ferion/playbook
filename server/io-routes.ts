@@ -3668,7 +3668,6 @@ const ALL_PERMISSION_KEYS = [
   'anchor.input_portal', 'anchor.dashboard', 'anchor.billing_compliance',
   'anchor.risk_intelligence',
   'anchor.edit_attendance', 'anchor.download_csv', 'anchor.sync_roster',
-  'helm.analytics',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee', 'regimen.export_csv', 'regimen.full_columns',
   'compass.disputes',
   'compass.corrective_actions',
@@ -3698,13 +3697,11 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   if (role === 'Team Lead') b['anchor.edit_attendance'] = true;
   if (role === 'Manager') {
     b['anchor.edit_attendance'] = true;
-    b['helm.analytics'] = true;
   }
   if (ohrId === '740044909') {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
     b['compass.corrective_actions'] = true;
-    b['helm.analytics'] = true;
     b['regimen.edit_employee'] = true;
     b['regimen.add_employee'] = true;
     b['regimen.full_columns'] = true;

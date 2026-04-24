@@ -711,6 +711,97 @@ function sandboxReviewPgFilter(val) {
   sandboxRenderKanban();
 }
 
+// CSV export for Review Area — respects current PG filter
+function sandboxExportReviewCSV() {
+  let data = [...SANDBOX_MOD.insights];
+
+  // Apply role-based PG filtering (same as kanban)
+  if (typeof currentUser !== 'undefined' && currentUser) {
+    const role = currentUser.actual_role;
+    const cpg = currentUser.complete_planning_group || currentUser.planning_group || '';
+    const pgList = cpg.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    if (role === 'SME' || role === 'Trainer') {
+      data = data.filter(i => {
+        const iPg = (i.planning_group || '').toLowerCase();
+        return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
+      });
+    }
+  }
+
+  // Apply PG filter
+  if (SANDBOX_MOD._reviewPgFilter) {
+    data = data.filter(i => i.planning_group === SANDBOX_MOD._reviewPgFilter);
+  }
+
+  // Apply search filter
+  const searchQ = SANDBOX_MOD._reviewSearch;
+  if (searchQ) {
+    data = data.filter(i => {
+      const title = (i.title || i.insight_title || '').toLowerCase();
+      const submitter = (i.full_name || i.submitter || '').toLowerCase();
+      const insId = (i.insight_id || '').toLowerCase();
+      return title.includes(searchQ) || submitter.includes(searchQ) || insId.includes(searchQ);
+    });
+  }
+
+  if (data.length === 0) {
+    showToast('No data to export', 'info');
+    return;
+  }
+
+  // Define CSV columns
+  const cols = [
+    { key: 'insight_id', label: 'Insight ID' },
+    { key: 'title', label: 'Title', fallback: 'insight_title' },
+    { key: 'full_name', label: 'Submitter', fallback: 'submitter' },
+    { key: 'ohr_id', label: 'OHR' },
+    { key: 'planning_group', label: 'Planning Group' },
+    { key: 'category', label: 'Insight Category', fallback: 'insight_category' },
+    { key: 'proposal_type', label: 'Proposal Type' },
+    { key: 'status', label: 'Status' },
+    { key: 'description', label: 'Description' },
+    { key: 'week_ending', label: 'Week Ending' },
+    { key: 'created_at', label: 'Created At' },
+    { key: 'updated_at', label: 'Updated At' },
+  ];
+
+  // Build CSV string
+  const csvEscape = (val) => {
+    if (val == null) return '';
+    const s = String(val);
+    if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+
+  let csv = cols.map(c => csvEscape(c.label)).join(',') + '\n';
+  data.forEach(row => {
+    csv += cols.map(c => {
+      let val = row[c.key];
+      if ((val === undefined || val === null || val === '') && c.fallback) val = row[c.fallback];
+      // Format dates
+      if ((c.key === 'created_at' || c.key === 'updated_at' || c.key === 'week_ending') && val) {
+        try { val = new Date(val).toLocaleString('en-US', { timeZone: 'Asia/Manila' }); } catch(e) {}
+      }
+      return csvEscape(val);
+    }).join(',') + '\n';
+  });
+
+  // Download
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const pgSuffix = SANDBOX_MOD._reviewPgFilter ? '_' + SANDBOX_MOD._reviewPgFilter.replace(/[^a-zA-Z0-9]/g, '_') : '';
+  a.download = 'sandbox_review' + pgSuffix + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${data.length} records to CSV`, 'success');
+}
+
 function sandboxRenderReviewToolbar() {
   const toolbar = document.getElementById('sandbox-review-toolbar');
   if (!toolbar) return;
@@ -736,6 +827,10 @@ function sandboxRenderReviewToolbar() {
         <option value="">All Planning Groups</option>
         ${pgOptions.map(pg => `<option value="${escapeAttr(pg)}" ${SANDBOX_MOD._reviewPgFilter === pg ? 'selected' : ''}>${escapeHtml(pg)}</option>`).join('')}
       </select>
+      <button class="btn btn-outline btn-sm" onclick="sandboxExportReviewCSV()" title="Export filtered insights to CSV" style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
     </div>`;
 }
 
@@ -1719,5 +1814,7 @@ async function initSandbox(view) {
     sandboxRenderKanban();
   } else {
     sandboxRenderTeamToggle();
+    if (typeof sandboxInitPillFilterBar === 'function') sandboxInitPillFilterBar();
+    sandboxOmniApply();
   }
 }

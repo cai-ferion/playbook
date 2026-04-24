@@ -1,7 +1,6 @@
 /**
  * Helm — Task Assigning, Tracking & Cross-Module Execution
- * Sub-page 1: Task Board — create, browse, and manage tasks
- * Sub-page 2: Analytics — completion rates by TL, department, module
+ * Task Board — create, browse, and manage tasks
  */
 
 const HELM = {
@@ -52,14 +51,9 @@ const HELM = {
 async function initHelm(view) {
   if (HELM.employees.length === 0) await helmFetchEmployees();
   await helmFetchTasks();
-  const subMap = { 'helm-board': 'board', 'helm-analytics': 'analytics' };
-  const sub = subMap[view] || 'board';
-  if (sub === 'board') {
-    helmApplyFilters();
-    helmApplyReceivedFilters();
-    helmApplyApprovalsFilters();
-  }
-  else if (sub === 'analytics') helmRenderAnalytics();
+  helmApplyFilters();
+  helmApplyReceivedFilters();
+  helmApplyApprovalsFilters();
 }
 
 // ===== Sub-page Switching =====
@@ -74,7 +68,6 @@ function helmSwitchSubpage(subpage) {
   if (target) target.style.display = '';
 
   if (subpage === 'board') helmApplyFilters();
-  else if (subpage === 'analytics') helmRenderAnalytics();
 }
 
 // ===== Data Fetching =====
@@ -794,110 +787,6 @@ async function helmUpdateStatus(taskId, newStatus) {
   }
 }
 
-// ===== Analytics =====
-
-function helmRenderAnalytics() {
-  const el = document.getElementById('helm-analytics-content');
-  if (!el) return;
-
-  const tasks = HELM.tasks;
-  const total = tasks.length;
-  const completed = tasks.filter(t => t.status === 'Completed').length;
-  const completionRate = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
-  const overdue = tasks.filter(t => t.due_date && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due_date) < new Date()).length;
-  const avgCompletionDays = helmCalcAvgCompletion();
-
-  // Group by assignee (Team Lead / person)
-  const byAssignee = {};
-  tasks.forEach(t => {
-    const name = t.assigned_to_name || 'Unassigned';
-    if (!byAssignee[name]) byAssignee[name] = { total: 0, completed: 0, open: 0, overdue: 0 };
-    byAssignee[name].total++;
-    if (t.status === 'Completed') byAssignee[name].completed++;
-    if (t.status === 'Open' || t.status === 'In Progress') byAssignee[name].open++;
-    if (t.due_date && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due_date) < new Date()) byAssignee[name].overdue++;
-  });
-
-  // Group by planning group (department)
-  const byDept = {};
-  tasks.forEach(t => {
-    const pg = t.assigned_to_pg || 'Unknown';
-    if (!byDept[pg]) byDept[pg] = { total: 0, completed: 0 };
-    byDept[pg].total++;
-    if (t.status === 'Completed') byDept[pg].completed++;
-  });
-
-
-
-  let html = '<div class="analytics-grid">';
-
-  // KPI Cards
-  html += `
-    <div class="analytics-card analytics-card-wide">
-      <h4 class="analytics-card-title">Overview</h4>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <div class="analytics-kpi"><div class="analytics-kpi-value">${total}</div><div class="analytics-kpi-label">Total Tasks</div></div>
-        <div class="analytics-kpi"><div class="analytics-kpi-value" style="color:var(--success);">${completionRate}%</div><div class="analytics-kpi-label">Completion Rate</div></div>
-        <div class="analytics-kpi"><div class="analytics-kpi-value" style="color:var(--error);">${overdue}</div><div class="analytics-kpi-label">Overdue</div></div>
-        <div class="analytics-kpi"><div class="analytics-kpi-value">${avgCompletionDays}</div><div class="analytics-kpi-label">Avg Days to Complete</div></div>
-      </div>
-    </div>
-  `;
-
-  // By Assignee Table
-  const assigneeRows = Object.entries(byAssignee).sort((a, b) => b[1].total - a[1].total);
-  html += `
-    <div class="analytics-card">
-      <h4 class="analytics-card-title">Completion by Assignee</h4>
-      <div style="max-height:300px;overflow-y:auto;">
-        <table class="analytics-table">
-          <thead><tr><th>Assignee</th><th>Total</th><th>Done</th><th>Open</th><th>Overdue</th><th>Rate</th></tr></thead>
-          <tbody>
-            ${assigneeRows.map(([name, d]) => {
-              const rate = d.total > 0 ? ((d.completed / d.total) * 100).toFixed(0) : 0;
-              return `<tr><td>${escapeHtml(name)}</td><td>${d.total}</td><td style="color:var(--success);">${d.completed}</td><td>${d.open}</td><td style="color:${d.overdue > 0 ? 'var(--error)' : 'var(--fg-muted)'};">${d.overdue}</td><td><strong>${rate}%</strong></td></tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-  // By Department Table
-  const deptRows = Object.entries(byDept).sort((a, b) => b[1].total - a[1].total);
-  html += `
-    <div class="analytics-card">
-      <h4 class="analytics-card-title">Completion by Department</h4>
-      <div style="max-height:300px;overflow-y:auto;">
-        <table class="analytics-table">
-          <thead><tr><th>Department</th><th>Total</th><th>Completed</th><th>Rate</th></tr></thead>
-          <tbody>
-            ${deptRows.map(([name, d]) => {
-              const rate = d.total > 0 ? ((d.completed / d.total) * 100).toFixed(0) : 0;
-              return `<tr><td>${escapeHtml(name)}</td><td>${d.total}</td><td style="color:var(--success);">${d.completed}</td><td><strong>${rate}%</strong></td></tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-
-
-
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function helmCalcAvgCompletion() {
-  const completed = HELM.tasks.filter(t => t.status === 'Completed' && t.created_at && t.completed_date);
-  if (completed.length === 0) return '—';
-  const totalDays = completed.reduce((sum, t) => {
-    const created = new Date(t.created_at);
-    const done = new Date(t.completed_date);
-    return sum + ((done - created) / (1000 * 60 * 60 * 24));
-  }, 0);
-  return (totalDays / completed.length).toFixed(1);
-}
 
 
 // ===== New Request Form =====
