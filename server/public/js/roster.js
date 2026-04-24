@@ -235,6 +235,10 @@ function rosterRenderFilterBar() {
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;">'
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export'
       + '</button>';
+    // Purge Attendance (owner-only)
+    tbHtml += '<button class="btn btn-outline btn-sm" id="roster-purge-btn" onclick="rosterShowPurgeModal()" style="display:none;white-space:nowrap;color:#ef4444;border-color:#ef4444;">' 
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Purge'
+      + '</button>';
     // Sync to Sheet
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-sync-sheet-btn" onclick="rosterSyncToSheet()" style="display:none;white-space:nowrap;">'
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync'
@@ -1588,6 +1592,12 @@ async function rosterFetchEmployees() {
     const hasSyncPerm = !!perms['regimen.sync_sheet'];
     syncSheetBtn.style.display = (isWfm || hasSyncPerm) ? '' : 'none';
   }
+
+  // Show/hide Purge button — owner-only
+  const purgeBtn = document.getElementById('roster-purge-btn');
+  if (purgeBtn) {
+    purgeBtn.style.display = ROSTER.isOwner ? '' : 'none';
+  }
 }
 
 // ===== Sync to Google Sheet (WFM) =====
@@ -1631,3 +1641,191 @@ window.rosterSyncToSheet = async function() {
 async function initRoster() {
   await rosterFetchEmployees();
 }
+
+// ===== Purge Attendance (Owner-only) =====
+
+window.rosterShowPurgeModal = function() {
+  // Build employee options from ROSTER.employees
+  const empOptions = (ROSTER.employees || [])
+    .filter(e => e.actual_role !== 'Manager')
+    .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
+    .map(e => `<option value="${e.ohr_id}">${escapeHtml(e.full_name)} (${e.ohr_id})</option>`)
+    .join('');
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const overlay = document.createElement('div');
+  overlay.id = 'purge-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface,#1e293b);border-radius:12px;width:640px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,.4);padding:28px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h3 style="margin:0;font-size:18px;color:#ef4444;display:flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Purge Attendance Records
+        </h3>
+        <button onclick="document.getElementById('purge-modal-overlay').remove()" style="background:none;border:none;color:var(--text-secondary,#94a3b8);cursor:pointer;font-size:20px;">✕</button>
+      </div>
+
+      <div id="purge-form-section">
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:13px;color:var(--text-secondary,#94a3b8);margin-bottom:6px;text-align:left;">Employee</label>
+          <select id="purge-employee-select" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:14px;">
+            <option value="">-- Select Employee --</option>
+            ${empOptions}
+          </select>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:13px;color:var(--text-secondary,#94a3b8);margin-bottom:6px;text-align:left;">Starting Date (inclusive)</label>
+          <input type="date" id="purge-from-date" value="${today}" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--bg,#0f172a);color:var(--text,#e2e8f0);font-size:14px;">
+        </div>
+        <button onclick="rosterPurgePreview()" class="btn btn-primary btn-sm" style="width:100%;">Preview Affected Records</button>
+      </div>
+
+      <div id="purge-preview-section" style="display:none;margin-top:20px;"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+};
+
+window.rosterPurgePreview = async function() {
+  const ohrId = document.getElementById('purge-employee-select').value;
+  const fromDate = document.getElementById('purge-from-date').value;
+
+  if (!ohrId) { showToast('Please select an employee.', 'error'); return; }
+  if (!fromDate) { showToast('Please select a starting date.', 'error'); return; }
+
+  const previewSection = document.getElementById('purge-preview-section');
+  previewSection.style.display = 'block';
+  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary,#94a3b8);">Loading preview...</div>';
+
+  try {
+    const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const actorOhr = user.ohr_id || '';
+    const resp = await fetch(`/api/io/attendance-purge-preview?ohr_id=${ohrId}&from_date=${fromDate}&actor_ohr=${actorOhr}`);
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+        <strong>Error:</strong> ${escapeHtml(data.error || 'Unknown error')}
+      </div>`;
+      return;
+    }
+
+    if (data.error === 'employee_not_found') {
+      previewSection.innerHTML = `<div style="padding:16px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        ${escapeHtml(data.message)}
+      </div>`;
+      return;
+    }
+
+    if (data.error === 'no_attendance_rows') {
+      previewSection.innerHTML = `<div style="padding:16px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;color:#f59e0b;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        ${escapeHtml(data.message)}
+      </div>`;
+      return;
+    }
+
+    // Build preview HTML
+    const emp = data.employee;
+    const tagRows = (data.tag_distribution || []).map(t =>
+      `<tr><td style="padding:4px 10px;border-bottom:1px solid var(--border,#334155);">${escapeHtml(t.tag_name)}</td><td style="padding:4px 10px;border-bottom:1px solid var(--border,#334155);text-align:right;">${t.cnt}</td></tr>`
+    ).join('');
+
+    const previewRows = (data.preview || []).map(r =>
+      `<tr>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${r.log_date}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${escapeHtml(r.tag || '—')}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${r.ot_hours || '—'}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${escapeHtml(r.snap_planning_group || '—')}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border,#334155);font-size:12px;">${escapeHtml(r.wfm_tag || '—')}</td>
+      </tr>`
+    ).join('');
+
+    previewSection.innerHTML = `
+      <div style="padding:16px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:8px;margin-bottom:16px;">
+        <div style="font-size:14px;font-weight:600;color:#ef4444;margin-bottom:8px;">⚠ Destructive Operation</div>
+        <div style="font-size:13px;color:var(--text,#e2e8f0);line-height:1.6;">
+          This will <strong>permanently delete ${data.total_rows} attendance record${data.total_rows !== 1 ? 's' : ''}</strong> for:<br>
+          <strong>${escapeHtml(emp.full_name)}</strong> (${emp.ohr_id}) — ${escapeHtml(emp.actual_role || '')} · ${escapeHtml(emp.planning_group || '')}<br>
+          Date range: <strong>${data.date_range.from}</strong> → <strong>${data.date_range.to}</strong>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text,#e2e8f0);margin-bottom:8px;">Tag Distribution</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="color:var(--text-secondary,#94a3b8);"><th style="text-align:left;padding:4px 10px;border-bottom:1px solid var(--border,#334155);">Tag</th><th style="text-align:right;padding:4px 10px;border-bottom:1px solid var(--border,#334155);">Count</th></tr></thead>
+          <tbody>${tagRows}</tbody>
+        </table>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text,#e2e8f0);margin-bottom:8px;">Preview (first 20 rows)</div>
+        <div style="max-height:200px;overflow-y:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr style="color:var(--text-secondary,#94a3b8);"><th style="text-align:left;padding:4px 8px;">Date</th><th style="text-align:left;padding:4px 8px;">Tag</th><th style="text-align:left;padding:4px 8px;">OT</th><th style="text-align:left;padding:4px 8px;">PG</th><th style="text-align:left;padding:4px 8px;">WFM</th></tr></thead>
+            <tbody>${previewRows}</tbody>
+          </table>
+        </div>
+        ${data.total_rows > 20 ? `<div style="font-size:11px;color:var(--text-secondary,#94a3b8);margin-top:4px;">Showing 20 of ${data.total_rows} rows</div>` : ''}
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
+        <button onclick="rosterExecutePurge('${emp.ohr_id}','${fromDate}',${data.total_rows})" class="btn btn-sm" style="flex:1;background:#ef4444;color:#fff;border:none;">
+          Delete ${data.total_rows} Record${data.total_rows !== 1 ? 's' : ''}
+        </button>
+      </div>
+    `;
+
+    // Store for confirm
+    window._purgeTarget = { ohr_id: ohrId, from_date: fromDate, total: data.total_rows, name: emp.full_name };
+  } catch (err) {
+    previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+      <strong>Error:</strong> ${escapeHtml(err.message)}
+    </div>`;
+  }
+};
+
+window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
+  // Double-confirm
+  const confirmed = confirm(`FINAL CONFIRMATION\n\nYou are about to permanently delete ${expectedCount} attendance records for OHR ${ohrId} from ${fromDate} onwards.\n\nThis action CANNOT be undone.\n\nProceed?`);
+  if (!confirmed) return;
+
+  const previewSection = document.getElementById('purge-preview-section');
+  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary,#94a3b8);">Deleting records...</div>';
+
+  try {
+    const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const resp = await fetch('/api/io/attendance-purge', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_ohr: user.ohr_id, ohr_id: ohrId, from_date: fromDate }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || !data.success) {
+      previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+        <strong>Error:</strong> ${escapeHtml(data.error || 'Delete failed')}
+      </div>`;
+      return;
+    }
+
+    previewSection.innerHTML = `
+      <div style="padding:16px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;">
+        <strong>✓ Purge Complete</strong><br>
+        <span style="font-size:13px;">Successfully deleted <strong>${data.deleted}</strong> attendance record${data.deleted !== 1 ? 's' : ''} for OHR ${ohrId} from ${fromDate} onwards.</span>
+      </div>
+      <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;">Close</button>
+    `;
+    showToast(`Purged ${data.deleted} attendance records`, 'success');
+  } catch (err) {
+    previewSection.innerHTML = `<div style="padding:16px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;">
+      <strong>Error:</strong> ${escapeHtml(err.message)}
+    </div>`;
+  }
+};

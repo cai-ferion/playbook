@@ -2913,3 +2913,9 @@
 
 ## Regimen Add Employee Bug (April 24, 2026)
 - [x] Fix lost capability to add employee in Regimen (button visibility check ran before rosterRenderFilterBar created the DOM element)
+
+## Purge Attendance Feature (April 24, 2026)
+- [x] Build server-side preview endpoint: GET /api/io/attendance-purge-preview?ohr_id=X&from_date=Y
+- [x] Build server-side delete endpoint: DELETE /api/io/attendance-purge?ohr_id=X&from_date=Y (owner-only)
+- [x] Build client-side UI: owner-only button, modal with employee picker, date picker, preview summary, confirm dialog
+- [x] Add validation: employee not found in attendance, no rows to delete, etc.

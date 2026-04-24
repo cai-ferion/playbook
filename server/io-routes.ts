@@ -4973,6 +4973,138 @@ router.delete("/wfm-schedule", async (_req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// Attendance Purge — owner-only (740045023)
+// ============================================================
+
+const OWNER_OHR = '740045023';
+
+// GET /api/io/attendance-purge-preview?ohr_id=X&from_date=YYYY-MM-DD
+// Returns a summary of rows that would be deleted + first 20 rows for preview
+router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
+  try {
+    const actor = String(req.query.actor_ohr || '');
+    if (actor !== OWNER_OHR) return res.status(403).json({ error: "Owner-only operation" });
+
+    const ohrId = String(req.query.ohr_id || '').trim();
+    const fromDate = String(req.query.from_date || '').trim();
+    if (!ohrId) return res.status(400).json({ error: "ohr_id is required" });
+    if (!fromDate || !/^\d{4}-\d{2}-\d{2}$/.test(fromDate)) return res.status(400).json({ error: "from_date is required (YYYY-MM-DD)" });
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    // Check if employee exists in employees table
+    const empRows: any = await db.execute(
+      sql`SELECT ohr_id, full_name, actual_role, planning_group FROM io_employees WHERE ohr_id = ${ohrId} LIMIT 1`
+    );
+    const empArr = Array.isArray(empRows[0]) ? empRows[0] : empRows;
+    if (!empArr || empArr.length === 0) {
+      return res.json({ found: false, error: "employee_not_found", message: `Employee with OHR ${ohrId} not found in the employee database.` });
+    }
+    const employee = empArr[0];
+
+    // Count matching attendance rows
+    const countResult: any = await db.execute(
+      sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}`
+    );
+    const countArr = Array.isArray(countResult[0]) ? countResult[0] : countResult;
+    const totalRows = Number(countArr[0]?.cnt || 0);
+
+    if (totalRows === 0) {
+      return res.json({
+        found: true,
+        employee: { ohr_id: employee.ohr_id, full_name: employee.full_name, actual_role: employee.actual_role, planning_group: employee.planning_group },
+        total_rows: 0,
+        error: "no_attendance_rows",
+        message: `No attendance records found for ${employee.full_name} (${ohrId}) from ${fromDate} onwards.`
+      });
+    }
+
+    // Get date range
+    const rangeResult: any = await db.execute(
+      sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}`
+    );
+    const rangeArr = Array.isArray(rangeResult[0]) ? rangeResult[0] : rangeResult;
+    const { min_date, max_date } = rangeArr[0] || {};
+
+    // Get first 20 rows for preview
+    const previewRows: any = await db.execute(
+      sql`SELECT id, log_date, tag, ot_hours, remarks, snap_planning_group, snap_shift_time, wfm_tag
+          FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}
+          ORDER BY log_date ASC LIMIT 20`
+    );
+    const preview = Array.isArray(previewRows[0]) ? previewRows[0] : previewRows;
+
+    // Tag distribution
+    const tagResult: any = await db.execute(
+      sql`SELECT COALESCE(tag, '(empty)') as tag_name, COUNT(*) as cnt
+          FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}
+          GROUP BY tag ORDER BY cnt DESC`
+    );
+    const tagDist = Array.isArray(tagResult[0]) ? tagResult[0] : tagResult;
+
+    res.json({
+      found: true,
+      employee: { ohr_id: employee.ohr_id, full_name: employee.full_name, actual_role: employee.actual_role, planning_group: employee.planning_group },
+      total_rows: totalRows,
+      date_range: { from: min_date, to: max_date },
+      tag_distribution: tagDist,
+      preview: preview,
+    });
+  } catch (err: any) {
+    console.error("[IO API] attendance-purge-preview error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/io/attendance-purge - hard delete attendance rows (owner-only)
+router.delete("/attendance-purge", async (req: Request, res: Response) => {
+  try {
+    const { actor_ohr, ohr_id, from_date } = req.body;
+    if (String(actor_ohr) !== OWNER_OHR) return res.status(403).json({ error: "Owner-only operation" });
+    if (!ohr_id) return res.status(400).json({ error: "ohr_id is required" });
+    if (!from_date || !/^\d{4}-\d{2}-\d{2}$/.test(from_date)) return res.status(400).json({ error: "from_date is required (YYYY-MM-DD)" });
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    // Count before delete for confirmation
+    const countResult: any = await db.execute(
+      sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date}`
+    );
+    const countArr = Array.isArray(countResult[0]) ? countResult[0] : countResult;
+    const totalRows = Number(countArr[0]?.cnt || 0);
+
+    if (totalRows === 0) {
+      return res.json({ success: true, deleted: 0, message: "No rows matched the criteria." });
+    }
+
+    // Log the purge action to audit log
+    await db.insert(ioAuditLog).values({
+      record_type: "attendance_purge",
+      record_id: `${ohr_id}_from_${from_date}`,
+      action: "purge",
+      field_name: "bulk_delete",
+      old_value: `${totalRows} rows`,
+      new_value: null,
+      actor_ohr: String(actor_ohr),
+      actor_name: "Owner",
+    });
+
+    // Execute the delete
+    await db.execute(
+      sql`DELETE FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date}`
+    );
+
+    console.log(`[IO API] PURGE: Deleted ${totalRows} attendance rows for ${ohr_id} from ${from_date} onwards (actor: ${actor_ohr})`);
+    res.json({ success: true, deleted: totalRows });
+  } catch (err: any) {
+    console.error("[IO API] attendance-purge error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");
