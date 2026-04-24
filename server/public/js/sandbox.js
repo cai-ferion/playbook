@@ -935,12 +935,23 @@ function sandboxRenderKanban() {
 
     const colClass = `col-${col.id}`;
 
+    // Build pagination HTML (top of column, Disputes-style)
+    let paginationHtml = '';
+    if (totalPages > 1) {
+      paginationHtml = `<div class="kanban-col-pagination" style="margin-bottom:8px;">
+        <button class="btn btn-ghost btn-xs" ${page <= 1 ? 'disabled' : ''} onclick="event.stopPropagation();sandboxKanbanPage('${col.id}',-1)">&laquo;</button>
+        <span style="font-size:11px;color:var(--fg-muted);">${page}/${totalPages}</span>
+        <button class="btn btn-ghost btn-xs" ${page >= totalPages ? 'disabled' : ''} onclick="event.stopPropagation();sandboxKanbanPage('${col.id}',1)">&raquo;</button>
+      </div>`;
+    }
+
     html += `<div class="sandbox-kanban-col ${colClass}">
       <div class="sandbox-kanban-col-header">
         <span class="sandbox-kanban-col-title">${escapeHtml(col.title)}</span>
         <span class="sandbox-kanban-col-count">${cards.length}</span>
       </div>
-      <div class="sandbox-kanban-col-body">`;
+      <div class="sandbox-kanban-col-body">
+      ${paginationHtml}`;
 
     if (cards.length === 0) {
       html += '<div class="sandbox-kanban-empty">No items</div>';
@@ -969,14 +980,7 @@ function sandboxRenderKanban() {
       });
     }
 
-    // Pagination
-    if (totalPages > 1) {
-      html += `<div class="sandbox-kanban-pagination">
-        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();sandboxKanbanPage('${col.id}',-1)" ${page <= 1 ? 'disabled' : ''}>&laquo; Prev</button>
-        <span>Page ${page} / ${totalPages}</span>
-        <button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();sandboxKanbanPage('${col.id}',1)" ${page >= totalPages ? 'disabled' : ''}>Next &raquo;</button>
-      </div>`;
-    }
+    // Pagination already rendered at top of column body
 
     html += '</div></div>';
   });

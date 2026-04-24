@@ -2889,3 +2889,6 @@
 
 ## Review Area Column Height (April 24, 2026)
 - [x] Extend kanban column body height from 520px to calc(100vh - 220px) with min-height 500px
+
+## Review Area Pagination (April 24, 2026)
+- [x] Move kanban pagination to top of each column, matching Disputes Area style (btn-ghost btn-xs, compact page/total)
