@@ -2905,3 +2905,8 @@
 
 ## My Team Toggle Root Cause Fix (April 24, 2026)
 - [x] Add meta_email and supervisor_email to currentUser object in loginAsEmployee() — was missing, causing undefined match
+
+## CO Sheet Import & TL Simulation (April 24, 2026)
+- [x] Import insights from CO sheet into the database (2 inserted, 5 updated to Implemented)
+- [x] Run TL simulation: 24/29 TLs can see team insights; 3 TLs have 0 insights (agents haven't submitted); 12 TLs have orphaned insights from supervisor reassignments
+- [x] No code fix needed — filtering logic is correct; orphaned insights are from supervisor reassignments
