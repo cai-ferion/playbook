@@ -2990,3 +2990,11 @@
 - [x] Upload all 105 files to S3 via /api/io/upload (0 errors)
 - [x] Update 105 io_insights records with S3 attachment URLs
 - [x] Verify: 122 total insights with S3 attachments, 1 broken legacy record (unfixable AppSheet error)
+
+## Sandbox Notifications Implementation (April 27, 2026)
+- [x] Add 8 notification types to UI registry (notifications.js): icons, labels, colors, brief, detail
+- [x] Add client-side triggers in sandbox.js: insight_submitted, insight_initial_accepted, insight_initial_rejected, insight_final_accepted, insight_final_rejected, insight_status_changed, insight_implemented
+- [x] Add server-side cron job in auto-mailer.ts: insight_review_pending (48h initial, 72h final)
+- [x] Add manual trigger endpoint: POST /api/io/insight-review-pending-check
+- [x] Run full notification simulation across all components and roles (158 tests passed)
+- [x] Diagnose and fix errors: 2 literal-match failures (rejected types used variable instead of string literal), 5 stale cache-version assertions across 5 test files

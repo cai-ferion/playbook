@@ -9,7 +9,7 @@ import { Express } from "express";
 import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq, and, inArray, sql, gte, lte, asc, ne, isNotNull } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig, ioCoaching, ioCorrectiveActions } from "../drizzle/schema";
+import { ioAttendance, ioEmployees, ioNotifications, ioOtRequests, ioLeaves, ioAuditLog, ioOtConfig, ioCoaching, ioCorrectiveActions, ioInsights } from "../drizzle/schema";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
@@ -1183,6 +1183,138 @@ export function registerAutoMailer(app: Express): void {
   app.post("/api/io/weekly-digest", async (req, res) => {
     try {
       const result = await sendWeeklyDigest(db);
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════
+  // Insight Review Pending — Every 12h (06:00 UTC + 18:00 UTC)
+  // Nudges SMEs/Trainers when insights sit pending > 48h (initial) or > 72h (final)
+  // ═══════════════════════════════════════════════════════════════════
+  async function checkInsightReviewPending(db: ReturnType<typeof drizzle>): Promise<{ alerts: number; errors: number }> {
+    let alerts = 0, errors = 0;
+    try {
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
+      const seventyTwoHoursAgo = new Date(now.getTime() - 72 * 60 * 60 * 1000).toISOString();
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+      // Find insights pending initial review > 48h
+      const pendingInitial = await db.select()
+        .from(ioInsights)
+        .where(and(
+          eq(ioInsights.status, 'Pending Initial Review'),
+          lte(ioInsights.created_at, fortyEightHoursAgo)
+        ));
+
+      // Find insights pending final review > 72h (use initial_review_date as the start)
+      const pendingFinal = await db.select()
+        .from(ioInsights)
+        .where(and(
+          eq(ioInsights.status, 'Pending Final Review'),
+          lte(ioInsights.initial_review_date, seventyTwoHoursAgo)
+        ));
+
+      // Group initial by planning_group for SME targeting
+      const pgGroups: Record<string, typeof pendingInitial> = {};
+      for (const ins of pendingInitial) {
+        const pg = ins.planning_group || 'Unknown';
+        if (!pgGroups[pg]) pgGroups[pg] = [];
+        pgGroups[pg].push(ins);
+      }
+
+      // Get all employees for role-based targeting
+      const allEmps = await db.select({
+        ohr_id: ioEmployees.ohr_id,
+        full_name: ioEmployees.full_name,
+        actual_role: ioEmployees.actual_role,
+        planning_group: ioEmployees.planning_group,
+      }).from(ioEmployees);
+
+      // Notify SMEs/Content Reviewers for pending initial insights
+      for (const [pg, insights] of Object.entries(pgGroups)) {
+        const reviewers = allEmps.filter(e =>
+          (e.actual_role === 'Operational SME' || e.actual_role === 'Content Reviewer') &&
+          e.planning_group === pg
+        );
+        for (const reviewer of reviewers) {
+          if (!reviewer.ohr_id) continue;
+          // Dedup: skip if already notified within 24h for same PG
+          const existing = await db.select({ id: ioNotifications.id })
+            .from(ioNotifications)
+            .where(and(
+              eq(ioNotifications.type, 'insight_review_pending'),
+              eq(ioNotifications.target_ohr, reviewer.ohr_id),
+              gte(ioNotifications.created_at, twentyFourHoursAgo)
+            ))
+            .limit(1);
+          if (existing.length > 0) continue;
+
+          const insightIds = insights.map(i => i.insight_id).filter(Boolean);
+          await db.insert(ioNotifications).values({
+            type: 'insight_review_pending',
+            title: `Insight Awaiting Review — ${insights.length} pending`,
+            message: `${insights.length} insight(s) pending your initial review for 48+ hours.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: reviewer.ohr_id,
+            metadata: JSON.stringify({ insight_ids: insightIds, count: insights.length, review_tier: 'initial', planning_group: pg }),
+            is_read: false,
+            created_at: nowIso,
+          });
+          alerts++;
+        }
+      }
+
+      // Notify Trainers for pending final insights
+      if (pendingFinal.length > 0) {
+        const trainers = allEmps.filter(e => e.actual_role === 'Trainer');
+        for (const trainer of trainers) {
+          if (!trainer.ohr_id) continue;
+          // Dedup
+          const existing = await db.select({ id: ioNotifications.id })
+            .from(ioNotifications)
+            .where(and(
+              eq(ioNotifications.type, 'insight_review_pending'),
+              eq(ioNotifications.target_ohr, trainer.ohr_id),
+              gte(ioNotifications.created_at, twentyFourHoursAgo)
+            ))
+            .limit(1);
+          if (existing.length > 0) continue;
+
+          const insightIds = pendingFinal.map(i => i.insight_id).filter(Boolean);
+          await db.insert(ioNotifications).values({
+            type: 'insight_review_pending',
+            title: `Insight Awaiting Review — ${pendingFinal.length} pending`,
+            message: `${pendingFinal.length} insight(s) pending your final review for 72+ hours.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: trainer.ohr_id,
+            metadata: JSON.stringify({ insight_ids: insightIds, count: pendingFinal.length, review_tier: 'final' }),
+            is_read: false,
+            created_at: nowIso,
+          });
+          alerts++;
+        }
+      }
+
+      console.log(`[Insight-Review-Pending] Completed: ${alerts} reminders sent, ${errors} errors.`);
+    } catch (err) {
+      console.error('[Insight-Review-Pending] Fatal error:', err);
+    }
+    return { alerts, errors };
+  }
+  // Schedule: Every 12h at 06:00 UTC (2:00 PM PHT) and 18:00 UTC (2:00 AM PHT)
+  cron.schedule("0 6,18 * * *", async () => {
+    try { await checkInsightReviewPending(db); } catch (err) { console.error('[Insight-Review-Pending] Cron error:', err); }
+  });
+  console.log("[AutoNotifier] Scheduled: Every 12h (Insight Review Pending Reminder)");
+  app.post("/api/io/insight-review-pending-check", async (req, res) => {
+    try {
+      const result = await checkInsightReviewPending(db);
       res.json({ success: true, ...result });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });

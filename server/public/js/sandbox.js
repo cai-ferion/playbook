@@ -1204,6 +1204,42 @@ async function sandboxSubmitAccept(tier) {
     });
     if (!resp.ok) throw new Error('Failed to approve insight');
 
+    // --- Notification: insight_initial_accepted or insight_final_accepted ---
+    try {
+      if (tier === 'initial') {
+        createNotification({
+          type: 'insight_initial_accepted',
+          title: 'Insight Accepted \u2014 Initial Review',
+          message: "Your insight '" + (ins.insight_title || ins.title || '') + "' has been accepted and is now pending final review.",
+          target_ohr: ins.ohr_id,
+          metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', comments: comments || '' }
+        });
+      } else {
+        // Final accept via generic accept path (fallback)
+        const targets = [ins.ohr_id, ins.initial_reviewer ? null : null].filter(Boolean);
+        createNotification({
+          type: 'insight_final_accepted',
+          title: 'Insight Elevated \u2014 Elevated - Task in Progress',
+          message: "Insight '" + (ins.insight_title || ins.title || '') + "' has been elevated to 'Elevated - Task in Progress' after final review.",
+          target_ohr: ins.ohr_id,
+          metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', elevated_status: 'Elevated - Task in Progress', comments: comments || '' }
+        });
+        // Also notify initial reviewer if different from submitter
+        if (ins.initial_reviewer) {
+          const initRev = SANDBOX_MOD.employees.find(e => e.full_name === ins.initial_reviewer);
+          if (initRev && initRev.ohr_id !== ins.ohr_id) {
+            createNotification({
+              type: 'insight_final_accepted',
+              title: 'Insight Elevated \u2014 Elevated - Task in Progress',
+              message: "Insight '" + (ins.insight_title || ins.title || '') + "' has been elevated to 'Elevated - Task in Progress' after final review.",
+              target_ohr: initRev.ohr_id,
+              metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', elevated_status: 'Elevated - Task in Progress', comments: comments || '' }
+            });
+          }
+        }
+      }
+    } catch (_ne) { /* non-blocking */ }
+
     showToast('Insight approved', 'success');
     sandboxCloseForm();
     await sandboxFetchInsights();
@@ -1295,6 +1331,30 @@ async function sandboxSubmitFinalApprove() {
       body: JSON.stringify(updates)
     });
     if (!resp.ok) throw new Error('Failed to approve insight');
+
+    // --- Notification: insight_final_accepted → submitter + initial reviewer ---
+    try {
+      const elevatedStatus = selected.value;
+      createNotification({
+        type: 'insight_final_accepted',
+        title: 'Insight Elevated \u2014 ' + elevatedStatus,
+        message: "Insight '" + (ins.insight_title || ins.title || '') + "' has been elevated to '" + elevatedStatus + "' after final review.",
+        target_ohr: ins.ohr_id,
+        metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', elevated_status: elevatedStatus, comments: comments || '' }
+      });
+      if (ins.initial_reviewer) {
+        const initRev = SANDBOX_MOD.employees.find(e => e.full_name === ins.initial_reviewer);
+        if (initRev && initRev.ohr_id !== ins.ohr_id) {
+          createNotification({
+            type: 'insight_final_accepted',
+            title: 'Insight Elevated \u2014 ' + elevatedStatus,
+            message: "Insight '" + (ins.insight_title || ins.title || '') + "' has been elevated to '" + elevatedStatus + "' after final review.",
+            target_ohr: initRev.ohr_id,
+            metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', elevated_status: elevatedStatus, comments: comments || '' }
+          });
+        }
+      }
+    } catch (_ne) { /* non-blocking */ }
 
     showToast('Insight approved (Final)', 'success');
     sandboxCloseForm();
@@ -1393,6 +1453,41 @@ async function sandboxSubmitReject(tier) {
     });
     if (!resp.ok) throw new Error('Failed to reject insight');
 
+    // --- Notification: insight_initial_rejected or insight_final_rejected ---
+    try {
+      const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
+      if (tier === 'initial') {
+        createNotification({
+          type: 'insight_initial_rejected',
+          title: 'Insight Rejected \u2014 ' + tierLabel,
+          message: "Your insight '" + (ins.insight_title || ins.title || '') + "' was rejected: " + reason + ".",
+          target_ohr: ins.ohr_id,
+          metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', reason, comments: comments || '' }
+        });
+      } else {
+        createNotification({
+          type: 'insight_final_rejected',
+          title: 'Insight Rejected \u2014 ' + tierLabel,
+          message: "Your insight '" + (ins.insight_title || ins.title || '') + "' was rejected: " + reason + ".",
+          target_ohr: ins.ohr_id,
+          metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', reason, comments: comments || '' }
+        });
+        // For final rejection, also notify initial reviewer
+        if (ins.initial_reviewer) {
+          const initRev = SANDBOX_MOD.employees.find(e => e.full_name === ins.initial_reviewer);
+          if (initRev && initRev.ohr_id !== ins.ohr_id) {
+            createNotification({
+              type: 'insight_final_rejected',
+              title: 'Insight Rejected \u2014 ' + tierLabel,
+              message: "Insight '" + (ins.insight_title || ins.title || '') + "' was rejected at final review: " + reason + ".",
+              target_ohr: initRev.ohr_id,
+              metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', reason, comments: comments || '' }
+            });
+          }
+        }
+      }
+    } catch (_ne) { /* non-blocking */ }
+
     showToast('Insight rejected', 'success');
     sandboxCloseForm();
     await sandboxFetchInsights();
@@ -1487,6 +1582,68 @@ async function sandboxSubmitTrainerStatus() {
       body: JSON.stringify(updates)
     });
     if (!resp.ok) throw new Error('Failed to update insight');
+
+    // --- Notification: insight_implemented or insight_status_changed ---
+    try {
+      const oldStatus = ins.status || '';
+      if (newStatus === 'Implemented') {
+        // insight_implemented → submitter + initial reviewer + supervisor
+        createNotification({
+          type: 'insight_implemented',
+          title: 'Insight Implemented \u2014 ' + (ins.insight_title || ins.title || ''),
+          message: "Congratulations! Your insight '" + (ins.insight_title || ins.title || '') + "' has been implemented.",
+          target_ohr: ins.ohr_id,
+          metadata: { insight_id: ins.insight_id, implementation_date: new Date().toISOString(), implemented_by: user ? user.full_name : '' }
+        });
+        // Notify initial reviewer
+        if (ins.initial_reviewer) {
+          const initRev = SANDBOX_MOD.employees.find(e => e.full_name === ins.initial_reviewer);
+          if (initRev && initRev.ohr_id !== ins.ohr_id) {
+            createNotification({
+              type: 'insight_implemented',
+              title: 'Insight Implemented \u2014 ' + (ins.insight_title || ins.title || ''),
+              message: "Insight '" + (ins.insight_title || ins.title || '') + "' has been implemented.",
+              target_ohr: initRev.ohr_id,
+              metadata: { insight_id: ins.insight_id, implementation_date: new Date().toISOString(), implemented_by: user ? user.full_name : '' }
+            });
+          }
+        }
+        // Notify supervisor
+        if (ins.supervisor_email) {
+          const sup = SANDBOX_MOD.employees.find(e => e.meta_email === ins.supervisor_email || e.supervisor_email === ins.supervisor_email);
+          if (sup && sup.ohr_id !== ins.ohr_id) {
+            createNotification({
+              type: 'insight_implemented',
+              title: 'Insight Implemented \u2014 ' + (ins.insight_title || ins.title || ''),
+              message: "An insight by " + (ins.submitter || 'an agent') + " has been implemented: '" + (ins.insight_title || ins.title || '') + "'.",
+              target_ohr: sup.ohr_id,
+              metadata: { insight_id: ins.insight_id, implementation_date: new Date().toISOString(), implemented_by: user ? user.full_name : '' }
+            });
+          }
+        }
+      } else {
+        // insight_status_changed → submitter + initial reviewer
+        createNotification({
+          type: 'insight_status_changed',
+          title: 'Insight Status Updated \u2014 ' + newStatus,
+          message: "Insight '" + (ins.insight_title || ins.title || '') + "' status changed from '" + oldStatus + "' to '" + newStatus + "'.",
+          target_ohr: ins.ohr_id,
+          metadata: { insight_id: ins.insight_id, old_status: oldStatus, new_status: newStatus, changed_by: user ? user.full_name : '' }
+        });
+        if (ins.initial_reviewer) {
+          const initRev = SANDBOX_MOD.employees.find(e => e.full_name === ins.initial_reviewer);
+          if (initRev && initRev.ohr_id !== ins.ohr_id) {
+            createNotification({
+              type: 'insight_status_changed',
+              title: 'Insight Status Updated \u2014 ' + newStatus,
+              message: "Insight '" + (ins.insight_title || ins.title || '') + "' status changed from '" + oldStatus + "' to '" + newStatus + "'.",
+              target_ohr: initRev.ohr_id,
+              metadata: { insight_id: ins.insight_id, old_status: oldStatus, new_status: newStatus, changed_by: user ? user.full_name : '' }
+            });
+          }
+        }
+      }
+    } catch (_ne) { /* non-blocking */ }
 
     showToast(`Status changed \u2192 ${newStatus}`, 'success');
     sandboxCloseForm();
@@ -1967,6 +2124,25 @@ async function sandboxSubmitNew() {
       body: JSON.stringify(record)
     });
     if (!resp.ok) throw new Error('Failed to submit insight');
+
+    // --- Notification: insight_submitted → all SMEs/Content Reviewers in submitter's PG ---
+    try {
+      const submitterPg = record.planning_group || '';
+      const reviewers = SANDBOX_MOD.employees.filter(e =>
+        (e.actual_role === 'Operational SME' || e.actual_role === 'Content Reviewer') &&
+        e.planning_group === submitterPg &&
+        e.ohr_id !== record.ohr_id
+      );
+      for (const reviewer of reviewers) {
+        createNotification({
+          type: 'insight_submitted',
+          title: 'New Insight Submitted \u2014 ' + title,
+          message: (user ? user.full_name : 'Someone') + ' submitted: ' + title + ' (' + insightId + ')',
+          target_ohr: reviewer.ohr_id,
+          metadata: { insight_id: insightId, submitter: user ? user.full_name : '', planning_group: submitterPg, category: insightCategory, proposal_type: proposalType }
+        });
+      }
+    } catch (_ne) { /* notification failure is non-blocking */ }
 
     showToast('Insight submitted successfully', 'success');
     sandboxCloseInlineForm();

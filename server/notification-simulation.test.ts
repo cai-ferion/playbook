@@ -80,6 +80,10 @@ const KNOWN_NOTIFICATION_TYPES = [
   "backdate_request", "absent_alert",
   // App.js (onboarding)
   "system_alert",
+  // Sandbox (client-side + server cron)
+  "insight_submitted", "insight_initial_accepted", "insight_initial_rejected",
+  "insight_final_accepted", "insight_final_rejected",
+  "insight_status_changed", "insight_implemented", "insight_review_pending",
   // Legacy/misc (registered in UI but may not be actively created)
   "record_save", "billing_change", "daily_summary", "login", "srt_upload",
 ];
@@ -500,15 +504,85 @@ describe("Notification Brief Rendering Coverage", () => {
   });
 });
 
-describe("Sandbox Module — No Notifications Yet", () => {
-  it("sandbox.js does not currently create any notifications", () => {
-    expect(sandboxJs).not.toContain("createNotification(");
+describe("Sandbox Module Notifications", () => {
+  const sandboxTypes = [
+    "insight_submitted", "insight_initial_accepted", "insight_initial_rejected",
+    "insight_final_accepted", "insight_final_rejected",
+    "insight_status_changed", "insight_implemented",
+  ];
+
+  it("sandbox.js creates notifications via createNotification", () => {
+    expect(sandboxJs).toContain("createNotification({");
   });
 
-  it("sandbox.js has no notification type references", () => {
-    // Sandbox currently has no notification integration — this is expected
-    // and will be addressed in the Sandbox notification blueprint
-    expect(sandboxJs).not.toContain("type: 'sandbox_");
+  for (const t of sandboxTypes) {
+    it(`sandbox.js creates '${t}' notifications`, () => {
+      expect(sandboxJs).toContain(`type: '${t}'`);
+    });
+
+    it(`'${t}' has icon in UI registry`, () => {
+      expect(registeredTypes.has(t), `${t} missing from icon registry`).toBe(true);
+    });
+
+    it(`'${t}' has label in UI registry`, () => {
+      expect(labelTypes.has(t), `${t} missing from label registry`).toBe(true);
+    });
+
+    it(`'${t}' has color in UI registry`, () => {
+      expect(colorTypes.has(t), `${t} missing from color registry`).toBe(true);
+    });
+  }
+
+  it("sandbox.js uses object syntax for all createNotification calls", () => {
+    const calls = [...sandboxJs.matchAll(/createNotification\(\s*(\{)/g)];
+    expect(calls.length).toBeGreaterThan(0);
+    // Ensure no positional-arg calls
+    const allCalls = [...sandboxJs.matchAll(/createNotification\(/g)];
+    expect(allCalls.length).toBe(calls.length);
+  });
+
+  it("insight_submitted targets reviewers by PG (not broadcast)", () => {
+    expect(sandboxJs).toContain("target_ohr: reviewer.ohr_id");
+  });
+
+  it("insight_initial_accepted targets submitter OHR", () => {
+    expect(sandboxJs).toContain("target_ohr: ins.ohr_id");
+  });
+
+  it("insight_implemented notifies supervisor", () => {
+    expect(sandboxJs).toContain("target_ohr: sup.ohr_id");
+  });
+
+  it("insight_review_pending exists in auto-mailer.ts", () => {
+    expect(autoMailerTs).toContain("type: 'insight_review_pending'");
+  });
+
+  it("insight_review_pending has icon in UI registry", () => {
+    expect(registeredTypes.has("insight_review_pending")).toBe(true);
+  });
+
+  it("insight_review_pending cron runs every 12h", () => {
+    expect(autoMailerTs).toContain('cron.schedule("0 6,18 * * *"');
+  });
+
+  it("insight_review_pending has manual trigger endpoint", () => {
+    expect(autoMailerTs).toContain("/api/io/insight-review-pending-check");
+  });
+
+  it("insight_review_pending deduplicates within 24h", () => {
+    const section = autoMailerTs.slice(autoMailerTs.indexOf("checkInsightReviewPending"));
+    expect(section).toContain("24 * 60 * 60 * 1000");
+  });
+
+  it("notifications.js has brief rendering for insight types", () => {
+    expect(notificationsJs).toContain("case 'insight_submitted':");
+    expect(notificationsJs).toContain("case 'insight_review_pending':");
+  });
+
+  it("notifications.js has detail rendering for insight types", () => {
+    expect(notificationsJs).toContain("meta.insight_id");
+    expect(notificationsJs).toContain("meta.elevated_status");
+    expect(notificationsJs).toContain("meta.implementation_date");
   });
 });
 

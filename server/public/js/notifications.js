@@ -219,6 +219,15 @@ function getNotifIcon(type) {
     weekly_digest: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
     docx_generated: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
     dispute_resolved: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    // Sandbox — Insight Notifications
+    insight_submitted: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/></svg>',
+    insight_initial_accepted: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    insight_initial_rejected: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    insight_final_accepted: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><path d="M8 12l2 2 4-4"/></svg>',
+    insight_final_rejected: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    insight_status_changed: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>',
+    insight_implemented: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    insight_review_pending: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
   };
   return icons[type] || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
 }
@@ -239,6 +248,10 @@ function getNotifTagLabel(type) {
     nte_served: 'Served', cap_expiring: 'Expiring', nte_deadline_reminder: 'Deadline',
     coaching_ack_overdue: 'Overdue', repeat_offender: 'Repeat', cap_escalated: 'Escalated',
     weekly_digest: 'Digest', docx_generated: 'Document', dispute_resolved: 'Resolved',
+    // Sandbox
+    insight_submitted: 'Insight', insight_initial_accepted: 'Accepted', insight_initial_rejected: 'Rejected',
+    insight_final_accepted: 'Elevated', insight_final_rejected: 'Rejected', insight_status_changed: 'Updated',
+    insight_implemented: 'Implemented', insight_review_pending: 'Pending',
   };
   return labels[type] || '';
 }
@@ -259,6 +272,10 @@ function getNotifColor(type) {
     nte_served: '#3b82f6', cap_expiring: '#f59e0b', nte_deadline_reminder: '#ef4444',
     coaching_ack_overdue: '#d97706', repeat_offender: '#dc2626', cap_escalated: '#dc2626',
     weekly_digest: '#06b6d4', docx_generated: '#3b82f6', dispute_resolved: '#22c55e',
+    // Sandbox
+    insight_submitted: '#3b82f6', insight_initial_accepted: '#22c55e', insight_initial_rejected: '#ef4444',
+    insight_final_accepted: '#10b981', insight_final_rejected: '#dc2626', insight_status_changed: '#8b5cf6',
+    insight_implemented: '#7c3aed', insight_review_pending: '#f59e0b',
   };
   return colors[type] || '#9ca3af';
 }
@@ -323,6 +340,21 @@ function getNotifBrief(n) {
       const meta = tryParseMeta(n.metadata);
       const cid = meta.coaching_id || '';
       return n.message ? n.message.substring(0, 80) : (cid ? `Re: ${cid}` : n.title);
+    }
+    // Sandbox — Insight notifications
+    case 'insight_submitted':
+    case 'insight_initial_accepted':
+    case 'insight_initial_rejected':
+    case 'insight_final_accepted':
+    case 'insight_final_rejected':
+    case 'insight_status_changed':
+    case 'insight_implemented': {
+      const meta = tryParseMeta(n.metadata);
+      return meta.insight_id ? `${meta.insight_id} — ${(n.message || '').substring(0, 60)}` : (n.message || '').substring(0, 60);
+    }
+    case 'insight_review_pending': {
+      const meta = tryParseMeta(n.metadata);
+      return `${meta.count || ''} insight(s) awaiting your review`;
     }
     default:
       return n.message ? n.message.substring(0, 60) : '';
@@ -462,6 +494,27 @@ function showNotifDetailCard(n) {
       if (meta.tag) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Tag</span><span class="notif-detail-value" style="color:${n.type === 'upl_notice' ? '#ef4444' : '#d97706'};font-weight:700">${escapeHtml(meta.tag)}</span></div>`;
       if (meta.reason) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Reason</span><span class="notif-detail-value">${escapeHtml(meta.reason)}</span></div>`;
       if (meta.remarks) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Remarks</span><span class="notif-detail-value">${escapeHtml(meta.remarks)}</span></div>`;
+      break;
+    // Sandbox — Insight notifications
+    case 'insight_submitted':
+    case 'insight_initial_accepted':
+    case 'insight_initial_rejected':
+    case 'insight_final_accepted':
+    case 'insight_final_rejected':
+    case 'insight_status_changed':
+    case 'insight_implemented':
+    case 'insight_review_pending':
+      if (meta.insight_id) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Insight ID</span><span class="notif-detail-value">${escapeHtml(meta.insight_id)}</span></div>`;
+      if (meta.reviewer) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Reviewer</span><span class="notif-detail-value">${escapeHtml(meta.reviewer)}</span></div>`;
+      if (meta.submitter) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Submitter</span><span class="notif-detail-value">${escapeHtml(meta.submitter)}</span></div>`;
+      if (meta.reason) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Reason</span><span class="notif-detail-value">${escapeHtml(meta.reason)}</span></div>`;
+      if (meta.elevated_status) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Status</span><span class="notif-detail-value">${escapeHtml(meta.elevated_status)}</span></div>`;
+      if (meta.old_status) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Previous</span><span class="notif-detail-value">${escapeHtml(meta.old_status)}</span></div>`;
+      if (meta.new_status) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">New Status</span><span class="notif-detail-value">${escapeHtml(meta.new_status)}</span></div>`;
+      if (meta.comments) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Comments</span><span class="notif-detail-value">${escapeHtml(meta.comments)}</span></div>`;
+      if (meta.planning_group) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Planning Group</span><span class="notif-detail-value">${escapeHtml(meta.planning_group)}</span></div>`;
+      if (meta.review_tier) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Review Tier</span><span class="notif-detail-value">${escapeHtml(meta.review_tier)}</span></div>`;
+      if (meta.implementation_date) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Implemented</span><span class="notif-detail-value">${escapeHtml(meta.implementation_date)}</span></div>`;
       break;
     default:
       if (n.message) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Details</span><span class="notif-detail-value">${escapeHtml(n.message)}</span></div>`;
