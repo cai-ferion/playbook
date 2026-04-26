@@ -272,7 +272,7 @@ describe("WFM Tag — Cache Busting", () => {
   });
 
   it("styles.css cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("styles.css?v=135");
+    expect(indexHtmlContent).toContain("styles.css?v=136");
   });
 });
 
