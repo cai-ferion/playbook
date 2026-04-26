@@ -2968,3 +2968,9 @@
 - [x] Fix: Group Coaching path now uploads attachments once and shares across individual logs
 - [x] Fix: Form reset now clears compassAttachedFiles array
 - [x] Detail rendering already correct (JSON parse, fallback, preview, download)
+
+## Select My Team — Group Coaching (April 26, 2026)
+- [x] Add "Select My Team" button to Group Coaching multi-coachee picker
+- [x] Auto-select all employees where supervisor matches the logged-in user
+- [x] Ensure button only appears for team leads (users with direct reports)
+- [x] Write tests for the feature (select-my-team.test.ts — 22 tests)

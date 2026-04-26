@@ -261,7 +261,7 @@ describe("Cache Version Bumps", () => {
   });
 
   it("should have compass.js at v=119", () => {
-    expect(indexHtml).toContain('compass.js?v=122');
+    expect(indexHtml).toContain('compass.js?v=123');
   });
 
   it("should have corrective-actions.js at v=12", () => {

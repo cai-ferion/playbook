@@ -2155,6 +2155,7 @@ async function compassShowNewFormInline(preselectedType) {
           <div class="multi-coachee-dropdown" id="compass-multi-coachee-dropdown" style="display:none;">
             <div style="padding:6px 8px; border-bottom:1px solid var(--border); position:sticky; top:0; background:var(--bg-card); z-index:1; display:flex; gap:6px; align-items:center;">
               <input type="text" class="form-input" id="compass-multi-coachee-search" placeholder="Search employees..." autocomplete="off" oninput="_compassFilterMultiCoacheesDebounced()" style="font-size:12px; padding:6px 8px; flex:1;">
+              <button type="button" id="compass-select-my-team-btn" onclick="compassSelectMyTeam()" style="white-space:nowrap; font-size:11px; padding:4px 8px; background:var(--accent-primary); border:1px solid var(--accent-primary); border-radius:var(--radius); color:#fff; cursor:pointer; transition:all 0.15s; display:none;">👥 My Team</button>
               <button type="button" onclick="compassClearMultiCoachees()" style="white-space:nowrap; font-size:11px; padding:4px 8px; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); color:var(--fg-muted); cursor:pointer; transition:all 0.15s;">Clear All</button>
             </div>
             <div id="compass-multi-coachee-options" style="max-height:220px; overflow-y:auto;"></div>
@@ -3116,6 +3117,7 @@ function compassToggleCoacheeMulti() {
     const search = document.getElementById('compass-multi-coachee-search');
     if (search) { search.value = ''; search.focus(); }
     compassFilterMultiCoachees();
+    _compassUpdateSelectMyTeamBtn();
   }
 }
 
@@ -3159,6 +3161,66 @@ function compassClearMultiCoachees() {
   const checkboxes = document.querySelectorAll('#compass-multi-coachee-options input[type="checkbox"]:checked');
   checkboxes.forEach(cb => cb.checked = false);
   compassUpdateMultiCoacheeDisplay();
+}
+
+/**
+ * "Select My Team" — auto-checks all employees whose supervisor_name matches
+ * the logged-in user's full_name. Handles the 50-item cap by re-rendering
+ * the full team list before checking, then restoring the display.
+ */
+function compassSelectMyTeam() {
+  if (!currentUser || !COMPASS.employees) return;
+  const myName = currentUser.full_name;
+  // Build the set of team member OHR IDs (direct reports only, excluding self)
+  const teamOhrs = new Set();
+  COMPASS.employees.forEach(e => {
+    if (e.supervisor_name === myName && e.ohr_id !== currentUser.ohr_id) {
+      teamOhrs.add(e.ohr_id);
+    }
+  });
+  if (teamOhrs.size === 0) {
+    showToast('No direct reports found under your name.', 'warning');
+    return;
+  }
+  // Re-render the full list (bypass the 50-item cap) so all team checkboxes exist
+  const container = document.getElementById('compass-multi-coachee-options');
+  if (!container) return;
+  // Preserve existing checked state
+  const existingChecked = new Set();
+  container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => existingChecked.add(cb.value));
+  // Merge: existing selections + team
+  const allChecked = new Set([...existingChecked, ...teamOhrs]);
+  // Render all employees that are in allChecked OR match current search
+  const searchVal = (document.getElementById('compass-multi-coachee-search')?.value || '').toLowerCase().trim();
+  let visibleEmps = COMPASS.employees.filter(e => {
+    if (allChecked.has(e.ohr_id)) return true;
+    if (searchVal && (e.full_name.toLowerCase().includes(searchVal) || e.ohr_id.includes(searchVal))) return true;
+    if (!searchVal) return true;
+    return false;
+  });
+  // Cap at a reasonable limit but ensure all team members are included
+  const teamEmps = visibleEmps.filter(e => teamOhrs.has(e.ohr_id));
+  const nonTeamEmps = visibleEmps.filter(e => !teamOhrs.has(e.ohr_id));
+  const capped = [...teamEmps, ...nonTeamEmps.slice(0, Math.max(50 - teamEmps.length, 0))];
+  container.innerHTML = capped.map(e => {
+    const checked = allChecked.has(e.ohr_id) ? 'checked' : '';
+    return `<label class="multi-coachee-option" data-name="${escapeAttr(e.full_name.toLowerCase())}" data-ohr="${escapeAttr(e.ohr_id)}">
+      <input type="checkbox" value="${escapeAttr(e.ohr_id)}" ${checked} onchange="compassUpdateMultiCoacheeDisplay()">
+      <span>${escapeHtml(e.full_name)}</span>
+    </label>`;
+  }).join('');
+  compassUpdateMultiCoacheeDisplay();
+  showToast(`Selected ${teamOhrs.size} team member${teamOhrs.size > 1 ? 's' : ''}.`, 'success');
+}
+
+/** Show/hide the "My Team" button based on whether the user has direct reports */
+function _compassUpdateSelectMyTeamBtn() {
+  const btn = document.getElementById('compass-select-my-team-btn');
+  if (!btn) return;
+  if (!currentUser || !COMPASS.employees) { btn.style.display = 'none'; return; }
+  const myName = currentUser.full_name;
+  const hasReports = COMPASS.employees.some(e => e.supervisor_name === myName && e.ohr_id !== currentUser.ohr_id);
+  btn.style.display = hasReports ? '' : 'none';
 }
 
 // Close multi-coachee dropdown when clicking outside

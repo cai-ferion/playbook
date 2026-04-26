@@ -232,7 +232,7 @@ describe("Inline Add Panel CSS", () => {
 // ═══════════════════════════════════════════════════════════════════════
 describe("Inline Panel Cache Versions", () => {
   it("should have compass.js at v=119", () => {
-    expect(indexHtml).toContain("compass.js?v=122");
+    expect(indexHtml).toContain("compass.js?v=123");
   });
 
   it("should have compass-redesign.css at v=110", () => {

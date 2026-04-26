@@ -240,7 +240,7 @@ describe("Compass Attachment Pipeline", () => {
   // ---- Cache Version ----
   describe("Cache Version", () => {
     it("compass.js cache version is bumped to v122", () => {
-      expect(indexHtml).toContain("compass.js?v=122");
+      expect(indexHtml).toContain("compass.js?v=123");
     });
   });
 });
