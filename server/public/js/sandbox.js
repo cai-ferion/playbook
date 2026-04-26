@@ -720,11 +720,18 @@ function sandboxKanbanPage(colId, dir) {
 
 // ===== Review Area: Search & Planning Group Filter =====
 
+// Debounce timer for search input
+let _sandboxSearchTimer = null;
+
 function sandboxReviewSearch(val) {
   SANDBOX_MOD._reviewSearch = (val || '').trim().toLowerCase();
   // Reset pagination when search changes
   SANDBOX_MOD._kanbanPages = {};
-  sandboxRenderKanban();
+  // Debounce: only re-render cards, skip toolbar rebuild to preserve focus
+  clearTimeout(_sandboxSearchTimer);
+  _sandboxSearchTimer = setTimeout(() => {
+    sandboxRenderKanban(true); // true = skip toolbar re-render
+  }, 150);
 }
 
 function sandboxReviewPgFilter(val) {
@@ -873,12 +880,12 @@ function sandboxToggleReviewTeamFilter(mode) {
   sandboxRenderKanban();
 }
 
-function sandboxRenderKanban() {
+function sandboxRenderKanban(skipToolbar) {
   const board = document.getElementById('sandbox-kanban-board');
   if (!board) return;
 
-  // Render the search/filter toolbar
-  sandboxRenderReviewToolbar();
+  // Render the search/filter toolbar (skip when called from search to preserve input focus)
+  if (!skipToolbar) sandboxRenderReviewToolbar();
 
   let filteredInsights = [...SANDBOX_MOD.insights];
 

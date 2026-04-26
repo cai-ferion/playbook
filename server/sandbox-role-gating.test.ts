@@ -331,7 +331,7 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
 describe("Cache Version Alignment", () => {
   it("sandbox.js cache version is bumped to v120", () => {
-    expect(indexHtml).toContain("sandbox.js?v=120");
+    expect(indexHtml).toContain("sandbox.js?v=121");
   });
 
   it("STATUSES array uses dash-format for Pending statuses", () => {
@@ -420,5 +420,39 @@ describe("Inline Comment Expansion", () => {
     expect(css).toContain('.sandbox-ia-comment-box');
     expect(css).toContain('.sandbox-ia-textarea');
     expect(css).toContain('.sandbox-ia-confirm-row');
+  });
+});
+
+describe("Review Area Search Focus Preservation", () => {
+  it("sandboxReviewSearch uses debounce (clearTimeout + setTimeout)", () => {
+    expect(sandboxJs).toContain('let _sandboxSearchTimer = null');
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxReviewSearch'));
+    expect(fn).toContain('clearTimeout(_sandboxSearchTimer)');
+    expect(fn).toContain('_sandboxSearchTimer = setTimeout');
+  });
+
+  it("sandboxReviewSearch passes skipToolbar=true to sandboxRenderKanban", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxReviewSearch'));
+    expect(fn).toContain('sandboxRenderKanban(true)');
+  });
+
+  it("sandboxRenderKanban accepts skipToolbar parameter", () => {
+    expect(sandboxJs).toContain('function sandboxRenderKanban(skipToolbar)');
+  });
+
+  it("sandboxRenderKanban skips toolbar re-render when skipToolbar is true", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxRenderKanban(skipToolbar)'));
+    expect(fn).toContain('if (!skipToolbar) sandboxRenderReviewToolbar()');
+  });
+
+  it("debounce delay is 150ms", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxReviewSearch'));
+    expect(fn).toContain('}, 150)');
+  });
+
+  it("PG filter still triggers full re-render (no skipToolbar)", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxReviewPgFilter'));
+    expect(fn).toContain('sandboxRenderKanban()');
+    expect(fn).not.toContain('sandboxRenderKanban(true)');
   });
 });

@@ -3024,3 +3024,7 @@
 - [x] Display comments in insight review history trail (sandbox-trail-comment with accent border)
 - [x] Style inline comment section — sandbox-ia-* CSS classes with animation, matching kanban aesthetic
 - [x] Write tests for inline comment flow (53 role-gating tests, full suite 1216/1218)
+
+## Sandbox Review Area — Search Bar Focus Loss Bug (April 27, 2026)
+- [x] Fix search input losing focus after each keystroke — sandboxRenderKanban(skipToolbar) skips toolbar innerHTML rebuild
+- [x] Implement debounced search (150ms) that preserves cursor position (59 tests, full suite 1222/1224)
