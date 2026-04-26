@@ -1086,31 +1086,213 @@ function sandboxBuildPanelActions(ins) {
     const iPg = (ins.planning_group || '').toLowerCase();
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
 
+    const iid = escapeAttr(ins.insight_id);
+
     // Pending Initial Review: Operational SME or Content Reviewer (with PG match) OR admin
     if (ins.status === 'Pending - Initial Review' && (isAdmin || ((role === 'Operational SME' || role === 'Content Reviewer') && pgMatch))) {
-      footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowAcceptPopout('initial')">Approve</button>`;
-      footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('initial')">Reject</button>`;
+      footerHtml += `<div class="sandbox-inline-actions" id="sandbox-inline-actions-${iid}">`;
+      // Default button row
+      footerHtml += `<div class="sandbox-ia-buttons" id="sandbox-ia-btns-${iid}">`;
+      footerHtml += `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();sandboxExpandInlineComment('${iid}','approve','initial')">Approve</button>`;
+      footerHtml += `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();sandboxExpandInlineComment('${iid}','reject','initial')">Reject</button>`;
+      footerHtml += `</div>`;
+      // Expandable comment section (hidden by default)
+      footerHtml += `<div class="sandbox-ia-expand" id="sandbox-ia-expand-${iid}" style="display:none;"></div>`;
+      footerHtml += `</div>`;
     }
 
     // Pending Final Review: ONLY Trainer (with PG match) OR admin
     if (ins.status === 'Pending - Final Review' && (isAdmin || (role === 'Trainer' && pgMatch))) {
-      footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowFinalApprovePopout()">Approve</button>`;
-      footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('final')">Reject</button>`;
+      footerHtml += `<div class="sandbox-inline-actions" id="sandbox-inline-actions-${iid}">`;
+      footerHtml += `<div class="sandbox-ia-buttons" id="sandbox-ia-btns-${iid}">`;
+      footerHtml += `<button class="btn btn-success btn-sm" onclick="event.stopPropagation();sandboxExpandInlineComment('${iid}','approve','final')">Approve</button>`;
+      footerHtml += `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();sandboxExpandInlineComment('${iid}','reject','final')">Reject</button>`;
+      footerHtml += `</div>`;
+      footerHtml += `<div class="sandbox-ia-expand" id="sandbox-ia-expand-${iid}" style="display:none;"></div>`;
+      footerHtml += `</div>`;
     }
 
     // Trainer's Area statuses (Approved + Elevated): ONLY Trainer (with PG match) OR admin
     const trainerAreaStatuses = ['Approved - Final Review', 'Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
     if (trainerAreaStatuses.includes(ins.status) && (isAdmin || (role === 'Trainer' && pgMatch))) {
-      footerHtml += `<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>`;
+      footerHtml += `<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="SANDBOX_MOD.editingId='${iid}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>`;
     }
 
     // Admin delete button — only for 740045023 and 740044909
     if (isAdmin) {
-      footerHtml += ` <button class="btn btn-danger btn-sm" onclick="sandboxDeleteInsight('${escapeAttr(ins.insight_id)}')" style="margin-left:auto;">Delete</button>`;
+      footerHtml += ` <button class="btn btn-danger btn-sm" onclick="sandboxDeleteInsight('${iid}')" style="margin-left:auto;">Delete</button>`;
     }
   }
 
   return footerHtml;
+}
+
+// ===== Inline Comment Expansion (replaces overlay approach) =====
+
+function sandboxExpandInlineComment(insightId, action, tier) {
+  SANDBOX_MOD.editingId = insightId;
+  SANDBOX_MOD._context = 'review';
+
+  const expandEl = document.getElementById('sandbox-ia-expand-' + insightId);
+  const btnsEl = document.getElementById('sandbox-ia-btns-' + insightId);
+  if (!expandEl) return;
+
+  // Hide the original buttons
+  if (btnsEl) btnsEl.style.display = 'none';
+
+  let html = '';
+
+  if (action === 'approve' && tier === 'final') {
+    // Final approve needs elevated status selection + comments
+    const choices = [
+      { value: 'Elevated - Task in Progress', label: 'Task in Progress', color: '#8B5CF6' },
+      { value: 'Elevated - POC Rejected', label: 'POC Rejected', color: '#EF4444' },
+      { value: 'Elevated - Pending POC Discussion', label: 'Pending POC Discussion', color: '#EC4899' },
+      { value: 'Elevated - No POC', label: 'No POC', color: '#6B7280' }
+    ];
+    html += `<div class="sandbox-ia-comment-box">`;
+    html += `<div class="sandbox-ia-header" style="color:#22C55E;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Approve (Final Review)</div>`;
+    html += `<div class="sandbox-ia-status-choices">`;
+    html += choices.map((c, i) => `<label class="sandbox-ia-choice"><input type="radio" name="sandbox-approve-status" value="${c.value}" ${i===0?'checked':''} style="accent-color:${c.color};"><span class="sandbox-ia-dot" style="background:${c.color};"></span>${c.label}</label>`).join('');
+    html += `</div>`;
+    html += `<textarea class="form-textarea sandbox-ia-textarea" id="sandbox-ia-comments-${insightId}" rows="2" placeholder="Add review comments (optional)..."></textarea>`;
+    html += `<div class="sandbox-ia-confirm-row">`;
+    html += `<button class="btn btn-outline btn-sm" onclick="sandboxCollapseInlineComment('${insightId}')">Cancel</button>`;
+    html += `<button class="btn btn-success btn-sm" onclick="sandboxSubmitFinalApprove()">Confirm Approval</button>`;
+    html += `</div></div>`;
+  } else if (action === 'approve') {
+    // Initial approve — just comments
+    html += `<div class="sandbox-ia-comment-box">`;
+    html += `<div class="sandbox-ia-header" style="color:#22C55E;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Approve (Initial Review)</div>`;
+    html += `<textarea class="form-textarea sandbox-ia-textarea" id="sandbox-ia-comments-${insightId}" rows="2" placeholder="Add review comments (optional)..."></textarea>`;
+    html += `<div class="sandbox-ia-confirm-row">`;
+    html += `<button class="btn btn-outline btn-sm" onclick="sandboxCollapseInlineComment('${insightId}')">Cancel</button>`;
+    html += `<button class="btn btn-success btn-sm" onclick="sandboxSubmitAcceptInline('initial')">Confirm Approval</button>`;
+    html += `</div></div>`;
+  } else if (action === 'reject') {
+    // Reject — reason selection + comments
+    const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
+    const reasons = ['Duplicate', 'Insufficient Context/Details', 'Out of Scope', 'Pitched Already'];
+    html += `<div class="sandbox-ia-comment-box">`;
+    html += `<div class="sandbox-ia-header" style="color:#EF4444;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Reject (${tierLabel})</div>`;
+    html += `<div class="sandbox-ia-status-choices">`;
+    html += reasons.map(r => `<label class="sandbox-ia-choice"><input type="radio" name="sandbox-reject-reason" value="${r}" style="accent-color:#EF4444;">${r}</label>`).join('');
+    html += `</div>`;
+    html += `<textarea class="form-textarea sandbox-ia-textarea" id="sandbox-ia-comments-${insightId}" rows="2" placeholder="Add rejection comments (optional)..."></textarea>`;
+    html += `<div class="sandbox-ia-confirm-row">`;
+    html += `<button class="btn btn-outline btn-sm" onclick="sandboxCollapseInlineComment('${insightId}')">Cancel</button>`;
+    html += `<button class="btn btn-danger btn-sm" onclick="sandboxSubmitRejectInline('${tier}')">Confirm Rejection</button>`;
+    html += `</div></div>`;
+  }
+
+  expandEl.innerHTML = html;
+  expandEl.style.display = 'block';
+  // Focus the textarea
+  const ta = document.getElementById('sandbox-ia-comments-' + insightId);
+  if (ta) setTimeout(() => ta.focus(), 50);
+}
+
+function sandboxCollapseInlineComment(insightId) {
+  const expandEl = document.getElementById('sandbox-ia-expand-' + insightId);
+  const btnsEl = document.getElementById('sandbox-ia-btns-' + insightId);
+  if (expandEl) { expandEl.innerHTML = ''; expandEl.style.display = 'none'; }
+  if (btnsEl) btnsEl.style.display = '';
+}
+
+// Inline accept handler (reads comments from inline textarea)
+async function sandboxSubmitAcceptInline(tier) {
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const comments = document.getElementById('sandbox-ia-comments-' + ins.insight_id)?.value?.trim() || '';
+
+  const updates = { updated_at: new Date().toISOString() };
+  if (tier === 'initial') {
+    updates.status = 'Pending - Final Review';
+    updates.initial_reviewer = user ? user.full_name : '';
+    updates.initial_review_date = new Date().toISOString();
+    updates.initial_review_comments = comments;
+  } else {
+    updates.status = 'Elevated - Task in Progress';
+    updates.final_reviewer = user ? user.full_name : '';
+    updates.final_review_date = new Date().toISOString();
+    updates.final_review_comments = comments;
+  }
+
+  try {
+    const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
+    const resp = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    if (!resp.ok) throw new Error('Failed to approve insight');
+
+    // Notification
+    try {
+      if (tier === 'initial') {
+        createNotification({ type: 'insight_initial_accepted', title: 'Insight Accepted \u2014 Initial Review', message: "Your insight '" + (ins.insight_title || ins.title || '') + "' has been accepted and is now pending final review.", target_ohr: ins.ohr_id, metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', comments: comments || '' } });
+      }
+    } catch (_ne) { /* non-blocking */ }
+
+    showToast('Insight approved', 'success');
+    sandboxCloseReviewPanel();
+    await sandboxFetchInsights();
+    sandboxRenderKanban();
+  } catch (e) {
+    console.error('Failed to approve insight:', e);
+    showToast('Failed to approve: ' + e.message, 'error');
+  }
+}
+
+// Inline reject handler (reads reason + comments from inline section)
+async function sandboxSubmitRejectInline(tier) {
+  const selected = document.querySelector('input[name="sandbox-reject-reason"]:checked');
+  if (!selected) { showToast('Please select a rejection reason', 'error'); return; }
+
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === SANDBOX_MOD.editingId);
+  if (!ins) return;
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const reason = selected.value;
+  const comments = document.getElementById('sandbox-ia-comments-' + ins.insight_id)?.value?.trim() || '';
+  const prefix = tier === 'initial' ? 'Rejected - Initial Review' : 'Rejected - Final Review';
+
+  const updates = { status: `${prefix} [${reason}]`, updated_at: new Date().toISOString() };
+  if (tier === 'initial') {
+    updates.initial_reviewer = user ? user.full_name : '';
+    updates.initial_review_date = new Date().toISOString();
+    updates.initial_review_comments = comments;
+  } else {
+    updates.final_reviewer = user ? user.full_name : '';
+    updates.final_review_date = new Date().toISOString();
+    updates.final_review_comments = comments;
+  }
+
+  try {
+    const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
+    const resp = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    if (!resp.ok) throw new Error('Failed to reject insight');
+
+    // Notification
+    try {
+      const tierLabel = tier === 'initial' ? 'Initial Review' : 'Final Review';
+      if (tier === 'initial') {
+        createNotification({ type: 'insight_initial_rejected', title: 'Insight Rejected \u2014 ' + tierLabel, message: "Your insight '" + (ins.insight_title || ins.title || '') + "' was rejected: " + reason + ".", target_ohr: ins.ohr_id, metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', reason, comments: comments || '' } });
+      } else {
+        createNotification({ type: 'insight_final_rejected', title: 'Insight Rejected \u2014 ' + tierLabel, message: "Your insight '" + (ins.insight_title || ins.title || '') + "' was rejected: " + reason + ".", target_ohr: ins.ohr_id, metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', reason, comments: comments || '' } });
+        if (ins.initial_reviewer) {
+          const initRev = SANDBOX_MOD.employees.find(e => e.full_name === ins.initial_reviewer);
+          if (initRev && initRev.ohr_id !== ins.ohr_id) {
+            createNotification({ type: 'insight_final_rejected', title: 'Insight Rejected \u2014 ' + tierLabel, message: "Insight '" + (ins.insight_title || ins.title || '') + "' was rejected at final review: " + reason + ".", target_ohr: initRev.ohr_id, metadata: { insight_id: ins.insight_id, reviewer: user ? user.full_name : '', reason, comments: comments || '' } });
+          }
+        }
+      }
+    } catch (_ne) { /* non-blocking */ }
+
+    showToast('Insight rejected', 'success');
+    sandboxCloseReviewPanel();
+    await sandboxFetchInsights();
+    sandboxRenderKanban();
+  } catch (e) {
+    console.error('Failed to reject insight:', e);
+    showToast('Failed to reject: ' + e.message, 'error');
+  }
 }
 
 // ===== Detail View (dispatches to inline expansion for both contexts) =====
@@ -1313,7 +1495,10 @@ async function sandboxSubmitFinalApprove() {
   if (!ins) return;
 
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const comments = document.getElementById('sandbox-final-approve-comments')?.value?.trim() || '';
+  // Check both the old overlay textarea and the new inline textarea
+  const comments = document.getElementById('sandbox-final-approve-comments')?.value?.trim()
+    || document.getElementById('sandbox-ia-comments-' + ins.insight_id)?.value?.trim()
+    || '';
 
   const updates = {
     status: selected.value,
@@ -1321,7 +1506,7 @@ async function sandboxSubmitFinalApprove() {
     final_review_date: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
-  if (comments) updates.final_review_comments = comments;
+  updates.final_review_comments = comments;
 
   try {
     const url = `${IO_API_BASE}/insights/${encodeURIComponent(ins.insight_id)}`;
@@ -1357,6 +1542,7 @@ async function sandboxSubmitFinalApprove() {
     } catch (_ne) { /* non-blocking */ }
 
     showToast('Insight approved (Final)', 'success');
+    sandboxCloseReviewPanel();
     sandboxCloseForm();
     await sandboxFetchInsights();
     sandboxRenderKanban();

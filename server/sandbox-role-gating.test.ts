@@ -330,8 +330,8 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 });
 
 describe("Cache Version Alignment", () => {
-  it("sandbox.js cache version is bumped to v119", () => {
-    expect(indexHtml).toContain("sandbox.js?v=119");
+  it("sandbox.js cache version is bumped to v120", () => {
+    expect(indexHtml).toContain("sandbox.js?v=120");
   });
 
   it("STATUSES array uses dash-format for Pending statuses", () => {
@@ -345,5 +345,80 @@ describe("Cache Version Alignment", () => {
 
   it("accept flow writes 'Pending - Final Review' (with dash)", () => {
     expect(sandboxJs).toContain("updates.status = 'Pending - Final Review'");
+  });
+
+  it("sandbox-redesign.css cache version is bumped to v107", () => {
+    expect(indexHtml).toContain("sandbox-redesign.css?v=107");
+  });
+});
+
+describe("Inline Comment Expansion", () => {
+  it("sandboxBuildPanelActions uses inline expansion pattern (not old overlay)", () => {
+    // The footer should contain sandbox-inline-actions wrapper
+    expect(sandboxJs).toContain('sandbox-inline-actions');
+    expect(sandboxJs).toContain('sandbox-ia-expand');
+    expect(sandboxJs).toContain('sandbox-ia-btns');
+  });
+
+  it("sandboxExpandInlineComment function exists", () => {
+    expect(sandboxJs).toContain('function sandboxExpandInlineComment(insightId, action, tier)');
+  });
+
+  it("sandboxCollapseInlineComment function exists", () => {
+    expect(sandboxJs).toContain('function sandboxCollapseInlineComment(insightId)');
+  });
+
+  it("inline approve (initial) renders comment textarea", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxExpandInlineComment'));
+    expect(fn).toContain('sandbox-ia-comments-');
+    expect(fn).toContain('Approve (Initial Review)');
+    expect(fn).toContain('Add review comments (optional)');
+  });
+
+  it("inline approve (final) renders status choices + comment textarea", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxExpandInlineComment'));
+    expect(fn).toContain('Approve (Final Review)');
+    expect(fn).toContain('sandbox-approve-status');
+    expect(fn).toContain('Elevated - Task in Progress');
+  });
+
+  it("inline reject renders reason choices + comment textarea", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxExpandInlineComment'));
+    expect(fn).toContain('sandbox-reject-reason');
+    expect(fn).toContain('Duplicate');
+    expect(fn).toContain('Insufficient Context/Details');
+    expect(fn).toContain('Add rejection comments (optional)');
+  });
+
+  it("sandboxSubmitAcceptInline saves comments to initial_review_comments", () => {
+    expect(sandboxJs).toContain('function sandboxSubmitAcceptInline(tier)');
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxSubmitAcceptInline'));
+    expect(fn).toContain('updates.initial_review_comments = comments');
+  });
+
+  it("sandboxSubmitRejectInline saves comments to initial/final_review_comments", () => {
+    expect(sandboxJs).toContain('function sandboxSubmitRejectInline(tier)');
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxSubmitRejectInline'));
+    expect(fn).toContain('updates.initial_review_comments = comments');
+    expect(fn).toContain('updates.final_review_comments = comments');
+  });
+
+  it("sandboxSubmitFinalApprove reads from inline textarea as fallback", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('async function sandboxSubmitFinalApprove'));
+    expect(fn).toContain('sandbox-ia-comments-');
+  });
+
+  it("review trail renders comments with sandbox-trail-comment class", () => {
+    const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxRenderReviewTrail'));
+    expect(fn).toContain('sandbox-trail-comment');
+    expect(fn).toContain('e.comments');
+  });
+
+  it("CSS includes trail styles for side panel", () => {
+    const css = readFileSync(join(__dirname, 'public/css/sandbox-redesign.css'), 'utf-8');
+    expect(css).toContain('.sandbox-side-panel-body .sandbox-trail-comment');
+    expect(css).toContain('.sandbox-ia-comment-box');
+    expect(css).toContain('.sandbox-ia-textarea');
+    expect(css).toContain('.sandbox-ia-confirm-row');
   });
 });

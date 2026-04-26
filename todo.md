@@ -3016,3 +3016,11 @@
 - [x] Fix auto-mailer.ts: insight_review_pending cron queries corrected to dash format
 - [x] Normalize 26 legacy DB rows from 'Pending Initial Review' to 'Pending - Initial Review'
 - [x] Update simulation tests — 41 tests passing, full suite 1204/1206 (2 pre-existing Supabase)
+
+## Sandbox Review Area — Inline Comments for Approve/Reject (April 27, 2026)
+- [x] Replace popout/modal approve/reject with inline expandable comment section in side panel footer
+- [x] Comment section expands below the action buttons with textarea, reason/status selection, and Confirm/Cancel
+- [x] Include reviewer comments in PATCH payload (initial_review_comments / final_review_comments) — always saved
+- [x] Display comments in insight review history trail (sandbox-trail-comment with accent border)
+- [x] Style inline comment section — sandbox-ia-* CSS classes with animation, matching kanban aesthetic
+- [x] Write tests for inline comment flow (53 role-gating tests, full suite 1216/1218)

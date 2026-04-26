@@ -1215,3 +1215,123 @@
   width: 100%;
   padding: 20px;
 }
+
+/* Trail styles inside side panel (mirrors #view-sandbox-input scoping) */
+.sandbox-side-panel-body .sandbox-trail {
+  position: relative;
+  padding-left: 24px;
+}
+.sandbox-side-panel-body .sandbox-trail-line {
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--sandbox-border);
+}
+.sandbox-side-panel-body .sandbox-trail-entry {
+  position: relative;
+  padding: 8px 0 16px 0;
+}
+.sandbox-side-panel-body .sandbox-trail-dot {
+  position: absolute;
+  left: -20px;
+  top: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sandbox-accent);
+}
+.sandbox-side-panel-body .sandbox-trail-date {
+  font-size: 12px;
+  color: var(--sandbox-text-muted);
+}
+.sandbox-side-panel-body .sandbox-trail-action {
+  font-size: 13px;
+  color: var(--sandbox-text);
+  margin-top: 2px;
+}
+.sandbox-side-panel-body .sandbox-trail-comment {
+  font-size: 12px;
+  color: var(--sandbox-text-muted);
+  margin-top: 4px;
+  font-style: italic;
+  background: rgba(0,0,0,0.03);
+  border-left: 3px solid var(--sandbox-accent);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+}
+.sandbox-side-panel-body .sandbox-trail-empty {
+  color: var(--sandbox-text-subtle);
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+/* ===== Inline Comment Expansion (footer area) ===== */
+.sandbox-inline-actions {
+  width: 100%;
+}
+.sandbox-ia-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.sandbox-ia-expand {
+  width: 100%;
+}
+.sandbox-ia-comment-box {
+  background: var(--sandbox-surface, #fff);
+  border: 1px solid var(--sandbox-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 4px;
+  animation: sandboxFadeUp 0.15s ease-out;
+}
+.sandbox-ia-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.sandbox-ia-status-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+.sandbox-ia-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--sandbox-border, #e5e7eb);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.12s;
+}
+.sandbox-ia-choice:hover {
+  background: var(--bg-surface-hover, #f9fafb);
+}
+.sandbox-ia-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sandbox-ia-textarea {
+  width: 100%;
+  font-size: 12px;
+  margin-bottom: 10px;
+  resize: vertical;
+  min-height: 48px;
+}
+.sandbox-ia-confirm-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

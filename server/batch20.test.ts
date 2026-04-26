@@ -111,13 +111,13 @@ describe('Sandbox Review Side Panel — CSS', () => {
 
 describe('Cache Versions', () => {
   it('sandbox-redesign.css bumped to v102', () => {
-    expect(indexHtml).toContain('sandbox-redesign.css?v=106');
+    expect(indexHtml).toContain('sandbox-redesign.css?v=107');
   });
   it('compass.js bumped to v120', () => {
     expect(indexHtml).toContain('compass.js?v=123');
   });
   it('sandbox.js bumped to v106', () => {
-    expect(indexHtml).toContain('sandbox.js?v=119');
+    expect(indexHtml).toContain('sandbox.js?v=120');
   });
 });
 
