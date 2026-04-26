@@ -216,8 +216,8 @@ describe("Client — Sandbox Delete UI", () => {
 // Cache Versions
 // ============================================================
 describe("Cache Versions — Admin Delete", () => {
-  it("compass.js bumped to v121", () => {
-    expect(indexHtml).toContain("compass.js?v=121");
+  it("compass.js bumped to v122", () => {
+    expect(indexHtml).toContain("compass.js?v=122");
   });
 
   it("sandbox.js bumped to v116", () => {

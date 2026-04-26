@@ -1951,6 +1951,7 @@ function _compassResetFormFields() {
   }
   compassResetRCAFrom('l2');
   // Attachments
+  compassAttachedFiles = [];
   if (el['compass-attachment-list']) el['compass-attachment-list'].innerHTML = '';
   if (el['compass-attachments']) el['compass-attachments'].value = '';
   // Support joiners
@@ -2839,6 +2840,31 @@ async function compassSubmitNew() {
 
   // Group Coaching: create one log per coachee
   if (type === 'Group Coaching' && coacheeList.length > 0) {
+    // Upload attachments once for group coaching (shared across all individual logs)
+    let groupAttachmentsJson = null;
+    if (compassAttachedFiles.length > 0) {
+      const uploadedAttachments = [];
+      for (const file of compassAttachedFiles) {
+        try {
+          const base64 = await fileToBase64(file);
+          const upResp = await fetch(`${IO_API_BASE}/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64, folder: 'compass' })
+          });
+          if (upResp.ok) {
+            const result = await upResp.json();
+            uploadedAttachments.push({ name: file.name, url: result.url });
+          }
+        } catch (upErr) {
+          console.error('Failed to upload group attachment:', upErr);
+        }
+      }
+      if (uploadedAttachments.length > 0) {
+        groupAttachmentsJson = JSON.stringify(uploadedAttachments);
+      }
+    }
+
     let successCount = 0;
     let failCount = 0;
     const createdIds = [];
@@ -2863,7 +2889,8 @@ async function compassSubmitNew() {
         session_goal: sessionGoal,
         coaching_details: document.getElementById('compass-new-details')?.innerHTML || '',
         status: 'Pending Acknowledgement',
-        coachee_list: []
+        coachee_list: [],
+        ...(groupAttachmentsJson ? { attachments: groupAttachmentsJson } : {})
       };
 
       try {
@@ -2910,6 +2937,30 @@ async function compassSubmitNew() {
   if (shouldOpenNte) {
     // NTE flow placeholder — will be reimplemented in dedicated CAP page
     return;
+  }
+
+  // Upload attachments if any
+  if (compassAttachedFiles.length > 0) {
+    const uploadedAttachments = [];
+    for (const file of compassAttachedFiles) {
+      try {
+        const base64 = await fileToBase64(file);
+        const upResp = await fetch(`${IO_API_BASE}/upload`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: file.name, contentType: file.type, data: base64, folder: 'compass' })
+        });
+        if (upResp.ok) {
+          const result = await upResp.json();
+          uploadedAttachments.push({ name: file.name, url: result.url });
+        }
+      } catch (upErr) {
+        console.error('Failed to upload attachment:', upErr);
+      }
+    }
+    if (uploadedAttachments.length > 0) {
+      record.attachments = JSON.stringify(uploadedAttachments);
+    }
   }
 
   try {

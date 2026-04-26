@@ -2957,3 +2957,14 @@
 - [x] Replace browser confirm() with styled modal for Sandbox sandboxDeleteInsight
 - [x] Use app's existing modal CSS classes for consistency
 - [x] Add global showConfirmModal() utility in app.js (reusable for future delete confirmations)
+
+## Compass Attachment Audit (April 26, 2026)
+- [x] Audit Compass attachment form UI (file input, file list, removal)
+- [x] Audit Compass attachment upload logic (base64, /api/io/upload endpoint)
+- [x] Audit Compass attachment DB persistence (schema column, JSON format)
+- [x] Audit Compass attachment rendering in detail views (overlay + inline)
+- [x] Write simulation tests for full attachment pipeline (compass-attachments.test.ts — 30 tests)
+- [x] Fix: compassSubmitNew() now uploads files via fileToBase64 → /api/io/upload before POST
+- [x] Fix: Group Coaching path now uploads attachments once and shares across individual logs
+- [x] Fix: Form reset now clears compassAttachedFiles array
+- [x] Detail rendering already correct (JSON parse, fallback, preview, download)
