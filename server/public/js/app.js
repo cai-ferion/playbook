@@ -1259,6 +1259,66 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
+/**
+ * showConfirmModal — styled confirmation dialog (replaces browser confirm())
+ * @param {Object} opts
+ * @param {string} opts.title       — modal header text
+ * @param {string} opts.message     — body paragraph (HTML allowed)
+ * @param {string} opts.detail      — optional warning detail line
+ * @param {string} opts.confirmText — confirm button label (default "Delete")
+ * @param {string} opts.confirmClass — confirm button CSS class (default "btn btn-danger")
+ * @param {Function} opts.onConfirm — callback when confirmed
+ */
+function showConfirmModal(opts) {
+  const existing = document.getElementById('confirm-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'confirm-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '9999';
+
+  const detailHtml = opts.detail
+    ? `<p class="modal-detail" style="margin-top:4px">${escapeHtml(opts.detail)}</p>`
+    : '';
+
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="color:var(--error);display:flex;align-items:center;gap:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+          </svg>
+          ${escapeHtml(opts.title || 'Confirm Delete')}
+        </h3>
+      </div>
+      <div class="modal-body">
+        <p>${escapeHtml(opts.message || 'Are you sure?')}</p>
+        ${detailHtml}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="confirm-modal-cancel">Cancel</button>
+        <button class="btn ${opts.confirmClass || 'btn-danger'}" id="confirm-modal-ok">${escapeHtml(opts.confirmText || 'Delete')}</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Close handlers
+  const close = () => overlay.remove();
+  document.getElementById('confirm-modal-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  document.getElementById('confirm-modal-ok').addEventListener('click', () => {
+    close();
+    if (typeof opts.onConfirm === 'function') opts.onConfirm();
+  });
+
+  // Focus the cancel button for keyboard accessibility
+  document.getElementById('confirm-modal-cancel').focus();
+}
+
 // ===== Update All Views =====
 
 function updateAlertNavBadge() {

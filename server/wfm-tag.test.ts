@@ -260,7 +260,7 @@ describe("WFM Tag — Cache Busting", () => {
   });
 
   it("app.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("app.js?v=120");
+    expect(indexHtmlContent).toContain("app.js?v=121");
   });
 
   it("input-portal.js cache version is bumped", () => {

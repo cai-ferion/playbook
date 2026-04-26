@@ -2951,3 +2951,9 @@
 - [x] Add confirmation dialog before deletion (browser confirm() with record label)
 - [x] Write 30 tests for delete endpoints and UI presence (admin-delete.test.ts)
 - [x] Expand Sandbox isAdmin check to include 740044909 alongside 740045023
+
+## Delete Confirmation Modal (April 26, 2026)
+- [x] Replace browser confirm() with styled modal for Compass compassDeleteLog
+- [x] Replace browser confirm() with styled modal for Sandbox sandboxDeleteInsight
+- [x] Use app's existing modal CSS classes for consistency
+- [x] Add global showConfirmModal() utility in app.js (reusable for future delete confirmations)

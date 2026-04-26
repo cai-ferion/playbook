@@ -2003,33 +2003,35 @@ async function sandboxDeleteInsight(insightId) {
   const ins = SANDBOX_MOD.insights.find(i => i.insight_id === insightId);
   const label = ins ? `${ins.insight_id} (${ins.insight_title || ins.title || 'Untitled'} by ${ins.submitter || 'Unknown'})` : insightId;
 
-  if (!confirm(`Are you sure you want to permanently delete this insight?\n\n${label}\n\nThis action cannot be undone.`)) {
-    return;
-  }
-
-  try {
-    const resp = await fetch(`${IO_API_BASE}/insights/${encodeURIComponent(insightId)}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actor_ohr: cu.ohr_id })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || 'Delete failed');
+  showConfirmModal({
+    title: 'Delete Insight',
+    message: 'Are you sure you want to permanently delete this insight?',
+    detail: label + ' \u2014 This action cannot be undone.',
+    confirmText: 'Delete Insight',
+    onConfirm: async () => {
+      try {
+        const resp = await fetch(`${IO_API_BASE}/insights/${encodeURIComponent(insightId)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ actor_ohr: cu.ohr_id })
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || 'Delete failed');
+        }
+        showToast('Insight deleted successfully', 'success');
+        sandboxCloseForm();
+        SANDBOX_MOD.insights = SANDBOX_MOD.insights.filter(i => i.insight_id !== insightId);
+        SANDBOX_MOD.filtered = SANDBOX_MOD.filtered.filter(i => i.insight_id !== insightId);
+        sandboxRenderTable();
+        sandboxRenderStats();
+        sandboxRenderKanban();
+      } catch (e) {
+        console.error('Failed to delete insight:', e);
+        showToast('Failed to delete: ' + e.message, 'error');
+      }
     }
-    showToast('Insight deleted successfully', 'success');
-    // Close any open panels/overlays
-    sandboxCloseForm();
-    // Remove from local cache and re-render
-    SANDBOX_MOD.insights = SANDBOX_MOD.insights.filter(i => i.insight_id !== insightId);
-    SANDBOX_MOD.filtered = SANDBOX_MOD.filtered.filter(i => i.insight_id !== insightId);
-    sandboxRenderTable();
-    sandboxRenderStats();
-    sandboxRenderKanban();
-  } catch (e) {
-    console.error('Failed to delete insight:', e);
-    showToast('Failed to delete: ' + e.message, 'error');
-  }
+  });
 }
 
 // ===== Init =====

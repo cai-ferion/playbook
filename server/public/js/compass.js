@@ -2997,31 +2997,34 @@ async function compassDeleteLog(coachingId) {
   }
 
   const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
-  const label = log ? `${log.coaching_id || log.id} (${log.coachee || 'Unknown'} — ${log.coaching_type || ''})` : coachingId;
+  const label = log ? `${log.coaching_id || log.id} (${log.coachee || 'Unknown'} \u2014 ${log.coaching_type || ''})` : coachingId;
 
-  if (!confirm(`Are you sure you want to permanently delete coaching log:\n\n${label}\n\nThis will also delete associated RCA and ZTP records. This action cannot be undone.`)) {
-    return;
-  }
-
-  try {
-    const resp = await fetch(`${IO_API_BASE}/coaching/${encodeURIComponent(coachingId)}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actor_ohr: cu.ohr_id })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || 'Delete failed');
+  showConfirmModal({
+    title: 'Delete Coaching Log',
+    message: 'Are you sure you want to permanently delete this coaching log?',
+    detail: label + ' \u2014 This will also delete associated RCA and ZTP records. This action cannot be undone.',
+    confirmText: 'Delete Log',
+    onConfirm: async () => {
+      try {
+        const resp = await fetch(`${IO_API_BASE}/coaching/${encodeURIComponent(coachingId)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ actor_ohr: cu.ohr_id })
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || 'Delete failed');
+        }
+        showToast('Coaching log deleted successfully', 'success');
+        compassCloseForm();
+        COMPASS.logs = COMPASS.logs.filter(l => String(l.coaching_id || l.id) !== String(coachingId));
+        compassApplyFilters();
+      } catch (e) {
+        console.error('Failed to delete coaching log:', e);
+        showToast('Failed to delete: ' + e.message, 'error');
+      }
     }
-    showToast('Coaching log deleted successfully', 'success');
-    compassCloseForm();
-    // Remove from local cache and re-render
-    COMPASS.logs = COMPASS.logs.filter(l => String(l.coaching_id || l.id) !== String(coachingId));
-    compassApplyFilters();
-  } catch (e) {
-    console.error('Failed to delete coaching log:', e);
-    showToast('Failed to delete: ' + e.message, 'error');
-  }
+  });
 }
 
 // Reset form fields after successful submit, keeping the form open for consecutive entries

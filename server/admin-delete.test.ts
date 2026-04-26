@@ -112,10 +112,10 @@ describe("Client — Compass Delete UI", () => {
     expect(section).toContain("740044909");
   });
 
-  it("shows confirmation dialog before deleting", () => {
+  it("shows styled confirmation modal before deletion", () => {
     const idx = compassJs.indexOf("async function compassDeleteLog(coachingId)");
     const section = compassJs.slice(idx, idx + 600);
-    expect(section).toContain("confirm(");
+    expect(section).toContain("showConfirmModal(");
   });
 
   it("sends DELETE request with actor_ohr in body", () => {
@@ -163,10 +163,10 @@ describe("Client — Sandbox Delete UI", () => {
     expect(section).toContain("740044909");
   });
 
-  it("shows confirmation dialog before deleting", () => {
+  it("shows styled confirmation modal before deletion", () => {
     const idx = sandboxJs.indexOf("async function sandboxDeleteInsight(insightId)");
     const section = sandboxJs.slice(idx, idx + 600);
-    expect(section).toContain("confirm(");
+    expect(section).toContain("showConfirmModal(");
   });
 
   it("sends DELETE request with actor_ohr in body", () => {
