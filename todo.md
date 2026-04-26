@@ -2998,3 +2998,12 @@
 - [x] Add manual trigger endpoint: POST /api/io/insight-review-pending-check
 - [x] Run full notification simulation across all components and roles (158 tests passed)
 - [x] Diagnose and fix errors: 2 literal-match failures (rejected types used variable instead of string literal), 5 stale cache-version assertions across 5 test files
+
+## Sandbox Review Area — Role-Based Action Gating Fix (April 27, 2026)
+- [x] Diagnose why some SMEs and Trainers cannot perform actions in Review Area
+- [x] Fix role-matching logic for initial review (SME/Content Reviewer): role === 'SME' → 'Operational SME', added Content Reviewer
+- [x] Fix role-matching logic for final review (Trainer): already correct, PG null/space handling fixed
+- [x] Fix role-matching logic for status change actions: Trainer gating was correct, PG matching fixed
+- [x] Fix kanban PG filtering: role === 'SME' → 'Operational SME' || 'Content Reviewer'
+- [x] Fix export PG filtering: same role string correction
+- [x] Write simulation tests (sandbox-role-gating.test.ts — 36 tests)

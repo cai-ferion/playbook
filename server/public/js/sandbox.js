@@ -742,7 +742,7 @@ function sandboxExportReviewCSV() {
     const role = currentUser.actual_role;
     const cpg = currentUser.complete_planning_group || currentUser.planning_group || '';
     const pgList = cpg.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    if (role === 'SME' || role === 'Trainer') {
+    if (role === 'Operational SME' || role === 'Content Reviewer' || role === 'Trainer') {
       data = data.filter(i => {
         const iPg = (i.planning_group || '').toLowerCase();
         return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
@@ -887,7 +887,7 @@ function sandboxRenderKanban() {
     const role = currentUser.actual_role;
     const cpg = currentUser.complete_planning_group || currentUser.planning_group || '';
     const pgList = cpg.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-    if (role === 'SME') {
+    if (role === 'Operational SME' || role === 'Content Reviewer') {
       filteredInsights = filteredInsights.filter(i => {
         const iPg = (i.planning_group || '').toLowerCase();
         return pgList.some(pg => iPg.includes(pg) || pg.includes(iPg));
@@ -931,7 +931,7 @@ function sandboxRenderKanban() {
     const userPg = currentUser.complete_planning_group || currentUser.planning_group || '';
     const userPgs = userPg.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
     // pgMatch is computed per-card below
-    if (role === 'Operational SME' || isAdmin) canActionInitial = true;
+    if (role === 'Operational SME' || role === 'Content Reviewer' || isAdmin) canActionInitial = true;
     if (role === 'Trainer' || isAdmin) { canActionFinal = true; canActionElevated = true; }
   }
 
@@ -1086,8 +1086,8 @@ function sandboxBuildPanelActions(ins) {
     const iPg = (ins.planning_group || '').toLowerCase();
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
 
-    // Pending Initial Review: ONLY Operational SME (with PG match) OR admin
-    if (ins.status === 'Pending Initial Review' && (isAdmin || (role === 'Operational SME' && pgMatch))) {
+    // Pending Initial Review: Operational SME or Content Reviewer (with PG match) OR admin
+    if (ins.status === 'Pending Initial Review' && (isAdmin || ((role === 'Operational SME' || role === 'Content Reviewer') && pgMatch))) {
       footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowAcceptPopout('initial')">Approve</button>`;
       footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('initial')">Reject</button>`;
     }
