@@ -2982,3 +2982,11 @@
 - [x] Add planningGroup field to all 6 detect functions in data.js
 - [x] Populate PG dropdown from unique planning groups in loaded records
 - [x] Apply PG filter in renderAlerts, updateAlertNavBadge, and applyAlertFilters
+
+## Legacy AppSheet Attachment Migration (April 26, 2026)
+- [x] Inspect Google Drive folder structure and file naming conventions
+- [x] Query DB for existing insight IDs and cross-reference with Drive filenames (225 matched, 1628 orphaned)
+- [x] Download 105 unique files from Google Drive via rclone (deduped from 225)
+- [x] Upload all 105 files to S3 via /api/io/upload (0 errors)
+- [x] Update 105 io_insights records with S3 attachment URLs
+- [x] Verify: 122 total insights with S3 attachments, 1 broken legacy record (unfixable AppSheet error)
