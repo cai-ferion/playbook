@@ -2942,3 +2942,12 @@
 - [x] Add missing DB columns: initial_review_date, initial_review_comments, final_reviewer, final_review_date, final_review_comments
 - [x] Add folder parameter to generic upload endpoint for S3 key organization
 - [x] Write 29 attachment pipeline tests (sandbox-attachments.test.ts)
+
+## Admin Delete for Compass & Sandbox (April 26, 2026)
+- [x] Add server-side DELETE endpoint for Compass logs (admin-gated: 740045023, 740044909) — cascade deletes RCA + ZTP
+- [x] Add server-side admin gating on existing Sandbox DELETE endpoints (single + bulk)
+- [x] Add Delete Log button in Compass overlay detail + inline detail footer for admin users
+- [x] Add Delete button in Sandbox Input Portal detail + Review Area panel for admin users
+- [x] Add confirmation dialog before deletion (browser confirm() with record label)
+- [x] Write 30 tests for delete endpoints and UI presence (admin-delete.test.ts)
+- [x] Expand Sandbox isAdmin check to include 740044909 alongside 740045023

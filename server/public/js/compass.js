@@ -1241,6 +1241,11 @@ async function compassOpenDetail(coachingId) {
 
     // Dispute action buttons removed from Coaching Profile.
     // QA Feedback dispute workflow is handled exclusively in the Disputes Area (disputesOpenDetail).
+
+    // Admin delete button — only for 740045023 and 740044909
+    if (['740045023', '740044909'].includes(ohr)) {
+      footerHtml += ` <button class="btn btn-danger btn-sm" onclick="compassDeleteLog('${escapeAttr(String(log.coaching_id || log.id))}')" style="margin-left:auto;">Delete Log</button>`;
+    }
   }
 
   formFooter.innerHTML = footerHtml;
@@ -1672,6 +1677,10 @@ function _compassBuildInlineDetailHtml(log) {
     const _isAwarenessOnly = COMPASS.AWARENESS_ONLY_TYPES.includes(log.coaching_type);
     if (isCoachee && !isAcknowledged && !_isAwarenessOnly) {
       footerHtml += ' <button class="btn btn-primary btn-sm" id="compass-ack-trigger-btn" onclick="event.stopPropagation();compassShowAckForm()">Acknowledge</button>';
+    }
+    // Admin delete button — only for 740045023 and 740044909
+    if (['740045023', '740044909'].includes(cu.ohr_id)) {
+      footerHtml += ` <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();compassDeleteLog('${escapeAttr(String(log.coaching_id || log.id))}')" style="margin-left:auto;">Delete Log</button>`;
     }
   }
   if (footerHtml) {
@@ -2977,6 +2986,42 @@ function compassCloseForm() {
   }
   COMPASS.selectedParentLog = null;
   _compassDetailStack = [];
+}
+
+// ===== Admin Delete Coaching Log (740045023 + 740044909 only) =====
+async function compassDeleteLog(coachingId) {
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  if (!cu || !['740045023', '740044909'].includes(cu.ohr_id)) {
+    showToast('Only admin users can delete coaching logs', 'error');
+    return;
+  }
+
+  const log = COMPASS.logs.find(l => String(l.coaching_id || l.id) === String(coachingId));
+  const label = log ? `${log.coaching_id || log.id} (${log.coachee || 'Unknown'} — ${log.coaching_type || ''})` : coachingId;
+
+  if (!confirm(`Are you sure you want to permanently delete coaching log:\n\n${label}\n\nThis will also delete associated RCA and ZTP records. This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/coaching/${encodeURIComponent(coachingId)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_ohr: cu.ohr_id })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || 'Delete failed');
+    }
+    showToast('Coaching log deleted successfully', 'success');
+    compassCloseForm();
+    // Remove from local cache and re-render
+    COMPASS.logs = COMPASS.logs.filter(l => String(l.coaching_id || l.id) !== String(coachingId));
+    compassApplyFilters();
+  } catch (e) {
+    console.error('Failed to delete coaching log:', e);
+    showToast('Failed to delete: ' + e.message, 'error');
+  }
 }
 
 // Reset form fields after successful submit, keeping the form open for consecutive entries

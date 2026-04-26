@@ -808,6 +808,43 @@ router.patch("/coaching/:id", async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/io/coaching/:id - delete a coaching log (admin-gated: 740045023, 740044909)
+router.delete("/coaching/:id", async (req: Request, res: Response) => {
+  try {
+    // Admin-gated: only 740045023 and 740044909 can delete coaching logs
+    const actorOhr = req.body?.actor_ohr || req.query?.actor_ohr;
+    if (!actorOhr || !['740045023', '740044909'].includes(String(actorOhr))) {
+      return res.status(403).json({ error: "Only admin users can delete coaching logs" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const paramId = req.params.id;
+    const isNumericId = /^\d+$/.test(paramId);
+
+    // Also delete related RCA and ZTP records
+    if (isNumericId) {
+      // Get coaching_id first for cascade cleanup
+      const rows = await db.select({ coaching_id: ioCoaching.coaching_id }).from(ioCoaching).where(eq(ioCoaching.id, Number(paramId)));
+      const coachingId = rows[0]?.coaching_id;
+      if (coachingId) {
+        await db.delete(ioCoachingRca).where(eq(ioCoachingRca.coaching_id, coachingId));
+        await db.delete(ioCoachingZtp).where(eq(ioCoachingZtp.ztp_id, coachingId));
+      }
+      await db.delete(ioCoaching).where(eq(ioCoaching.id, Number(paramId)));
+    } else {
+      await db.delete(ioCoachingRca).where(eq(ioCoachingRca.coaching_id, paramId));
+      await db.delete(ioCoachingZtp).where(eq(ioCoachingZtp.ztp_id, paramId));
+      await db.delete(ioCoaching).where(eq(ioCoaching.coaching_id, paramId));
+    }
+    console.log(`[IO API] Coaching log ${paramId} deleted by ${actorOhr} (cascade: RCA + ZTP)`);
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] coaching DELETE error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // io_coaching_rca
 // ============================================================
@@ -1125,9 +1162,15 @@ router.patch("/insights/:insight_id", async (req: Request, res: Response) => {
 
 router.delete("/insights/:insight_id", async (req: Request, res: Response) => {
   try {
+    // Admin-gated: only 740045023 and 740044909 can delete insights
+    const actorOhr = req.body?.actor_ohr || req.query?.actor_ohr;
+    if (!actorOhr || !['740045023', '740044909'].includes(String(actorOhr))) {
+      return res.status(403).json({ error: "Only admin users can delete insights" });
+    }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
     await db.delete(ioInsights).where(eq(ioInsights.insight_id, req.params.insight_id));
+    console.log(`[IO API] Insight ${req.params.insight_id} deleted by ${actorOhr}`);
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] insights DELETE error:", err);
@@ -1137,6 +1180,11 @@ router.delete("/insights/:insight_id", async (req: Request, res: Response) => {
 
 router.post("/insights-bulk-delete", async (req: Request, res: Response) => {
   try {
+    // Admin-gated: only 740045023 and 740044909 can bulk-delete insights
+    const actorOhr = req.body?.actor_ohr;
+    if (!actorOhr || !['740045023', '740044909'].includes(String(actorOhr))) {
+      return res.status(403).json({ error: "Only admin users can delete insights" });
+    }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
     const { ids } = req.body;
@@ -1148,6 +1196,7 @@ router.post("/insights-bulk-delete", async (req: Request, res: Response) => {
       await db.delete(ioInsights).where(inArray(ioInsights.insight_id, batch));
       deleted += batch.length;
     }
+    console.log(`[IO API] ${deleted} insights bulk-deleted by ${actorOhr}`);
     res.json({ ok: true, deleted });
   } catch (err: any) {
     console.error("[IO API] insights bulk-delete error:", err);

@@ -114,10 +114,10 @@ describe('Cache Versions', () => {
     expect(indexHtml).toContain('sandbox-redesign.css?v=106');
   });
   it('compass.js bumped to v120', () => {
-    expect(indexHtml).toContain('compass.js?v=120');
+    expect(indexHtml).toContain('compass.js?v=121');
   });
   it('sandbox.js bumped to v106', () => {
-    expect(indexHtml).toContain('sandbox.js?v=115');
+    expect(indexHtml).toContain('sandbox.js?v=116');
   });
 });
 

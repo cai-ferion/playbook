@@ -375,7 +375,7 @@ function sandboxToggleTeamFilter(mode) {
 function sandboxRenderTeamToggle() {
   const container = document.getElementById('sandbox-team-toggle');
   if (!container) return;
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
   if (!isAdmin) { container.style.display = 'none'; return; }
   container.style.display = 'inline-flex';
   const mode = SANDBOX_MOD._inputTeamToggle;
@@ -621,6 +621,14 @@ function sandboxBuildDetailPanel(ins) {
     ${sandboxRenderReviewTrail(ins, isAgent)}
   </div>`;
 
+  // Admin delete button in Input Portal detail panel
+  const _isAdminDel = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
+  if (_isAdminDel) {
+    html += `<div class="sandbox-detail-section" style="border-top:1px solid var(--border);padding-top:12px;">
+      <button class="btn btn-danger btn-sm" onclick="sandboxDeleteInsight('${escapeAttr(ins.insight_id)}')">Delete Insight</button>
+    </div>`;
+  }
+
   html += `</div>`;
   return html;
 }
@@ -828,7 +836,7 @@ function sandboxRenderReviewToolbar() {
   const pgOptions = [...pgSet].sort();
 
   // Build admin toggle HTML
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
   const reviewMode = SANDBOX_MOD._reviewTeamToggle;
   const toggleHtml = isAdmin ? `
     <div class="sandbox-team-toggle" style="display:inline-flex;flex-shrink:0;">
@@ -916,7 +924,7 @@ function sandboxRenderKanban() {
   let canActionFinal = false;
   let canActionElevated = false;
   let pgMatch = false;
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
 
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
@@ -1069,7 +1077,7 @@ function sandboxCloseReviewPanel() {
 
 function sandboxBuildPanelActions(ins) {
   let footerHtml = '';
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
 
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
@@ -1094,6 +1102,11 @@ function sandboxBuildPanelActions(ins) {
     const trainerAreaStatuses = ['Approved - Final Review', 'Elevated - Task in Progress', 'Elevated - POC Rejected', 'Elevated - Pending POC Discussion', 'Elevated - No POC'];
     if (trainerAreaStatuses.includes(ins.status) && (isAdmin || (role === 'Trainer' && pgMatch))) {
       footerHtml += `<button class="btn btn-sm" style="background:#8B5CF6;color:#fff;" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowTrainerStatusPopout()">Change Status</button>`;
+    }
+
+    // Admin delete button — only for 740045023 and 740044909
+    if (isAdmin) {
+      footerHtml += ` <button class="btn btn-danger btn-sm" onclick="sandboxDeleteInsight('${escapeAttr(ins.insight_id)}')" style="margin-left:auto;">Delete</button>`;
     }
   }
 
@@ -1977,6 +1990,46 @@ function sandboxCloseForm() {
   // Collapse inline kanban expansion
   SANDBOX_MOD._reviewExpandedId = null;
   SANDBOX_MOD.editingId = null;
+}
+
+// ===== Admin Delete Insight (740045023 + 740044909 only) =====
+async function sandboxDeleteInsight(insightId) {
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  if (!cu || !['740045023', '740044909'].includes(cu.ohr_id)) {
+    showToast('Only admin users can delete insights', 'error');
+    return;
+  }
+
+  const ins = SANDBOX_MOD.insights.find(i => i.insight_id === insightId);
+  const label = ins ? `${ins.insight_id} (${ins.insight_title || ins.title || 'Untitled'} by ${ins.submitter || 'Unknown'})` : insightId;
+
+  if (!confirm(`Are you sure you want to permanently delete this insight?\n\n${label}\n\nThis action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/insights/${encodeURIComponent(insightId)}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_ohr: cu.ohr_id })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || 'Delete failed');
+    }
+    showToast('Insight deleted successfully', 'success');
+    // Close any open panels/overlays
+    sandboxCloseForm();
+    // Remove from local cache and re-render
+    SANDBOX_MOD.insights = SANDBOX_MOD.insights.filter(i => i.insight_id !== insightId);
+    SANDBOX_MOD.filtered = SANDBOX_MOD.filtered.filter(i => i.insight_id !== insightId);
+    sandboxRenderTable();
+    sandboxRenderStats();
+    sandboxRenderKanban();
+  } catch (e) {
+    console.error('Failed to delete insight:', e);
+    showToast('Failed to delete: ' + e.message, 'error');
+  }
 }
 
 // ===== Init =====
