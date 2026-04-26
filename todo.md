@@ -3007,3 +3007,12 @@
 - [x] Fix kanban PG filtering: role === 'SME' → 'Operational SME' || 'Content Reviewer'
 - [x] Fix export PG filtering: same role string correction
 - [x] Write simulation tests (sandbox-role-gating.test.ts — 36 tests)
+
+## Sandbox Review Area — Status String Mismatch Fix (April 27, 2026)
+- [x] Fix sandboxBuildPanelActions: status checks use 'Pending Initial Review' → 'Pending - Initial Review' (with dash)
+- [x] Fix sandboxBuildPanelActions: status checks use 'Pending Final Review' → 'Pending - Final Review' (with dash)
+- [x] Fix accept flow: status update writes 'Pending - Final Review' (corrected)
+- [x] Fix submit flow: status writes 'Pending - Initial Review' (corrected)
+- [x] Fix auto-mailer.ts: insight_review_pending cron queries corrected to dash format
+- [x] Normalize 26 legacy DB rows from 'Pending Initial Review' to 'Pending - Initial Review'
+- [x] Update simulation tests — 41 tests passing, full suite 1204/1206 (2 pre-existing Supabase)

@@ -28,8 +28,8 @@ const SANDBOX_MOD = {
   _inputTeamToggle: 'all', // Input Portal All|My Team toggle (admin only)
 
   STATUSES: [
-    'Pending Initial Review',
-    'Pending Final Review',
+    'Pending - Initial Review',
+    'Pending - Final Review',
     'Elevated - Task in Progress',
     'Elevated - POC Rejected',
     'Elevated - Pending POC Discussion',
@@ -1087,13 +1087,13 @@ function sandboxBuildPanelActions(ins) {
     const pgMatch = userPgs.some(pg => iPg.includes(pg) || pg.includes(iPg));
 
     // Pending Initial Review: Operational SME or Content Reviewer (with PG match) OR admin
-    if (ins.status === 'Pending Initial Review' && (isAdmin || ((role === 'Operational SME' || role === 'Content Reviewer') && pgMatch))) {
+    if (ins.status === 'Pending - Initial Review' && (isAdmin || ((role === 'Operational SME' || role === 'Content Reviewer') && pgMatch))) {
       footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowAcceptPopout('initial')">Approve</button>`;
       footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('initial')">Reject</button>`;
     }
 
     // Pending Final Review: ONLY Trainer (with PG match) OR admin
-    if (ins.status === 'Pending Final Review' && (isAdmin || (role === 'Trainer' && pgMatch))) {
+    if (ins.status === 'Pending - Final Review' && (isAdmin || (role === 'Trainer' && pgMatch))) {
       footerHtml += `<button class="btn btn-success btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowFinalApprovePopout()">Approve</button>`;
       footerHtml += `<button class="btn btn-danger btn-sm" onclick="SANDBOX_MOD.editingId='${escapeAttr(ins.insight_id)}';SANDBOX_MOD._context='review';sandboxShowRejectModal('final')">Reject</button>`;
     }
@@ -1184,7 +1184,7 @@ async function sandboxSubmitAccept(tier) {
   const updates = { updated_at: new Date().toISOString() };
 
   if (tier === 'initial') {
-    updates.status = 'Pending Final Review';
+    updates.status = 'Pending - Final Review';
     updates.initial_reviewer = user ? user.full_name : '';
     updates.initial_review_date = new Date().toISOString();
     if (comments) updates.initial_review_comments = comments;
@@ -2109,7 +2109,7 @@ async function sandboxSubmitNew() {
     supervisor_email: emp ? emp.supervisor_email : '',
     queue: emp ? emp.queue : '',
     platform: emp ? emp.platform : '',
-    status: 'Pending Initial Review',
+    status: 'Pending - Initial Review',
     created_date: new Date().toISOString(),
     created_at: new Date().toISOString(),
     attachments: attachmentUrls.length > 0 ? JSON.stringify(attachmentUrls) : '',

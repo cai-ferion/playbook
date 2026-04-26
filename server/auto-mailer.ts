@@ -1206,7 +1206,7 @@ export function registerAutoMailer(app: Express): void {
       const pendingInitial = await db.select()
         .from(ioInsights)
         .where(and(
-          eq(ioInsights.status, 'Pending Initial Review'),
+          eq(ioInsights.status, 'Pending - Initial Review'),
           lte(ioInsights.created_at, fortyEightHoursAgo)
         ));
 
@@ -1214,7 +1214,7 @@ export function registerAutoMailer(app: Express): void {
       const pendingFinal = await db.select()
         .from(ioInsights)
         .where(and(
-          eq(ioInsights.status, 'Pending Final Review'),
+          eq(ioInsights.status, 'Pending - Final Review'),
           lte(ioInsights.initial_review_date, seventyTwoHoursAgo)
         ));
 

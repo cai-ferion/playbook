@@ -61,11 +61,16 @@ describe("Initial Review Gating — Operational SME + Content Reviewer", () => {
       sandboxJs.indexOf("Pending Final Review:")
     );
     expect(initialBlock).toContain("role === 'Content Reviewer'");
+    expect(initialBlock).toContain("'Pending - Initial Review'");
   });
 
   it("canActionInitial flag includes Content Reviewer", () => {
-    // The canActionInitial assignment line
     expect(sandboxJs).toContain("role === 'Content Reviewer' || isAdmin) canActionInitial = true");
+  });
+
+  it("uses dash-format 'Pending - Initial Review' in gating (not 'Pending Initial Review')", () => {
+    expect(sandboxJs).toContain("ins.status === 'Pending - Initial Review'");
+    expect(sandboxJs).not.toMatch(/ins\.status === 'Pending Initial Review'/);
   });
 });
 
@@ -80,6 +85,11 @@ describe("Final Review Gating — Trainer Only", () => {
 
   it("canActionFinal flag is set for Trainer", () => {
     expect(sandboxJs).toContain("role === 'Trainer' || isAdmin) { canActionFinal = true; canActionElevated = true; }");
+  });
+
+  it("uses dash-format 'Pending - Final Review' in gating (not 'Pending Final Review')", () => {
+    expect(sandboxJs).toContain("ins.status === 'Pending - Final Review'");
+    expect(sandboxJs).not.toMatch(/ins\.status === 'Pending Final Review'/);
   });
 });
 
@@ -212,12 +222,12 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
     let approve = false, reject = false, changeStatus = false;
 
-    if (insightStatus === 'Pending Initial Review' && (isAdminOhr || ((userRole === 'Operational SME' || userRole === 'Content Reviewer') && pgMatch))) {
+    if (insightStatus === 'Pending - Initial Review' && (isAdminOhr || ((userRole === 'Operational SME' || userRole === 'Content Reviewer') && pgMatch))) {
       approve = true;
       reject = true;
     }
 
-    if (insightStatus === 'Pending Final Review' && (isAdminOhr || (userRole === 'Trainer' && pgMatch))) {
+    if (insightStatus === 'Pending - Final Review' && (isAdminOhr || (userRole === 'Trainer' && pgMatch))) {
       approve = true;
       reject = true;
     }
@@ -232,54 +242,54 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
   // --- Operational SMEs ---
   it("Operational SME (S-ABF) can approve/reject S-ABF initial review", () => {
-    const result = canPerformAction("Operational SME", "S-ABF", "S-ABF", "S-ABF", "Pending Initial Review", false);
+    const result = canPerformAction("Operational SME", "S-ABF", "S-ABF", "S-ABF", "Pending - Initial Review", false);
     expect(result.approve).toBe(true);
     expect(result.reject).toBe(true);
   });
 
   it("Operational SME (SME_CTR) can approve/reject RECALL_MEASUREMENT_CTR initial review (via complete_planning_group)", () => {
-    const result = canPerformAction("Operational SME", "RECALL_MEASUREMENT_CTR,SME_CTR", "SME_CTR", "RECALL_MEASUREMENT_CTR", "Pending Initial Review", false);
+    const result = canPerformAction("Operational SME", "RECALL_MEASUREMENT_CTR,SME_CTR", "SME_CTR", "RECALL_MEASUREMENT_CTR", "Pending - Initial Review", false);
     expect(result.approve).toBe(true);
   });
 
   it("Operational SME (CS-ABF) CAN approve S-ABF initial review (S-ABF is substring of CS-ABF)", () => {
     // Bidirectional includes: 'cs-abf'.includes('s-abf') = true
     // This is acceptable — CS-ABF and S-ABF are related PGs
-    const result = canPerformAction("Operational SME", "CS-ABF", "CS-ABF", "S-ABF", "Pending Initial Review", false);
+    const result = canPerformAction("Operational SME", "CS-ABF", "CS-ABF", "S-ABF", "Pending - Initial Review", false);
     expect(result.approve).toBe(true);
   });
 
   it("Operational SME (SME_CTR) CANNOT approve FAD_CTR initial review (true PG mismatch)", () => {
-    const result = canPerformAction("Operational SME", "SME_CTR", "SME_CTR", "FAD_CTR", "Pending Initial Review", false);
+    const result = canPerformAction("Operational SME", "SME_CTR", "SME_CTR", "FAD_CTR", "Pending - Initial Review", false);
     expect(result.approve).toBe(false);
   });
 
   it("Operational SME CANNOT do final review (wrong role)", () => {
-    const result = canPerformAction("Operational SME", "S-ABF", "S-ABF", "S-ABF", "Pending Final Review", false);
+    const result = canPerformAction("Operational SME", "S-ABF", "S-ABF", "S-ABF", "Pending - Final Review", false);
     expect(result.approve).toBe(false);
   });
 
   // --- Trainers ---
   it("Trainer (S-ABF) can approve/reject S-ABF final review", () => {
-    const result = canPerformAction("Trainer", "S-ABF", "S-ABF", "S-ABF", "Pending Final Review", false);
+    const result = canPerformAction("Trainer", "S-ABF", "S-ABF", "S-ABF", "Pending - Final Review", false);
     expect(result.approve).toBe(true);
     expect(result.reject).toBe(true);
   });
 
   it("Trainer (MULTIPLE PGs) can approve CS-ABF final review", () => {
-    const result = canPerformAction("Trainer", "S-ABF,CS-ABF,SME_CTR,QPE_CTR,CSO_CTR,FAD_CTR", "MULTIPLE", "CS-ABF", "Pending Final Review", false);
+    const result = canPerformAction("Trainer", "S-ABF,CS-ABF,SME_CTR,QPE_CTR,CSO_CTR,FAD_CTR", "MULTIPLE", "CS-ABF", "Pending - Final Review", false);
     expect(result.approve).toBe(true);
   });
 
   it("Trainer with null complete_planning_group falls back to planning_group", () => {
     // San Mateo: complete_planning_group = null, planning_group = "S-ABF"
-    const result = canPerformAction("Trainer", null, "S-ABF", "S-ABF", "Pending Final Review", false);
+    const result = canPerformAction("Trainer", null, "S-ABF", "S-ABF", "Pending - Final Review", false);
     expect(result.approve).toBe(true);
   });
 
   it("Trainer with spaces in PG string can still match", () => {
     // Icaranom: "MASA_MAFSA_CTR_SCALED_REVIEW,CEI_TASKFORCE_CTR,CSO_CTR, FAD_CTR,..."
-    const result = canPerformAction("Trainer", "MASA_MAFSA_CTR_SCALED_REVIEW,CEI_TASKFORCE_CTR,CSO_CTR, FAD_CTR,RECALL_MEASUREMENT_CTR,SME_CTR,QPE_CTR", "MULTIPLE", "FAD_CTR", "Pending Final Review", false);
+    const result = canPerformAction("Trainer", "MASA_MAFSA_CTR_SCALED_REVIEW,CEI_TASKFORCE_CTR,CSO_CTR, FAD_CTR,RECALL_MEASUREMENT_CTR,SME_CTR,QPE_CTR", "MULTIPLE", "FAD_CTR", "Pending - Final Review", false);
     expect(result.approve).toBe(true);
   });
 
@@ -296,13 +306,13 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
   });
 
   it("Trainer CANNOT do initial review (wrong role)", () => {
-    const result = canPerformAction("Trainer", "S-ABF", "S-ABF", "S-ABF", "Pending Initial Review", false);
+    const result = canPerformAction("Trainer", "S-ABF", "S-ABF", "S-ABF", "Pending - Initial Review", false);
     expect(result.approve).toBe(false);
   });
 
   // --- Agents ---
   it("Agent CANNOT perform any review actions", () => {
-    const result = canPerformAction("Agent", "S-ABF", "S-ABF", "S-ABF", "Pending Initial Review", false);
+    const result = canPerformAction("Agent", "S-ABF", "S-ABF", "S-ABF", "Pending - Initial Review", false);
     expect(result.approve).toBe(false);
     expect(result.reject).toBe(false);
     expect(result.changeStatus).toBe(false);
@@ -310,8 +320,8 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
   // --- Admin override ---
   it("Admin can perform all actions regardless of role/PG", () => {
-    const r1 = canPerformAction("Operational SME", "S-ABF", "S-ABF", "CS-ABF", "Pending Initial Review", true);
-    const r2 = canPerformAction("Operational SME", "S-ABF", "S-ABF", "CS-ABF", "Pending Final Review", true);
+    const r1 = canPerformAction("Operational SME", "S-ABF", "S-ABF", "CS-ABF", "Pending - Initial Review", true);
+    const r2 = canPerformAction("Operational SME", "S-ABF", "S-ABF", "CS-ABF", "Pending - Final Review", true);
     const r3 = canPerformAction("Operational SME", "S-ABF", "S-ABF", "CS-ABF", "Approved - Final Review", true);
     expect(r1.approve).toBe(true);
     expect(r2.approve).toBe(true);
@@ -320,7 +330,20 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 });
 
 describe("Cache Version Alignment", () => {
-  it("sandbox.js cache version is bumped to v118", () => {
-    expect(indexHtml).toContain("sandbox.js?v=118");
+  it("sandbox.js cache version is bumped to v119", () => {
+    expect(indexHtml).toContain("sandbox.js?v=119");
+  });
+
+  it("STATUSES array uses dash-format for Pending statuses", () => {
+    expect(sandboxJs).toContain("'Pending - Initial Review',");
+    expect(sandboxJs).toContain("'Pending - Final Review',");
+  });
+
+  it("submit flow writes 'Pending - Initial Review' (with dash)", () => {
+    expect(sandboxJs).toContain("status: 'Pending - Initial Review'");
+  });
+
+  it("accept flow writes 'Pending - Final Review' (with dash)", () => {
+    expect(sandboxJs).toContain("updates.status = 'Pending - Final Review'");
   });
 });
