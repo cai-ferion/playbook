@@ -262,7 +262,7 @@ function detectUPLViolations(records) {
   for (const r of filtered) {
     if (getEffectiveTag(r.tag) === 'UPL') {
       const key = `${r.agent}__${r.month}`;
-      if (!grouped[key]) grouped[key] = { agent: r.agent, month: r.month, count: 0, dates: [], flm: r.flm || '' };
+      if (!grouped[key]) grouped[key] = { agent: r.agent, month: r.month, count: 0, dates: [], flm: r.flm || '', planningGroup: r.actualPlanningGroup || '' };
       grouped[key].count++;
       if (r.date) grouped[key].dates.push(r.date);
       if (!grouped[key].flm && r.flm) grouped[key].flm = r.flm;
@@ -281,7 +281,7 @@ function detectUPLViolations(records) {
         severity: 'critical', title: `${entry.count} UPL days in ${entry.month}`,
         detail: `${entry.agent} has ${entry.count} UPL days in ${entry.month} (threshold: >3)`,
         count: entry.count, month: entry.month,
-        uplDates: sortedDates, supervisor: entry.flm
+        uplDates: sortedDates, supervisor: entry.flm, planningGroup: entry.planningGroup
       });
     }
   }
@@ -293,13 +293,14 @@ function detectNCNSPipeline(records) {
   const grouped = {};
   for (const r of filtered) {
     if (r.uplReason === 'NCNS') {
-      if (!grouped[r.agent]) grouped[r.agent] = { count: 0, dates: [], supervisor: '' };
+      if (!grouped[r.agent]) grouped[r.agent] = { count: 0, dates: [], supervisor: '', planningGroup: '' };
       grouped[r.agent].count++;
       if (r.date) {
         const d = new Date(r.date);
         grouped[r.agent].dates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
       }
       if (r.flm && !grouped[r.agent].supervisor) grouped[r.agent].supervisor = r.flm;
+      if (r.actualPlanningGroup && !grouped[r.agent].planningGroup) grouped[r.agent].planningGroup = r.actualPlanningGroup;
     }
   }
   const alerts = [];
@@ -312,7 +313,8 @@ function detectNCNSPipeline(records) {
         count: data.count,
         supervisor: data.supervisor,
         metaDates: data.dates.sort(),
-        metaDatesLabel: 'NCNS Dates'
+        metaDatesLabel: 'NCNS Dates',
+        planningGroup: data.planningGroup
       });
     }
   }
@@ -332,6 +334,7 @@ function detectOffboardingRisk(records) {
     let consecutiveUPL = 0;
     let uplDates = [];
     let supervisor = '';
+    let planningGroup = '';
     for (const r of sorted) {
       const tag = getEffectiveTag(r.tag);
       if (tag === 'WO') continue;
@@ -340,6 +343,7 @@ function detectOffboardingRisk(records) {
         const d = new Date(r.date);
         uplDates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
         if (r.flm && !supervisor) supervisor = r.flm;
+        if (r.actualPlanningGroup && !planningGroup) planningGroup = r.actualPlanningGroup;
         if (consecutiveUPL >= 10) {
           alerts.push({
             id: `offboard_${agent}`, category: 'offboarding_risk', agent,
@@ -348,7 +352,8 @@ function detectOffboardingRisk(records) {
             count: consecutiveUPL,
             supervisor,
             metaDates: uplDates,
-            metaDatesLabel: 'Consecutive UPL Dates'
+            metaDatesLabel: 'Consecutive UPL Dates',
+            planningGroup
           });
           break;
         }
@@ -369,13 +374,14 @@ function detectWeeklyLateTrend(records) {
       const key = r.agent;
       const we = r.weekEnding || 'Unknown';
       const compKey = `${key}||${we}`;
-      if (!grouped[compKey]) grouped[compKey] = { agent: key, weekEnding: we, count: 0, dates: [], supervisor: '' };
+      if (!grouped[compKey]) grouped[compKey] = { agent: key, weekEnding: we, count: 0, dates: [], supervisor: '', planningGroup: '' };
       grouped[compKey].count++;
       if (r.date) {
         const d = new Date(r.date);
         grouped[compKey].dates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
       }
       if (r.flm && !grouped[compKey].supervisor) grouped[compKey].supervisor = r.flm;
+      if (r.actualPlanningGroup && !grouped[compKey].planningGroup) grouped[compKey].planningGroup = r.actualPlanningGroup;
     }
   }
   const alerts = [];
@@ -389,7 +395,8 @@ function detectWeeklyLateTrend(records) {
         month: getMonthFromWeekEnding(data.weekEnding),
         supervisor: data.supervisor,
         metaDates: data.dates.sort(),
-        metaDatesLabel: 'Late Dates'
+        metaDatesLabel: 'Late Dates',
+        planningGroup: data.planningGroup
       });
     }
   }
@@ -409,13 +416,14 @@ function detectMonthlyLateEscalation(records) {
     if (getEffectiveTag(r.tag) === 'LATE') {
       const key = r.agent;
       if (!grouped[key]) grouped[key] = {};
-      if (!grouped[key][r.month]) grouped[key][r.month] = { count: 0, dates: [], supervisor: '' };
+      if (!grouped[key][r.month]) grouped[key][r.month] = { count: 0, dates: [], supervisor: '', planningGroup: '' };
       grouped[key][r.month].count++;
       if (r.date) {
         const d = new Date(r.date);
         grouped[key][r.month].dates.push(`${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
       }
       if (r.flm && !grouped[key][r.month].supervisor) grouped[key][r.month].supervisor = r.flm;
+      if (r.actualPlanningGroup && !grouped[key][r.month].planningGroup) grouped[key][r.month].planningGroup = r.actualPlanningGroup;
     }
   }
   const alerts = [];
@@ -429,7 +437,8 @@ function detectMonthlyLateEscalation(records) {
           count: data.count, month,
           supervisor: data.supervisor,
           metaDates: data.dates.sort(),
-          metaDatesLabel: 'Late Dates'
+          metaDatesLabel: 'Late Dates',
+          planningGroup: data.planningGroup
         });
       }
     }
@@ -466,7 +475,9 @@ function detectActiveML(records) {
         return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
       }).sort();
       let supervisor = '';
+      let planningGroup = '';
       for (const r of mlRecs) { if (r.flm) { supervisor = r.flm; break; } }
+      for (const r of mlRecs) { if (r.actualPlanningGroup) { planningGroup = r.actualPlanningGroup; break; } }
       alerts.push({
         id: `ml_${agent}`, category: 'active_ml', agent,
         severity: 'info', title: 'Active Maternity Leave',
@@ -474,7 +485,8 @@ function detectActiveML(records) {
         count: mlDates.length,
         supervisor,
         metaDates: mlDates,
-        metaDatesLabel: 'ML Dates'
+        metaDatesLabel: 'ML Dates',
+        planningGroup
       });
     }
   }

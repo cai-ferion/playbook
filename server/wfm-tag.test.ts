@@ -256,11 +256,11 @@ describe("WFM Tag — Admin Tools Upload UI", () => {
 // ============================================================
 describe("WFM Tag — Cache Busting", () => {
   it("data.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("data.js?v=106");
+    expect(indexHtmlContent).toContain("data.js?v=107");
   });
 
   it("app.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("app.js?v=121");
+    expect(indexHtmlContent).toContain("app.js?v=122");
   });
 
   it("input-portal.js cache version is bumped", () => {

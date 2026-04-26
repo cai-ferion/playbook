@@ -1325,6 +1325,7 @@ function updateAlertNavBadge() {
   const allAlerts = getAllAlerts(appState.records);
   const monthFilter = appState.alertFilters.month;
   const weekFilter = appState.alertFilters.weekEnding;
+  const pgFilter = appState.alertFilters.planningGroup || 'All';
 
   // Apply same role-based filtering as renderAlerts
   const role = currentUser ? currentUser.actual_role : '';
@@ -1365,6 +1366,9 @@ function updateAlertNavBadge() {
     }
     if (cat.hasWeek && weekFilter && weekFilter !== 'All') {
       catAlerts = catAlerts.filter(a => a.weekEnding === weekFilter);
+    }
+    if (pgFilter !== 'All') {
+      catAlerts = catAlerts.filter(a => (a.planningGroup || '') === pgFilter);
     }
     total += catAlerts.length;
   }
@@ -2543,6 +2547,7 @@ function populateAlertFilterDropdowns() {
   // Preserve current user selection before rebuilding options
   const prevMonth = appState.alertFilters.month;
   const prevWeek = appState.alertFilters.weekEnding;
+  const prevPG = appState.alertFilters.planningGroup || 'All';
 
   // Show ALL months (Jan-Dec) regardless of loaded data
   fillSelect('alert-filter-month', MONTHS.slice(), 'All Months');
@@ -2587,6 +2592,25 @@ function populateAlertFilterDropdowns() {
     weekEl.value = 'All';
     appState.alertFilters.weekEnding = 'All';
   }
+
+  // Populate Planning Group dropdown from loaded records
+  const pgEl = document.getElementById('alert-filter-pg');
+  if (pgEl) {
+    const pgSet = new Set();
+    for (const r of appState.records) {
+      const pg = (r.actualPlanningGroup || '').trim();
+      if (pg) pgSet.add(pg);
+    }
+    const pgList = [...pgSet].sort();
+    fillSelect('alert-filter-pg', pgList, 'All Planning Groups');
+    if (prevPG && prevPG !== 'All' && [...pgEl.options].some(o => o.value === prevPG)) {
+      pgEl.value = prevPG;
+      appState.alertFilters.planningGroup = prevPG;
+    } else {
+      pgEl.value = 'All';
+      appState.alertFilters.planningGroup = 'All';
+    }
+  }
 }
 
 async function applyAlertFilters() {
@@ -2620,8 +2644,11 @@ async function applyAlertFilters() {
   }
 
   const selectedWeek = weekEl.value;
+  const pgEl = document.getElementById('alert-filter-pg');
+  const selectedPG = pgEl ? pgEl.value : 'All';
   appState.alertFilters.month = selectedMonth;
   appState.alertFilters.weekEnding = selectedWeek;
+  appState.alertFilters.planningGroup = selectedPG;
 
   // Always compute the full date range to load for the selected month
   let rangeStart = null;
@@ -2685,6 +2712,7 @@ function renderAlerts() {
   const allAlerts = getAllAlerts(appState.records);
   const monthFilter = appState.alertFilters.month;
   const weekFilter = appState.alertFilters.weekEnding;
+  const pgFilter = appState.alertFilters.planningGroup || 'All';
 
   // Role-based filtering: Team Lead sees only their agents, Manager sees their planning group
   const role = typeof currentUser !== 'undefined' ? currentUser?.actual_role : '';
@@ -2727,6 +2755,9 @@ function renderAlerts() {
     if (cat.hasWeek && weekFilter !== 'All') {
       catAlerts = catAlerts.filter(a => a.weekEnding === weekFilter);
     }
+    if (pgFilter !== 'All') {
+      catAlerts = catAlerts.filter(a => (a.planningGroup || '') === pgFilter);
+    }
     const count = catAlerts.length;
     const isActive = appState.alertCategory === cat.id;
     return `<button class="alert-tab ${isActive ? 'active' : ''}" onclick="switchAlertCategory('${cat.id}')">
@@ -2747,6 +2778,9 @@ function renderAlerts() {
   }
   if (currentCat.hasWeek && weekFilter !== 'All') {
     alerts = alerts.filter(a => a.weekEnding === weekFilter);
+  }
+  if (pgFilter !== 'All') {
+    alerts = alerts.filter(a => (a.planningGroup || '') === pgFilter);
   }
 
   const listContainer = document.getElementById('alert-list');

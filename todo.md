@@ -2974,3 +2974,11 @@
 - [x] Auto-select all employees where supervisor matches the logged-in user
 - [x] Ensure button only appears for team leads (users with direct reports)
 - [x] Write tests for the feature (select-my-team.test.ts — 22 tests)
+
+## Planning Group Filter in Risk Intelligence (April 26, 2026)
+- [x] Add Planning Group filter to Risk Intelligence page in Anchor
+- [x] Ensure filter follows existing filter patterns (Select All, default all selected)
+- [x] Write tests for the feature (alert-pg-filter.test.ts — 20 tests)
+- [x] Add planningGroup field to all 6 detect functions in data.js
+- [x] Populate PG dropdown from unique planning groups in loaded records
+- [x] Apply PG filter in renderAlerts, updateAlertNavBadge, and applyAlertFilters
