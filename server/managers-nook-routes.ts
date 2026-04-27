@@ -52,11 +52,11 @@ router.get("/scorecard", async (req: Request, res: Response) => {
       WHERE e.actual_role = 'Agent'
         AND e.supervisor_name IS NOT NULL
         AND e.supervisor_name != ''
-        AND e.employement_status != 'Offboarded'
+        AND e.employement_status = 'Active'
         AND EXISTS (
           SELECT 1 FROM io_employees sup
           WHERE sup.full_name = e.supervisor_name
-            AND sup.employement_status != 'Offboarded'
+            AND sup.employement_status = 'Active'
             AND sup.actual_role IN ('Team Lead', 'TL', 'Supervisor')
         )
       ORDER BY e.supervisor_name ASC
@@ -70,7 +70,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
       WHERE actual_role = 'Agent'
         AND supervisor_name IS NOT NULL
         AND supervisor_name != ''
-        AND employement_status != 'Offboarded'
+        AND employement_status = 'Active'
       GROUP BY supervisor_name
     `)) as unknown as [any[], any];
     const agentCountMap: Record<string, number> = {};
@@ -153,7 +153,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
       WHERE actual_role = 'Agent'
         AND supervisor_name IS NOT NULL
         AND supervisor_name != ''
-        AND employement_status != 'Offboarded'
+        AND employement_status = 'Active'
       ORDER BY supervisor_name, full_name
     `)) as unknown as [any[], any];
     const agentsBySup: Record<string, { ohr_id: string; full_name: string }[]> = {};

@@ -3206,3 +3206,6 @@
 ## Manager's Nook Fixes (April 28, 2026 - Batch 2)
 - [x] Fix: Filter to active employees only (active supervisors, active agents in coaching coverage)
 - [x] Fix: Transparent modal background on coaching drill-down — add solid white background
+
+## Manager's Nook Fixes (April 28, 2026 - Batch 3)
+- [x] Fix: Inactive supervisors (Dave Jayson Villanueva, Reuben Marana) still showing in scorecard — changed all filters from != 'Offboarded' to = 'Active'
