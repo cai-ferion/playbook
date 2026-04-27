@@ -15,6 +15,7 @@ import { registerIORoutes } from "../io-routes.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
 import { registerTardinessRoutes } from "../io-tardiness-routes.js";
 import { registerRoleChangeRoutes } from "../io-role-change-routes.js";
+import { registerManagersNookRoutes } from "../managers-nook-routes.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import performanceRouter from "../io-performance-routes.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
@@ -78,6 +79,7 @@ async function startServer() {
   registerTardinessRoutes(app);
   registerRoleChangeRoutes(app);
   app.use('/api/io/performance', performanceRouter);
+  registerManagersNookRoutes(app);
 
   // Auto-mailer for UPL/LATE notifications
   registerAutoMailer(app);

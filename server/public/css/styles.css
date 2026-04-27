@@ -5748,3 +5748,49 @@ body {
     align-items: flex-start;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Manager's Nook — Supervisor Scorecard
+   ═══════════════════════════════════════════════════════════ */
+
+.nook-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--fg-muted);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.nook-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.nook-table tbody tr:hover {
+  background: var(--bg-surface-hover);
+}
+
+/* Coaching coverage click hint */
+.nook-table td[onclick] {
+  position: relative;
+}
+.nook-table td[onclick]:hover {
+  background: rgba(0, 181, 226, 0.06);
+}
+
+/* Modal overlay for missing coaching drill-down */
+#nook-coaching-modal .modal-content {
+  border-radius: var(--radius-lg);
+}
+#nook-coaching-modal .data-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--fg-muted);
+}
+#nook-coaching-modal .data-table td {
+  padding: 6px 8px;
+}

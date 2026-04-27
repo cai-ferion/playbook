@@ -954,6 +954,13 @@ function applyNavPermissions(user) {
   // Regimen
   vis('nav-regimen', 'nav.regimen');
 
+  // Manager's Nook: Managers + Admin only (role-based, not permission-based)
+  const nookNav = document.getElementById('nav-managers-nook');
+  if (nookNav) {
+    const isManagerOrAdmin = user.actual_role === 'Manager' || (user.ohr_id === '740045023');
+    nookNav.style.display = isManagerOrAdmin ? '' : 'none';
+  }
+
   // Compass sub-sections
   vis('nav-compass-disputes', 'compass.disputes');
   vis('nav-compass-corrective', 'compass.corrective_actions');
@@ -1021,7 +1028,7 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'regimen', 'performance', 'productivity-hrs', 'tardiness-validator'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'regimen', 'managers-nook', 'tardiness-validator'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -1057,7 +1064,7 @@ async function switchView(view) {
     const helmGroup = document.getElementById('nav-group-helm');
     if (helmGroup) helmGroup.classList.add('expanded');
   }
-  const horizonViews = ['performance', 'productivity-hrs', 'tardiness-validator'];
+  const horizonViews = ['managers-nook', 'tardiness-validator'];
   if (horizonViews.includes(view)) {
     const horizonGroup = document.getElementById('nav-group-horizon');
     if (horizonGroup) horizonGroup.classList.add('expanded');
@@ -1071,7 +1078,7 @@ async function switchView(view) {
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
     'helm-board': 'Task Board',
     regimen: 'Regimen',
-    performance: 'Main Metrics', 'productivity-hrs': 'Productivity Hrs.', 'tardiness-validator': 'Tardiness Validator',
+    'managers-nook': "Manager's Nook", 'tardiness-validator': 'Tardiness Validator',
   };
   var viewTitleEl = document.getElementById('view-title');
   if (viewTitleEl) viewTitleEl.textContent = titles[view] || view;
@@ -1104,7 +1111,7 @@ async function switchView(view) {
   if (view === 'dashboard') renderDashboard();
   if (view === 'alerts') await loadAllDataForAlerts();
   if (view === 'billing') await initBillingCompliance();
-  if (view === 'performance') { if (typeof initPerformance === 'function') await initPerformance(); }
+  if (view === 'managers-nook') { if (typeof initManagersNook === 'function') initManagersNook(); }
   if (view === 'admin') { if (typeof onAdminViewLoad === 'function') onAdminViewLoad(); }
   if (view === 'compass-input') { if (typeof initCompass === 'function') initCompass(); }
   if (view === 'compass-disputes') { if (typeof initCompassDisputes === 'function') initCompassDisputes(); }
@@ -1114,7 +1121,7 @@ async function switchView(view) {
   const helmViews = ['helm-board'];
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
-  if (view === 'productivity-hrs') { if (typeof initProductivityHrs === 'function') initProductivityHrs(); }
+
   if (view === 'tardiness-validator') { if (typeof initTardinessValidator === 'function') initTardinessValidator(); }
 }
 

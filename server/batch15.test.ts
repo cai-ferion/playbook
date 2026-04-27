@@ -155,51 +155,31 @@ describe("Batch 15 Changes", () => {
     });
   });
 
-  // 7. Horizon - Rename Performance to Main Metrics
-  describe("Horizon - Main Metrics Rename", () => {
-    it("should show 'Main Metrics' in sidebar nav instead of 'Performance'", () => {
+  // 7. Horizon - Manager's Nook (replaced Main Metrics & Productivity Hrs)
+  describe("Horizon - Manager's Nook", () => {
+    it("should show Manager's Nook in sidebar nav", () => {
       const indexHtml = fs.readFileSync(
         path.join(__dirname, "public/index.html"),
         "utf-8"
       );
-      // Should have Main Metrics label in the Horizon section
-      expect(indexHtml).toContain("Main Metrics");
+      expect(indexHtml).toContain("Manager's Nook");
     });
 
-    it("should have 'Main Metrics' in switchView title map", () => {
+    it("should have managers-nook in switchView title map", () => {
       const appJs = fs.readFileSync(
         path.join(__dirname, "public/js/app.js"),
         "utf-8"
       );
-      expect(appJs).toContain("performance: 'Main Metrics'");
+      expect(appJs).toContain("Manager's Nook");
     });
-  });
 
-  // 8. Horizon - Productivity Hrs child page
-  describe("Horizon - Productivity Hrs", () => {
-    it("should have Productivity Hrs nav item in sidebar", () => {
+    it("should NOT have Main Metrics or Productivity Hrs nav items", () => {
       const indexHtml = fs.readFileSync(
         path.join(__dirname, "public/index.html"),
         "utf-8"
       );
-      expect(indexHtml).toContain("Productivity Hrs.");
-      expect(indexHtml).toContain("productivity-hrs");
-    });
-
-    it("should have productivity-hrs view container", () => {
-      const indexHtml = fs.readFileSync(
-        path.join(__dirname, "public/index.html"),
-        "utf-8"
-      );
-      expect(indexHtml).toContain('id="view-productivity-hrs"');
-    });
-
-    it("should have productivity-hrs in allViews array", () => {
-      const appJs = fs.readFileSync(
-        path.join(__dirname, "public/js/app.js"),
-        "utf-8"
-      );
-      expect(appJs).toContain("'productivity-hrs'");
+      expect(indexHtml).not.toContain('id="nav-performance"');
+      expect(indexHtml).not.toContain('id="nav-productivity-hrs"');
     });
 
     it("should auto-expand Horizon group for horizon views", () => {

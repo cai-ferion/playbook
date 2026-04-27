@@ -3187,3 +3187,18 @@
 
 ## Role Change Fixes (April 28, 2026 - Batch 3)
 - [x] Fix: Week Ending dropdown not populating — API returns plain array, JS expects { weeks, current_week_ending }
+
+## Manager's Nook (April 28, 2026)
+- [x] Remove "Productivity Hours" and "Main Metrics" nav items and views from Horizon
+- [x] Add "Manager's Nook" nav item under Horizon (Managers + Admin only)
+- [x] Add managers-nook view HTML with month picker + 3-month rolling trend
+- [x] Server route: GET /api/io/managers-nook/scorecard — aggregated supervisor metrics
+- [x] Metric 1: Valid tardiness count per supervisor per month (from io_tardiness where validation_status='Valid')
+- [x] Metric 2: Coaching coverage — unique agents coached + total sessions + missing agents per supervisor per month
+- [x] Metric 3: Insights submitted & approved per supervisor per month (from io_insights)
+- [x] Metric 4: Shrinkage per supervisor per month — (PL+UPL)/(P+PL+UPL)*100 from io_attendance tags
+- [x] Frontend JS: managers-nook.js with scorecard table, drill-down modals, trend sparklines
+- [x] CSS styling for Manager's Nook
+- [x] Vitest tests for managers-nook routes and UI
+- [x] Update switchView in app.js for managers-nook view
+- [x] Supervisors arranged alphabetically in the scorecard table

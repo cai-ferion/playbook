@@ -325,13 +325,9 @@
             <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="nav-group-items" id="nav-group-items-horizon">
-            <button class="nav-item" data-view="performance" onclick="switchView('performance')" id="nav-performance">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              Main Metrics
-            </button>
-            <button class="nav-item" data-view="productivity-hrs" onclick="switchView('productivity-hrs')" id="nav-productivity-hrs">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Productivity Hrs.
+            <button class="nav-item" data-view="managers-nook" onclick="switchView('managers-nook')" id="nav-managers-nook" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Manager's Nook
             </button>
             <button class="nav-item" data-view="tardiness-validator" onclick="switchView('tardiness-validator')" id="nav-tardiness-validator">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -1644,53 +1640,63 @@
       </div>
 
 
-      <!-- ===== View: Productivity Hrs. ===== -->
-      <div class="view-container view-hidden" id="view-productivity-hrs">
+      <!-- ===== View: Manager's Nook ===== -->
+      <div class="view-container view-hidden" id="view-managers-nook">
         <div class="module-page">
-          <div class="loading-overlay" id="productivity-hrs-loading" style="display:none;">
+          <div class="loading-overlay" id="managers-nook-loading" style="display:none;">
             <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
-            <div class="loading-text">Loading Productivity Data...</div>
+            <div class="loading-text">Loading Supervisor Scorecard...</div>
           </div>
-          <!-- Omnibar -->
-          <div class="filter-bar" style="margin-bottom:12px;align-items:center;flex-wrap:wrap;gap:8px;">
+
+          <!-- Month Selector -->
+          <div class="filter-bar" style="margin-bottom:16px;align-items:center;flex-wrap:wrap;gap:8px;">
             <div style="display:flex;align-items:center;gap:8px;flex:1;">
-              <span class="filter-label">Week Ending:</span>
-              <select class="form-select" id="prod-week-select" onchange="prodLoadWeek()" style="min-width:160px;"></select>
-              <span class="filter-label" style="margin-left:12px;">Planning Group:</span>
-              <select class="form-select" id="prod-pg-filter" onchange="prodApplyFilters()">
-                <option value="All">All Groups</option>
-              </select>
+              <span class="filter-label">Month:</span>
+              <select class="form-select" id="nook-month-select" onchange="nookLoadScorecard()" style="min-width:160px;"></select>
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);margin-left:12px;cursor:pointer;">
+                <input type="checkbox" id="nook-trend-toggle" onchange="nookToggleTrend()" style="accent-color:var(--accent-primary);">
+                Show 3-Month Trend
+              </label>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
-              <span id="prod-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Agents: 0</span>
+              <span id="nook-supervisor-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Supervisors: 0</span>
             </div>
           </div>
-          <div id="productivity-hrs-content">
+
+          <!-- Scorecard Table -->
+          <div id="managers-nook-content">
             <div class="module-table-wrapper">
-              <table class="data-table module-table" id="prod-table" style="font-size:12px;">
-                <thead>
+              <table class="data-table module-table nook-table" id="nook-table" style="font-size:12px;">
+                <thead id="nook-table-head">
                   <tr>
-                    <th style="position:sticky;left:0;z-index:2;background:var(--bg-secondary);min-width:180px;">Agent Name</th>
-                    <th style="text-align:right;">Available</th>
-                    <th style="text-align:right;">Non-SRT Prod.</th>
-                    <th style="text-align:right;">FB Training</th>
-                    <th style="text-align:right;">Onboarding</th>
-                    <th style="text-align:right;">Coaching</th>
-                    <th style="text-align:right;">Wellness</th>
-                    <th style="text-align:right;">Team Mtg.</th>
-                    <th style="text-align:right;font-weight:700;">Total Billable</th>
-                    <th style="text-align:right;font-weight:700;">Delivered Hrs.</th>
+                    <th style="position:sticky;left:0;z-index:2;background:var(--bg-secondary);min-width:200px;">Supervisor</th>
+                    <th style="text-align:center;min-width:60px;">Agents</th>
+                    <th style="text-align:center;min-width:80px;">Valid Tardiness</th>
+                    <th style="text-align:center;min-width:120px;">Coaching Coverage</th>
+                    <th style="text-align:center;min-width:100px;">Insights (Sub/App)</th>
+                    <th style="text-align:center;min-width:90px;">Shrinkage %</th>
                   </tr>
                 </thead>
-                <tbody id="prod-table-body"></tbody>
-                <tfoot id="prod-table-foot"></tfoot>
+                <tbody id="nook-table-body"></tbody>
               </table>
             </div>
-            <div id="prod-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;opacity:0.4;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <p>No productivity data available for the selected week.</p>
+            <div id="nook-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;opacity:0.4;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <p>No scorecard data available for the selected month.</p>
             </div>
           </div>
+
+          <!-- Drill-down Modal: Missing Coaching -->
+          <div class="modal-overlay" id="nook-coaching-modal" style="display:none;">
+            <div class="modal-content" style="max-width:500px;">
+              <div class="modal-header">
+                <h3 id="nook-coaching-modal-title">Missing Coaching</h3>
+                <button class="modal-close" onclick="document.getElementById('nook-coaching-modal').style.display='none';">&times;</button>
+              </div>
+              <div class="modal-body" id="nook-coaching-modal-body" style="max-height:400px;overflow-y:auto;"></div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -2016,6 +2022,7 @@
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
+  <script src="js/managers-nook.js?v=100" defer></script>
   <script src="js/tardiness.js?v=111" defer></script>
 
   <!-- Maintenance Overlay -->
