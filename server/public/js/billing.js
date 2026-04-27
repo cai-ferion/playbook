@@ -128,6 +128,9 @@ async function initBillingCompliance() {
     }
   }
   await otDashInit();
+
+  // Role Change tab visibility (Managers, TLs, Admin)
+  if (typeof initRoleChangeVisibility === 'function') initRoleChangeVisibility();
 }
 
 // ===== Load Compliance Data =====

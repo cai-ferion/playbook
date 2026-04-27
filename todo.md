@@ -3163,3 +3163,20 @@
 - [x] Remove "Clear All WFM Data" button from admin.js
 - [x] Remove DELETE /wfm-schedule route from io-routes.ts
 - [x] Change WFM upload to skip-duplicates (INSERT IGNORE / check existing before insert) instead of delete-then-insert
+
+## Role Change Email Automation (April 28, 2026)
+- [x] Add io_role_changes table to schema (ohr, date_from, date_to, new_billing_role, new_billing_pg, original_role, original_pg, week_ending, created_by, email_generated_at)
+- [x] Run migration for io_role_changes table
+- [x] Server route: GET /api/io/role-change/deficit-analysis (wraps billing compliance to extract deficit PGs)
+- [x] Server route: GET /api/io/role-change/available-staff (TLs/Trainers with availability status for target dates)
+- [x] Server route: POST /api/io/role-change/generate (generate email HTML + auto-update attendance records)
+- [x] Server route: GET /api/io/role-change/history (list past role change requests by week)
+- [x] Frontend HTML: add "Role Changes" tab to Billing Compliance view
+- [x] Frontend JS: role-change.js wizard (week selector → deficit table → staff selection → assignment → email preview)
+- [x] Auto-suggest logic: recommend new role/PG based on deficit analysis
+- [x] Email template: match Jennifer's exact format (blue headers, yellow change columns, Calibri font)
+- [x] Auto-update attendance: write billing_role/billing_planning_group changes to io_attendance after generation
+- [x] Conflict detection: prevent duplicate role changes for overlapping dates
+- [x] CSS styling: match Playbook design language (restyled light theme)
+- [x] Vitest tests for all new role-change routes
+- [x] Bump cache versions in index.html

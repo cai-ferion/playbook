@@ -552,6 +552,21 @@
       <div class="view-container view-hidden" id="view-billing">
         <div class="billing-compliance-container">
 
+          <!-- Billing Tab Bar -->
+          <div class="rc-tab-bar" id="billing-main-tabs">
+            <button class="rc-tab active" id="billing-main-tab-compliance" onclick="switchBillingMainTab('compliance')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Compliance
+            </button>
+            <button class="rc-tab" id="billing-main-tab-role-changes" onclick="switchBillingMainTab('role-changes')" style="display:none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+              Role Changes
+            </button>
+          </div>
+
+          <!-- Compliance Tab Content -->
+          <div id="billing-tab-compliance">
+
           <div class="billing-controls">
             <div class="filter-group">
               <label class="filter-label">Select Week Ending:</label>
@@ -725,7 +740,139 @@
             </div>
           </div><!-- end ot-dashboard-section -->
 
+          </div><!-- end billing-tab-compliance -->
 
+          <!-- Role Changes Tab Content -->
+          <div id="billing-tab-role-changes" style="display:none;">
+
+            <!-- Step 1: Week & Date Selection -->
+            <div class="rc-wizard-section" id="rc-step-1">
+              <div class="rc-section-header">
+                <span class="rc-step-badge">1</span>
+                <h3 class="rc-section-title">Select Week & Date Range</h3>
+              </div>
+              <div class="rc-controls-row">
+                <div class="rc-control-group">
+                  <label class="rc-label">Week Ending</label>
+                  <select class="rc-select" id="rc-week-select" onchange="rcOnWeekChange()">
+                    <option value="">Select Week Ending</option>
+                  </select>
+                </div>
+                <div class="rc-control-group">
+                  <label class="rc-label">Start Date</label>
+                  <input type="date" class="rc-input" id="rc-date-from">
+                </div>
+                <div class="rc-control-group">
+                  <label class="rc-label">End Date</label>
+                  <input type="date" class="rc-input" id="rc-date-to">
+                </div>
+                <div class="rc-control-group rc-control-actions">
+                  <button class="rc-btn rc-btn-primary" id="rc-analyze-btn" onclick="rcAnalyze()" disabled>Analyze Deficits</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Deficit Analysis -->
+            <div class="rc-wizard-section" id="rc-step-2" style="display:none;">
+              <div class="rc-section-header">
+                <span class="rc-step-badge">2</span>
+                <h3 class="rc-section-title">Deficit Analysis</h3>
+                <span class="rc-section-subtitle" id="rc-deficit-summary"></span>
+              </div>
+              <div class="rc-table-wrap">
+                <table class="rc-table" id="rc-deficit-table">
+                  <thead>
+                    <tr>
+                      <th>PG × Role</th>
+                      <th style="text-align:center;">Target Hrs</th>
+                      <th style="text-align:center;">Billed Hrs</th>
+                      <th style="text-align:center;">Compliance %</th>
+                      <th style="text-align:center;">Hours Gap</th>
+                      <th style="text-align:center;">HC Needed</th>
+                      <th style="text-align:center;">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rc-deficit-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Step 3: Available Staff -->
+            <div class="rc-wizard-section" id="rc-step-3" style="display:none;">
+              <div class="rc-section-header">
+                <span class="rc-step-badge">3</span>
+                <h3 class="rc-section-title">Available Support Staff</h3>
+                <span class="rc-section-subtitle" id="rc-staff-summary"></span>
+              </div>
+              <div class="rc-table-wrap">
+                <table class="rc-table" id="rc-staff-table">
+                  <thead>
+                    <tr>
+                      <th style="width:40px;text-align:center;"><input type="checkbox" id="rc-select-all" onchange="rcToggleSelectAll()"></th>
+                      <th>Name</th>
+                      <th>OHR</th>
+                      <th>Role</th>
+                      <th>Planning Group</th>
+                      <th style="text-align:center;">Status</th>
+                      <th>New Role</th>
+                      <th>New PG</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rc-staff-body"></tbody>
+                </table>
+              </div>
+              <div class="rc-actions-bar" id="rc-generate-bar" style="display:none;">
+                <span class="rc-selected-count" id="rc-selected-count">0 selected</span>
+                <button class="rc-btn rc-btn-primary" id="rc-generate-btn" onclick="rcGenerateEmail()">Generate Email & Update Attendance</button>
+              </div>
+            </div>
+
+            <!-- Step 4: Email Preview -->
+            <div class="rc-wizard-section" id="rc-step-4" style="display:none;">
+              <div class="rc-section-header">
+                <span class="rc-step-badge">4</span>
+                <h3 class="rc-section-title">Email Preview</h3>
+              </div>
+              <div class="rc-email-preview-bar">
+                <div class="rc-email-subject" id="rc-email-subject"></div>
+                <div class="rc-email-actions">
+                  <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailHtml()">Copy HTML to Clipboard</button>
+                  <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailPlainText()">Copy Plain Text</button>
+                </div>
+              </div>
+              <div class="rc-email-preview" id="rc-email-preview"></div>
+              <div class="rc-result-summary" id="rc-result-summary" style="display:none;"></div>
+            </div>
+
+            <!-- History Section -->
+            <div class="rc-wizard-section" id="rc-history-section">
+              <div class="rc-section-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#6b7280;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <h3 class="rc-section-title">Role Change History</h3>
+              </div>
+              <div class="rc-table-wrap">
+                <table class="rc-table" id="rc-history-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>OHR</th>
+                      <th>Original Role</th>
+                      <th>Original PG</th>
+                      <th>New Role</th>
+                      <th>New PG</th>
+                      <th>Dates</th>
+                      <th>Created By</th>
+                      <th>Generated At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rc-history-body">
+                    <tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">Select a week to view history</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div><!-- end billing-tab-role-changes -->
 
         </div>
       </div>
@@ -1859,9 +2006,10 @@
   <script src="js/notifications.js?v=106"></script>
   <script src="js/maintenance.js?v=105"></script>
   <script src="js/admin.js?v=108"></script>
-  <script src="js/billing.js?v=134"></script>
+  <script src="js/billing.js?v=135"></script>
   <script src="js/billing-v2.js?v=122"></script>
   <script src="js/billing-v2-page.js?v=101"></script>
+  <script src="js/role-change.js?v=101"></script>
 
   <script src="js/performance.js?v=102g" defer></script>
   <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
