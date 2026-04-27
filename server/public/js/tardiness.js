@@ -692,14 +692,4 @@ async function tardaLoadEscalations() {
 
 // ============================================================
 // View Initialization Hooks
-// ============================================================
-
-// Hook into the global switchView function
-const _origSwitchView = window.switchView;
-if (typeof _origSwitchView === "function") {
-  window.switchView = function(view) {
-    _origSwitchView(view);
-    if (view === "tardiness-validator") initTardinessValidator();
-    if (view === "tardiness-analytics") initTardinessAnalytics();
-  };
-}
+/// Init hooks are registered in app.js switchView() — no monkey-patching needed.

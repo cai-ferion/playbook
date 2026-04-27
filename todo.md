@@ -3087,3 +3087,6 @@
 
 ## Tardiness — Query Fix (April 27, 2026)
 - [x] Fix double-execution bug in GET /api/io/tardiness: first query ran with literal ? placeholders, second query tried to inline params but first already failed
+
+## Tardiness — Blank Page Fix (April 27, 2026)
+- [x] Fix blank Tardiness Validator page: switchView hook in tardiness.js monkey-patched window.switchView but app.js declares it as a local async function (not on window). Moved init calls into app.js switchView() matching existing pattern (performance, productivity-hrs).

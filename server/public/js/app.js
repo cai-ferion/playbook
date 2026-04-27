@@ -1115,6 +1115,8 @@ async function switchView(view) {
   if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
   if (view === 'productivity-hrs') { if (typeof initProductivityHrs === 'function') initProductivityHrs(); }
+  if (view === 'tardiness-validator') { if (typeof initTardinessValidator === 'function') initTardinessValidator(); }
+  if (view === 'tardiness-analytics') { if (typeof initTardinessAnalytics === 'function') initTardinessAnalytics(); }
 }
 
 /**
