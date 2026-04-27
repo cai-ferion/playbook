@@ -172,7 +172,7 @@ describe("Tardiness — Client JS (tardiness.js)", () => {
   });
 
   it("hooks into switchView", () => {
-    expect(tardinessJs).toContain("_origSwitchView");
+    expect(tardinessJs).toContain("Init hooks are registered in app.js");
     expect(tardinessJs).toContain("tardiness-validator");
     expect(tardinessJs).toContain("tardiness-analytics");
   });

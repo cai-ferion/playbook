@@ -3090,3 +3090,7 @@
 
 ## Tardiness — Blank Page Fix (April 27, 2026)
 - [x] Fix blank Tardiness Validator page: switchView hook in tardiness.js monkey-patched window.switchView but app.js declares it as a local async function (not on window). Moved init calls into app.js switchView() matching existing pattern (performance, productivity-hrs).
+
+## Regimen — Editing Access & Missing Fields (April 27, 2026)
+- [x] Grant 740044909 (Joshua Aspera) editing capabilities in Regimen table — DB already had regimen.edit_employee=true; added missing regimen.full_columns, regimen.add_employee, regimen.onboarding_tab, regimen.permissions_tab
+- [x] Add all missing fields (including Role) to the inline expansion panel — removed table-column exclusion filter so ALL visible columns appear in the detail panel

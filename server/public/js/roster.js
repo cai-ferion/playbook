@@ -658,9 +658,8 @@ window.rosterToggleInlineDetail = function(ohrId) {
   if (!emp) return;
 
   const cols = ROSTER.getVisibleColumns();
-  // Exclude the slim table columns from the detail (they're already visible)
-  const tableKeys = new Set(ROSTER.getTableColumns().map(c => c.key));
-  const detailCols = cols.filter(c => !tableKeys.has(c.key));
+  // Show ALL columns in the detail panel (including those in the slim table)
+  const detailCols = cols;
 
   const groups = [
     { label: 'Identity', keys: detailCols.filter(c => c.group === 'identity') },
