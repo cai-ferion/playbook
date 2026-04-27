@@ -162,6 +162,13 @@
       "when": 1777069886722,
       "tag": "0022_unique_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1777250411784,
+      "tag": "0023_fancy_blue_shield",
+      "breakpoints": true
     }
   ]
 }

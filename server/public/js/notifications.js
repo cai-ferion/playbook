@@ -228,6 +228,10 @@ function getNotifIcon(type) {
     insight_status_changed: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>',
     insight_implemented: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     insight_review_pending: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    // Tardiness
+    tardiness_escalation: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    tardiness_validated: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    tardiness_uploaded: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
   };
   return icons[type] || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
 }
@@ -252,6 +256,8 @@ function getNotifTagLabel(type) {
     insight_submitted: 'Insight', insight_initial_accepted: 'Accepted', insight_initial_rejected: 'Rejected',
     insight_final_accepted: 'Elevated', insight_final_rejected: 'Rejected', insight_status_changed: 'Updated',
     insight_implemented: 'Implemented', insight_review_pending: 'Pending',
+    // Tardiness
+    tardiness_escalation: 'Escalation', tardiness_validated: 'Validated', tardiness_uploaded: 'Uploaded',
   };
   return labels[type] || '';
 }
@@ -276,6 +282,8 @@ function getNotifColor(type) {
     insight_submitted: '#3b82f6', insight_initial_accepted: '#22c55e', insight_initial_rejected: '#ef4444',
     insight_final_accepted: '#10b981', insight_final_rejected: '#dc2626', insight_status_changed: '#8b5cf6',
     insight_implemented: '#7c3aed', insight_review_pending: '#f59e0b',
+    // Tardiness
+    tardiness_escalation: '#ef4444', tardiness_validated: '#22c55e', tardiness_uploaded: '#3b82f6',
   };
   return colors[type] || '#9ca3af';
 }
@@ -355,6 +363,18 @@ function getNotifBrief(n) {
     case 'insight_review_pending': {
       const meta = tryParseMeta(n.metadata);
       return `${meta.count || ''} insight(s) awaiting your review`;
+    }
+    case 'tardiness_escalation': {
+      const meta = tryParseMeta(n.metadata);
+      return `${meta.employee_name || 'Agent'} — ${meta.instances || 0} valid late instances in 4 weeks`;
+    }
+    case 'tardiness_validated': {
+      const meta = tryParseMeta(n.metadata);
+      return `${meta.count || 1} tardiness item(s) validated as ${meta.status || 'Valid'}`;
+    }
+    case 'tardiness_uploaded': {
+      const meta = tryParseMeta(n.metadata);
+      return `${meta.count || 0} tardiness records uploaded for WE ${meta.week_ending || ''}`;
     }
     default:
       return n.message ? n.message.substring(0, 60) : '';
@@ -515,6 +535,24 @@ function showNotifDetailCard(n) {
       if (meta.planning_group) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Planning Group</span><span class="notif-detail-value">${escapeHtml(meta.planning_group)}</span></div>`;
       if (meta.review_tier) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Review Tier</span><span class="notif-detail-value">${escapeHtml(meta.review_tier)}</span></div>`;
       if (meta.implementation_date) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Implemented</span><span class="notif-detail-value">${escapeHtml(meta.implementation_date)}</span></div>`;
+      break;
+    case 'tardiness_escalation':
+      if (meta.employee_name) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Agent</span><span class="notif-detail-value">${escapeHtml(meta.employee_name)}</span></div>`;
+      if (meta.ohr_id) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">OHR</span><span class="notif-detail-value">${escapeHtml(meta.ohr_id)}</span></div>`;
+      if (meta.instances) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Valid Instances</span><span class="notif-detail-value" style="color:var(--danger);font-weight:700;">${meta.instances}</span></div>`;
+      if (meta.total_minutes) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Total Minutes</span><span class="notif-detail-value">${meta.total_minutes}</span></div>`;
+      if (meta.planning_group) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Planning Group</span><span class="notif-detail-value">${escapeHtml(meta.planning_group)}</span></div>`;
+      if (meta.supervisor_name) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Supervisor</span><span class="notif-detail-value">${escapeHtml(meta.supervisor_name)}</span></div>`;
+      break;
+    case 'tardiness_validated':
+      if (meta.status) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Status</span><span class="notif-detail-value">${escapeHtml(meta.status)}</span></div>`;
+      if (meta.count) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Items</span><span class="notif-detail-value">${meta.count}</span></div>`;
+      if (meta.validator) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Validated By</span><span class="notif-detail-value">${escapeHtml(meta.validator)}</span></div>`;
+      break;
+    case 'tardiness_uploaded':
+      if (meta.count) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Records</span><span class="notif-detail-value">${meta.count}</span></div>`;
+      if (meta.week_ending) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Week Ending</span><span class="notif-detail-value">${escapeHtml(meta.week_ending)}</span></div>`;
+      if (meta.uploader) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Uploaded By</span><span class="notif-detail-value">${escapeHtml(meta.uploader)}</span></div>`;
       break;
     default:
       if (n.message) detailRows += `<div class="notif-detail-row"><span class="notif-detail-label">Details</span><span class="notif-detail-value">${escapeHtml(n.message)}</span></div>`;

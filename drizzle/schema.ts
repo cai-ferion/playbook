@@ -811,3 +811,49 @@ export const ioWfmSchedules = mysqlTable("io_wfm_schedules", {
 
 export type IoWfmSchedule = typeof ioWfmSchedules.$inferSelect;
 export type InsertIoWfmSchedule = typeof ioWfmSchedules.$inferInsert;
+
+// ============================================================
+// Tardiness Validator & Analytics (Horizon)
+// ============================================================
+
+/**
+ * io_tardiness — Individual tardiness records uploaded via CSV.
+ * Weekly cadence: Saturday to Friday. TLs validate each item as Valid/Invalid.
+ * Only "Valid" items count toward analytics/KPIs.
+ * Lock-in: once validated, cannot be changed (admin can unlock).
+ */
+export const ioTardiness = mysqlTable("io_tardiness", {
+  id: int("id").autoincrement().primaryKey(),
+
+  // ── Employee Info (from CSV + enriched from io_employees) ──
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  employee_name: varchar("employee_name", { length: 255 }).notNull(),
+  supervisor_name: varchar("supervisor_name", { length: 255 }),
+  planning_group: varchar("planning_group", { length: 100 }),
+  actual_role: varchar("actual_role", { length: 100 }),
+  shift_time: varchar("shift_time", { length: 100 }),
+
+  // ── Shift & Tardiness Data (from CSV, auto-calculated) ──
+  date: varchar("date", { length: 16 }).notNull(),                // YYYY-MM-DD
+  roster_login: varchar("roster_login", { length: 30 }),           // datetime string
+  roster_logout: varchar("roster_logout", { length: 30 }),         // datetime string
+  actual_login: varchar("actual_login", { length: 30 }),           // datetime string (blank = no-show)
+  actual_logout: varchar("actual_logout", { length: 30 }),         // datetime string
+  tardiness_minutes: int("tardiness_minutes").default(0).notNull(),// auto-calculated
+  shift_type: varchar("shift_type", { length: 30 }),               // Morning/Afternoon/Overnight/GY
+  week_ending: varchar("week_ending", { length: 16 }).notNull(),   // YYYY-MM-DD (Friday)
+
+  // ── Validation ──
+  validation_status: varchar("validation_status", { length: 20 }).default("Pending").notNull(), // Pending/Valid/Invalid
+  validated_by: varchar("validated_by", { length: 255 }),
+  validated_by_ohr: varchar("validated_by_ohr", { length: 20 }),
+  validated_at: varchar("validated_at", { length: 64 }),
+  remarks: text("remarks"),
+
+  // ── Upload Tracking ──
+  upload_batch: varchar("upload_batch", { length: 64 }),
+  created_at: varchar("created_at", { length: 64 }),
+});
+
+export type IoTardiness = typeof ioTardiness.$inferSelect;
+export type InsertIoTardiness = typeof ioTardiness.$inferInsert;

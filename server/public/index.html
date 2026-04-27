@@ -332,6 +332,14 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Productivity Hrs.
             </button>
+            <button class="nav-item" data-view="tardiness-validator" onclick="switchView('tardiness-validator')" id="nav-tardiness-validator">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Tardiness Validator
+            </button>
+            <button class="nav-item" data-view="tardiness-analytics" onclick="switchView('tardiness-analytics')" id="nav-tardiness-analytics">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+              Tardiness Analytics
+            </button>
           </div>
         </div>
 
@@ -828,6 +836,31 @@
               <div class="admin-result" id="wfm-upload-result" style="display:none;margin-top:8px;"></div>
               <!-- WFM Schedule Summary -->
               <div id="wfm-schedule-summary" style="margin-top:16px;"></div>
+            </div>
+          </div>
+
+          <!-- Tardiness Data Upload -->
+          <div class="card admin-card" style="margin-top:20px;">
+            <div class="card-header">
+              <span class="card-title">TARDINESS DATA UPLOAD</span>
+              <span id="tardiness-upload-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
+            </div>
+            <div class="admin-card-body">
+              <p class="admin-help">Upload a CSV file with tardiness data. Only late logins (tardiness > 0 minutes) will be imported as validation items. Duplicates (same OHR + date) are automatically skipped.</p>
+              <p class="admin-help" style="font-size:11px;color:var(--fg-muted);margin-top:4px;">Required columns: <code>ohr, name, date, roster_login, roster_logout, actual_login, actual_logout</code></p>
+              <p class="admin-help" style="font-size:11px;color:var(--fg-muted);margin-top:2px;">Auto-calculated: tardiness_minutes, shift_type, week_ending, supervisor, planning_group, role (from employee roster)</p>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+                <input type="file" id="tardiness-csv-input" accept=".csv,.xlsx,.xls" style="font-size:13px;">
+                <button class="btn btn-primary btn-sm" id="tardiness-upload-btn" onclick="tardinessUploadCSV()" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Upload Tardiness Data
+                </button>
+              </div>
+              <div class="admin-progress" id="tardiness-upload-progress" style="display:none;margin-top:12px;">
+                <div class="admin-progress-bar"><div class="admin-progress-fill" id="tardiness-upload-progress-fill" style="width:0%;"></div></div>
+                <span class="admin-progress-text" id="tardiness-upload-progress-text">Parsing file...</span>
+              </div>
+              <div class="admin-result" id="tardiness-upload-result" style="display:none;margin-top:8px;"></div>
             </div>
           </div>
 
@@ -1524,6 +1557,137 @@
         </div>
       </div>
 
+      <!-- ===== Tardiness Validator View ===== -->
+      <div class="view-container view-hidden" id="view-tardiness-validator">
+        <div class="module-page">
+          <div class="loading-overlay" id="tardiness-validator-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Tardiness Data...</div>
+          </div>
+          <!-- Omnibar -->
+          <div class="filter-bar" style="margin-bottom:12px;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;">
+              <span class="filter-label">Week Ending:</span>
+              <select class="form-select" id="tard-week-select" onchange="tardLoadData()" style="min-width:160px;"></select>
+              <span class="filter-label" style="margin-left:8px;">Status:</span>
+              <select class="form-select" id="tard-status-filter" onchange="tardLoadData()" style="min-width:120px;">
+                <option value="">All</option>
+                <option value="Pending" selected>Pending</option>
+                <option value="Valid">Valid</option>
+                <option value="Invalid">Invalid</option>
+              </select>
+              <span class="filter-label" style="margin-left:8px;">PG:</span>
+              <select class="form-select" id="tard-pg-filter" onchange="tardLoadData()" style="min-width:140px;">
+                <option value="">All Groups</option>
+              </select>
+              <input type="text" class="form-input form-input-sm" id="tard-search" placeholder="Search agent or OHR..." oninput="tardSearchDebounce()" style="max-width:200px;margin-left:8px;">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="tard-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Items: 0</span>
+              <button class="btn btn-outline btn-sm" id="tard-bulk-valid-btn" onclick="tardBulkValidate('Valid')" style="display:none;font-size:11px;">Bulk Valid</button>
+              <button class="btn btn-outline btn-sm" id="tard-bulk-invalid-btn" onclick="tardBulkValidate('Invalid')" style="display:none;font-size:11px;">Bulk Invalid</button>
+              <button class="btn btn-outline btn-sm" onclick="tardExportCSV()" style="font-size:11px;">Export CSV</button>
+            </div>
+          </div>
+          <!-- Table -->
+          <div id="tardiness-validator-content">
+            <div class="module-table-wrapper">
+              <table class="data-table module-table" id="tard-table" style="font-size:12px;">
+                <thead>
+                  <tr>
+                    <th style="width:30px;"><input type="checkbox" id="tard-select-all" onchange="tardToggleSelectAll()" title="Select all"></th>
+                    <th style="min-width:160px;">Agent</th>
+                    <th>OHR</th>
+                    <th>Date</th>
+                    <th style="text-align:right;">Minutes Late</th>
+                    <th>Shift Type</th>
+                    <th>Roster Login</th>
+                    <th>Actual Login</th>
+                    <th>Status</th>
+                    <th>Validated By</th>
+                    <th>Remarks</th>
+                    <th style="min-width:180px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tard-table-body"></tbody>
+              </table>
+            </div>
+            <div id="tard-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;opacity:0.4;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <p>No tardiness items found for the selected filters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Tardiness Analytics View ===== -->
+      <div class="view-container view-hidden" id="view-tardiness-analytics">
+        <div class="module-page">
+          <div class="loading-overlay" id="tardiness-analytics-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Analytics...</div>
+          </div>
+          <!-- Filters -->
+          <div class="filter-bar" style="margin-bottom:16px;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;">
+              <span class="filter-label">From:</span>
+              <select class="form-select" id="tarda-start-we" onchange="tardaLoadAnalytics()" style="min-width:140px;"></select>
+              <span class="filter-label" style="margin-left:4px;">To:</span>
+              <select class="form-select" id="tarda-end-we" onchange="tardaLoadAnalytics()" style="min-width:140px;"></select>
+              <span class="filter-label" style="margin-left:8px;">PG:</span>
+              <select class="form-select" id="tarda-pg-filter" onchange="tardaLoadAnalytics()" style="min-width:140px;">
+                <option value="">All Groups</option>
+              </select>
+            </div>
+          </div>
+          <!-- KPI Cards -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;" id="tarda-kpi-row">
+            <div class="card" style="padding:16px;text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Valid Late Instances</div>
+              <div style="font-size:28px;font-weight:700;color:var(--danger);margin-top:4px;" id="tarda-kpi-instances">0</div>
+            </div>
+            <div class="card" style="padding:16px;text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Avg. Minutes Late</div>
+              <div style="font-size:28px;font-weight:700;color:var(--warning);margin-top:4px;" id="tarda-kpi-avg">0</div>
+            </div>
+            <div class="card" style="padding:16px;text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">Unique Agents Late</div>
+              <div style="font-size:28px;font-weight:700;color:var(--primary);margin-top:4px;" id="tarda-kpi-agents">0</div>
+            </div>
+            <div class="card" style="padding:16px;text-align:center;">
+              <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;">On-Time Rate</div>
+              <div style="font-size:28px;font-weight:700;color:var(--success);margin-top:4px;" id="tarda-kpi-ontime">100%</div>
+            </div>
+          </div>
+          <!-- Charts -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="card" style="padding:16px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Weekly Trend</div>
+              <canvas id="tarda-chart-weekly" height="220"></canvas>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px;">By Planning Group</div>
+              <canvas id="tarda-chart-pg" height="220"></canvas>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+            <div class="card" style="padding:16px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px;">By Team (Supervisor)</div>
+              <canvas id="tarda-chart-team" height="220"></canvas>
+            </div>
+            <div class="card" style="padding:16px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Top Repeat Offenders</div>
+              <div id="tarda-offenders-table" style="max-height:260px;overflow-y:auto;"></div>
+            </div>
+          </div>
+          <!-- Escalation Alerts -->
+          <div class="card" style="padding:16px;margin-bottom:20px;" id="tarda-escalation-card" style="display:none;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--danger);">Escalation Alerts (3+ valid instances in rolling 4 weeks)</div>
+            <div id="tarda-escalation-list"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== View 9: Roster Management ===== -->
 
 
@@ -1673,7 +1837,7 @@
   <script src="js/input-portal.js?v=121"></script>
   <script src="js/input-compact.js?v=121"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
-  <script src="js/notifications.js?v=105"></script>
+  <script src="js/notifications.js?v=106"></script>
   <script src="js/maintenance.js?v=105"></script>
   <script src="js/admin.js?v=107"></script>
   <script src="js/billing.js?v=134"></script>
@@ -1693,6 +1857,7 @@
   <script src="js/roster.js?v=204" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
+  <script src="js/tardiness.js?v=100" defer></script>
 
   <!-- Maintenance Overlay -->
   <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">

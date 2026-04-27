@@ -1021,7 +1021,7 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'regimen', 'performance', 'productivity-hrs'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'regimen', 'performance', 'productivity-hrs', 'tardiness-validator', 'tardiness-analytics'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -1057,7 +1057,7 @@ async function switchView(view) {
     const helmGroup = document.getElementById('nav-group-helm');
     if (helmGroup) helmGroup.classList.add('expanded');
   }
-  const horizonViews = ['performance', 'productivity-hrs'];
+  const horizonViews = ['performance', 'productivity-hrs', 'tardiness-validator', 'tardiness-analytics'];
   if (horizonViews.includes(view)) {
     const horizonGroup = document.getElementById('nav-group-horizon');
     if (horizonGroup) horizonGroup.classList.add('expanded');
@@ -1071,7 +1071,7 @@ async function switchView(view) {
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
     'helm-board': 'Task Board',
     regimen: 'Regimen',
-    performance: 'Main Metrics', 'productivity-hrs': 'Productivity Hrs.',
+    performance: 'Main Metrics', 'productivity-hrs': 'Productivity Hrs.', 'tardiness-validator': 'Tardiness Validator', 'tardiness-analytics': 'Tardiness Analytics',
   };
   var viewTitleEl = document.getElementById('view-title');
   if (viewTitleEl) viewTitleEl.textContent = titles[view] || view;

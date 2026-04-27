@@ -3028,3 +3028,55 @@
 ## Sandbox Review Area — Search Bar Focus Loss Bug (April 27, 2026)
 - [x] Fix search input losing focus after each keystroke — sandboxRenderKanban(skipToolbar) skips toolbar innerHTML rebuild
 - [x] Implement debounced search (150ms) that preserves cursor position (59 tests, full suite 1222/1224)
+
+## Tardiness Validator & Analytics Module (April 27, 2026)
+
+### Database
+- [x] Create io_tardiness table (20 columns incl. auto-calculated fields)
+- [x] Generate and apply migration SQL (drizzle/0023_fancy_blue_shield.sql)
+
+### Server-Side API
+- [x] POST /api/io/tardiness/upload — CSV upload with auto-calculation and enrichment
+- [x] GET /api/io/tardiness — list with filters (week_ending, PG, status, team scope)
+- [x] PATCH /api/io/tardiness/:id — validate (Valid/Invalid) with remarks, lock-in
+- [x] PATCH /api/io/tardiness/bulk-validate — bulk validation
+- [x] GET /api/io/tardiness/analytics — aggregated analytics (agent, team, PG, site-wide)
+- [x] GET /api/io/tardiness/export — CSV export of validated data
+- [x] GET /api/io/tardiness/escalation-check — rolling 4-week escalation
+- [x] Auto-enrichment from io_employees (supervisor, PG, shift_type, role)
+- [x] Auto-calculate tardiness_minutes from roster_login vs actual_login
+- [x] Auto-calculate week_ending as next Friday from date (Sat-Fri)
+- [x] Duplicate detection: same OHR + date = skip
+- [x] Only rows where actual_login > roster_login generate validation items
+
+### Admin Tools — Upload UI
+- [x] File upload widget in Admin Tools for tardiness CSV
+- [x] CSV parsing with flexible column name matching
+- [x] Show import summary (new items, skipped duplicates, enrichment stats)
+
+### Horizon — Tardiness Validator Page
+- [x] Table view with search, week filter, PG filter, status filter
+- [x] Auto-scoped to TL's team, admin "All" toggle
+- [x] Inline validate/invalidate with prompt for remarks
+- [x] Color coding: Red (>150 min), Yellow (30-150 min), Green (<30 min)
+- [x] Lock-in mechanism: once validated, cannot be changed (admin can unlock)
+- [x] Bulk validation: select multiple items and validate as Valid/Invalid
+- [x] CSV export button
+
+### Horizon — Tardiness Analytics Page
+- [x] KPI cards: total valid instances, avg tardiness minutes, on-time rate, unique agents
+- [x] Weekly trend chart (Chart.js bar + line)
+- [x] Per-PG breakdown chart
+- [x] Per-TL team comparison chart
+- [x] Top 5 repeat offenders table
+- [x] Escalation alerts panel (3+ valid instances in rolling 4 weeks)
+
+### Notifications & Escalation
+- [x] 3 notification types: tardiness_escalation, tardiness_validated, tardiness_uploaded
+- [x] Icons, labels, colors, brief, and detail card rendering in notifications.js
+- [x] Client-side triggers in tardiness.js for upload, validate, and bulk validate
+- [x] Escalation-check endpoint for rolling 4-week window
+
+### Tests
+- [x] 56 tardiness-specific tests passing (server/tardiness.test.ts)
+- [x] Full suite: 1278/1280 (2 pre-existing Supabase connectivity failures)

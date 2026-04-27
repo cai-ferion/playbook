@@ -13,6 +13,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerIORoutes } from "../io-routes.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
+import { registerTardinessRoutes } from "../io-tardiness-routes.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import performanceRouter from "../io-performance-routes.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
@@ -73,6 +74,7 @@ async function startServer() {
   // IO Operations API routes
   registerIORoutes(app);
   registerIOBackupRoutes(app);
+  registerTardinessRoutes(app);
   app.use('/api/io/performance', performanceRouter);
 
   // Auto-mailer for UPL/LATE notifications
