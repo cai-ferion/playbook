@@ -1590,6 +1590,13 @@
               </select>
               <input type="text" class="form-input form-input-sm" id="tard-search" placeholder="Search agent or OHR..." oninput="tardSearchDebounce()" style="max-width:200px;margin-left:8px;">
             </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <span class="filter-label">From:</span>
+              <input type="date" class="form-input form-input-sm" id="tard-date-from" onchange="tardLoadData()" style="width:140px;">
+              <span class="filter-label">To:</span>
+              <input type="date" class="form-input form-input-sm" id="tard-date-to" onchange="tardLoadData()" style="width:140px;">
+              <button class="btn btn-outline btn-sm" onclick="tardClearDateRange()" style="font-size:10px;padding:2px 8px;" title="Clear date range">Clear</button>
+            </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <span id="tard-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Items: 0</span>
               <button class="btn btn-outline btn-sm" id="tard-bulk-valid-btn" onclick="tardOpenBulkModal('Valid')" style="display:none;font-size:11px;">Bulk Valid</button>
@@ -1813,7 +1820,7 @@
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
-  <script src="js/tardiness.js?v=104" defer></script>
+  <script src="js/tardiness.js?v=105" defer></script>
 
   <!-- Maintenance Overlay -->
   <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">

@@ -220,7 +220,7 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     const actorName = String(req.headers["x-actor-name"] || "");
     const isAdmin = ADMIN_OHRS.includes(actorOhr);
 
-    const { week_ending, planning_group, status, search, scope, supervisor, shift_type } = req.query;
+    const { week_ending, planning_group, status, search, scope, supervisor, shift_type, date_from, date_to } = req.query;
 
     let conditions: string[] = [];
     let params: any[] = [];
@@ -237,6 +237,8 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     if (status) { conditions.push("t.validation_status = ?"); params.push(String(status)); }
     if (supervisor) { conditions.push("e.supervisor_name = ?"); params.push(String(supervisor)); }
     if (shift_type) { conditions.push("t.shift_type = ?"); params.push(String(shift_type)); }
+    if (date_from) { conditions.push("t.date >= ?"); params.push(String(date_from)); }
+    if (date_to) { conditions.push("t.date <= ?"); params.push(String(date_to)); }
     if (search) {
       conditions.push("(t.employee_name LIKE ? OR t.ohr_id LIKE ?)");
       params.push(`%${String(search)}%`, `%${String(search)}%`);
@@ -386,13 +388,15 @@ router.get("/tardiness/export", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
 
-    const { week_ending, planning_group, status, supervisor, shift_type } = req.query;
+    const { week_ending, planning_group, status, supervisor, shift_type, date_from, date_to } = req.query;
     let conditions: string[] = [];
     if (week_ending) conditions.push(`week_ending = '${String(week_ending).replace(/'/g, "''")}'`);
     if (planning_group) conditions.push(`planning_group = '${String(planning_group).replace(/'/g, "''")}'`);
     if (status) conditions.push(`validation_status = '${String(status).replace(/'/g, "''")}'`);
     if (supervisor) conditions.push(`supervisor_name = '${String(supervisor).replace(/'/g, "''")}'`);
     if (shift_type) conditions.push(`shift_type = '${String(shift_type).replace(/'/g, "''")}'`);
+    if (date_from) conditions.push(`date >= '${String(date_from).replace(/'/g, "''")}'`);
+    if (date_to) conditions.push(`date <= '${String(date_to).replace(/'/g, "''")}'`);
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const result: any = await db.execute(sql.raw(

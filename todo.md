@@ -3115,3 +3115,7 @@
 ## Regimen — Planning Group Renames (April 28, 2026)
 - [x] Rename CEI_TASKFORCE_CTR → CS-ABF in io_employees (70 rows + 3 complete_planning_group)
 - [x] Rename MASA_MAFSA_CTR_SCALED_REVIEW → S-ABF in io_employees (100 rows + 4 complete_planning_group)
+
+## Tardiness Validator — Date Range Filter & Grace Period Indicator (April 28, 2026)
+- [x] Add start/end date picker filter to Tardiness Validator (HTML, JS, server route)
+- [x] Add grace period indicator column (badge on auto-invalidated <5min rows)

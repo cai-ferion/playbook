@@ -215,6 +215,8 @@ async function tardLoadData() {
     const supervisor = document.getElementById("tard-supervisor-filter")?.value || "";
     const shiftType = document.getElementById("tard-shift-filter")?.value || "";
     const search = document.getElementById("tard-search")?.value || "";
+    const dateFrom = document.getElementById("tard-date-from")?.value || "";
+    const dateTo = document.getElementById("tard-date-to")?.value || "";
 
     const params = new URLSearchParams();
     if (we) params.set("week_ending", we);
@@ -223,6 +225,8 @@ async function tardLoadData() {
     if (supervisor) params.set("supervisor", supervisor);
     if (shiftType) params.set("shift_type", shiftType);
     if (search) params.set("search", search);
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
 
     const resp = await fetch(`/api/io/tardiness?${params.toString()}`, {
       headers: {
@@ -302,11 +306,16 @@ function tardRenderTable() {
     if (item.tardiness_minutes >= 150) minColor = "var(--danger)";
     else if (item.tardiness_minutes >= 30) minColor = "var(--warning)";
 
+    // Grace period indicator: auto-invalidated records with <5 min tardiness
+    const isGracePeriod = isInvalid && item.tardiness_minutes < 5 && (item.remarks || "").toLowerCase().includes("grace period");
+
     const statusBadge = isPending
       ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg-muted);color:var(--fg-muted);">Pending</span>'
       : isValid
         ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--success);color:#fff;">Valid</span>'
-        : '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--danger);color:#fff;">Invalid</span>';
+        : isGracePeriod
+          ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#6366f1;color:#fff;" title="Auto-invalidated: within 5-minute grace period">Grace Period</span>'
+          : '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--danger);color:#fff;">Invalid</span>';
 
     const actions = isPending
       ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -523,13 +532,26 @@ function tardExportCSV() {
   const pg = document.getElementById("tard-pg-filter")?.value || "";
   const supervisor = document.getElementById("tard-supervisor-filter")?.value || "";
   const shiftType = document.getElementById("tard-shift-filter")?.value || "";
+  const dateFrom = document.getElementById("tard-date-from")?.value || "";
+  const dateTo = document.getElementById("tard-date-to")?.value || "";
   const params = new URLSearchParams();
   if (we) params.set("week_ending", we);
   if (status) params.set("status", status);
   if (pg) params.set("planning_group", pg);
   if (supervisor) params.set("supervisor", supervisor);
   if (shiftType) params.set("shift_type", shiftType);
+  if (dateFrom) params.set("date_from", dateFrom);
+  if (dateTo) params.set("date_to", dateTo);
   window.open(`/api/io/tardiness/export?${params.toString()}`, "_blank");
+}
+
+/** Clear date range pickers and reload */
+function tardClearDateRange() {
+  const fromEl = document.getElementById("tard-date-from");
+  const toEl = document.getElementById("tard-date-to");
+  if (fromEl) fromEl.value = "";
+  if (toEl) toEl.value = "";
+  tardLoadData();
 }
 
 // ============================================================

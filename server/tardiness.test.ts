@@ -85,6 +85,17 @@ describe("Tardiness — Server Routes", () => {
     expect(tardinessRoutes).toContain("shift_type");
     expect(tardinessRoutes).toContain("t.shift_type = ?");
   });
+  it("supports date_from and date_to range filter", () => {
+    expect(tardinessRoutes).toContain("date_from");
+    expect(tardinessRoutes).toContain("date_to");
+    expect(tardinessRoutes).toContain('t.date >= ?');
+    expect(tardinessRoutes).toContain('t.date <= ?');
+  });
+  it("export route supports date range filter", () => {
+    // Export route uses inline string building
+    expect(tardinessRoutes).toContain("date >= '");
+    expect(tardinessRoutes).toContain("date <= '");
+  });
   it("is registered in server entry", () => {
     expect(serverEntry).toContain("registerTardinessRoutes");
   });
@@ -203,6 +214,20 @@ describe("Tardiness — Client JS (tardiness.js)", () => {
   it("has bulk modal functions", () => {
     expect(tardinessJs).toContain("tardOpenBulkModal");
   });
+  it("sends date_from and date_to filter params", () => {
+    expect(tardinessJs).toContain('getElementById("tard-date-from")');
+    expect(tardinessJs).toContain('getElementById("tard-date-to")');
+    expect(tardinessJs).toContain('params.set("date_from"');
+    expect(tardinessJs).toContain('params.set("date_to"');
+  });
+  it("has tardClearDateRange function", () => {
+    expect(tardinessJs).toContain("tardClearDateRange");
+  });
+  it("renders grace period indicator for auto-invalidated <5min records", () => {
+    expect(tardinessJs).toContain("isGracePeriod");
+    expect(tardinessJs).toContain("Grace Period");
+    expect(tardinessJs).toContain("grace period");
+  });
 });
 // ── 6. Notification Integration ─────────────────────────────────
 describe("Tardiness — Notifications", () => {
@@ -314,6 +339,12 @@ describe("Tardiness — HTML Structure", () => {
   it("bulk buttons use modal functions", () => {
     expect(indexHtml).toContain("tardOpenBulkModal('Valid')");
     expect(indexHtml).toContain("tardOpenBulkModal('Invalid')");
+  });
+  it("has date range pickers (From/To)", () => {
+    expect(indexHtml).toContain('id="tard-date-from"');
+    expect(indexHtml).toContain('id="tard-date-to"');
+    expect(indexHtml).toContain('type="date"');
+    expect(indexHtml).toContain('tardClearDateRange()');
   });
   it("nav item is under Horizon group", () => {
     const horizonGroupIdx = indexHtml.indexOf('id="nav-group-horizon"');
