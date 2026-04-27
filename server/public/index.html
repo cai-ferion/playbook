@@ -1590,6 +1590,7 @@
               </select>
               <input type="text" class="form-input form-input-sm" id="tard-search" placeholder="Search agent or OHR..." oninput="tardSearchDebounce()" style="max-width:200px;margin-left:8px;">
               <button class="btn btn-outline btn-sm" id="tard-my-team-btn" onclick="tardToggleMyTeam()" style="font-size:11px;padding:2px 10px;margin-left:4px;" title="Toggle: show only your direct reports">My Team</button>
+              <button class="btn btn-outline btn-sm" onclick="tardClearFilters()" style="font-size:11px;padding:2px 10px;margin-left:4px;color:#ef4444;border-color:#ef4444;" title="Reset all filters">Clear</button>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <span id="tard-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Items: 0</span>
@@ -1817,7 +1818,7 @@
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
-  <script src="js/tardiness.js?v=108" defer></script>
+  <script src="js/tardiness.js?v=109" defer></script>
 
   <!-- Maintenance Overlay -->
   <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">

@@ -3135,3 +3135,6 @@
 ## Tardiness Validator — WE Filter Fix (April 28, 2026)
 - [x] Sort Week Ending filter dropdown in descending order (newest first)
 - [x] Format week_ending dates properly (MM/DD format) in dropdown and table column
+
+## Tardiness Validator — Clear Filter Button (April 28, 2026)
+- [x] Add a Clear button to reset all filters in Tardiness Validator

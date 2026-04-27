@@ -584,6 +584,36 @@ function tardToggleMyTeam() {
   tardLoadData();
 }
 
+/** Reset all filters to default state and reload */
+function tardClearFilters() {
+  const weSelect = document.getElementById('tard-week-select');
+  const statusSelect = document.getElementById('tard-status-filter');
+  const pgSelect = document.getElementById('tard-pg-filter');
+  const supSelect = document.getElementById('tard-supervisor-filter');
+  const stSelect = document.getElementById('tard-shift-filter');
+  const searchInput = document.getElementById('tard-search');
+
+  if (weSelect) weSelect.value = '';
+  if (statusSelect) statusSelect.value = 'Pending';
+  if (pgSelect) pgSelect.value = '';
+  if (supSelect) supSelect.value = '';
+  if (stSelect) stSelect.value = '';
+  if (searchInput) searchInput.value = '';
+
+  // Reset My Team toggle if active
+  if (TARD_STATE.myTeamOnly) {
+    TARD_STATE.myTeamOnly = false;
+    const btn = document.getElementById('tard-my-team-btn');
+    if (btn) {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }
+  }
+
+  tardLoadData();
+}
+
 // ============================================================
 // View Initialization Hooks
 /// Init hooks are registered in app.js switchView() — no monkey-patching needed.
