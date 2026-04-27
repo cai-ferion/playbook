@@ -149,7 +149,7 @@ describe('Risk Intelligence — Planning Group Filter', () => {
     });
 
     it('app.js version is v122', () => {
-      expect(indexHtml).toContain('app.js?v=124');
+      expect(indexHtml).toContain('app.js?v=125');
     });
   });
 });

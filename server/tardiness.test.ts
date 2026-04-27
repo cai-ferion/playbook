@@ -65,14 +65,21 @@ describe("Tardiness — Server Routes", () => {
   it("escalation-check route has been removed", () => {
     expect(tardinessRoutes).not.toContain('router.get("/tardiness/escalation-check"');
   });
-  it("returns filter metadata (weeks, planning_groups, supervisors)", () => {
+  it("returns filter metadata (weeks, planning_groups, supervisors, shift_types)", () => {
     expect(tardinessRoutes).toContain("SELECT DISTINCT week_ending FROM io_tardiness");
     expect(tardinessRoutes).toContain("SELECT DISTINCT planning_group FROM io_tardiness");
-    expect(tardinessRoutes).toContain("SELECT DISTINCT supervisor_name FROM io_tardiness");
+    expect(tardinessRoutes).toContain("SELECT DISTINCT e.supervisor_name FROM io_tardiness");
+    expect(tardinessRoutes).toContain("SELECT DISTINCT shift_type FROM io_tardiness");
   });
-  it("supports supervisor filter parameter", () => {
+  it("uses LEFT JOIN io_employees for progressive-cascade supervisor", () => {
+    expect(tardinessRoutes).toContain("LEFT JOIN io_employees e ON t.ohr_id = e.ohr_id");
+    expect(tardinessRoutes).toContain("live_supervisor");
+    expect(tardinessRoutes).toContain("live_full_name");
+    expect(tardinessRoutes).toContain("live_planning_group");
+  });
+  it("supports supervisor filter parameter (via live employee data)", () => {
     expect(tardinessRoutes).toContain("supervisor");
-    expect(tardinessRoutes).toContain("t.supervisor_name = ?");
+    expect(tardinessRoutes).toContain("e.supervisor_name = ?");
   });
   it("supports shift_type filter parameter", () => {
     expect(tardinessRoutes).toContain("shift_type");
@@ -171,6 +178,31 @@ describe("Tardiness — Client JS (tardiness.js)", () => {
   it("populates supervisor dropdown from server filters", () => {
     expect(tardinessJs).toContain("data.filters.supervisors");
   });
+  it("populates shift_types dropdown from server filters", () => {
+    expect(tardinessJs).toContain("data.filters.shift_types");
+  });
+  it("uses modal instead of browser prompt() for validation", () => {
+    expect(tardinessJs).toContain("tardOpenModal");
+    expect(tardinessJs).toContain("tardCloseModal");
+    expect(tardinessJs).toContain("tardConfirmModal");
+    expect(tardinessJs).toContain("tard-validation-modal");
+    // Should NOT use prompt() for validation actions
+    expect(tardinessJs).not.toMatch(/prompt\(`Remarks for marking/);
+    expect(tardinessJs).not.toMatch(/prompt\(`Bulk remarks/);
+  });
+  it("uses progressive cascade for supervisor (live_supervisor fallback)", () => {
+    expect(tardinessJs).toContain("live_supervisor");
+    expect(tardinessJs).toContain("live_planning_group");
+  });
+  it("renders new column order: OHR, Full Name, Date, Minutes Late, Supervisor, Shift Type, PG, Roster Login, Actual Login, Status, Remarks, Validated By, Actions", () => {
+    // OHR should come before employee_name in the row template
+    const ohrIdx = tardinessJs.indexOf("item.ohr_id");
+    const nameIdx = tardinessJs.indexOf("item.employee_name", ohrIdx);
+    expect(ohrIdx).toBeLessThan(nameIdx);
+  });
+  it("has bulk modal functions", () => {
+    expect(tardinessJs).toContain("tardOpenBulkModal");
+  });
 });
 // ── 6. Notification Integration ─────────────────────────────────
 describe("Tardiness — Notifications", () => {
@@ -256,6 +288,33 @@ describe("Tardiness — HTML Structure", () => {
     expect(indexHtml).toContain("GY Shift");
     expect(indexHtml).toContain("Morning");
   });
+  it("has validation modal markup", () => {
+    expect(indexHtml).toContain('id="tard-validation-modal"');
+    expect(indexHtml).toContain('id="tard-modal-title"');
+    expect(indexHtml).toContain('id="tard-modal-remarks"');
+    expect(indexHtml).toContain('id="tard-modal-confirm"');
+    expect(indexHtml).toContain('tardCloseModal()');
+    expect(indexHtml).toContain('tardConfirmModal()');
+  });
+  it("table header has correct column order", () => {
+    // Search within the tardiness table section specifically
+    const tardTableStart = indexHtml.indexOf('id="tard-table"');
+    const tardSection = indexHtml.slice(tardTableStart, tardTableStart + 1000);
+    const ohrThIdx = tardSection.indexOf('<th>OHR</th>');
+    const nameThIdx = tardSection.indexOf('Full Name</th>');
+    const supervisorThIdx = tardSection.indexOf('<th>Supervisor</th>');
+    const pgThIdx = tardSection.indexOf('<th>Planning Group</th>');
+    const validatedByThIdx = tardSection.indexOf('<th>Validated By</th>');
+    expect(ohrThIdx).toBeGreaterThan(-1);
+    expect(ohrThIdx).toBeLessThan(nameThIdx);
+    expect(nameThIdx).toBeLessThan(supervisorThIdx);
+    expect(supervisorThIdx).toBeLessThan(pgThIdx);
+    expect(pgThIdx).toBeLessThan(validatedByThIdx);
+  });
+  it("bulk buttons use modal functions", () => {
+    expect(indexHtml).toContain("tardOpenBulkModal('Valid')");
+    expect(indexHtml).toContain("tardOpenBulkModal('Invalid')");
+  });
   it("nav item is under Horizon group", () => {
     const horizonGroupIdx = indexHtml.indexOf('id="nav-group-horizon"');
     const tardValidatorIdx = indexHtml.indexOf('data-view="tardiness-validator"');
@@ -292,6 +351,6 @@ describe("Tardiness — Cache Versions", () => {
     expect(indexHtml).toMatch(/tardiness\.js\?v=\d+/);
   });
   it("app.js cache version is current", () => {
-    expect(indexHtml).toContain("app.js?v=124");
+    expect(indexHtml).toContain("app.js?v=125");
   });
 });

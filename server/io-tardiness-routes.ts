@@ -235,7 +235,7 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     if (week_ending) { conditions.push("t.week_ending = ?"); params.push(String(week_ending)); }
     if (planning_group) { conditions.push("t.planning_group = ?"); params.push(String(planning_group)); }
     if (status) { conditions.push("t.validation_status = ?"); params.push(String(status)); }
-    if (supervisor) { conditions.push("t.supervisor_name = ?"); params.push(String(supervisor)); }
+    if (supervisor) { conditions.push("e.supervisor_name = ?"); params.push(String(supervisor)); }
     if (shift_type) { conditions.push("t.shift_type = ?"); params.push(String(shift_type)); }
     if (search) {
       conditions.push("(t.employee_name LIKE ? OR t.ohr_id LIKE ?)");
@@ -245,7 +245,8 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     // Build the final SQL with params inlined (drizzle sql.raw doesn't support ? bindings)
-    let stmt = `SELECT t.* FROM io_tardiness t ${whereClause} ORDER BY t.date DESC, t.employee_name ASC LIMIT 5000`;
+    // LEFT JOIN io_employees for progressive-cascade supervisor (always reflects current employee data)
+    let stmt = `SELECT t.*, e.supervisor_name AS live_supervisor, e.full_name AS live_full_name, e.planning_group AS live_planning_group, e.shift_time AS live_shift_time FROM io_tardiness t LEFT JOIN io_employees e ON t.ohr_id = e.ohr_id ${whereClause} ORDER BY t.date DESC, t.employee_name ASC LIMIT 5000`;
     if (params.length) {
       const paramsCopy = [...params];
       stmt = stmt.replace(/\?/g, () => {
@@ -270,12 +271,18 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     ));
     const pgs = (Array.isArray(pgsResult[0]) ? pgsResult[0] : pgsResult).map((r: any) => r.planning_group);
 
+    // Supervisors: use live data from io_employees for progressive cascade
     const supsResult: any = await db.execute(sql.raw(
-      `SELECT DISTINCT supervisor_name FROM io_tardiness WHERE supervisor_name IS NOT NULL AND supervisor_name != '' ORDER BY supervisor_name`
+      `SELECT DISTINCT e.supervisor_name FROM io_tardiness t LEFT JOIN io_employees e ON t.ohr_id = e.ohr_id WHERE e.supervisor_name IS NOT NULL AND e.supervisor_name != '' ORDER BY e.supervisor_name`
     ));
     const sups = (Array.isArray(supsResult[0]) ? supsResult[0] : supsResult).map((r: any) => r.supervisor_name);
 
-    filters = { weeks, planning_groups: pgs, supervisors: sups };
+    const shiftTypesResult: any = await db.execute(sql.raw(
+      `SELECT DISTINCT shift_type FROM io_tardiness WHERE shift_type IS NOT NULL AND shift_type != '' ORDER BY shift_type`
+    ));
+    const shiftTypes = (Array.isArray(shiftTypesResult[0]) ? shiftTypesResult[0] : shiftTypesResult).map((r: any) => r.shift_type);
+
+    filters = { weeks, planning_groups: pgs, supervisors: sups, shift_types: shiftTypes };
 
     res.json({ items: data, is_admin: isAdmin, filters });
   } catch (err: any) {

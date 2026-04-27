@@ -3104,3 +3104,14 @@
 - [x] Rename "Graveyard" to "GY Shift" and "Afternoon" to "Mid-Shift" in code and DB
 - [x] Auto-invalidate existing records with <5 min tardiness (set validation_status=Invalid, remarks=grace period)
 - [x] Add auto-invalidation logic to upload route for future uploads
+
+## Tardiness Validator — Column Rearrangement & Modal (April 28, 2026)
+- [x] Add validated_by column to io_tardiness DB table
+- [x] Rearrange columns: OHR, Full Name, Date, Minutes Late, Supervisor, Shift Type, PG, Roster Login, Actual Login, Status, Remarks, Validated By, Actions
+- [x] Supervisor from io_employees (progressive cascade — always reflects current employee data)
+- [x] Replace browser prompt() with styled modal for validation actions
+- [x] Optimize column widths (truncation + tooltip for narrow columns)
+
+## Regimen — Planning Group Renames (April 28, 2026)
+- [x] Rename CEI_TASKFORCE_CTR → CS-ABF in io_employees (70 rows + 3 complete_planning_group)
+- [x] Rename MASA_MAFSA_CTR_SCALED_REVIEW → S-ABF in io_employees (100 rows + 4 complete_planning_group)

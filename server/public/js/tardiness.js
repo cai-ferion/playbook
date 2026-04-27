@@ -250,6 +250,10 @@ async function tardLoadData() {
       if (supSelect && data.filters.supervisors) {
         supSelect.innerHTML = '<option value="">All Supervisors</option>' + data.filters.supervisors.map(s => `<option value="${s}">${s}</option>`).join("");
       }
+      const stSelect = document.getElementById("tard-shift-filter");
+      if (stSelect && data.filters.shift_types) {
+        stSelect.innerHTML = '<option value="">All Shifts</option>' + data.filters.shift_types.map(s => `<option value="${s}">${s}</option>`).join("");
+      }
     }
 
     tardRenderTable();
@@ -287,6 +291,7 @@ function tardRenderTable() {
   if (bulkValidBtn) bulkValidBtn.style.display = hasPending ? "inline-flex" : "none";
   if (bulkInvalidBtn) bulkInvalidBtn.style.display = hasPending ? "inline-flex" : "none";
 
+  // New column order: OHR, Full Name, Date, Minutes Late, Supervisor, Shift Type, PG, Roster Login, Actual Login, Status, Remarks, Validated By, Actions
   tbody.innerHTML = items.map(item => {
     const isPending = item.validation_status === "Pending";
     const isValid = item.validation_status === "Valid";
@@ -305,8 +310,8 @@ function tardRenderTable() {
 
     const actions = isPending
       ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">
-           <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:var(--success);color:#fff;border:none;" onclick="tardValidateItem(${item.id},'Valid')">Valid</button>
-           <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:var(--danger);color:#fff;border:none;" onclick="tardValidateItem(${item.id},'Invalid')">Invalid</button>
+           <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:var(--success);color:#fff;border:none;" onclick="tardOpenModal(${item.id},'Valid')">Valid</button>
+           <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:var(--danger);color:#fff;border:none;" onclick="tardOpenModal(${item.id},'Invalid')">Invalid</button>
          </div>`
       : TARD_STATE.isAdmin
         ? `<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 6px;" onclick="tardUnlockItem(${item.id})">Unlock</button>`
@@ -315,18 +320,24 @@ function tardRenderTable() {
     const checked = TARD_STATE.selectedIds.has(item.id) ? "checked" : "";
     const checkboxDisabled = !isPending ? "disabled" : "";
 
+    // Progressive cascade: use live_supervisor from io_employees JOIN (falls back to snapshot)
+    const supervisor = item.live_supervisor || item.supervisor_name || "";
+    const planningGroup = item.live_planning_group || item.planning_group || "";
+
     return `<tr style="border-bottom:1px solid var(--border);">
       <td><input type="checkbox" class="tard-row-check" data-id="${item.id}" ${checked} ${checkboxDisabled} onchange="tardToggleRow(${item.id})"></td>
-      <td style="font-weight:500;">${escHtml(item.employee_name)}</td>
-      <td style="font-size:11px;color:var(--fg-muted);">${escHtml(item.ohr_id)}</td>
-      <td>${item.date}</td>
+      <td style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.ohr_id)}">${escHtml(item.ohr_id)}</td>
+      <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.employee_name)}">${escHtml(item.employee_name)}</td>
+      <td style="white-space:nowrap;">${item.date}</td>
       <td style="text-align:right;font-weight:700;color:${minColor};">${item.tardiness_minutes}</td>
-      <td style="font-size:11px;">${escHtml(item.shift_type || "")}</td>
-      <td style="font-size:11px;">${escHtml(item.roster_login || "")}</td>
-      <td style="font-size:11px;">${escHtml(item.actual_login || "")}</td>
+      <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(supervisor)}">${escHtml(supervisor)}</td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.shift_type || "")}</td>
+      <td style="font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(planningGroup)}">${escHtml(planningGroup)}</td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.roster_login || "")}</td>
+      <td style="font-size:11px;white-space:nowrap;">${escHtml(item.actual_login || "")}</td>
       <td>${statusBadge}</td>
-      <td style="font-size:11px;">${escHtml(item.validated_by || "")}</td>
-      <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(item.remarks || "")}">${escHtml(item.remarks || "")}</td>
+      <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.remarks || "")}">${escHtml(item.remarks || "")}</td>
+      <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.validated_by || "")}">${escHtml(item.validated_by || "")}</td>
       <td>${actions}</td>
     </tr>`;
   }).join("");
@@ -354,10 +365,61 @@ function tardToggleRow(id) {
   else TARD_STATE.selectedIds.add(id);
 }
 
-async function tardValidateItem(id, status) {
-  const remarks = prompt(`Remarks for marking as "${status}" (optional):`);
-  if (remarks === null) return; // cancelled
+// ── Modal-based validation (replaces browser prompt()) ──
+let _tardModalResolve = null;
 
+function tardOpenModal(id, status) {
+  TARD_STATE._pendingValidation = { id, status, mode: 'single' };
+  const modal = document.getElementById('tard-validation-modal');
+  const title = document.getElementById('tard-modal-title');
+  const remarks = document.getElementById('tard-modal-remarks');
+  const confirmBtn = document.getElementById('tard-modal-confirm');
+  if (!modal) { /* fallback if modal HTML missing */ tardValidateItem(id, status); return; }
+  title.textContent = `Mark as ${status}`;
+  remarks.value = '';
+  confirmBtn.textContent = `Mark ${status}`;
+  confirmBtn.style.background = status === 'Valid' ? 'var(--success)' : 'var(--danger)';
+  modal.style.display = 'flex';
+  remarks.focus();
+}
+
+function tardOpenBulkModal(status) {
+  const ids = Array.from(TARD_STATE.selectedIds);
+  if (ids.length === 0) { showToast('No items selected', 'warning'); return; }
+  TARD_STATE._pendingValidation = { ids, status, mode: 'bulk' };
+  const modal = document.getElementById('tard-validation-modal');
+  const title = document.getElementById('tard-modal-title');
+  const remarks = document.getElementById('tard-modal-remarks');
+  const confirmBtn = document.getElementById('tard-modal-confirm');
+  if (!modal) { tardBulkValidate(status); return; }
+  title.textContent = `Mark ${ids.length} item(s) as ${status}`;
+  remarks.value = '';
+  confirmBtn.textContent = `Mark ${status}`;
+  confirmBtn.style.background = status === 'Valid' ? 'var(--success)' : 'var(--danger)';
+  modal.style.display = 'flex';
+  remarks.focus();
+}
+
+function tardCloseModal() {
+  const modal = document.getElementById('tard-validation-modal');
+  if (modal) modal.style.display = 'none';
+  TARD_STATE._pendingValidation = null;
+}
+
+async function tardConfirmModal() {
+  const pending = TARD_STATE._pendingValidation;
+  if (!pending) return;
+  const remarks = (document.getElementById('tard-modal-remarks')?.value || '').trim();
+  tardCloseModal();
+  if (pending.mode === 'single') {
+    await tardValidateItem(pending.id, pending.status, remarks);
+  } else {
+    await tardBulkValidate(pending.status, remarks);
+  }
+}
+
+async function tardValidateItem(id, status, remarks) {
+  if (remarks === undefined) remarks = '';
   try {
     const resp = await fetch(`/api/io/tardiness/${id}`, {
       method: "PATCH",
@@ -372,7 +434,6 @@ async function tardValidateItem(id, status) {
     if (!resp.ok) throw new Error(data.error || "Failed");
     showToast(`Item marked as ${status}`, "success");
 
-    // Notification: tardiness_validated
     if (typeof createNotification === 'function') {
       createNotification({
         type: 'tardiness_validated',
@@ -412,13 +473,10 @@ async function tardUnlockItem(id) {
   }
 }
 
-async function tardBulkValidate(status) {
+async function tardBulkValidate(status, remarks) {
   const ids = Array.from(TARD_STATE.selectedIds);
   if (ids.length === 0) { showToast("No items selected", "warning"); return; }
-  if (!confirm(`Mark ${ids.length} item(s) as "${status}"?`)) return;
-
-  const remarks = prompt(`Bulk remarks (optional):`);
-  if (remarks === null) return;
+  if (remarks === undefined) remarks = '';
 
   try {
     const resp = await fetch("/api/io/tardiness/bulk-validate", {
