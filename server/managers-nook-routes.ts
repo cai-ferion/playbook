@@ -45,15 +45,21 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     const oldestMonth = monthRange[monthRange.length - 1]; // e.g. "2026-02"
     const newestMonth = monthRange[0];
 
-    // ── 1. Get all supervisors (Team Leads) and their agents ──
+    // ── 1. Get active supervisors: only those who are active TLs AND have active agents ──
     const [supervisorRows] = (await db.execute(sql`
-      SELECT DISTINCT supervisor_name
-      FROM io_employees
-      WHERE actual_role NOT IN ('Manager')
-        AND supervisor_name IS NOT NULL
-        AND supervisor_name != ''
-        AND employement_status != 'Offboarded'
-      ORDER BY supervisor_name ASC
+      SELECT DISTINCT e.supervisor_name
+      FROM io_employees e
+      WHERE e.actual_role = 'Agent'
+        AND e.supervisor_name IS NOT NULL
+        AND e.supervisor_name != ''
+        AND e.employement_status != 'Offboarded'
+        AND EXISTS (
+          SELECT 1 FROM io_employees sup
+          WHERE sup.full_name = e.supervisor_name
+            AND sup.employement_status != 'Offboarded'
+            AND sup.actual_role IN ('Team Lead', 'TL', 'Supervisor')
+        )
+      ORDER BY e.supervisor_name ASC
     `)) as unknown as [any[], any];
     const supervisors = supervisorRows.map((r: any) => r.supervisor_name);
 
@@ -140,7 +146,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
       coachedOhrsMap[sup][m] = new Set(ohrs);
     }
 
-    // ── 4c. Get all agent names per supervisor for missing coaching detection ──
+    // ── 4c. Get all ACTIVE agent names per supervisor for missing coaching detection ──
     const [agentsBySupRows] = (await db.execute(sql`
       SELECT supervisor_name, ohr_id, full_name
       FROM io_employees

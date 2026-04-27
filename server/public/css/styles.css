@@ -5783,7 +5783,22 @@ body {
 
 /* Modal overlay for missing coaching drill-down */
 #nook-coaching-modal .modal-content {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 0;
+}
+#nook-coaching-modal .modal-header {
+  padding: 20px 24px 0;
+}
+#nook-coaching-modal .modal-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+}
+#nook-coaching-modal .modal-body {
+  padding: 16px 24px 24px;
 }
 #nook-coaching-modal .data-table th {
   font-size: 11px;

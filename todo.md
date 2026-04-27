@@ -3202,3 +3202,7 @@
 - [x] Vitest tests for managers-nook routes and UI
 - [x] Update switchView in app.js for managers-nook view
 - [x] Supervisors arranged alphabetically in the scorecard table
+
+## Manager's Nook Fixes (April 28, 2026 - Batch 2)
+- [x] Fix: Filter to active employees only (active supervisors, active agents in coaching coverage)
+- [x] Fix: Transparent modal background on coaching drill-down — add solid white background
