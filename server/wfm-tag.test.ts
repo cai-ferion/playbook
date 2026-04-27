@@ -93,8 +93,10 @@ describe("WFM Tag — Upload Endpoint", () => {
     expect(ioRoutesContent).toContain("No valid date columns found in header");
   });
 
-  it("deletes existing WFM data for upload dates (upsert behavior)", () => {
-    expect(ioRoutesContent).toContain("DELETE FROM io_wfm_schedules WHERE schedule_date");
+  it("skips duplicate OHR+date pairs instead of deleting (append-only)", () => {
+    expect(ioRoutesContent).toContain("existingPairs");
+    expect(ioRoutesContent).toContain("skippedDuplicates");
+    expect(ioRoutesContent).not.toContain("DELETE FROM io_wfm_schedules WHERE schedule_date");
   });
 
   it("uses bulk insert with chunk size of 500", () => {
@@ -127,13 +129,15 @@ describe("WFM Tag — Schedule Management Endpoints", () => {
     expect(ioRoutesContent).toContain("MAX(uploaded_by)");
   });
 
-  it("DELETE /wfm-schedule endpoint exists", () => {
-    expect(ioRoutesContent).toContain('router.delete("/wfm-schedule"');
+  it("DELETE /wfm-schedule endpoint is removed (append-only)", () => {
+    expect(ioRoutesContent).not.toContain('router.delete("/wfm-schedule",');
   });
 
-  it("DELETE clears both io_wfm_schedules and io_attendance.wfm_tag", () => {
-    expect(ioRoutesContent).toContain("DELETE FROM io_wfm_schedules");
-    expect(ioRoutesContent).toContain("UPDATE io_attendance SET wfm_tag = NULL");
+  it("Clear All WFM Data button is removed from admin.js", () => {
+    const adminJsPath = path.resolve(__dirname, "public/js/admin.js");
+    const adminJsContent = fs.readFileSync(adminJsPath, "utf-8");
+    expect(adminJsContent).not.toContain("wfmClearAllSchedules()");
+    expect(adminJsContent).not.toContain("Clear All WFM Data");
   });
 });
 
@@ -268,7 +272,7 @@ describe("WFM Tag — Cache Busting", () => {
   });
 
   it("admin.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("admin.js?v=107");
+    expect(indexHtmlContent).toContain("admin.js?v=108");
   });
 
   it("styles.css cache version is bumped", () => {

@@ -3158,3 +3158,8 @@
 - [x] Remove 292 tardiness records (135 OHRs) that don't match io_employees (not Integrity Operations)
 - [x] Fix Full Name/Supervisor fallback when live JOIN doesn't match (no longer needed — all orphan records deleted)
 - [x] Add 30-row pagination to the table
+
+## WFM Schedule Upload — Remove Clear & Skip Duplicates (April 28, 2026)
+- [x] Remove "Clear All WFM Data" button from admin.js
+- [x] Remove DELETE /wfm-schedule route from io-routes.ts
+- [x] Change WFM upload to skip-duplicates (INSERT IGNORE / check existing before insert) instead of delete-then-insert

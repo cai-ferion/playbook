@@ -4904,13 +4904,20 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No valid date columns found in header" });
     }
 
-    // Collect all unique dates for cleanup before insert
+    // Collect all unique dates
     const uniqueDates = Array.from(new Set(dateColumns.filter(d => d)));
 
-    // Delete existing WFM data for these dates (upsert behavior)
+    // Load existing OHR+date pairs to skip duplicates (append-only)
+    const existingPairs = new Set<string>();
     for (const d of uniqueDates) {
-      await db.execute(sql`DELETE FROM io_wfm_schedules WHERE schedule_date = ${d}`);
+      const [existing]: any = await db.execute(
+        sql`SELECT ohr_id FROM io_wfm_schedules WHERE schedule_date = ${d}`
+      );
+      for (const row of existing) {
+        existingPairs.add(`${row.ohr_id}|${d}`);
+      }
     }
+    let skippedDuplicates = 0;
 
     // WFM Tag mapping: time patterns (HH:MM-HH:MM) and BOJ → "Scheduled"
     // Keep as-is: WO, PL, ML, LOA, Exit, NH Training
@@ -4938,6 +4945,12 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
         const rawValue = String(row[c] || '').trim();
         if (!rawValue) continue;
         const mappedTag = mapWfmTag(rawValue);
+        const pairKey = `${ohr}|${dateStr}`;
+        if (existingPairs.has(pairKey)) {
+          skippedDuplicates++;
+          continue; // Skip duplicate — already exists in DB
+        }
+        existingPairs.add(pairKey); // Prevent intra-batch duplicates
         scheduleRecords.push([ohr, dateStr, mappedTag, now, uploaderName]);
 
         // Flush in chunks
@@ -4971,6 +4984,7 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
     res.json({
       success: true,
       totalInserted,
+      skippedDuplicates,
       datesProcessed: uniqueDates.length,
       attendanceBackfilled: backfilled,
     });
@@ -5009,19 +5023,7 @@ router.get("/wfm-schedule/dates", async (_req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/io/wfm-schedule — clear all WFM schedule data
-router.delete("/wfm-schedule", async (_req: Request, res: Response) => {
-  try {
-    const db = await getDb();
-    if (!db) return res.status(500).json({ error: "DB unavailable" });
-    await db.execute(sql`DELETE FROM io_wfm_schedules`);
-    // Also clear wfm_tag from attendance
-    await db.execute(sql`UPDATE io_attendance SET wfm_tag = NULL WHERE wfm_tag IS NOT NULL`);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// DELETE /api/io/wfm-schedule — REMOVED (WFM data is now append-only with skip-duplicates)
 
 // ============================================================
 // Attendance Purge — owner-only (740045023)

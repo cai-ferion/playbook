@@ -483,28 +483,14 @@ async function wfmLoadScheduleSummary() {
       html += `<tr><td>${escapeHtml(d.schedule_date)}</td><td>${d.count}</td><td>${uploadTime}</td><td>${escapeHtml(d.uploaded_by || '-')}</td></tr>`;
     }
     html += '</tbody></table></div>';
-    html += '<div style="margin-top:8px;"><button class="btn btn-outline btn-sm" onclick="wfmClearAllSchedules()" style="color:var(--danger);border-color:var(--danger);">Clear All WFM Data</button></div>';
+
     container.innerHTML = html;
   } catch (err) {
     container.innerHTML = `<p style="color:var(--danger);font-size:13px;">Failed to load schedule summary: ${err.message}</p>`;
   }
 }
 
-async function wfmClearAllSchedules() {
-  if (!confirm('Are you sure you want to clear ALL WFM schedule data? This will also remove WFM tags from all attendance records.')) return;
-  try {
-    const resp = await fetch(`${IO_API_BASE}/wfm-schedule`, { method: 'DELETE', headers: { 'X-Actor-Ohr': window.currentUserOhr } });
-    const data = await resp.json();
-    if (resp.ok && data.success) {
-      showToast('All WFM schedule data cleared.', 'success');
-      wfmLoadScheduleSummary();
-    } else {
-      showToast('Failed to clear WFM data: ' + (data.error || 'Unknown'), 'error');
-    }
-  } catch (err) {
-    showToast('Error: ' + err.message, 'error');
-  }
-}
+// wfmClearAllSchedules removed — WFM data is now append-only with skip-duplicates
 
 // ===== Database Backup / Export =====
 
