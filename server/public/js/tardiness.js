@@ -1,10 +1,10 @@
 /**
- * Tardiness Validator & Analytics — Client Module
- * Handles: Admin CSV upload, Validator table with inline validation, Analytics charts.
+ * Tardiness Validator — Client Module
+ * Handles: Admin CSV upload, Validator table with inline validation.
  * Weekly cadence: Saturday to Friday.
  */
 
-/* global currentUser, showToast, Chart */
+/* global currentUser, showToast */
 
 /** Safe accessor for the global currentUser set by app.js */
 function _cu() { return (typeof currentUser !== 'undefined') ? currentUser : null; }
@@ -19,10 +19,6 @@ const TARD_STATE = {
   weekEndings: [],
   planningGroups: [],
   searchTimer: null,
-  // Analytics chart instances
-  chartWeekly: null,
-  chartPg: null,
-  chartTeam: null,
 };
 
 // ============================================================
@@ -216,12 +212,16 @@ async function tardLoadData() {
     const we = document.getElementById("tard-week-select")?.value || "";
     const status = document.getElementById("tard-status-filter")?.value || "";
     const pg = document.getElementById("tard-pg-filter")?.value || "";
+    const supervisor = document.getElementById("tard-supervisor-filter")?.value || "";
+    const shiftType = document.getElementById("tard-shift-filter")?.value || "";
     const search = document.getElementById("tard-search")?.value || "";
 
     const params = new URLSearchParams();
     if (we) params.set("week_ending", we);
     if (status) params.set("status", status);
     if (pg) params.set("planning_group", pg);
+    if (supervisor) params.set("supervisor", supervisor);
+    if (shiftType) params.set("shift_type", shiftType);
     if (search) params.set("search", search);
 
     const resp = await fetch(`/api/io/tardiness?${params.toString()}`, {
@@ -236,27 +236,20 @@ async function tardLoadData() {
     TARD_STATE.isAdmin = data.is_admin || false;
     TARD_STATE.selectedIds.clear();
 
-    // Populate week endings dropdown (only first load)
+    // Populate filter dropdowns from server-provided filter metadata (first load)
     const weSelect = document.getElementById("tard-week-select");
-    if (weSelect && weSelect.options.length <= 1) {
-      // Get distinct week endings from data
-      const weeks = [...new Set(TARD_STATE.items.map(i => i.week_ending))].sort().reverse();
-      // Also fetch from analytics for full list
-      try {
-        const aResp = await fetch("/api/io/tardiness/analytics", {
-          headers: { "x-actor-ohr": _cu()?.ohr_id || "", "x-actor-name": _cu()?.full_name || "" },
-        });
-        const aData = await aResp.json();
-        if (aData.filters?.weeks) {
-          const allWeeks = [...new Set([...weeks, ...aData.filters.weeks])].sort().reverse();
-          weSelect.innerHTML = '<option value="">All Weeks</option>' + allWeeks.map(w => `<option value="${w}">${w}</option>`).join("");
-          // Populate PG filter
-          const pgSelect = document.getElementById("tard-pg-filter");
-          if (pgSelect && aData.filters?.planning_groups) {
-            pgSelect.innerHTML = '<option value="">All Groups</option>' + aData.filters.planning_groups.map(p => `<option value="${p}">${p}</option>`).join("");
-          }
-        }
-      } catch (_) {}
+    if (weSelect && weSelect.options.length <= 1 && data.filters) {
+      if (data.filters.weeks) {
+        weSelect.innerHTML = '<option value="">All Weeks</option>' + data.filters.weeks.map(w => `<option value="${w}">${w}</option>`).join("");
+      }
+      const pgSelect = document.getElementById("tard-pg-filter");
+      if (pgSelect && data.filters.planning_groups) {
+        pgSelect.innerHTML = '<option value="">All Groups</option>' + data.filters.planning_groups.map(p => `<option value="${p}">${p}</option>`).join("");
+      }
+      const supSelect = document.getElementById("tard-supervisor-filter");
+      if (supSelect && data.filters.supervisors) {
+        supSelect.innerHTML = '<option value="">All Supervisors</option>' + data.filters.supervisors.map(s => `<option value="${s}">${s}</option>`).join("");
+      }
     }
 
     tardRenderTable();
@@ -470,224 +463,15 @@ function tardExportCSV() {
   const we = document.getElementById("tard-week-select")?.value || "";
   const status = document.getElementById("tard-status-filter")?.value || "";
   const pg = document.getElementById("tard-pg-filter")?.value || "";
+  const supervisor = document.getElementById("tard-supervisor-filter")?.value || "";
+  const shiftType = document.getElementById("tard-shift-filter")?.value || "";
   const params = new URLSearchParams();
   if (we) params.set("week_ending", we);
   if (status) params.set("status", status);
   if (pg) params.set("planning_group", pg);
+  if (supervisor) params.set("supervisor", supervisor);
+  if (shiftType) params.set("shift_type", shiftType);
   window.open(`/api/io/tardiness/export?${params.toString()}`, "_blank");
-}
-
-// ============================================================
-// Tardiness Analytics
-// ============================================================
-
-function initTardinessAnalytics() {
-  tardaLoadAnalytics();
-}
-
-async function tardaLoadAnalytics() {
-  const loading = document.getElementById("tardiness-analytics-loading");
-  if (loading) loading.style.display = "flex";
-
-  try {
-    const startWe = document.getElementById("tarda-start-we")?.value || "";
-    const endWe = document.getElementById("tarda-end-we")?.value || "";
-    const pg = document.getElementById("tarda-pg-filter")?.value || "";
-
-    const params = new URLSearchParams();
-    if (startWe) params.set("start_we", startWe);
-    if (endWe) params.set("end_we", endWe);
-    if (pg) params.set("planning_group", pg);
-
-    const resp = await fetch(`/api/io/tardiness/analytics?${params.toString()}`, {
-      headers: {
-        "x-actor-ohr": _cu()?.ohr_id || "",
-        "x-actor-name": _cu()?.full_name || "",
-      },
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || "Failed");
-
-    // Populate filter dropdowns (first load)
-    const startSelect = document.getElementById("tarda-start-we");
-    const endSelect = document.getElementById("tarda-end-we");
-    if (startSelect && startSelect.options.length <= 1 && data.filters?.weeks?.length) {
-      const weeks = data.filters.weeks;
-      startSelect.innerHTML = '<option value="">Earliest</option>' + weeks.map(w => `<option value="${w}">${w}</option>`).join("");
-      endSelect.innerHTML = '<option value="">Latest</option>' + weeks.map(w => `<option value="${w}">${w}</option>`).join("");
-      const pgSelect = document.getElementById("tarda-pg-filter");
-      if (pgSelect && data.filters?.planning_groups) {
-        pgSelect.innerHTML = '<option value="">All Groups</option>' + data.filters.planning_groups.map(p => `<option value="${p}">${p}</option>`).join("");
-      }
-    }
-
-    // KPI Cards
-    document.getElementById("tarda-kpi-instances").textContent = data.kpi.total_instances;
-    document.getElementById("tarda-kpi-avg").textContent = data.kpi.avg_minutes + " min";
-    document.getElementById("tarda-kpi-agents").textContent = data.kpi.unique_agents;
-    document.getElementById("tarda-kpi-ontime").textContent = data.kpi.on_time_rate + "%";
-
-    // Weekly Trend Chart
-    tardaRenderWeeklyChart(data.weekly);
-
-    // PG Breakdown Chart
-    tardaRenderPgChart(data.by_pg);
-
-    // Team Chart
-    tardaRenderTeamChart(data.by_team);
-
-    // Top Offenders Table
-    tardaRenderOffenders(data.top_offenders);
-
-    // Escalation Alerts
-    tardaLoadEscalations();
-
-  } catch (err) {
-    showToast("Failed to load analytics: " + err.message, "error");
-  } finally {
-    if (loading) loading.style.display = "none";
-  }
-}
-
-function tardaRenderWeeklyChart(weekly) {
-  const ctx = document.getElementById("tarda-chart-weekly");
-  if (!ctx) return;
-  if (TARD_STATE.chartWeekly) TARD_STATE.chartWeekly.destroy();
-
-  const labels = weekly.map(w => w.week_ending);
-  const instances = weekly.map(w => Number(w.instances));
-  const avgMins = weekly.map(w => Math.round(Number(w.avg_minutes)));
-
-  TARD_STATE.chartWeekly = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        { label: "Late Instances", data: instances, backgroundColor: "rgba(239,68,68,0.7)", yAxisID: "y" },
-        { label: "Avg Minutes", data: avgMins, type: "line", borderColor: "#f59e0b", backgroundColor: "transparent", yAxisID: "y1", tension: 0.3, pointRadius: 3 },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: "top", labels: { font: { size: 11 } } } },
-      scales: {
-        y: { beginAtZero: true, title: { display: true, text: "Instances" } },
-        y1: { beginAtZero: true, position: "right", title: { display: true, text: "Avg Minutes" }, grid: { drawOnChartArea: false } },
-      },
-    },
-  });
-}
-
-function tardaRenderPgChart(byPg) {
-  const ctx = document.getElementById("tarda-chart-pg");
-  if (!ctx) return;
-  if (TARD_STATE.chartPg) TARD_STATE.chartPg.destroy();
-
-  const labels = byPg.map(p => p.planning_group || "Unknown");
-  const instances = byPg.map(p => Number(p.instances));
-  const colors = labels.map((_, i) => `hsl(${(i * 47) % 360}, 65%, 55%)`);
-
-  TARD_STATE.chartPg = new Chart(ctx, {
-    type: "doughnut",
-    data: { labels, datasets: [{ data: instances, backgroundColor: colors }] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: "right", labels: { font: { size: 10 }, boxWidth: 12 } } },
-    },
-  });
-}
-
-function tardaRenderTeamChart(byTeam) {
-  const ctx = document.getElementById("tarda-chart-team");
-  if (!ctx) return;
-  if (TARD_STATE.chartTeam) TARD_STATE.chartTeam.destroy();
-
-  const top10 = byTeam.slice(0, 10);
-  const labels = top10.map(t => (t.supervisor_name || "Unknown").split(",")[0]);
-  const instances = top10.map(t => Number(t.instances));
-
-  TARD_STATE.chartTeam = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [{ label: "Valid Late Instances", data: instances, backgroundColor: "rgba(99,102,241,0.7)" }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "y",
-      plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true } },
-    },
-  });
-}
-
-function tardaRenderOffenders(offenders) {
-  const container = document.getElementById("tarda-offenders-table");
-  if (!container) return;
-
-  if (!offenders || offenders.length === 0) {
-    container.innerHTML = '<p style="color:var(--fg-muted);font-size:12px;text-align:center;padding:20px;">No data available.</p>';
-    return;
-  }
-
-  container.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
-    <thead><tr style="border-bottom:1px solid var(--border);">
-      <th style="text-align:left;padding:4px 8px;">Agent</th>
-      <th style="text-align:right;padding:4px 8px;">Instances</th>
-      <th style="text-align:right;padding:4px 8px;">Total Min.</th>
-    </tr></thead>
-    <tbody>${offenders.map((o, i) => {
-      const bg = i < 3 ? "background:rgba(239,68,68,0.1);" : "";
-      return `<tr style="border-bottom:1px solid var(--border);${bg}">
-        <td style="padding:4px 8px;">${escHtml(o.employee_name)}<br><span style="font-size:10px;color:var(--fg-muted);">${escHtml(o.planning_group || "")}</span></td>
-        <td style="text-align:right;padding:4px 8px;font-weight:700;color:var(--danger);">${o.instances}</td>
-        <td style="text-align:right;padding:4px 8px;">${o.total_minutes}</td>
-      </tr>`;
-    }).join("")}</tbody>
-  </table>`;
-}
-
-async function tardaLoadEscalations() {
-  try {
-    const resp = await fetch("/api/io/tardiness/escalation-check", {
-      headers: { "x-actor-ohr": _cu()?.ohr_id || "", "x-actor-name": _cu()?.full_name || "" },
-    });
-    const data = await resp.json();
-    if (!resp.ok) return;
-
-    const card = document.getElementById("tarda-escalation-card");
-    const list = document.getElementById("tarda-escalation-list");
-    if (!card || !list) return;
-
-    if (!data.escalations || data.escalations.length === 0) {
-      card.style.display = "none";
-      return;
-    }
-
-    card.style.display = "block";
-    list.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
-      <thead><tr style="border-bottom:1px solid var(--border);">
-        <th style="text-align:left;padding:4px 8px;">Agent</th>
-        <th>OHR</th>
-        <th>Supervisor</th>
-        <th>PG</th>
-        <th style="text-align:right;">Instances</th>
-        <th style="text-align:right;">Total Min.</th>
-      </tr></thead>
-      <tbody>${data.escalations.map(e => `<tr style="border-bottom:1px solid var(--border);background:rgba(239,68,68,0.08);">
-        <td style="padding:4px 8px;font-weight:600;">${escHtml(e.employee_name)}</td>
-        <td style="padding:4px 8px;font-size:11px;">${escHtml(e.ohr_id)}</td>
-        <td style="padding:4px 8px;font-size:11px;">${escHtml(e.supervisor_name || "")}</td>
-        <td style="padding:4px 8px;font-size:11px;">${escHtml(e.planning_group || "")}</td>
-        <td style="text-align:right;padding:4px 8px;font-weight:700;color:var(--danger);">${e.instances}</td>
-        <td style="text-align:right;padding:4px 8px;">${e.total_minutes}</td>
-      </tr>`).join("")}</tbody>
-    </table>
-    <p style="font-size:11px;color:var(--fg-muted);margin-top:8px;">Window: ${data.window_weeks?.join(", ") || "N/A"}</p>`;
-  } catch (_) {}
 }
 
 // ============================================================

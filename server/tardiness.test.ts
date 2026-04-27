@@ -1,14 +1,12 @@
 /**
- * Tardiness Validator & Analytics — Integration Test Suite
- * Tests: schema, routes, notifications, UI wiring, view switching, CSV upload, analytics.
+ * Tardiness Validator — Integration Test Suite
+ * Tests: schema, routes, notifications, UI wiring, view switching, CSV upload, filters, shift renames, auto-invalidation.
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-
 const ROOT = path.resolve(__dirname, "..");
 const readFile = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf-8");
-
 // ── Source files ──────────────────────────────────────────────────
 const schema = readFile("drizzle/schema.ts");
 const tardinessRoutes = readFile("server/io-tardiness-routes.ts");
@@ -17,14 +15,12 @@ const notificationsJs = readFile("server/public/js/notifications.js");
 const appJs = readFile("server/public/js/app.js");
 const indexHtml = readFile("server/public/index.html");
 const serverEntry = readFile("server/_core/index.ts");
-
 // ── 1. Database Schema ──────────────────────────────────────────
 describe("Tardiness — Database Schema", () => {
   it("defines io_tardiness table", () => {
     expect(schema).toContain("export const ioTardiness");
     expect(schema).toContain("io_tardiness");
   });
-
   it("has all required columns", () => {
     const requiredCols = [
       "ohr_id", "employee_name", "supervisor_name", "planning_group",
@@ -37,88 +33,89 @@ describe("Tardiness — Database Schema", () => {
       expect(schema).toContain(col);
     }
   });
-
   it("validation_status defaults to Pending", () => {
     expect(schema).toMatch(/validation_status.*default.*Pending/i);
   });
 });
-
 // ── 2. Server Routes ────────────────────────────────────────────
 describe("Tardiness — Server Routes", () => {
   it("registers routes under /api/io", () => {
     expect(tardinessRoutes).toContain('app.use("/api/io", router)');
   });
-
   it("has upload endpoint", () => {
     expect(tardinessRoutes).toContain('router.post("/tardiness/upload"');
   });
-
   it("has list endpoint with team scoping", () => {
     expect(tardinessRoutes).toContain('router.get("/tardiness"');
     expect(tardinessRoutes).toContain("supervisor_name LIKE");
   });
-
   it("has single validate endpoint with lock-in", () => {
     expect(tardinessRoutes).toContain('router.patch("/tardiness/:id"');
     expect(tardinessRoutes).toContain("locked after validation");
   });
-
   it("has bulk validate endpoint", () => {
     expect(tardinessRoutes).toContain('router.patch("/tardiness/bulk-validate"');
   });
-
-  it("has analytics endpoint", () => {
-    expect(tardinessRoutes).toContain('router.get("/tardiness/analytics"');
-  });
-
   it("has export endpoint", () => {
     expect(tardinessRoutes).toContain('router.get("/tardiness/export"');
   });
-
-  it("returns distinct week endings in analytics", () => {
-    expect(tardinessRoutes).toContain('SELECT DISTINCT week_ending FROM io_tardiness');
+  it("analytics route has been removed", () => {
+    expect(tardinessRoutes).not.toContain('router.get("/tardiness/analytics"');
   });
-
-  it("has escalation-check endpoint", () => {
-    expect(tardinessRoutes).toContain('router.get("/tardiness/escalation-check"');
-    expect(tardinessRoutes).toContain("HAVING COUNT(*) >= 3");
+  it("escalation-check route has been removed", () => {
+    expect(tardinessRoutes).not.toContain('router.get("/tardiness/escalation-check"');
   });
-
+  it("returns filter metadata (weeks, planning_groups, supervisors)", () => {
+    expect(tardinessRoutes).toContain("SELECT DISTINCT week_ending FROM io_tardiness");
+    expect(tardinessRoutes).toContain("SELECT DISTINCT planning_group FROM io_tardiness");
+    expect(tardinessRoutes).toContain("SELECT DISTINCT supervisor_name FROM io_tardiness");
+  });
+  it("supports supervisor filter parameter", () => {
+    expect(tardinessRoutes).toContain("supervisor");
+    expect(tardinessRoutes).toContain("t.supervisor_name = ?");
+  });
+  it("supports shift_type filter parameter", () => {
+    expect(tardinessRoutes).toContain("shift_type");
+    expect(tardinessRoutes).toContain("t.shift_type = ?");
+  });
   it("is registered in server entry", () => {
     expect(serverEntry).toContain("registerTardinessRoutes");
   });
 });
-
 // ── 3. Upload Logic ─────────────────────────────────────────────
 describe("Tardiness — Upload Logic", () => {
   it("auto-calculates tardiness minutes", () => {
     expect(tardinessRoutes).toContain("calcTardinessMinutes");
   });
-
   it("auto-computes week ending (Sat-Fri)", () => {
     expect(tardinessRoutes).toContain("computeWeekEnding");
   });
-
   it("derives shift type from roster login", () => {
     expect(tardinessRoutes).toContain("deriveShiftType");
   });
-
   it("enriches from io_employees", () => {
     expect(tardinessRoutes).toContain("io_employees");
     expect(tardinessRoutes).toContain("empMap");
   });
-
   it("detects duplicates (same OHR + date)", () => {
     expect(tardinessRoutes).toContain("ohr_id = ");
     expect(tardinessRoutes).toContain("date = ");
     expect(tardinessRoutes).toContain("LIMIT 1");
   });
-
   it("skips non-late records (tardiness <= 0)", () => {
     expect(tardinessRoutes).toContain("tardMins <= 0");
   });
+  it("filters by business unit (COMMUNITY_OPS, INTEGRITY_OPS)", () => {
+    expect(tardinessRoutes).toContain("ALLOWED_BUS");
+    expect(tardinessRoutes).toContain("COMMUNITY_OPS");
+    expect(tardinessRoutes).toContain("INTEGRITY_OPS");
+  });
+  it("auto-invalidates records with <5 min tardiness on upload", () => {
+    expect(tardinessRoutes).toContain("autoInvalid");
+    expect(tardinessRoutes).toContain("tardMins < 5");
+    expect(tardinessRoutes).toContain("Auto-invalidated: within 5-minute grace period");
+  });
 });
-
 // ── 4. Validation Lock-in ───────────────────────────────────────
 describe("Tardiness — Lock-in Mechanism", () => {
   it("prevents editing after validation unless admin", () => {
@@ -126,201 +123,175 @@ describe("Tardiness — Lock-in Mechanism", () => {
     expect(tardinessRoutes).toContain("!unlock");
     expect(tardinessRoutes).toContain("locked after validation");
   });
-
   it("admin can unlock items", () => {
     expect(tardinessRoutes).toContain("unlock && isAdmin");
     expect(tardinessRoutes).toContain("validation_status = 'Pending'");
   });
-
   it("only updates Pending items in bulk validate", () => {
     expect(tardinessRoutes).toContain("validation_status = 'Pending'");
   });
 });
-
 // ── 5. Client-side JS ───────────────────────────────────────────
 describe("Tardiness — Client JS (tardiness.js)", () => {
   it("defines TARD_STATE", () => {
     expect(tardinessJs).toContain("TARD_STATE");
   });
-
   it("has upload function", () => {
     expect(tardinessJs).toContain("tardinessUploadCSV");
   });
-
   it("has data loading function", () => {
     expect(tardinessJs).toContain("tardLoadData");
   });
-
   it("has single validate function", () => {
     expect(tardinessJs).toContain("tardValidateItem");
   });
-
   it("has bulk validate function", () => {
     expect(tardinessJs).toContain("tardBulkValidate");
   });
-
   it("has unlock function", () => {
     expect(tardinessJs).toContain("tardUnlockItem");
   });
-
-  it("has analytics loading function", () => {
-    expect(tardinessJs).toContain("tardaLoadAnalytics");
+  it("analytics functions have been removed", () => {
+    expect(tardinessJs).not.toContain("tardaLoadAnalytics");
+    expect(tardinessJs).not.toContain("initTardinessAnalytics");
+    expect(tardinessJs).not.toContain("tardaRenderWeeklyChart");
+    expect(tardinessJs).not.toContain("chartWeekly");
   });
-
   it("has CSV export function", () => {
     expect(tardinessJs).toContain("tardExportCSV");
   });
-
-  it("hooks into switchView", () => {
-    expect(tardinessJs).toContain("Init hooks are registered in app.js");
-    expect(tardinessJs).toContain("tardiness-validator");
-    expect(tardinessJs).toContain("tardiness-analytics");
+  it("sends supervisor filter param", () => {
+    expect(tardinessJs).toContain("tard-supervisor-filter");
+    expect(tardinessJs).toContain('params.set("supervisor"');
+  });
+  it("sends shift_type filter param", () => {
+    expect(tardinessJs).toContain("tard-shift-filter");
+    expect(tardinessJs).toContain('params.set("shift_type"');
+  });
+  it("populates supervisor dropdown from server filters", () => {
+    expect(tardinessJs).toContain("data.filters.supervisors");
   });
 });
-
 // ── 6. Notification Integration ─────────────────────────────────
 describe("Tardiness — Notifications", () => {
   const TARD_NOTIF_TYPES = ["tardiness_escalation", "tardiness_validated", "tardiness_uploaded"];
-
   it("has icons for all tardiness notification types", () => {
     for (const t of TARD_NOTIF_TYPES) {
       expect(notificationsJs).toContain(`${t}:`);
     }
   });
-
   it("has labels for all tardiness notification types", () => {
     expect(notificationsJs).toContain("tardiness_escalation: 'Escalation'");
     expect(notificationsJs).toContain("tardiness_validated: 'Validated'");
     expect(notificationsJs).toContain("tardiness_uploaded: 'Uploaded'");
   });
-
   it("has colors for all tardiness notification types", () => {
     expect(notificationsJs).toContain("tardiness_escalation: '#ef4444'");
     expect(notificationsJs).toContain("tardiness_validated: '#22c55e'");
     expect(notificationsJs).toContain("tardiness_uploaded: '#3b82f6'");
   });
-
   it("has brief rendering for all tardiness types", () => {
     expect(notificationsJs).toContain("case 'tardiness_escalation':");
     expect(notificationsJs).toContain("case 'tardiness_validated':");
     expect(notificationsJs).toContain("case 'tardiness_uploaded':");
   });
-
   it("has detail card rendering for all tardiness types", () => {
-    // Detail card cases in showNotifDetailCard
     for (const t of TARD_NOTIF_TYPES) {
       expect(notificationsJs).toContain(`case '${t}':`);
     }
   });
-
   it("tardiness.js triggers createNotification on upload", () => {
     expect(tardinessJs).toContain("type: 'tardiness_uploaded'");
   });
-
   it("tardiness.js triggers createNotification on validate", () => {
     expect(tardinessJs).toContain("type: 'tardiness_validated'");
   });
 });
-
 // ── 7. View Switching & Navigation ──────────────────────────────
 describe("Tardiness — View Switching & Navigation", () => {
-  it("allViews includes tardiness views", () => {
+  it("allViews includes tardiness-validator", () => {
     expect(appJs).toContain("'tardiness-validator'");
-    expect(appJs).toContain("'tardiness-analytics'");
   });
-
-  it("horizonViews includes tardiness views", () => {
+  it("allViews does NOT include tardiness-analytics (removed)", () => {
+    expect(appJs).not.toContain("'tardiness-analytics'");
+  });
+  it("horizonViews includes tardiness-validator only", () => {
     const horizonMatch = appJs.match(/horizonViews\s*=\s*\[([^\]]+)\]/);
     expect(horizonMatch).toBeTruthy();
     expect(horizonMatch![1]).toContain("tardiness-validator");
-    expect(horizonMatch![1]).toContain("tardiness-analytics");
+    expect(horizonMatch![1]).not.toContain("tardiness-analytics");
   });
-
-  it("titles map includes tardiness views", () => {
+  it("titles map includes tardiness-validator only", () => {
     expect(appJs).toContain("'tardiness-validator': 'Tardiness Validator'");
-    expect(appJs).toContain("'tardiness-analytics': 'Tardiness Analytics'");
+    expect(appJs).not.toContain("'tardiness-analytics'");
   });
 });
-
 // ── 8. HTML Structure ───────────────────────────────────────────
 describe("Tardiness — HTML Structure", () => {
-  it("has nav items for tardiness", () => {
+  it("has nav item for tardiness-validator", () => {
     expect(indexHtml).toContain('data-view="tardiness-validator"');
-    expect(indexHtml).toContain('data-view="tardiness-analytics"');
   });
-
-  it("has view containers", () => {
+  it("does NOT have nav item for tardiness-analytics (removed)", () => {
+    expect(indexHtml).not.toContain('data-view="tardiness-analytics"');
+  });
+  it("has view container for tardiness-validator", () => {
     expect(indexHtml).toContain('id="view-tardiness-validator"');
-    expect(indexHtml).toContain('id="view-tardiness-analytics"');
   });
-
+  it("does NOT have view container for tardiness-analytics (removed)", () => {
+    expect(indexHtml).not.toContain('id="view-tardiness-analytics"');
+  });
   it("has admin upload card for tardiness", () => {
     expect(indexHtml).toContain("tardiness-csv-input");
     expect(indexHtml).toContain("tardiness-upload-btn");
   });
-
   it("includes tardiness.js script", () => {
     expect(indexHtml).toContain("tardiness.js");
   });
-
-  it("nav items are under Horizon group", () => {
+  it("has Supervisor filter dropdown", () => {
+    expect(indexHtml).toContain('id="tard-supervisor-filter"');
+  });
+  it("has Shift Type filter dropdown", () => {
+    expect(indexHtml).toContain('id="tard-shift-filter"');
+    expect(indexHtml).toContain("Mid-Shift");
+    expect(indexHtml).toContain("GY Shift");
+    expect(indexHtml).toContain("Morning");
+  });
+  it("nav item is under Horizon group", () => {
     const horizonGroupIdx = indexHtml.indexOf('id="nav-group-horizon"');
     const tardValidatorIdx = indexHtml.indexOf('data-view="tardiness-validator"');
-    const tardAnalyticsIdx = indexHtml.indexOf('data-view="tardiness-analytics"');
     expect(horizonGroupIdx).toBeLessThan(tardValidatorIdx);
-    expect(horizonGroupIdx).toBeLessThan(tardAnalyticsIdx);
   });
 });
-
 // ── 9. Auto-calculation Helpers ─────────────────────────────────
 describe("Tardiness — Auto-calculation Helpers", () => {
   it("computeWeekEnding handles Saturday start", () => {
-    // Saturday should map to next Friday
     expect(tardinessRoutes).toContain("day === 6 ? 6");
   });
-
-  it("deriveShiftType categorizes hours correctly", () => {
+  it("deriveShiftType uses renamed shift types (Mid-Shift, GY Shift)", () => {
     expect(tardinessRoutes).toContain("Morning");
-    expect(tardinessRoutes).toContain("Afternoon");
+    expect(tardinessRoutes).toContain("Mid-Shift");
     expect(tardinessRoutes).toContain("GY Shift");
+    // Afternoon and Graveyard should no longer be used as shift type values
+    expect(tardinessRoutes).not.toContain('return "Afternoon"');
+    expect(tardinessRoutes).not.toContain('return "Graveyard"');
   });
-
   it("parseFlexibleDatetime handles M/D/YYYY and ISO formats", () => {
     expect(tardinessRoutes).toContain("parseFlexibleDatetime");
     expect(tardinessRoutes).toContain("M/D/YYYY");
   });
-
   it("normalizeDate handles multiple date formats", () => {
     expect(tardinessRoutes).toContain("normalizeDate");
   });
 });
-
-// ── 10. Escalation Check ────────────────────────────────────────
-describe("Tardiness — Escalation Check", () => {
-  it("uses rolling 4-week window", () => {
-    expect(tardinessRoutes).toContain("LIMIT 4");
-  });
-
-  it("threshold is 3+ valid instances", () => {
-    expect(tardinessRoutes).toContain("HAVING COUNT(*) >= 3");
-  });
-
-  it("only counts Valid items", () => {
-    expect(tardinessRoutes).toContain("validation_status = 'Valid'");
-  });
-
-  it("groups by employee", () => {
-    expect(tardinessRoutes).toContain("GROUP BY ohr_id");
-  });
-});
-
-// ── 11. Cache Version Consistency ───────────────────────────────
+// ── 10. Cache Version Consistency ───────────────────────────────
 describe("Tardiness — Cache Versions", () => {
   it("notifications.js cache version is current", () => {
     expect(indexHtml).toContain("notifications.js?v=106");
   });
-
-  it("tardiness.js is included in index.html", () => {
+  it("tardiness.js is included in index.html with version", () => {
     expect(indexHtml).toMatch(/tardiness\.js\?v=\d+/);
+  });
+  it("app.js cache version is current", () => {
+    expect(indexHtml).toContain("app.js?v=124");
   });
 });

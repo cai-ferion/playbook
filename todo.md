@@ -3094,3 +3094,13 @@
 ## Regimen — Editing Access & Missing Fields (April 27, 2026)
 - [x] Grant 740044909 (Joshua Aspera) editing capabilities in Regimen table — DB already had regimen.edit_employee=true; added missing regimen.full_columns, regimen.add_employee, regimen.onboarding_tab, regimen.permissions_tab
 - [x] Add all missing fields (including Role) to the inline expansion panel — removed table-column exclusion filter so ALL visible columns appear in the detail panel
+
+## Tardiness — Cleanup & Enhancements (April 27, 2026)
+- [x] Remove Tardiness Analytics page and all associated code (nav, view container, JS, routes, switchView)
+- [x] Delete non-COMMUNITY_OPS/INTEGRITY_OPS rows from DB
+- [x] Add business unit filter to upload route (reject non-department rows)
+- [x] Add Supervisor filter to Tardiness Validator
+- [x] Add Shift Type filter to Tardiness Validator
+- [x] Rename "Graveyard" to "GY Shift" and "Afternoon" to "Mid-Shift" in code and DB
+- [x] Auto-invalidate existing records with <5 min tardiness (set validation_status=Invalid, remarks=grace period)
+- [x] Add auto-invalidation logic to upload route for future uploads
