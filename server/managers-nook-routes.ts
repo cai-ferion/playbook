@@ -100,19 +100,23 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     }
 
     // ── 4. Coaching coverage per supervisor per month ──
-    // coaching_date is the date, coachee_sup is the supervisor
-    // Count unique coachees per supervisor per month
+    // Only count coaching sessions where the coachee is a CURRENT active agent under that supervisor.
+    // This prevents transferred/inactive agents from inflating the coached count.
     const [coachingRows] = (await db.execute(sql`
-      SELECT coachee_sup as supervisor_name,
-             LEFT(coaching_date, 7) as month,
-             COUNT(DISTINCT coachee_ohr) as unique_agents_coached,
+      SELECT c.coachee_sup as supervisor_name,
+             LEFT(c.coaching_date, 7) as month,
+             COUNT(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END) as unique_agents_coached,
              COUNT(*) as total_sessions
-      FROM io_coaching
-      WHERE LEFT(coaching_date, 7) >= ${oldestMonth}
-        AND LEFT(coaching_date, 7) <= ${newestMonth}
-        AND coachee_sup IS NOT NULL
-        AND coachee_sup != ''
-      GROUP BY coachee_sup, LEFT(coaching_date, 7)
+      FROM io_coaching c
+      LEFT JOIN io_employees e
+        ON c.coachee_ohr = e.ohr_id
+        AND e.employement_status = 'Active'
+        AND e.supervisor_name = c.coachee_sup
+      WHERE LEFT(c.coaching_date, 7) >= ${oldestMonth}
+        AND LEFT(c.coaching_date, 7) <= ${newestMonth}
+        AND c.coachee_sup IS NOT NULL
+        AND c.coachee_sup != ''
+      GROUP BY c.coachee_sup, LEFT(c.coaching_date, 7)
     `)) as unknown as [any[], any];
     const coachingMap: Record<string, Record<string, { unique: number; total: number }>> = {};
     for (const row of coachingRows) {
@@ -125,24 +129,28 @@ router.get("/scorecard", async (req: Request, res: Response) => {
       };
     }
 
-    // ── 4b. Get coached agent OHRs per supervisor per month (for missing agents) ──
+    // ── 4b. Get coached agent OHRs per supervisor per month (only active agents under that sup) ──
     const [coachedAgentRows] = (await db.execute(sql`
-      SELECT coachee_sup as supervisor_name,
-             LEFT(coaching_date, 7) as month,
-             GROUP_CONCAT(DISTINCT coachee_ohr) as coached_ohrs
-      FROM io_coaching
-      WHERE LEFT(coaching_date, 7) >= ${oldestMonth}
-        AND LEFT(coaching_date, 7) <= ${newestMonth}
-        AND coachee_sup IS NOT NULL
-        AND coachee_sup != ''
-      GROUP BY coachee_sup, LEFT(coaching_date, 7)
+      SELECT c.coachee_sup as supervisor_name,
+             LEFT(c.coaching_date, 7) as month,
+             GROUP_CONCAT(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END) as coached_ohrs
+      FROM io_coaching c
+      LEFT JOIN io_employees e
+        ON c.coachee_ohr = e.ohr_id
+        AND e.employement_status = 'Active'
+        AND e.supervisor_name = c.coachee_sup
+      WHERE LEFT(c.coaching_date, 7) >= ${oldestMonth}
+        AND LEFT(c.coaching_date, 7) <= ${newestMonth}
+        AND c.coachee_sup IS NOT NULL
+        AND c.coachee_sup != ''
+      GROUP BY c.coachee_sup, LEFT(c.coaching_date, 7)
     `)) as unknown as [any[], any];
     const coachedOhrsMap: Record<string, Record<string, Set<string>>> = {};
     for (const row of coachedAgentRows) {
       const sup = row.supervisor_name;
       const m = row.month;
       if (!coachedOhrsMap[sup]) coachedOhrsMap[sup] = {};
-      const ohrs = row.coached_ohrs ? String(row.coached_ohrs).split(",") : [];
+      const ohrs = row.coached_ohrs ? String(row.coached_ohrs).split(",").filter(Boolean) : [];
       coachedOhrsMap[sup][m] = new Set(ohrs);
     }
 
@@ -234,7 +242,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
             unique_agents_coached: coaching.unique,
             total_sessions: coaching.total,
             total_agents: totalAgents,
-            coverage_pct: totalAgents > 0 ? Math.round((coaching.unique / totalAgents) * 100) : 0,
+            coverage_pct: totalAgents > 0 ? Math.min(100, Math.round((coaching.unique / totalAgents) * 100)) : 0,
             missing_agents: missingAgents.map(a => ({ ohr_id: a.ohr_id, full_name: a.full_name })),
           },
           insights: insightsMap[sup]?.[m] || { submitted: 0, approved: 0 },

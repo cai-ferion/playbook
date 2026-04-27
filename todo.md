@@ -3209,3 +3209,6 @@
 
 ## Manager's Nook Fixes (April 28, 2026 - Batch 3)
 - [x] Fix: Inactive supervisors (Dave Jayson Villanueva, Reuben Marana) still showing in scorecard — changed all filters from != 'Offboarded' to = 'Active'
+
+## Manager's Nook Fixes (April 28, 2026 - Batch 4)
+- [x] Fix: Coaching coverage exceeding 100% — JOIN coaching with active employees under same supervisor, cap at 100%
