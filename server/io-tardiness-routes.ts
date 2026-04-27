@@ -225,15 +225,16 @@ router.get("/tardiness", async (req: Request, res: Response) => {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const rows: any = await db.execute(
-      sql.raw(`SELECT t.* FROM io_tardiness t ${whereClause} ORDER BY t.date DESC, t.employee_name ASC LIMIT 5000`),
-    );
-    // Bind params manually for raw query
-    const stmt = `SELECT t.* FROM io_tardiness t ${whereClause} ORDER BY t.date DESC, t.employee_name ASC LIMIT 5000`;
-    const result: any = await db.execute(sql.raw(params.length ? stmt.replace(/\?/g, () => {
-      const v = params.shift();
-      return typeof v === "string" ? `'${v.replace(/'/g, "''")}'` : String(v);
-    }) : stmt));
+    // Build the final SQL with params inlined (drizzle sql.raw doesn't support ? bindings)
+    let stmt = `SELECT t.* FROM io_tardiness t ${whereClause} ORDER BY t.date DESC, t.employee_name ASC LIMIT 5000`;
+    if (params.length) {
+      const paramsCopy = [...params];
+      stmt = stmt.replace(/\?/g, () => {
+        const v = paramsCopy.shift();
+        return typeof v === "string" ? `'${v.replace(/'/g, "''")}'` : String(v);
+      });
+    }
+    const result: any = await db.execute(sql.raw(stmt));
     const data = Array.isArray(result[0]) ? result[0] : result;
 
     res.json({ items: data, is_admin: isAdmin });

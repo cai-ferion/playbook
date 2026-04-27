@@ -3084,3 +3084,6 @@
 ## Tardiness — Bug Fix & Data Import (April 27, 2026)
 - [x] Fix CURRENT_USER not defined error in tardiness.js → changed to currentUser with correct field names (ohr_id, full_name)
 - [x] Import raw tardiness data from Google Sheet 1: 54,059 rows downloaded, 9,045 Late rows filtered, 9,346 inserted, 3,699 enriched from io_employees
+
+## Tardiness — Query Fix (April 27, 2026)
+- [x] Fix double-execution bug in GET /api/io/tardiness: first query ran with literal ? placeholders, second query tried to inline params but first already failed
