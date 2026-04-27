@@ -294,7 +294,16 @@ router.get("/tardiness", async (req: Request, res: Response) => {
 
     filters = { weeks, planning_groups: pgs, supervisors: sups, shift_types: shiftTypes };
 
-    res.json({ items: data, is_admin: isAdmin, filters });
+    // Compute stats from the full result set
+    const stats = {
+      total: data.length,
+      pending: data.filter((r: any) => r.validation_status === 'Pending').length,
+      valid: data.filter((r: any) => r.validation_status === 'Valid').length,
+      invalid: data.filter((r: any) => r.validation_status === 'Invalid' && !(r.tardiness_minutes < 5 && (r.remarks || '').toLowerCase().includes('grace period'))).length,
+      grace: data.filter((r: any) => r.validation_status === 'Invalid' && r.tardiness_minutes < 5 && (r.remarks || '').toLowerCase().includes('grace period')).length,
+    };
+
+    res.json({ items: data, is_admin: isAdmin, filters, stats });
   } catch (err: any) {
     console.error("[IO API] tardiness GET error:", err);
     res.status(500).json({ error: err.message });

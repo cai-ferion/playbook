@@ -227,8 +227,11 @@ describe("Tardiness — Client JS (tardiness.js)", () => {
     expect(tardinessJs).toContain('if (!remarks)');
     expect(tardinessJs).toContain('errorEl');
   });
-  it("center-aligns Minutes Late column", () => {
-    expect(tardinessJs).toContain('text-align:center;font-weight:700');
+  it("center-aligns Minutes Late column via CSS class", () => {
+    expect(tardinessJs).toContain('tard-td-min');
+    expect(tardinessJs).toContain('tard-sev-low');
+    expect(tardinessJs).toContain('tard-sev-med');
+    expect(tardinessJs).toContain('tard-sev-high');
   });
   it("renders grace period indicator for auto-invalidated <5min records", () => {
     expect(tardinessJs).toContain("isGracePeriod");
@@ -340,12 +343,12 @@ describe("Tardiness — HTML Structure", () => {
   it("table header has correct column order", () => {
     // Search within the tardiness table section specifically
     const tardTableStart = indexHtml.indexOf('id="tard-table"');
-    const tardSection = indexHtml.slice(tardTableStart, tardTableStart + 1000);
-    const ohrThIdx = tardSection.indexOf('<th>OHR</th>');
+    const tardSection = indexHtml.slice(tardTableStart, tardTableStart + 1500);
+    const ohrThIdx = tardSection.indexOf('OHR</th>');
     const nameThIdx = tardSection.indexOf('Full Name</th>');
-    const supervisorThIdx = tardSection.indexOf('<th>Supervisor</th>');
-    const pgThIdx = tardSection.indexOf('<th>Planning Group</th>');
-    const validatedByThIdx = tardSection.indexOf('<th>Validated By</th>');
+    const supervisorThIdx = tardSection.indexOf('Supervisor</th>');
+    const pgThIdx = tardSection.indexOf('Planning Group</th>');
+    const validatedByThIdx = tardSection.indexOf('Validated By</th>');
     expect(ohrThIdx).toBeGreaterThan(-1);
     expect(ohrThIdx).toBeLessThan(nameThIdx);
     expect(nameThIdx).toBeLessThan(supervisorThIdx);
@@ -366,14 +369,30 @@ describe("Tardiness — HTML Structure", () => {
     expect(indexHtml).toContain('tardToggleMyTeam()');
   });
   it("PG filter label says Planning Group (not PG)", () => {
-    // The label before the PG select should say "Planning Group:"
-    const pgLabelIdx = indexHtml.indexOf('Planning Group:</span>');
+    // The label before the PG select should say "Planning Group"
+    const pgLabelIdx = indexHtml.indexOf('Planning Group</label>');
     const pgSelectIdx = indexHtml.indexOf('id="tard-pg-filter"');
     expect(pgLabelIdx).toBeGreaterThan(-1);
     expect(pgLabelIdx).toBeLessThan(pgSelectIdx);
   });
   it("Minutes Late header is center-aligned", () => {
-    expect(indexHtml).toContain('text-align:center;">Minutes Late</th>');
+    expect(indexHtml).toContain('Min. Late</th>');
+    expect(indexHtml).toContain('tard-th-min');
+  });
+  it("has summary stats strip with clickable stat cards", () => {
+    expect(indexHtml).toContain('id="tard-stats-strip"');
+    expect(indexHtml).toContain('id="tard-stat-total-val"');
+    expect(indexHtml).toContain('id="tard-stat-pending-val"');
+    expect(indexHtml).toContain('id="tard-stat-valid-val"');
+    expect(indexHtml).toContain('id="tard-stat-invalid-val"');
+    expect(indexHtml).toContain('id="tard-stat-grace-val"');
+    expect(indexHtml).toContain("tardQuickFilter('Pending')");
+    expect(indexHtml).toContain("tardQuickFilter('Valid')");
+    expect(indexHtml).toContain("tardQuickFilter('Invalid')");
+    expect(indexHtml).toContain("tardQuickFilter('Grace')");
+  });
+  it("includes tardiness-restyle.css", () => {
+    expect(indexHtml).toContain('tardiness-restyle.css');
   });
   it("nav item is under Horizon group", () => {
     const horizonGroupIdx = indexHtml.indexOf('id="nav-group-horizon"');

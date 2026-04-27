@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/sandbox-redesign.css?v=107">
   <link rel="stylesheet" href="css/corrective-actions.css?v=7">
   <link rel="stylesheet" href="css/mascot.css?v=200">
+  <link rel="stylesheet" href="css/tardiness-restyle.css?v=100">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
@@ -1556,91 +1557,148 @@
 
       <!-- ===== Tardiness Validator View ===== -->
       <div class="view-container view-hidden" id="view-tardiness-validator">
-        <div class="module-page">
+        <div class="module-page tard-page">
           <div class="loading-overlay" id="tardiness-validator-loading" style="display:none;">
             <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
             <div class="loading-text">Loading Tardiness Data...</div>
           </div>
-          <!-- Omnibar -->
-          <div class="filter-bar" style="margin-bottom:12px;align-items:center;flex-wrap:wrap;gap:8px;">
-            <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;">
-              <span class="filter-label">Week Ending:</span>
-              <select class="form-select" id="tard-week-select" onchange="tardLoadData()" style="min-width:160px;"></select>
-              <span class="filter-label" style="margin-left:8px;">Status:</span>
-              <select class="form-select" id="tard-status-filter" onchange="tardLoadData()" style="min-width:120px;">
-                <option value="">All</option>
-                <option value="Pending" selected>Pending</option>
-                <option value="Valid">Valid</option>
-                <option value="Invalid">Invalid</option>
-              </select>
-              <span class="filter-label" style="margin-left:8px;">Planning Group:</span>
-              <select class="form-select" id="tard-pg-filter" onchange="tardLoadData()" style="min-width:140px;">
-                <option value="">All Groups</option>
-              </select>
-              <span class="filter-label" style="margin-left:8px;">Supervisor:</span>
-              <select class="form-select" id="tard-supervisor-filter" onchange="tardLoadData()" style="min-width:160px;">
-                <option value="">All Supervisors</option>
-              </select>
-              <span class="filter-label" style="margin-left:8px;">Shift:</span>
-              <select class="form-select" id="tard-shift-filter" onchange="tardLoadData()" style="min-width:120px;">
-                <option value="">All Shifts</option>
-                <option value="Morning">Morning</option>
-                <option value="Mid-Shift">Mid-Shift</option>
-                <option value="GY Shift">GY Shift</option>
-              </select>
-              <input type="text" class="form-input form-input-sm" id="tard-search" placeholder="Search agent or OHR..." oninput="tardSearchDebounce()" style="max-width:200px;margin-left:8px;">
-              <button class="btn btn-outline btn-sm" id="tard-my-team-btn" onclick="tardToggleMyTeam()" style="font-size:11px;padding:2px 10px;margin-left:4px;" title="Toggle: show only your direct reports">My Team</button>
-              <button class="btn btn-outline btn-sm" onclick="tardClearFilters()" style="font-size:11px;padding:2px 10px;margin-left:4px;color:#ef4444;border-color:#ef4444;" title="Reset all filters">Clear</button>
+
+          <!-- ── Summary Stats Strip ── -->
+          <div class="tard-stats-strip" id="tard-stats-strip">
+            <div class="tard-stat-card tard-stat-total" id="tard-stat-total">
+              <div class="tard-stat-label">Total Records</div>
+              <div class="tard-stat-value" id="tard-stat-total-val">0</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span id="tard-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Items: 0</span>
-              <button class="btn btn-outline btn-sm" id="tard-bulk-valid-btn" onclick="tardOpenBulkModal('Valid')" style="display:none;font-size:11px;">Bulk Valid</button>
-              <button class="btn btn-outline btn-sm" id="tard-bulk-invalid-btn" onclick="tardOpenBulkModal('Invalid')" style="display:none;font-size:11px;">Bulk Invalid</button>
-              <button class="btn btn-outline btn-sm" onclick="tardExportCSV()" style="font-size:11px;">Export CSV</button>
+            <div class="tard-stat-card tard-stat-pending" id="tard-stat-pending" onclick="tardQuickFilter('Pending')" title="Click to filter Pending">
+              <div class="tard-stat-label">Pending</div>
+              <div class="tard-stat-value" id="tard-stat-pending-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-valid" id="tard-stat-valid" onclick="tardQuickFilter('Valid')" title="Click to filter Valid">
+              <div class="tard-stat-label">Valid</div>
+              <div class="tard-stat-value" id="tard-stat-valid-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-invalid" id="tard-stat-invalid" onclick="tardQuickFilter('Invalid')" title="Click to filter Invalid">
+              <div class="tard-stat-label">Invalid</div>
+              <div class="tard-stat-value" id="tard-stat-invalid-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-grace" id="tard-stat-grace" onclick="tardQuickFilter('Grace')" title="Click to filter Grace Period">
+              <div class="tard-stat-label">Grace Period</div>
+              <div class="tard-stat-value" id="tard-stat-grace-val">0</div>
             </div>
           </div>
-          <!-- Table -->
+
+          <!-- ── Filter Bar ── -->
+          <div class="tard-filter-bar">
+            <div class="tard-filter-row">
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Week Ending</label>
+                <select class="tard-filter-select" id="tard-week-select" onchange="tardLoadData()"></select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Status</label>
+                <select class="tard-filter-select" id="tard-status-filter" onchange="tardLoadData()">
+                  <option value="">All</option>
+                  <option value="Pending" selected>Pending</option>
+                  <option value="Valid">Valid</option>
+                  <option value="Invalid">Invalid</option>
+                </select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Planning Group</label>
+                <select class="tard-filter-select" id="tard-pg-filter" onchange="tardLoadData()">
+                  <option value="">All Groups</option>
+                </select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Supervisor</label>
+                <select class="tard-filter-select" id="tard-supervisor-filter" onchange="tardLoadData()">
+                  <option value="">All Supervisors</option>
+                </select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Shift</label>
+                <select class="tard-filter-select" id="tard-shift-filter" onchange="tardLoadData()">
+                  <option value="">All Shifts</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Mid-Shift">Mid-Shift</option>
+                  <option value="GY Shift">GY Shift</option>
+                </select>
+              </div>
+              <div class="tard-filter-group tard-filter-search">
+                <label class="tard-filter-label">Search</label>
+                <input type="text" class="tard-filter-input" id="tard-search" placeholder="Agent or OHR..." oninput="tardSearchDebounce()">
+              </div>
+            </div>
+            <div class="tard-filter-actions">
+              <button class="tard-btn tard-btn-team" id="tard-my-team-btn" onclick="tardToggleMyTeam()" title="Show only your direct reports">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                My Team
+              </button>
+              <button class="tard-btn tard-btn-clear" onclick="tardClearFilters()" title="Reset all filters">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Clear
+              </button>
+              <span class="tard-record-badge" id="tard-record-count">0 items</span>
+              <button class="tard-btn tard-btn-bulk" id="tard-bulk-valid-btn" onclick="tardOpenBulkModal('Valid')" style="display:none;">Bulk Valid</button>
+              <button class="tard-btn tard-btn-bulk" id="tard-bulk-invalid-btn" onclick="tardOpenBulkModal('Invalid')" style="display:none;">Bulk Invalid</button>
+              <button class="tard-btn tard-btn-export" onclick="tardExportCSV()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Table ── -->
           <div id="tardiness-validator-content">
-            <div class="module-table-wrapper">
-              <table class="data-table module-table" id="tard-table" style="font-size:12px;">
+            <div class="tard-table-wrapper">
+              <table class="tard-table" id="tard-table">
                 <thead>
                   <tr>
-                    <th style="width:30px;"><input type="checkbox" id="tard-select-all" onchange="tardToggleSelectAll()" title="Select all"></th>
-                    <th>OHR</th>
-                    <th style="min-width:140px;">Full Name</th>
-                    <th>Date</th>
-                    <th style="text-align:center;">Minutes Late</th>
-                    <th>Supervisor</th>
-                    <th>Shift Type</th>
-                    <th>Planning Group</th>
-                    <th>Roster Login</th>
-                    <th>Actual Login</th>
-                    <th>Status</th>
-                    <th>Remarks</th>
-                    <th>Validated By</th>
-                    <th style="min-width:60px;text-align:center;">Actions</th>
+                    <th class="tard-th-check"><input type="checkbox" id="tard-select-all" onchange="tardToggleSelectAll()" title="Select all"></th>
+                    <th class="tard-th-ohr">OHR</th>
+                    <th class="tard-th-name">Full Name</th>
+                    <th class="tard-th-date">Date</th>
+                    <th class="tard-th-min">Min. Late</th>
+                    <th class="tard-th-sup">Supervisor</th>
+                    <th class="tard-th-shift">Shift</th>
+                    <th class="tard-th-pg">Planning Group</th>
+                    <th class="tard-th-roster">Roster Login</th>
+                    <th class="tard-th-actual">Actual Login</th>
+                    <th class="tard-th-status">Status</th>
+                    <th class="tard-th-remarks">Remarks</th>
+                    <th class="tard-th-validby">Validated By</th>
+                    <th class="tard-th-actions">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="tard-table-body"></tbody>
               </table>
             </div>
-            <!-- Validation Modal -->
-            <div id="tard-validation-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
-              <div style="background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:24px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);color:#1a1a2e;">
-                <h3 id="tard-modal-title" style="margin:0 0 4px;font-size:16px;font-weight:600;">Validate Item</h3>
-                <p id="tard-modal-agent" style="margin:0 0 16px;font-size:12px;color:#6b7280;"></p>
-                <label style="display:block;font-size:12px;font-weight:500;color:#6b7280;margin-bottom:6px;">Remarks <span style="color:#ef4444;">*</span></label>
-                <textarea id="tard-modal-remarks" class="form-input" rows="3" placeholder="Enter remarks (required)..." style="width:100%;resize:vertical;font-size:13px;background:#fff;color:#1a1a2e;border:1px solid #d1d5db;border-radius:6px;padding:8px;" required></textarea>
-                <p id="tard-modal-error" style="display:none;margin:4px 0 0;font-size:11px;color:#ef4444;">Remarks are required.</p>
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-                  <button class="btn btn-outline btn-sm" onclick="tardCloseModal()" style="font-size:12px;padding:6px 16px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">Cancel</button>
-                  <button class="btn btn-sm" id="tard-modal-invalid-btn" onclick="tardConfirmModal('Invalid')" style="font-size:12px;padding:6px 16px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;">Mark Invalid</button>
-                  <button class="btn btn-sm" id="tard-modal-valid-btn" onclick="tardConfirmModal('Valid')" style="font-size:12px;padding:6px 16px;background:#22c55e;color:#fff;border:none;border-radius:6px;cursor:pointer;">Mark Valid</button>
+
+            <!-- ── Validation Modal ── -->
+            <div id="tard-validation-modal" class="tard-modal-overlay">
+              <div class="tard-modal-card">
+                <div class="tard-modal-header">
+                  <h3 id="tard-modal-title">Validate Item</h3>
+                  <button class="tard-modal-close" onclick="tardCloseModal()" title="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <div class="tard-modal-context" id="tard-modal-agent"></div>
+                <div class="tard-modal-body">
+                  <label class="tard-modal-label">Remarks <span class="tard-required">*</span></label>
+                  <textarea id="tard-modal-remarks" class="tard-modal-textarea" rows="3" placeholder="Enter remarks (required)..." required></textarea>
+                  <p id="tard-modal-error" class="tard-modal-error">Remarks are required.</p>
+                </div>
+                <div class="tard-modal-footer">
+                  <button class="tard-btn tard-btn-cancel" onclick="tardCloseModal()">Cancel</button>
+                  <button class="tard-btn tard-btn-invalid" id="tard-modal-invalid-btn" onclick="tardConfirmModal('Invalid')">Mark Invalid</button>
+                  <button class="tard-btn tard-btn-valid" id="tard-modal-valid-btn" onclick="tardConfirmModal('Valid')">Mark Valid</button>
                 </div>
               </div>
             </div>
-            <div id="tard-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;opacity:0.4;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+
+            <div id="tard-empty" class="tard-empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <p>No tardiness items found for the selected filters.</p>
             </div>
           </div>
@@ -1818,7 +1876,7 @@
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
-  <script src="js/tardiness.js?v=109" defer></script>
+  <script src="js/tardiness.js?v=110" defer></script>
 
   <!-- Maintenance Overlay -->
   <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">

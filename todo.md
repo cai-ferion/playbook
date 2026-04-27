@@ -3138,3 +3138,18 @@
 
 ## Tardiness Validator — Clear Filter Button (April 28, 2026)
 - [x] Add a Clear button to reset all filters in Tardiness Validator
+
+## Tardiness Validator — Complete UI/UX Restyling (April 28, 2026)
+- [x] Add summary stats bar (Pending/Valid/Invalid/Grace Period counts with visual indicators)
+- [x] Redesign filter bar layout for compactness and clarity
+- [x] Improve table styling (density, row hover, alternating rows, status badges)
+- [x] Enhance validation modal design
+- [x] Add visual hierarchy and spacing improvements
+- [x] Improve action column UX
+- [x] Summary stats strip (Total, Pending, Valid, Invalid, Grace Period) with clickable quick-filters
+- [x] Refined filter bar with labeled groups, compact layout
+- [x] Polished table with severity-colored Minutes Late, status badges, truncation+tooltips
+- [x] Upgraded modal with close button, backdrop blur, better spacing
+- [x] Dedicated tardiness-restyle.css with light theme matching Dashboard restyle
+- [x] Row state hints (left border color on hover), action icons, empty state
+- [x] Server returns stats object in GET /tardiness response
