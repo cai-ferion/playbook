@@ -24,12 +24,13 @@ describe('Role Change Email Automation', () => {
       expect(html).toContain('id="billing-tab-role-changes"');
     });
 
-    it('has wizard step 1: week & date selection', () => {
+    it('has wizard step 1: week selection (no date range picker)', () => {
       expect(html).toContain('id="rc-step-1"');
       expect(html).toContain('id="rc-week-select"');
-      expect(html).toContain('id="rc-date-from"');
-      expect(html).toContain('id="rc-date-to"');
       expect(html).toContain('id="rc-analyze-btn"');
+      // Date range picker removed — dates derived from week ending
+      expect(html).not.toContain('id="rc-date-from"');
+      expect(html).not.toContain('id="rc-date-to"');
     });
 
     it('has wizard step 2: deficit analysis table', () => {
@@ -91,6 +92,15 @@ describe('Role Change Email Automation', () => {
 
     it('defines rcOnWeekChange function', () => {
       expect(js).toContain('function rcOnWeekChange()');
+    });
+
+    it('derives week dates from week ending (no date picker dependency)', () => {
+      expect(js).toContain('function rcDeriveWeekDates(weekEnding)');
+      expect(js).toContain('_rcDateFrom');
+      expect(js).toContain('_rcDateTo');
+      // No references to rc-date-from or rc-date-to DOM elements
+      expect(js).not.toContain("getElementById('rc-date-from')");
+      expect(js).not.toContain("getElementById('rc-date-to')");
     });
 
     it('defines rcAnalyze function for deficit analysis', () => {

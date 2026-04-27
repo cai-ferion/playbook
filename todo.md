@@ -3180,3 +3180,7 @@
 - [x] CSS styling: match Playbook design language (restyled light theme)
 - [x] Vitest tests for all new role-change routes
 - [x] Bump cache versions in index.html
+
+## Role Change Fixes (April 28, 2026 - Batch 2)
+- [x] Fix: Week Ending dropdown not populating in Role Changes tab
+- [x] Remove date range picker — derive full week dates from selected week ending

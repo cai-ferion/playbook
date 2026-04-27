@@ -11,6 +11,8 @@ let _rcSuggestions = {};
 let _rcLastEmail = '';
 let _rcLastSubject = '';
 let _rcInitialized = false;
+let _rcDateFrom = '';
+let _rcDateTo = '';
 
 // PG options for the "New PG" dropdown
 const RC_PG_OPTIONS = [
@@ -43,6 +45,17 @@ function switchBillingMainTab(tab) {
   }
 }
 
+// ── Helper: derive Sat–Fri date range from week ending (Friday) ──
+function rcDeriveWeekDates(weekEnding) {
+  const weDate = new Date(weekEnding + 'T00:00:00');
+  const wsDate = new Date(weDate);
+  wsDate.setDate(wsDate.getDate() - 6);
+  return {
+    dateFrom: wsDate.toISOString().slice(0, 10),
+    dateTo: weekEnding,
+  };
+}
+
 // ── Init ──────────────────────────────────────────────────────
 async function initRoleChangeTab() {
   _rcInitialized = true;
@@ -56,9 +69,12 @@ async function initRoleChangeTab() {
       if (select && data.weeks) {
         select.innerHTML = '<option value="">Select Week Ending</option>';
         data.weeks.forEach(w => {
+          // Format label as mm/dd for display, value stays YYYY-MM-DD
+          const d = new Date(w + 'T00:00:00');
+          const label = String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
           const opt = document.createElement('option');
           opt.value = w;
-          opt.textContent = w;
+          opt.textContent = label;
           select.appendChild(opt);
         });
         // Default to current/latest week
@@ -84,21 +100,16 @@ async function initRoleChangeTab() {
   }
 }
 
-// ── Step 1: Week & Date Selection ─────────────────────────────
+// ── Step 1: Week Selection ────────────────────────────────────
 function rcOnWeekChange() {
   const select = document.getElementById('rc-week-select');
   const we = select ? select.value : '';
   if (!we) return;
 
-  // Auto-set date range to the full week (Sat–Fri)
-  const weDate = new Date(we + 'T00:00:00');
-  const wsDate = new Date(weDate);
-  wsDate.setDate(wsDate.getDate() - 6);
-
-  const fromInput = document.getElementById('rc-date-from');
-  const toInput = document.getElementById('rc-date-to');
-  if (fromInput) fromInput.value = wsDate.toISOString().slice(0, 10);
-  if (toInput) toInput.value = we;
+  // Derive full week dates from week ending
+  const { dateFrom, dateTo } = rcDeriveWeekDates(we);
+  _rcDateFrom = dateFrom;
+  _rcDateTo = dateTo;
 
   const analyzeBtn = document.getElementById('rc-analyze-btn');
   if (analyzeBtn) analyzeBtn.disabled = false;
@@ -110,9 +121,7 @@ function rcOnWeekChange() {
 // ── Step 2: Analyze Deficits ──────────────────────────────────
 async function rcAnalyze() {
   const we = document.getElementById('rc-week-select')?.value;
-  const dateFrom = document.getElementById('rc-date-from')?.value;
-  const dateTo = document.getElementById('rc-date-to')?.value;
-  if (!we || !dateFrom || !dateTo) return;
+  if (!we) return;
 
   // Show step 2
   const step2 = document.getElementById('rc-step-2');
@@ -135,9 +144,9 @@ async function rcAnalyze() {
     return;
   }
 
-  // Fetch available staff
+  // Fetch available staff using derived dates
   try {
-    const resp = await fetch(`${IO_API_BASE}/role-change/available-staff?week_ending=${we}&date_from=${dateFrom}&date_to=${dateTo}`);
+    const resp = await fetch(`${IO_API_BASE}/role-change/available-staff?week_ending=${we}&date_from=${_rcDateFrom}&date_to=${_rcDateTo}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _rcStaff = data.staff || [];
@@ -204,7 +213,6 @@ function rcRenderStaff() {
     let suggestedPG = '';
     let suggestedRole = '';
     if (s.is_available && deficitPGs.length > 0) {
-      // Prefer a deficit PG different from the staff's own
       const candidatePG = deficitPGs.find(pg => pg !== s.planning_group) || deficitPGs[0];
       suggestedPG = candidatePG;
       suggestedRole = _rcSuggestions[candidatePG] || 'Agent';
@@ -257,9 +265,7 @@ function rcUpdateSelectedCount() {
 // ── Step 4: Generate Email & Update Attendance ────────────────
 async function rcGenerateEmail() {
   const we = document.getElementById('rc-week-select')?.value;
-  const dateFrom = document.getElementById('rc-date-from')?.value;
-  const dateTo = document.getElementById('rc-date-to')?.value;
-  if (!we || !dateFrom || !dateTo) return;
+  if (!we) return;
 
   const checks = document.querySelectorAll('.rc-staff-check:checked');
   if (checks.length === 0) {
@@ -267,7 +273,7 @@ async function rcGenerateEmail() {
     return;
   }
 
-  // Build assignments
+  // Build assignments — dates derived from week ending
   const assignments = [];
   checks.forEach(cb => {
     const idx = parseInt(cb.dataset.idx);
@@ -281,13 +287,13 @@ async function rcGenerateEmail() {
       ohr_id: staff.ohr_id,
       new_role: newRole,
       new_pg: newPG,
-      date_from: dateFrom,
-      date_to: dateTo,
+      date_from: _rcDateFrom,
+      date_to: _rcDateTo,
     });
   });
 
   // Confirm
-  if (!confirm(`This will:\n• Create ${assignments.length} role change record(s)\n• Update attendance records for ${dateFrom} to ${dateTo}\n• Generate the email template\n\nProceed?`)) {
+  if (!confirm(`This will:\n• Create ${assignments.length} role change record(s)\n• Update attendance records for WE ${we}\n• Generate the email template\n\nProceed?`)) {
     return;
   }
 
@@ -361,13 +367,11 @@ async function rcGenerateEmail() {
 async function rcCopyEmailHtml() {
   if (!_rcLastEmail) { showToast('No email to copy', 'warning'); return; }
   try {
-    // Use Clipboard API with HTML MIME type
     const blob = new Blob([_rcLastEmail], { type: 'text/html' });
     const item = new ClipboardItem({ 'text/html': blob, 'text/plain': new Blob([_rcLastEmail], { type: 'text/plain' }) });
     await navigator.clipboard.write([item]);
     showToast('Email HTML copied to clipboard! Paste directly into Outlook/Gmail.', 'success');
   } catch (e) {
-    // Fallback: copy as plain text
     try {
       await navigator.clipboard.writeText(_rcLastEmail);
       showToast('HTML copied as text (rich paste not supported in this browser)', 'info');
@@ -379,7 +383,6 @@ async function rcCopyEmailHtml() {
 
 async function rcCopyEmailPlainText() {
   if (!_rcLastEmail) { showToast('No email to copy', 'warning'); return; }
-  // Convert HTML to plain text
   const temp = document.createElement('div');
   temp.innerHTML = _rcLastEmail;
   const text = temp.textContent || temp.innerText || '';
