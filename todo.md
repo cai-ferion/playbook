@@ -3128,3 +3128,10 @@
 - [x] Fix PG filter label: "PG" → "Planning Group"
 - [x] Fix PG filter: exclude stale planning groups (CEI_TASKFORCE_CTR, MASA_MAFSA_CTR_SCALED_REVIEW)
 - [x] Add TL team toggle button to filter to agents under them
+
+## Tardiness Validator — Data Cleanup (April 28, 2026)
+- [x] Delete all tardiness records except WE 4/3/2026, 4/10/2026, 4/17/2026 (already only had these 3 weeks — 678 records retained, 0 deleted)
+
+## Tardiness Validator — WE Filter Fix (April 28, 2026)
+- [x] Sort Week Ending filter dropdown in descending order (newest first)
+- [x] Format week_ending dates properly (MM/DD format) in dropdown and table column

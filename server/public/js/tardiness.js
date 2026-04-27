@@ -243,7 +243,12 @@ async function tardLoadData() {
     const weSelect = document.getElementById("tard-week-select");
     if (weSelect && weSelect.options.length <= 1 && data.filters) {
       if (data.filters.weeks) {
-        weSelect.innerHTML = '<option value="">All Weeks</option>' + data.filters.weeks.map(w => `<option value="${w}">${w}</option>`).join("");
+        weSelect.innerHTML = '<option value="">All Weeks</option>' + data.filters.weeks.map(w => {
+          // Format display as MM/DD (per knowledge base requirement)
+          const parts = w.split('/');
+          const display = parts.length === 3 ? `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}` : w;
+          return `<option value="${w}">${display}</option>`;
+        }).join("");
       }
       const pgSelect = document.getElementById("tard-pg-filter");
       if (pgSelect && data.filters.planning_groups) {
@@ -334,7 +339,7 @@ function tardRenderTable() {
       <td><input type="checkbox" class="tard-row-check" data-id="${item.id}" ${checked} ${checkboxDisabled} onchange="tardToggleRow(${item.id})"></td>
       <td style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.ohr_id)}">${escHtml(item.ohr_id)}</td>
       <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.employee_name)}">${escHtml(item.employee_name)}</td>
-      <td style="white-space:nowrap;">${item.date}</td>
+      <td style="white-space:nowrap;">${tardFormatDate(item.date)}</td>
       <td style="text-align:center;font-weight:700;color:${minColor};">${item.tardiness_minutes}</td>
       <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(supervisor)}">${escHtml(supervisor)}</td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(item.shift_type || "")}</td>
@@ -349,6 +354,23 @@ function tardRenderTable() {
   }).join("");
 
   if (selectAll) selectAll.checked = false;
+}
+
+/** Format date string to MM/DD/YYYY consistently */
+function tardFormatDate(d) {
+  if (!d) return "";
+  const s = String(d);
+  // Handle M/D/YYYY format
+  const slashParts = s.split('/');
+  if (slashParts.length === 3) {
+    return `${slashParts[0].padStart(2,'0')}/${slashParts[1].padStart(2,'0')}/${slashParts[2]}`;
+  }
+  // Handle YYYY-MM-DD or ISO format
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) {
+    return `${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}/${dt.getFullYear()}`;
+  }
+  return s;
 }
 
 function escHtml(s) {

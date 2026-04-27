@@ -261,9 +261,19 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     const weSelect = req.query._populate_filters;
     // Always send filters on first call (client checks if dropdowns are empty)
     const weeksResult: any = await db.execute(sql.raw(
-      `SELECT DISTINCT week_ending FROM io_tardiness ORDER BY week_ending DESC`
+      `SELECT DISTINCT week_ending FROM io_tardiness WHERE week_ending IS NOT NULL AND week_ending != '' ORDER BY week_ending`
     ));
-    const weeks = (Array.isArray(weeksResult[0]) ? weeksResult[0] : weeksResult).map((r: any) => r.week_ending);
+    // Sort by actual date descending (values are M/D/YYYY strings)
+    const weeks = (Array.isArray(weeksResult[0]) ? weeksResult[0] : weeksResult)
+      .map((r: any) => r.week_ending)
+      .sort((a: string, b: string) => {
+        const parseWE = (s: string) => {
+          const parts = s.split('/');
+          if (parts.length === 3) return new Date(+parts[2], +parts[0] - 1, +parts[1]).getTime();
+          return new Date(s).getTime();
+        };
+        return parseWE(b) - parseWE(a); // descending
+      });
 
     // Planning groups: use live data from io_employees to exclude stale/renamed groups
     const pgsResult: any = await db.execute(sql.raw(
