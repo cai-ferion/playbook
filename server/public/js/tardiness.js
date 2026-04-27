@@ -4,7 +4,10 @@
  * Weekly cadence: Saturday to Friday.
  */
 
-/* global CURRENT_USER, showToast, Chart */
+/* global currentUser, showToast, Chart */
+
+/** Safe accessor for the global currentUser set by app.js */
+function _cu() { return (typeof currentUser !== 'undefined') ? currentUser : null; }
 
 // ============================================================
 // State
@@ -109,8 +112,8 @@ async function tardinessUploadCSV() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-actor-ohr": CURRENT_USER?.ohr || "",
-          "x-actor-name": CURRENT_USER?.name || "",
+          "x-actor-ohr": _cu()?.ohr_id || "",
+          "x-actor-name": _cu()?.full_name || "",
         },
         body: JSON.stringify({ records: batch }),
       });
@@ -142,10 +145,10 @@ async function tardinessUploadCSV() {
         type: 'tardiness_uploaded',
         title: 'Tardiness Data Uploaded',
         message: `${totalInserted} tardiness records uploaded`,
-        target_ohr: CURRENT_USER?.ohr || '',
-        actor_ohr: CURRENT_USER?.ohr || '',
-        actor_name: CURRENT_USER?.name || '',
-        metadata: JSON.stringify({ count: totalInserted, uploader: CURRENT_USER?.name || '' })
+        target_ohr: _cu()?.ohr_id || '',
+        actor_ohr: _cu()?.ohr_id || '',
+        actor_name: _cu()?.full_name || '',
+        metadata: JSON.stringify({ count: totalInserted, uploader: _cu()?.full_name || '' })
       });
     }
 
@@ -223,13 +226,12 @@ async function tardLoadData() {
 
     const resp = await fetch(`/api/io/tardiness?${params.toString()}`, {
       headers: {
-        "x-actor-ohr": CURRENT_USER?.ohr || "",
-        "x-actor-name": CURRENT_USER?.name || "",
+        "x-actor-ohr": _cu()?.ohr_id || "",
+        "x-actor-name": _cu()?.full_name || "",
       },
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || "Failed to load");
-
     TARD_STATE.items = data.items || [];
     TARD_STATE.isAdmin = data.is_admin || false;
     TARD_STATE.selectedIds.clear();
@@ -242,7 +244,7 @@ async function tardLoadData() {
       // Also fetch from analytics for full list
       try {
         const aResp = await fetch("/api/io/tardiness/analytics", {
-          headers: { "x-actor-ohr": CURRENT_USER?.ohr || "", "x-actor-name": CURRENT_USER?.name || "" },
+          headers: { "x-actor-ohr": _cu()?.ohr_id || "", "x-actor-name": _cu()?.full_name || "" },
         });
         const aData = await aResp.json();
         if (aData.filters?.weeks) {
@@ -368,8 +370,8 @@ async function tardValidateItem(id, status) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-actor-ohr": CURRENT_USER?.ohr || "",
-        "x-actor-name": CURRENT_USER?.name || "",
+        "x-actor-ohr": _cu()?.ohr_id || "",
+        "x-actor-name": _cu()?.full_name || "",
       },
       body: JSON.stringify({ validation_status: status, remarks: remarks || "" }),
     });
@@ -383,10 +385,10 @@ async function tardValidateItem(id, status) {
         type: 'tardiness_validated',
         title: `Tardiness ${status}`,
         message: `1 tardiness item validated as ${status}`,
-        target_ohr: CURRENT_USER?.ohr || '',
-        actor_ohr: CURRENT_USER?.ohr || '',
-        actor_name: CURRENT_USER?.name || '',
-        metadata: JSON.stringify({ status, count: 1, validator: CURRENT_USER?.name || '' })
+        target_ohr: _cu()?.ohr_id || '',
+        actor_ohr: _cu()?.ohr_id || '',
+        actor_name: _cu()?.full_name || '',
+        metadata: JSON.stringify({ status, count: 1, validator: _cu()?.full_name || '' })
       });
     }
 
@@ -403,8 +405,8 @@ async function tardUnlockItem(id) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-actor-ohr": CURRENT_USER?.ohr || "",
-        "x-actor-name": CURRENT_USER?.name || "",
+        "x-actor-ohr": _cu()?.ohr_id || "",
+        "x-actor-name": _cu()?.full_name || "",
       },
       body: JSON.stringify({ unlock: true }),
     });
@@ -430,8 +432,8 @@ async function tardBulkValidate(status) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-actor-ohr": CURRENT_USER?.ohr || "",
-        "x-actor-name": CURRENT_USER?.name || "",
+        "x-actor-ohr": _cu()?.ohr_id || "",
+        "x-actor-name": _cu()?.full_name || "",
       },
       body: JSON.stringify({ ids, validation_status: status, remarks: remarks || "" }),
     });
@@ -445,10 +447,10 @@ async function tardBulkValidate(status) {
         type: 'tardiness_validated',
         title: `Bulk Tardiness ${status}`,
         message: `${data.updated} tardiness item(s) validated as ${status}`,
-        target_ohr: CURRENT_USER?.ohr || '',
-        actor_ohr: CURRENT_USER?.ohr || '',
-        actor_name: CURRENT_USER?.name || '',
-        metadata: JSON.stringify({ status, count: data.updated, validator: CURRENT_USER?.name || '' })
+        target_ohr: _cu()?.ohr_id || '',
+        actor_ohr: _cu()?.ohr_id || '',
+        actor_name: _cu()?.full_name || '',
+        metadata: JSON.stringify({ status, count: data.updated, validator: _cu()?.full_name || '' })
       });
     }
 
@@ -499,8 +501,8 @@ async function tardaLoadAnalytics() {
 
     const resp = await fetch(`/api/io/tardiness/analytics?${params.toString()}`, {
       headers: {
-        "x-actor-ohr": CURRENT_USER?.ohr || "",
-        "x-actor-name": CURRENT_USER?.name || "",
+        "x-actor-ohr": _cu()?.ohr_id || "",
+        "x-actor-name": _cu()?.full_name || "",
       },
     });
     const data = await resp.json();
@@ -651,7 +653,7 @@ function tardaRenderOffenders(offenders) {
 async function tardaLoadEscalations() {
   try {
     const resp = await fetch("/api/io/tardiness/escalation-check", {
-      headers: { "x-actor-ohr": CURRENT_USER?.ohr || "", "x-actor-name": CURRENT_USER?.name || "" },
+      headers: { "x-actor-ohr": _cu()?.ohr_id || "", "x-actor-name": _cu()?.full_name || "" },
     });
     const data = await resp.json();
     if (!resp.ok) return;

@@ -3080,3 +3080,7 @@
 ### Tests
 - [x] 56 tardiness-specific tests passing (server/tardiness.test.ts)
 - [x] Full suite: 1278/1280 (2 pre-existing Supabase connectivity failures)
+
+## Tardiness — Bug Fix & Data Import (April 27, 2026)
+- [x] Fix CURRENT_USER not defined error in tardiness.js → changed to currentUser with correct field names (ohr_id, full_name)
+- [x] Import raw tardiness data from Google Sheet 1: 54,059 rows downloaded, 9,045 Late rows filtered, 9,346 inserted, 3,699 enriched from io_employees
