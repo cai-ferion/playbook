@@ -3119,3 +3119,12 @@
 ## Tardiness Validator — Date Range Filter & Grace Period Indicator (April 28, 2026)
 - [x] Add start/end date picker filter to Tardiness Validator (HTML, JS, server route)
 - [x] Add grace period indicator column (badge on auto-invalidated <5min rows)
+
+## Tardiness Validator — UI Revisions Round 2 (April 28, 2026)
+- [x] Remove date range filter (From/To pickers and Clear button)
+- [x] Center-align Minutes Late column
+- [x] Replace action buttons with single action icon in table row
+- [x] Improve modal: Mark Valid, Mark Invalid, Cancel buttons; remarks required
+- [x] Fix PG filter label: "PG" → "Planning Group"
+- [x] Fix PG filter: exclude stale planning groups (CEI_TASKFORCE_CTR, MASA_MAFSA_CTR_SCALED_REVIEW)
+- [x] Add TL team toggle button to filter to agents under them

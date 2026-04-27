@@ -220,15 +220,14 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     const actorName = String(req.headers["x-actor-name"] || "");
     const isAdmin = ADMIN_OHRS.includes(actorOhr);
 
-    const { week_ending, planning_group, status, search, scope, supervisor, shift_type, date_from, date_to } = req.query;
+    const { week_ending, planning_group, status, search, scope, supervisor, shift_type } = req.query;
 
     let conditions: string[] = [];
     let params: any[] = [];
 
-    // Team scoping: TLs only see their team unless admin
-    if (!isAdmin && scope !== "all") {
-      // Get the actor's name to match as supervisor
-      conditions.push("t.supervisor_name LIKE ?");
+    // Team scoping: when scope=team, restrict to TL's direct reports via live employee data
+    if (scope === "team" && actorName) {
+      conditions.push("e.supervisor_name LIKE ?");
       params.push(`%${actorName.split(",")[0]}%`); // Match by last name
     }
 
@@ -237,8 +236,6 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     if (status) { conditions.push("t.validation_status = ?"); params.push(String(status)); }
     if (supervisor) { conditions.push("e.supervisor_name = ?"); params.push(String(supervisor)); }
     if (shift_type) { conditions.push("t.shift_type = ?"); params.push(String(shift_type)); }
-    if (date_from) { conditions.push("t.date >= ?"); params.push(String(date_from)); }
-    if (date_to) { conditions.push("t.date <= ?"); params.push(String(date_to)); }
     if (search) {
       conditions.push("(t.employee_name LIKE ? OR t.ohr_id LIKE ?)");
       params.push(`%${String(search)}%`, `%${String(search)}%`);
@@ -268,8 +265,9 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     ));
     const weeks = (Array.isArray(weeksResult[0]) ? weeksResult[0] : weeksResult).map((r: any) => r.week_ending);
 
+    // Planning groups: use live data from io_employees to exclude stale/renamed groups
     const pgsResult: any = await db.execute(sql.raw(
-      `SELECT DISTINCT planning_group FROM io_tardiness WHERE planning_group IS NOT NULL AND planning_group != '' ORDER BY planning_group`
+      `SELECT DISTINCT e.planning_group FROM io_tardiness t LEFT JOIN io_employees e ON t.ohr_id = e.ohr_id WHERE e.planning_group IS NOT NULL AND e.planning_group != '' ORDER BY e.planning_group`
     ));
     const pgs = (Array.isArray(pgsResult[0]) ? pgsResult[0] : pgsResult).map((r: any) => r.planning_group);
 

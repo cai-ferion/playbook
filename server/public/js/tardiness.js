@@ -19,6 +19,7 @@ const TARD_STATE = {
   weekEndings: [],
   planningGroups: [],
   searchTimer: null,
+  myTeamOnly: false,
 };
 
 // ============================================================
@@ -215,8 +216,6 @@ async function tardLoadData() {
     const supervisor = document.getElementById("tard-supervisor-filter")?.value || "";
     const shiftType = document.getElementById("tard-shift-filter")?.value || "";
     const search = document.getElementById("tard-search")?.value || "";
-    const dateFrom = document.getElementById("tard-date-from")?.value || "";
-    const dateTo = document.getElementById("tard-date-to")?.value || "";
 
     const params = new URLSearchParams();
     if (we) params.set("week_ending", we);
@@ -225,8 +224,8 @@ async function tardLoadData() {
     if (supervisor) params.set("supervisor", supervisor);
     if (shiftType) params.set("shift_type", shiftType);
     if (search) params.set("search", search);
-    if (dateFrom) params.set("date_from", dateFrom);
-    if (dateTo) params.set("date_to", dateTo);
+    // My Team toggle: pass scope=team to restrict to TL's direct reports
+    if (TARD_STATE.myTeamOnly) params.set("scope", "team");
 
     const resp = await fetch(`/api/io/tardiness?${params.toString()}`, {
       headers: {
@@ -317,14 +316,12 @@ function tardRenderTable() {
           ? '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:#6366f1;color:#fff;" title="Auto-invalidated: within 5-minute grace period">Grace Period</span>'
           : '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--danger);color:#fff;">Invalid</span>';
 
+    // Action column: pencil icon for pending, lock/unlock icon for validated
     const actions = isPending
-      ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">
-           <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:var(--success);color:#fff;border:none;" onclick="tardOpenModal(${item.id},'Valid')">Valid</button>
-           <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:var(--danger);color:#fff;border:none;" onclick="tardOpenModal(${item.id},'Invalid')">Invalid</button>
-         </div>`
+      ? `<div style="text-align:center;"><button class="btn btn-sm btn-outline" style="padding:2px 8px;border:none;cursor:pointer;" onclick="tardOpenModal(${item.id})" title="Validate this item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></div>`
       : TARD_STATE.isAdmin
-        ? `<button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 6px;" onclick="tardUnlockItem(${item.id})">Unlock</button>`
-        : '<span style="font-size:11px;color:var(--fg-muted);">Locked</span>';
+        ? `<div style="text-align:center;"><button class="btn btn-sm btn-outline" style="padding:2px 8px;border:none;cursor:pointer;" onclick="tardUnlockItem(${item.id})" title="Unlock and reset to Pending"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></button></div>`
+        : '<div style="text-align:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>';
 
     const checked = TARD_STATE.selectedIds.has(item.id) ? "checked" : "";
     const checkboxDisabled = !isPending ? "disabled" : "";
@@ -338,7 +335,7 @@ function tardRenderTable() {
       <td style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.ohr_id)}">${escHtml(item.ohr_id)}</td>
       <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(item.employee_name)}">${escHtml(item.employee_name)}</td>
       <td style="white-space:nowrap;">${item.date}</td>
-      <td style="text-align:right;font-weight:700;color:${minColor};">${item.tardiness_minutes}</td>
+      <td style="text-align:center;font-weight:700;color:${minColor};">${item.tardiness_minutes}</td>
       <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(supervisor)}">${escHtml(supervisor)}</td>
       <td style="font-size:11px;white-space:nowrap;">${escHtml(item.shift_type || "")}</td>
       <td style="font-size:11px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(planningGroup)}">${escHtml(planningGroup)}</td>
@@ -377,17 +374,20 @@ function tardToggleRow(id) {
 // ── Modal-based validation (replaces browser prompt()) ──
 let _tardModalResolve = null;
 
-function tardOpenModal(id, status) {
-  TARD_STATE._pendingValidation = { id, status, mode: 'single' };
+function tardOpenModal(id) {
+  // Find the item to show agent context in modal
+  const item = TARD_STATE.items.find(i => i.id === id);
+  TARD_STATE._pendingValidation = { id, mode: 'single' };
   const modal = document.getElementById('tard-validation-modal');
   const title = document.getElementById('tard-modal-title');
+  const agentEl = document.getElementById('tard-modal-agent');
   const remarks = document.getElementById('tard-modal-remarks');
-  const confirmBtn = document.getElementById('tard-modal-confirm');
-  if (!modal) { /* fallback if modal HTML missing */ tardValidateItem(id, status); return; }
-  title.textContent = `Mark as ${status}`;
+  const errorEl = document.getElementById('tard-modal-error');
+  if (!modal) { tardValidateItem(id, 'Valid'); return; }
+  title.textContent = 'Validate Item';
+  if (agentEl && item) agentEl.textContent = `${item.employee_name} — ${item.date} (${item.tardiness_minutes} min)`;
   remarks.value = '';
-  confirmBtn.textContent = `Mark ${status}`;
-  confirmBtn.style.background = status === 'Valid' ? 'var(--success)' : 'var(--danger)';
+  if (errorEl) errorEl.style.display = 'none';
   modal.style.display = 'flex';
   remarks.focus();
 }
@@ -398,13 +398,14 @@ function tardOpenBulkModal(status) {
   TARD_STATE._pendingValidation = { ids, status, mode: 'bulk' };
   const modal = document.getElementById('tard-validation-modal');
   const title = document.getElementById('tard-modal-title');
+  const agentEl = document.getElementById('tard-modal-agent');
   const remarks = document.getElementById('tard-modal-remarks');
-  const confirmBtn = document.getElementById('tard-modal-confirm');
+  const errorEl = document.getElementById('tard-modal-error');
   if (!modal) { tardBulkValidate(status); return; }
-  title.textContent = `Mark ${ids.length} item(s) as ${status}`;
+  title.textContent = `Bulk Validate ${ids.length} Item(s)`;
+  if (agentEl) agentEl.textContent = `Action: Mark as ${status}`;
   remarks.value = '';
-  confirmBtn.textContent = `Mark ${status}`;
-  confirmBtn.style.background = status === 'Valid' ? 'var(--success)' : 'var(--danger)';
+  if (errorEl) errorEl.style.display = 'none';
   modal.style.display = 'flex';
   remarks.focus();
 }
@@ -415,14 +416,22 @@ function tardCloseModal() {
   TARD_STATE._pendingValidation = null;
 }
 
-async function tardConfirmModal() {
+async function tardConfirmModal(status) {
   const pending = TARD_STATE._pendingValidation;
   if (!pending) return;
   const remarks = (document.getElementById('tard-modal-remarks')?.value || '').trim();
+  const errorEl = document.getElementById('tard-modal-error');
+  // Remarks are required
+  if (!remarks) {
+    if (errorEl) errorEl.style.display = 'block';
+    document.getElementById('tard-modal-remarks')?.focus();
+    return;
+  }
   tardCloseModal();
   if (pending.mode === 'single') {
-    await tardValidateItem(pending.id, pending.status, remarks);
+    await tardValidateItem(pending.id, status, remarks);
   } else {
+    // Bulk mode: status is already set in _pendingValidation
     await tardBulkValidate(pending.status, remarks);
   }
 }
@@ -532,25 +541,24 @@ function tardExportCSV() {
   const pg = document.getElementById("tard-pg-filter")?.value || "";
   const supervisor = document.getElementById("tard-supervisor-filter")?.value || "";
   const shiftType = document.getElementById("tard-shift-filter")?.value || "";
-  const dateFrom = document.getElementById("tard-date-from")?.value || "";
-  const dateTo = document.getElementById("tard-date-to")?.value || "";
   const params = new URLSearchParams();
   if (we) params.set("week_ending", we);
   if (status) params.set("status", status);
   if (pg) params.set("planning_group", pg);
   if (supervisor) params.set("supervisor", supervisor);
   if (shiftType) params.set("shift_type", shiftType);
-  if (dateFrom) params.set("date_from", dateFrom);
-  if (dateTo) params.set("date_to", dateTo);
   window.open(`/api/io/tardiness/export?${params.toString()}`, "_blank");
 }
 
-/** Clear date range pickers and reload */
-function tardClearDateRange() {
-  const fromEl = document.getElementById("tard-date-from");
-  const toEl = document.getElementById("tard-date-to");
-  if (fromEl) fromEl.value = "";
-  if (toEl) toEl.value = "";
+/** Toggle My Team filter for TLs */
+function tardToggleMyTeam() {
+  TARD_STATE.myTeamOnly = !TARD_STATE.myTeamOnly;
+  const btn = document.getElementById('tard-my-team-btn');
+  if (btn) {
+    btn.style.background = TARD_STATE.myTeamOnly ? 'var(--accent)' : '';
+    btn.style.color = TARD_STATE.myTeamOnly ? '#fff' : '';
+    btn.style.borderColor = TARD_STATE.myTeamOnly ? 'var(--accent)' : '';
+  }
   tardLoadData();
 }
 

@@ -1573,7 +1573,7 @@
                 <option value="Valid">Valid</option>
                 <option value="Invalid">Invalid</option>
               </select>
-              <span class="filter-label" style="margin-left:8px;">PG:</span>
+              <span class="filter-label" style="margin-left:8px;">Planning Group:</span>
               <select class="form-select" id="tard-pg-filter" onchange="tardLoadData()" style="min-width:140px;">
                 <option value="">All Groups</option>
               </select>
@@ -1589,13 +1589,7 @@
                 <option value="GY Shift">GY Shift</option>
               </select>
               <input type="text" class="form-input form-input-sm" id="tard-search" placeholder="Search agent or OHR..." oninput="tardSearchDebounce()" style="max-width:200px;margin-left:8px;">
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span class="filter-label">From:</span>
-              <input type="date" class="form-input form-input-sm" id="tard-date-from" onchange="tardLoadData()" style="width:140px;">
-              <span class="filter-label">To:</span>
-              <input type="date" class="form-input form-input-sm" id="tard-date-to" onchange="tardLoadData()" style="width:140px;">
-              <button class="btn btn-outline btn-sm" onclick="tardClearDateRange()" style="font-size:10px;padding:2px 8px;" title="Clear date range">Clear</button>
+              <button class="btn btn-outline btn-sm" id="tard-my-team-btn" onclick="tardToggleMyTeam()" style="font-size:11px;padding:2px 10px;margin-left:4px;" title="Toggle: show only your direct reports">My Team</button>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <span id="tard-record-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Items: 0</span>
@@ -1614,7 +1608,7 @@
                     <th>OHR</th>
                     <th style="min-width:140px;">Full Name</th>
                     <th>Date</th>
-                    <th style="text-align:right;">Minutes Late</th>
+                    <th style="text-align:center;">Minutes Late</th>
                     <th>Supervisor</th>
                     <th>Shift Type</th>
                     <th>Planning Group</th>
@@ -1623,7 +1617,7 @@
                     <th>Status</th>
                     <th>Remarks</th>
                     <th>Validated By</th>
-                    <th style="min-width:120px;">Actions</th>
+                    <th style="min-width:60px;text-align:center;">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="tard-table-body"></tbody>
@@ -1631,13 +1625,16 @@
             </div>
             <!-- Validation Modal -->
             <div id="tard-validation-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
-              <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:24px;width:400px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
-                <h3 id="tard-modal-title" style="margin:0 0 16px;font-size:16px;font-weight:600;">Mark as Valid</h3>
-                <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px;">Remarks (optional)</label>
-                <textarea id="tard-modal-remarks" class="form-input" rows="3" placeholder="Enter remarks..." style="width:100%;resize:vertical;font-size:13px;"></textarea>
+              <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:24px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+                <h3 id="tard-modal-title" style="margin:0 0 4px;font-size:16px;font-weight:600;">Validate Item</h3>
+                <p id="tard-modal-agent" style="margin:0 0 16px;font-size:12px;color:var(--text-secondary);"></p>
+                <label style="display:block;font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:6px;">Remarks <span style="color:var(--danger);">*</span></label>
+                <textarea id="tard-modal-remarks" class="form-input" rows="3" placeholder="Enter remarks (required)..." style="width:100%;resize:vertical;font-size:13px;" required></textarea>
+                <p id="tard-modal-error" style="display:none;margin:4px 0 0;font-size:11px;color:var(--danger);">Remarks are required.</p>
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
                   <button class="btn btn-outline btn-sm" onclick="tardCloseModal()" style="font-size:12px;padding:6px 16px;">Cancel</button>
-                  <button class="btn btn-sm" id="tard-modal-confirm" onclick="tardConfirmModal()" style="font-size:12px;padding:6px 16px;color:#fff;">Confirm</button>
+                  <button class="btn btn-sm" id="tard-modal-invalid-btn" onclick="tardConfirmModal('Invalid')" style="font-size:12px;padding:6px 16px;background:var(--danger);color:#fff;border:none;">Mark Invalid</button>
+                  <button class="btn btn-sm" id="tard-modal-valid-btn" onclick="tardConfirmModal('Valid')" style="font-size:12px;padding:6px 16px;background:var(--success);color:#fff;border:none;">Mark Valid</button>
                 </div>
               </div>
             </div>
@@ -1820,7 +1817,7 @@
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>
-  <script src="js/tardiness.js?v=105" defer></script>
+  <script src="js/tardiness.js?v=106" defer></script>
 
   <!-- Maintenance Overlay -->
   <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">

@@ -67,7 +67,7 @@ describe("Tardiness — Server Routes", () => {
   });
   it("returns filter metadata (weeks, planning_groups, supervisors, shift_types)", () => {
     expect(tardinessRoutes).toContain("SELECT DISTINCT week_ending FROM io_tardiness");
-    expect(tardinessRoutes).toContain("SELECT DISTINCT planning_group FROM io_tardiness");
+    expect(tardinessRoutes).toContain("SELECT DISTINCT e.planning_group FROM io_tardiness");
     expect(tardinessRoutes).toContain("SELECT DISTINCT e.supervisor_name FROM io_tardiness");
     expect(tardinessRoutes).toContain("SELECT DISTINCT shift_type FROM io_tardiness");
   });
@@ -85,16 +85,12 @@ describe("Tardiness — Server Routes", () => {
     expect(tardinessRoutes).toContain("shift_type");
     expect(tardinessRoutes).toContain("t.shift_type = ?");
   });
-  it("supports date_from and date_to range filter", () => {
-    expect(tardinessRoutes).toContain("date_from");
-    expect(tardinessRoutes).toContain("date_to");
-    expect(tardinessRoutes).toContain('t.date >= ?');
-    expect(tardinessRoutes).toContain('t.date <= ?');
+  it("supports scope=team for TL My Team toggle", () => {
+    expect(tardinessRoutes).toContain('scope === "team"');
+    expect(tardinessRoutes).toContain("e.supervisor_name LIKE ?");
   });
-  it("export route supports date range filter", () => {
-    // Export route uses inline string building
-    expect(tardinessRoutes).toContain("date >= '");
-    expect(tardinessRoutes).toContain("date <= '");
+  it("PG filter metadata uses live io_employees data (not stale io_tardiness snapshot)", () => {
+    expect(tardinessRoutes).toContain("SELECT DISTINCT e.planning_group FROM io_tardiness t LEFT JOIN io_employees");
   });
   it("is registered in server entry", () => {
     expect(serverEntry).toContain("registerTardinessRoutes");
@@ -214,14 +210,25 @@ describe("Tardiness — Client JS (tardiness.js)", () => {
   it("has bulk modal functions", () => {
     expect(tardinessJs).toContain("tardOpenBulkModal");
   });
-  it("sends date_from and date_to filter params", () => {
-    expect(tardinessJs).toContain('getElementById("tard-date-from")');
-    expect(tardinessJs).toContain('getElementById("tard-date-to")');
-    expect(tardinessJs).toContain('params.set("date_from"');
-    expect(tardinessJs).toContain('params.set("date_to"');
+  it("has My Team toggle function", () => {
+    expect(tardinessJs).toContain("tardToggleMyTeam");
+    expect(tardinessJs).toContain("myTeamOnly");
+    expect(tardinessJs).toContain('params.set("scope", "team")');
   });
-  it("has tardClearDateRange function", () => {
-    expect(tardinessJs).toContain("tardClearDateRange");
+  it("uses action icon instead of text buttons in table rows", () => {
+    // Pencil icon SVG for pending items
+    expect(tardinessJs).toContain('tardOpenModal(${item.id})');
+    expect(tardinessJs).toContain('<svg width="14"');
+    // Should NOT have old text-based Valid/Invalid buttons in row
+    expect(tardinessJs).not.toContain("tardOpenModal(${item.id},'Valid')");
+    expect(tardinessJs).not.toContain("tardOpenModal(${item.id},'Invalid')");
+  });
+  it("modal requires remarks before confirming", () => {
+    expect(tardinessJs).toContain('if (!remarks)');
+    expect(tardinessJs).toContain('errorEl');
+  });
+  it("center-aligns Minutes Late column", () => {
+    expect(tardinessJs).toContain('text-align:center;font-weight:700');
   });
   it("renders grace period indicator for auto-invalidated <5min records", () => {
     expect(tardinessJs).toContain("isGracePeriod");
@@ -313,13 +320,22 @@ describe("Tardiness — HTML Structure", () => {
     expect(indexHtml).toContain("GY Shift");
     expect(indexHtml).toContain("Morning");
   });
-  it("has validation modal markup", () => {
+  it("has validation modal with Mark Valid, Mark Invalid, Cancel buttons", () => {
     expect(indexHtml).toContain('id="tard-validation-modal"');
     expect(indexHtml).toContain('id="tard-modal-title"');
     expect(indexHtml).toContain('id="tard-modal-remarks"');
-    expect(indexHtml).toContain('id="tard-modal-confirm"');
+    expect(indexHtml).toContain('id="tard-modal-agent"');
+    expect(indexHtml).toContain('id="tard-modal-error"');
     expect(indexHtml).toContain('tardCloseModal()');
-    expect(indexHtml).toContain('tardConfirmModal()');
+    expect(indexHtml).toContain("tardConfirmModal('Valid')");
+    expect(indexHtml).toContain("tardConfirmModal('Invalid')");
+    expect(indexHtml).toContain('Mark Invalid');
+    expect(indexHtml).toContain('Mark Valid');
+    expect(indexHtml).toContain('Cancel');
+  });
+  it("remarks are marked as required in modal", () => {
+    expect(indexHtml).toContain('required');
+    expect(indexHtml).toContain('Remarks are required');
   });
   it("table header has correct column order", () => {
     // Search within the tardiness table section specifically
@@ -340,11 +356,24 @@ describe("Tardiness — HTML Structure", () => {
     expect(indexHtml).toContain("tardOpenBulkModal('Valid')");
     expect(indexHtml).toContain("tardOpenBulkModal('Invalid')");
   });
-  it("has date range pickers (From/To)", () => {
-    expect(indexHtml).toContain('id="tard-date-from"');
-    expect(indexHtml).toContain('id="tard-date-to"');
-    expect(indexHtml).toContain('type="date"');
-    expect(indexHtml).toContain('tardClearDateRange()');
+  it("date range pickers have been removed", () => {
+    expect(indexHtml).not.toContain('id="tard-date-from"');
+    expect(indexHtml).not.toContain('id="tard-date-to"');
+    expect(indexHtml).not.toContain('tardClearDateRange()');
+  });
+  it("has My Team toggle button", () => {
+    expect(indexHtml).toContain('id="tard-my-team-btn"');
+    expect(indexHtml).toContain('tardToggleMyTeam()');
+  });
+  it("PG filter label says Planning Group (not PG)", () => {
+    // The label before the PG select should say "Planning Group:"
+    const pgLabelIdx = indexHtml.indexOf('Planning Group:</span>');
+    const pgSelectIdx = indexHtml.indexOf('id="tard-pg-filter"');
+    expect(pgLabelIdx).toBeGreaterThan(-1);
+    expect(pgLabelIdx).toBeLessThan(pgSelectIdx);
+  });
+  it("Minutes Late header is center-aligned", () => {
+    expect(indexHtml).toContain('text-align:center;">Minutes Late</th>');
   });
   it("nav item is under Horizon group", () => {
     const horizonGroupIdx = indexHtml.indexOf('id="nav-group-horizon"');
