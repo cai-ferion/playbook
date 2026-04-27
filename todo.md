@@ -3153,3 +3153,8 @@
 - [x] Dedicated tardiness-restyle.css with light theme matching Dashboard restyle
 - [x] Row state hints (left border color on hover), action icons, empty state
 - [x] Server returns stats object in GET /tardiness response
+
+## Tardiness Validator — Data Cleanup & Pagination (April 28, 2026)
+- [x] Remove 292 tardiness records (135 OHRs) that don't match io_employees (not Integrity Operations)
+- [x] Fix Full Name/Supervisor fallback when live JOIN doesn't match (no longer needed — all orphan records deleted)
+- [x] Add 30-row pagination to the table

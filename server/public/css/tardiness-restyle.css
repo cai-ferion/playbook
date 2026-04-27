@@ -653,6 +653,61 @@
 }
 
 /* ============================================================
+   PAGINATION
+   ============================================================ */
+.tard-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 8px;
+}
+.tard-pagination-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tard-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tard-fg-muted);
+  background: var(--tard-surface);
+  border: 1px solid var(--tard-surface-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--tard-transition);
+}
+.tard-page-btn:hover:not(:disabled) {
+  background: #EFF6FF;
+  color: var(--tard-accent-blue);
+  border-color: var(--tard-accent-blue);
+}
+.tard-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.tard-page-active,
+.tard-page-active:hover {
+  background: var(--tard-accent-blue) !important;
+  color: #fff !important;
+  border-color: var(--tard-accent-blue) !important;
+}
+.tard-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 34px;
+  font-size: 14px;
+  color: var(--tard-fg-subtle);
+  user-select: none;
+}
+
+/* ============================================================
    EMPTY STATE
    ============================================================ */
 .tard-empty-state {

@@ -22,6 +22,8 @@ const TARD_STATE = {
   planningGroups: [],
   searchTimer: null,
   myTeamOnly: false,
+  page: 1,
+  pageSize: 30,
 };
 
 // ============================================================
@@ -205,6 +207,7 @@ function initTardinessValidator() {
 async function tardLoadData() {
   const loading = document.getElementById("tardiness-validator-loading");
   if (loading) loading.style.display = "flex";
+  TARD_STATE.page = 1; // Reset to first page on any filter change
 
   try {
     const we = document.getElementById("tard-week-select")?.value || "";
@@ -330,13 +333,22 @@ function tardRenderTable() {
   if (!tbody) return;
 
   const items = TARD_STATE.items;
-  if (countEl) countEl.textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`;
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / TARD_STATE.pageSize));
+  if (TARD_STATE.page > totalPages) TARD_STATE.page = totalPages;
+  if (TARD_STATE.page < 1) TARD_STATE.page = 1;
+  const startIdx = (TARD_STATE.page - 1) * TARD_STATE.pageSize;
+  const endIdx = Math.min(startIdx + TARD_STATE.pageSize, totalItems);
+  const pageItems = items.slice(startIdx, endIdx);
 
-  if (items.length === 0) {
+  if (countEl) countEl.textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''} \u2022 Page ${TARD_STATE.page}/${totalPages}`;
+
+  if (totalItems === 0) {
     tbody.innerHTML = "";
     if (emptyEl) emptyEl.style.display = "flex";
     if (bulkValidBtn) bulkValidBtn.style.display = "none";
     if (bulkInvalidBtn) bulkInvalidBtn.style.display = "none";
+    tardRenderPagination(0, 1);
     return;
   }
   if (emptyEl) emptyEl.style.display = "none";
@@ -345,7 +357,7 @@ function tardRenderTable() {
   if (bulkValidBtn) bulkValidBtn.style.display = hasPending ? "inline-flex" : "none";
   if (bulkInvalidBtn) bulkInvalidBtn.style.display = hasPending ? "inline-flex" : "none";
 
-  tbody.innerHTML = items.map(item => {
+  tbody.innerHTML = pageItems.map(item => {
     const isPending = item.validation_status === "Pending";
     const isValid = item.validation_status === "Valid";
     const isInvalid = item.validation_status === "Invalid";
@@ -406,6 +418,68 @@ function tardRenderTable() {
   }).join("");
 
   if (selectAll) selectAll.checked = false;
+  tardRenderPagination(totalPages, TARD_STATE.page);
+}
+
+/** Render pagination controls below the table */
+function tardRenderPagination(totalPages, currentPage) {
+  let container = document.getElementById('tard-pagination');
+  if (!container) {
+    // Create pagination container after the table wrapper
+    const tableWrapper = document.getElementById('tard-table')?.closest('.tard-table-wrapper') || document.getElementById('tard-table')?.parentElement;
+    if (!tableWrapper) return;
+    container = document.createElement('div');
+    container.id = 'tard-pagination';
+    container.className = 'tard-pagination';
+    tableWrapper.parentElement.insertBefore(container, tableWrapper.nextSibling);
+  }
+
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+
+  let html = '<div class="tard-pagination-inner">';
+  // Prev button
+  html += `<button class="tard-page-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="tardGoToPage(${currentPage - 1})">&laquo; Prev</button>`;
+
+  // Page numbers — show max 7 with ellipsis
+  const maxVisible = 7;
+  let pages = [];
+  if (totalPages <= maxVisible) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    let start = Math.max(2, currentPage - 2);
+    let end = Math.min(totalPages - 1, currentPage + 2);
+    if (currentPage <= 3) { start = 2; end = 5; }
+    if (currentPage >= totalPages - 2) { start = totalPages - 4; end = totalPages - 1; }
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('...');
+    pages.push(totalPages);
+  }
+
+  pages.forEach(p => {
+    if (p === '...') {
+      html += '<span class="tard-page-ellipsis">\u2026</span>';
+    } else {
+      html += `<button class="tard-page-btn ${p === currentPage ? 'tard-page-active' : ''}" onclick="tardGoToPage(${p})">${p}</button>`;
+    }
+  });
+
+  // Next button
+  html += `<button class="tard-page-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="tardGoToPage(${currentPage + 1})">Next &raquo;</button>`;
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function tardGoToPage(page) {
+  TARD_STATE.page = page;
+  tardRenderTable();
+  // Scroll to top of table
+  const table = document.getElementById('tard-table');
+  if (table) table.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /** Format date string to MM/DD/YYYY consistently */
