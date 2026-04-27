@@ -152,6 +152,11 @@ describe('Role Change Email Automation', () => {
       expect(js).toContain('/role-change/suggest');
     });
 
+    it('parses weeks API response as plain array (not object with .weeks)', () => {
+      expect(js).toContain('Array.isArray(weeks)');
+      expect(js).not.toContain('data.weeks');
+    });
+
     it('renders deficit badges (success, warning, danger)', () => {
       expect(js).toContain('rc-badge-success');
       expect(js).toContain('rc-badge-warning');

@@ -61,14 +61,15 @@ async function initRoleChangeTab() {
   _rcInitialized = true;
 
   // Populate week selector (reuse billing weeks endpoint)
+  // API returns a plain JSON array of YYYY-MM-DD strings
   try {
     const resp = await fetch(`${IO_API_BASE}/billing-compliance/weeks`);
     if (resp.ok) {
-      const data = await resp.json();
+      const weeks = await resp.json();
       const select = document.getElementById('rc-week-select');
-      if (select && data.weeks) {
+      if (select && Array.isArray(weeks) && weeks.length > 0) {
         select.innerHTML = '<option value="">Select Week Ending</option>';
-        data.weeks.forEach(w => {
+        weeks.forEach(w => {
           // Format label as mm/dd for display, value stays YYYY-MM-DD
           const d = new Date(w + 'T00:00:00');
           const label = String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
@@ -77,11 +78,12 @@ async function initRoleChangeTab() {
           opt.textContent = label;
           select.appendChild(opt);
         });
-        // Default to current/latest week
-        if (data.current_week_ending) {
-          select.value = data.current_week_ending;
-          rcOnWeekChange();
-        }
+        // Default to the week ending closest to today (not in the future)
+        const today = new Date().toISOString().slice(0, 10);
+        const pastWeeks = weeks.filter(w => w <= today);
+        const currentWE = pastWeeks.length > 0 ? pastWeeks[pastWeeks.length - 1] : weeks[0];
+        select.value = currentWE;
+        rcOnWeekChange();
       }
     }
   } catch (e) {

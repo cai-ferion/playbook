@@ -3184,3 +3184,6 @@
 ## Role Change Fixes (April 28, 2026 - Batch 2)
 - [x] Fix: Week Ending dropdown not populating in Role Changes tab
 - [x] Remove date range picker — derive full week dates from selected week ending
+
+## Role Change Fixes (April 28, 2026 - Batch 3)
+- [x] Fix: Week Ending dropdown not populating — API returns plain array, JS expects { weeks, current_week_ending }
