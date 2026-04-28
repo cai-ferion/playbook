@@ -260,23 +260,23 @@ describe("WFM Tag — Admin Tools Upload UI", () => {
 // ============================================================
 describe("WFM Tag — Cache Busting", () => {
   it("data.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("data.js?v=107");
+    expect(indexHtmlContent).toContain("data.js?v=108");
   });
 
   it("app.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("app.js?v=126");
+    expect(indexHtmlContent).toContain("app.js?v=127");
   });
 
   it("input-portal.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("input-portal.js?v=122");
+    expect(indexHtmlContent).toContain("input-portal.js?v=123");
   });
 
   it("admin.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("admin.js?v=108");
+    expect(indexHtmlContent).toContain("admin.js?v=109");
   });
 
   it("styles.css cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("styles.css?v=136");
+    expect(indexHtmlContent).toContain("styles.css?v=137");
   });
 });
 

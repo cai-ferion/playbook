@@ -133,7 +133,7 @@ describe("Select My Team Feature", () => {
   // ---- Cache Version ----
   describe("Cache Version", () => {
     it("compass.js bumped to v123", () => {
-      expect(indexHtml).toContain("compass.js?v=123");
+      expect(indexHtml).toContain("compass.js?v=124");
     });
   });
 });

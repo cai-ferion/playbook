@@ -430,6 +430,6 @@ describe("Tardiness — Cache Versions", () => {
     expect(indexHtml).toMatch(/tardiness\.js\?v=\d+/);
   });
   it("app.js cache version is current", () => {
-    expect(indexHtml).toContain("app.js?v=126");
+    expect(indexHtml).toContain("app.js?v=127");
   });
 });

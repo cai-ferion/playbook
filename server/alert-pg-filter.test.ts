@@ -145,11 +145,11 @@ describe('Risk Intelligence — Planning Group Filter', () => {
 
   describe('Cache versions', () => {
     it('data.js version is v107', () => {
-      expect(indexHtml).toContain('data.js?v=107');
+      expect(indexHtml).toContain('data.js?v=108');
     });
 
     it('app.js version is v122', () => {
-      expect(indexHtml).toContain('app.js?v=126');
+      expect(indexHtml).toContain('app.js?v=127');
     });
   });
 });

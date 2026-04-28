@@ -3299,3 +3299,6 @@
 ## Sandbox Bug Fixes
 - [x] Fix: SMEs cannot see insights for their team (filter by supervisor_email of their TL, not their own meta_email)
 - [x] Fix: Manager's Nook shows 0/0 insights (root cause: mixed MM/DD/YY and M/D/YYYY date formats + wrong grouping key — fixed with CASE STR_TO_DATE and e.full_name grouping)
+
+## OT Field Lock Bug — Assistant
+- [x] Fix: Assistant OHR 740044909 cannot edit OT field — root cause: cache-busting version strings not bumped after OT bypass code was added, so browsers served stale JS

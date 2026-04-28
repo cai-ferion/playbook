@@ -165,7 +165,7 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
   // 7. Cache Version Bumps
   describe("Cache Version Bumps", () => {
     it("should have bumped sandbox.js version", () => {
-      expect(indexHtml).toContain("sandbox.js?v=121");
+      expect(indexHtml).toContain("sandbox.js?v=122");
     });
 
     it("should have bumped sandbox-redesign.css version", () => {
@@ -173,7 +173,7 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
     });
 
     it("should have bumped app.js version", () => {
-      expect(indexHtml).toContain("app.js?v=126");
+      expect(indexHtml).toContain("app.js?v=127");
     });
   });
 
