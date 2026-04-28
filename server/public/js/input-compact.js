@@ -347,11 +347,12 @@ function renderDetailPanel(r, idx, locked) {
       + '</select>';
   }
 
-  // Status dropdown — editable only by Managers and Admins
+  // Status dropdown — editable only by Managers and ADMIN_OHRS
   var STATUS_OPTIONS = ['Production', 'Training', 'Nesting', 'Attrition Backfill Training', 'Inactive', 'Exit'];
-  var isManagerOrAdmin = cu && (cu.actual_role === 'Manager' || (cu.permissions && cu.permissions['anchor.edit_attendance']));
+  var _ADMIN_OHRS_STATUS = window.ADMIN_OHRS || ['740045023', '740044909'];
+  var isStatusEditor = cu && (cu.actual_role === 'Manager' || _ADMIN_OHRS_STATUS.indexOf(cu.ohr_id) !== -1 || (cu.permissions && cu.permissions['anchor.edit_attendance']));
   var statusField;
-  if (locked || isWFM || !isManagerOrAdmin) {
+  if (locked || isWFM || !isStatusEditor) {
     statusField = '<span class="detail-readonly">' + escapeHtml(r.status || '\u2014') + '</span>';
   } else {
     statusField = '<select class="detail-select" data-idx="' + idx + '" data-key="status" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
@@ -499,7 +500,8 @@ window.toggleSelectionMode = function() {
 
   // Show/hide bulk status action for Managers/Admins only
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
-  var isStatusEditor = cu && (cu.actual_role === 'Manager' || (cu.permissions && cu.permissions['anchor.edit_attendance']));
+  var _ADMIN_OHRS_BULK = window.ADMIN_OHRS || ['740045023', '740044909'];
+  var isStatusEditor = cu && (cu.actual_role === 'Manager' || _ADMIN_OHRS_BULK.indexOf(cu.ohr_id) !== -1 || (cu.permissions && cu.permissions['anchor.edit_attendance']));
   var statusEls = document.querySelectorAll('.fcb-status-only');
   for (var si = 0; si < statusEls.length; si++) {
     statusEls[si].style.display = (compactState.selectionMode && isStatusEditor) ? '' : 'none';

@@ -3309,3 +3309,7 @@
 - [x] Team Leads: see insights of their own team (supervisor_email match)
 - [x] Managers and Trainers: see all insights (no filter)
 - [x] QAs and Agents: see only their own insights (ohr_id match)
+
+
+## Anchor Input Portal — Status Field Not Editable
+- [x] Fix: Owner (740045023) and Assistant (740044909) cannot edit the Status field in Anchor Input Portal — added ADMIN_OHRS check to isStatusEditor (was only checking Manager role + permissions object, which may not be populated reliably)
