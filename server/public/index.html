@@ -486,7 +486,18 @@
           <option value="_select">— Tag —</option>
           <option value="">&mdash;</option>
         </select>
-        <button class="fcb-btn fcb-btn--primary" id="fcb-apply-btn" onclick="fcbApplyTag()">Apply</button>
+        <button class="fcb-btn fcb-btn--primary" id="fcb-apply-btn" onclick="fcbApplyTag()">Apply Tag</button>
+        <div class="fcb-divider fcb-status-only" id="fcb-status-divider" style="display:none;"></div>
+        <select class="fcb-select fcb-status-only" id="fcb-status-select" style="display:none;">
+          <option value="_select">— Status —</option>
+          <option value="Production">Production</option>
+          <option value="Training">Training</option>
+          <option value="Nesting">Nesting</option>
+          <option value="Attrition Backfill Training">Attrition Backfill Training</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Exit">Exit</option>
+        </select>
+        <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-status-btn" style="display:none;" onclick="fcbApplyStatus()">Apply Status</button>
         <div class="fcb-divider"></div>
         <button class="fcb-btn fcb-btn--ghost" onclick="fcbDeselectAll()">Cancel</button>
       </div>

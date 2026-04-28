@@ -3281,3 +3281,9 @@
 - [x] Make Status field editable in inline expansion row (dropdown with status options: Production, Training, Nesting, Attrition Backfill Training, Inactive, Exit)
 - [x] Ensure backend accepts status field updates via existing cell edit endpoint (snap_status in fieldMap + audit logging)
 - [x] Restrict Status field editing to Managers and Admins only (TLs, Agents, SMEs see read-only)
+
+## Input Portal — Status Change Notification + Bulk Status Update
+- [x] Backend: Trigger owner notification when Manager changes an employee's status (include employee name, old status, new status, actor name)
+- [x] Backend: Add bulk status update endpoint (POST /api/io/attendance/bulk-status + bulk-status-filtered) for Managers/Admins only
+- [x] Frontend: Add "Change Status" option to multi-select bulk actions bar (Managers/Admins only)
+- [x] Frontend: Status change confirmation dialog showing count of affected records and target status

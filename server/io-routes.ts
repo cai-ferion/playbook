@@ -5,6 +5,7 @@
 import { Router, Request, Response } from "express";
 import { getDb } from "./db.js";
 import { invokeLLM } from "./_core/llm.js";
+import { notifyOwner } from "./_core/notification.js";
 import {
   ioEmployees,
   ioAttendance,
@@ -657,6 +658,17 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       for (const entry of auditEntries) {
         await db.insert(ioAuditLog).values(entry);
       }
+    }
+
+    // Notify owner when status is changed (fire-and-forget)
+    const statusAudit = auditEntries.find(e => e.field_name === "snap_status");
+    if (statusAudit) {
+      const empName = current.snap_full_name || current.ohr_id || recordId;
+      const logDate = current.log_date || "unknown date";
+      notifyOwner({
+        title: `Status Change: ${empName}`,
+        content: `${actorName || actorOhr} changed status of ${empName} (${logDate}) from "${statusAudit.old_value || '—'}" to "${statusAudit.new_value}".`,
+      }).catch(err => console.warn("[StatusNotify] Failed:", err.message));
     }
 
     res.json({ ok: true, audited: auditEntries.length });
@@ -1440,9 +1452,201 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
   }
 });
 
+// POST /api/io/attendance/bulk-status - bulk update status for selected record IDs (Managers/Admins only)
+router.post("/attendance/bulk-status", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { ids, status, actor_ohr, actor_name } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "ids array is required" });
+    }
+    if (!status) return res.status(400).json({ error: "status is required" });
+
+    // Role gate: Managers and Admins only
+    if (!ADMIN_OHRS.includes(actor_ohr)) {
+      // Check if actor is a Manager via employee record
+      const [actor] = await db.select({ role: ioEmployees.actual_role })
+        .from(ioEmployees).where(eq(ioEmployees.ohr_id, actor_ohr)).limit(1);
+      if (!actor || actor.role !== "Manager") {
+        return res.status(403).json({ error: "Only Managers and Admins can bulk-update status" });
+      }
+    }
+
+    const now = new Date().toISOString();
+    let updated = 0;
+    let locked = 0;
+    let skipped = 0;
+    const changedNames: string[] = [];
+
+    for (const id of ids) {
+      const [record] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, id)).limit(1);
+      if (!record) continue;
+
+      // Date-based lock (except admin)
+      if (!ADMIN_OHRS.includes(actor_ohr)) {
+        const nowD = new Date();
+        const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
+        const phtHourD = phtD.getUTCHours();
+        const yesterdayBulk = new Date(phtD);
+        yesterdayBulk.setUTCDate(yesterdayBulk.getUTCDate() - 1);
+        const yesterdayStr = yesterdayBulk.toISOString().slice(0, 10);
+        const recDate = record.log_date || '';
+        if (recDate < yesterdayStr) { locked++; continue; }
+        if (recDate === yesterdayStr && phtHourD >= 11) { locked++; continue; }
+      }
+
+      const oldStatus = record.snap_status || "";
+      if (oldStatus === status) { skipped++; continue; }
+
+      await db.update(ioAttendance).set({ snap_status: status }).where(eq(ioAttendance.id, id));
+
+      await db.insert(ioAuditLog).values({
+        record_type: "attendance",
+        record_id: id,
+        action: "bulk_status",
+        field_name: "snap_status",
+        old_value: oldStatus,
+        new_value: status,
+        actor_ohr: actor_ohr || "",
+        actor_name: actor_name || "",
+        timestamp: now,
+      });
+      if (changedNames.length < 5) changedNames.push(record.snap_full_name || record.ohr_id || id);
+      updated++;
+    }
+
+    // Notify owner of bulk status change
+    if (updated > 0) {
+      const preview = changedNames.join(", ") + (updated > 5 ? ` and ${updated - 5} more` : "");
+      notifyOwner({
+        title: `Bulk Status Change: ${updated} record(s) → ${status}`,
+        content: `${actor_name || actor_ohr} changed ${updated} record(s) to "${status}". Affected: ${preview}.${locked > 0 ? ` ${locked} locked rows skipped.` : ""}`,
+      }).catch(err => console.warn("[BulkStatusNotify] Failed:", err.message));
+    }
+
+    res.json({ ok: true, updated, locked, skipped, total: ids.length });
+  } catch (err: any) {
+    console.error("[IO API] attendance bulk-status error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/attendance/bulk-status-filtered - bulk update status for ALL records matching filters (Managers/Admins only)
+router.post("/attendance/bulk-status-filtered", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { status, actor_ohr, actor_name, filters } = req.body;
+    if (!status) return res.status(400).json({ error: "status is required" });
+    if (!filters) return res.status(400).json({ error: "filters object is required" });
+
+    // Role gate: Managers and Admins only
+    if (!ADMIN_OHRS.includes(actor_ohr)) {
+      const [actor] = await db.select({ role: ioEmployees.actual_role })
+        .from(ioEmployees).where(eq(ioEmployees.ohr_id, actor_ohr)).limit(1);
+      if (!actor || actor.role !== "Manager") {
+        return res.status(403).json({ error: "Only Managers and Admins can bulk-update status" });
+      }
+    }
+
+    const { log_date_gte, log_date_lte, tag_in, agent_in, flm_in,
+            planning_group_in, status_in, shift_time_in, role_in, wfm_tag_in, blanks_only } = filters;
+
+    const conditions: any[] = [];
+    const mgrSet3 = await getManagerOhrSet();
+    if (mgrSet3.size > 0) {
+      const mgrArr3 = Array.from(mgrSet3);
+      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (${sql.join(mgrArr3.map(o => sql`${o}`), sql`, `)})`);
+    }
+    if (log_date_gte) conditions.push(gte(ioAttendance.log_date, String(log_date_gte)));
+    if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
+    if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
+    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
+    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
+    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
+    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
+    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
+    if (blanks_only) {
+      conditions.push(or(
+        sql`${ioAttendance.tag} IS NULL`,
+        eq(ioAttendance.tag, ""),
+        eq(ioAttendance.tag, "\u2014")
+      ));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    let q = db.select({
+      id: ioAttendance.id,
+      snap_status: ioAttendance.snap_status,
+      snap_full_name: ioAttendance.snap_full_name,
+      ohr_id: ioAttendance.ohr_id,
+      log_date: ioAttendance.log_date,
+    }).from(ioAttendance);
+    if (where) q = q.where(where) as any;
+    const allRecords = await q;
+
+    const now = new Date().toISOString();
+    let updated = 0;
+    let locked = 0;
+    let skipped = 0;
+    const changedNames: string[] = [];
+
+    for (const record of allRecords) {
+      if (!ADMIN_OHRS.includes(actor_ohr)) {
+        const nowD = new Date();
+        const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
+        const phtHourD = phtD.getUTCHours();
+        const yesterdayBulk = new Date(phtD);
+        yesterdayBulk.setUTCDate(yesterdayBulk.getUTCDate() - 1);
+        const yesterdayStr = yesterdayBulk.toISOString().slice(0, 10);
+        const recDate = record.log_date || '';
+        if (recDate < yesterdayStr) { locked++; continue; }
+        if (recDate === yesterdayStr && phtHourD >= 11) { locked++; continue; }
+      }
+
+      const oldStatus = record.snap_status || "";
+      if (oldStatus === status) { skipped++; continue; }
+
+      await db.update(ioAttendance).set({ snap_status: status }).where(eq(ioAttendance.id, record.id));
+
+      await db.insert(ioAuditLog).values({
+        record_type: "attendance",
+        record_id: record.id,
+        action: "bulk_status_filtered",
+        field_name: "snap_status",
+        old_value: oldStatus,
+        new_value: status,
+        actor_ohr: actor_ohr || "",
+        actor_name: actor_name || "",
+        timestamp: now,
+      });
+      if (changedNames.length < 5) changedNames.push(record.snap_full_name || record.ohr_id || record.id);
+      updated++;
+    }
+
+    if (updated > 0) {
+      const preview = changedNames.join(", ") + (updated > 5 ? ` and ${updated - 5} more` : "");
+      notifyOwner({
+        title: `Bulk Status Change: ${updated} record(s) → ${status}`,
+        content: `${actor_name || actor_ohr} changed ${updated} record(s) to "${status}" (filtered). Affected: ${preview}.${locked > 0 ? ` ${locked} locked rows skipped.` : ""}`,
+      }).catch(err => console.warn("[BulkStatusFilteredNotify] Failed:", err.message));
+    }
+
+    res.json({ ok: true, updated, locked, skipped, total: allRecords.length });
+  } catch (err: any) {
+    console.error("[IO API] attendance bulk-status-filtered error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // Helm — Tasks CRUD
-// ============================================================
+// =============================================================
 
 /** Generate a unique task ID: TK-xxxxxxxx */
 function generateTaskId(): string {

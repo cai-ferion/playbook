@@ -495,6 +495,14 @@ window.toggleSelectionMode = function() {
   compactState.expandedId = null;
   renderCompactTable();
 
+  // Show/hide bulk status action for Managers/Admins only
+  var cu = typeof currentUser !== 'undefined' ? currentUser : null;
+  var isStatusEditor = cu && (cu.actual_role === 'Manager' || (cu.permissions && cu.permissions['anchor.edit_attendance']));
+  var statusEls = document.querySelectorAll('.fcb-status-only');
+  for (var si = 0; si < statusEls.length; si++) {
+    statusEls[si].style.display = (compactState.selectionMode && isStatusEditor) ? '' : 'none';
+  }
+
   var btn = document.getElementById('select-mode-btn');
   if (btn) {
     if (compactState.selectionMode) {
@@ -739,6 +747,133 @@ window.fcbApplyTag = async function() {
     showToast('Bulk tag failed: ' + err.message, 'error');
   } finally {
     if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply'; }
+  }
+};
+
+// ============================================================
+// BULK STATUS UPDATE
+// ============================================================
+window.fcbApplyStatus = async function() {
+  var sel = document.getElementById('fcb-status-select');
+  var status = sel ? sel.value : '';
+  if (status === '_select') { showToast('Please select a status first', 'info'); return; }
+
+  var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
+  if (count === 0) { showToast('No rows selected', 'info'); return; }
+
+  // Confirmation dialog
+  if (!confirm('Change status to "' + status + '" for ' + formatNumber(count) + ' record(s)?\n\nThis will be logged in the audit trail and you will receive a notification.')) return;
+
+  var user = typeof currentUser !== 'undefined' ? currentUser : null;
+  var applyBtn = document.getElementById('fcb-apply-status-btn');
+  if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Applying...'; }
+
+  try {
+    // Cross-page bulk status: use filtered endpoint
+    if (bulkState.selectAllMatching && typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+      var dateFilter = omnibarState.filters['date_range'];
+      var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+      var filterPayload = {
+        log_date_gte: dateFilter ? dateFilter.startDate : today,
+        log_date_lte: dateFilter ? dateFilter.endDate : today,
+      };
+      var fkeys = Object.keys(omnibarState.filters);
+      for (var fki = 0; fki < fkeys.length; fki++) {
+        var ff = omnibarState.filters[fkeys[fki]];
+        if (ff.type === 'multi' && ff.values && ff.values.length > 0) {
+          var fkMap = { tag: 'tag_in', agent: 'agent_in', flm: 'flm_in',
+            actualPlanningGroup: 'planning_group_in', status: 'status_in',
+            shiftTime: 'shift_time_in', role: 'role_in' };
+          var fpk = fkMap[ff.key];
+          if (fpk) filterPayload[fpk] = ff.values.join('|');
+        }
+        if (ff.type === 'toggle' && ff.key === 'blanks') filterPayload.blanks_only = true;
+      }
+      var resp = await fetch(IO_API_BASE + '/attendance/bulk-status-filtered', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: status,
+          actor_ohr: user ? user.ohr_id || '' : '',
+          actor_name: user ? user.full_name || '' : '',
+          filters: filterPayload,
+        }),
+      });
+      var result = await resp.json();
+      if (result.ok) {
+        var msg = 'Bulk status changed: ' + result.updated + ' of ' + result.total + ' record(s) to "' + status + '"'
+          + (result.locked > 0 ? ' (' + result.locked + ' locked rows skipped)' : '')
+          + (result.skipped > 0 ? ' (' + result.skipped + ' already "' + status + '")' : '');
+        showToast(msg, 'success');
+        compactState.selectionMode = false;
+        bulkDeselectAll();
+        if (typeof serverPageChange === 'function') {
+          try { await serverPageChange(appState.inputPage); } catch (e) { renderCompactTable(); }
+        } else { renderCompactTable(); }
+      } else {
+        showToast('Bulk status failed: ' + (result.error || 'Unknown error'), 'error');
+      }
+      return;
+    }
+
+    // Standard per-ID bulk status
+    var selectedIds = [...bulkState.selected];
+    if (selectedIds.length === 0) { showToast('No rows selected', 'info'); return; }
+    if (selectedIds.length > 50) { showToast('Bulk status is limited to 50 rows at a time', 'error'); return; }
+
+    var recordIds = [];
+    if (typeof serverPagState !== 'undefined' && serverPagState.enabled) {
+      recordIds = selectedIds; // Already _id strings
+    } else {
+      for (var i = 0; i < selectedIds.length; i++) {
+        var rec = appState.records[selectedIds[i]];
+        if (rec && rec._id) recordIds.push(rec._id);
+      }
+    }
+
+    var resp2 = await fetch(IO_API_BASE + '/attendance/bulk-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: recordIds,
+        status: status,
+        actor_ohr: user ? user.ohr_id || '' : '',
+        actor_name: user ? user.full_name || '' : '',
+      }),
+    });
+    var result2 = await resp2.json();
+    if (result2.ok) {
+      // Update local state
+      for (var ri = 0; ri < recordIds.length; ri++) {
+        var localRec = appState.records.find(function(r) { return r._id === recordIds[ri]; });
+        if (localRec) localRec.status = status;
+      }
+      if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
+        for (var bri = 0; bri < recordIds.length; bri++) {
+          var bRow = serverPagState.rows.find(function(r) { return r._id === recordIds[bri]; });
+          if (bRow) { bRow.status = status; bRow.snap_status = status; }
+        }
+      }
+      for (var ai = 0; ai < recordIds.length; ai++) { invalidateAuditCache(recordIds[ai]); }
+
+      var msg2 = 'Bulk status changed: ' + result2.updated + ' record(s) to "' + status + '"'
+        + (result2.locked > 0 ? ' (' + result2.locked + ' locked rows skipped)' : '')
+        + (result2.skipped > 0 ? ' (' + result2.skipped + ' already "' + status + '")' : '');
+      showToast(msg2, 'success');
+      compactState.selectionMode = false;
+      bulkDeselectAll();
+
+      if (typeof serverPagState !== 'undefined' && serverPagState.enabled && typeof serverPageChange === 'function') {
+        try { await serverPageChange(appState.inputPage); } catch (e) { renderCompactTable(); }
+      } else { renderCompactTable(); }
+    } else {
+      showToast('Bulk status failed: ' + (result2.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    showToast('Bulk status failed: ' + err.message, 'error');
+  } finally {
+    if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply Status'; }
+    if (sel) sel.value = '_select';
   }
 };
 
