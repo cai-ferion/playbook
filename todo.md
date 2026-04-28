@@ -3287,3 +3287,11 @@
 - [x] Backend: Add bulk status update endpoint (POST /api/io/attendance/bulk-status + bulk-status-filtered) for Managers/Admins only
 - [x] Frontend: Add "Change Status" option to multi-select bulk actions bar (Managers/Admins only)
 - [x] Frontend: Status change confirmation dialog showing count of affected records and target status
+
+## Centralize ADMIN_OHRS
+- [x] Identify all hardcoded ADMIN_OHRS across backend and frontend (40+ occurrences across 12 files)
+- [x] Create single source of truth in backend (server/config.ts with ADMIN_OHRS, OWNER_OHR, isAdminOhr)
+- [x] Expose via API endpoint (GET /api/io/config/admin-ohrs)
+- [x] Update frontend to fetch admin OHRs on login and cache in window.ADMIN_OHRS / window.OWNER_OHR
+- [x] Replace all hardcoded OHRs in 12 frontend JS files with window.ADMIN_OHRS references
+- [x] Update vitest tests (admin-delete.test.ts + batch47.test.ts) to check for ADMIN_OHRS instead of hardcoded OHRs

@@ -346,7 +346,7 @@ async function permResetToDefaults() {
 
 // Client-side role defaults (mirrors server logic)
 function computeRoleDefaults(role, ohrId) {
-  if (ohrId === '740045023') return Object.fromEntries(ALL_PERM_KEYS.map(k => [k, true]));
+  if ((window.ADMIN_OHRS || ['740045023']).includes(ohrId)) return Object.fromEntries(ALL_PERM_KEYS.map(k => [k, true]));
   const b = Object.fromEntries(ALL_PERM_KEYS.map(k => [k, false]));
   if (role === 'Agent') { b['nav.helm'] = true; b['nav.sandbox'] = true; b['nav.compass'] = true; return b; }
   b['nav.anchor'] = true;
@@ -370,7 +370,7 @@ function computeRoleDefaults(role, ohrId) {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
   }
-  if (ohrId === '740044909') {
+  if ((window.ADMIN_OHRS || []).includes(ohrId) && ohrId !== (window.OWNER_OHR || '740045023')) {
     b['anchor.edit_attendance'] = true;
     b['nav.compass'] = true;
     b['regimen.edit_employee'] = true;

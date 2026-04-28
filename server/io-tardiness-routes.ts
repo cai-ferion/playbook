@@ -7,11 +7,9 @@ import { Router, Request, Response } from "express";
 import { getDb } from "./db.js";
 import { ioTardiness, ioEmployees, ioNotifications } from "../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, inArray, count } from "drizzle-orm";
+import { ADMIN_OHRS } from "./config.js";
 
 const router = Router();
-
-// Admin OHRs — can see all teams, unlock validated items
-const ADMIN_OHRS = ["740045023", "740044909"];
 
 // ── Helpers ──────────────────────────────────────────────────────
 

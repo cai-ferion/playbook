@@ -52,7 +52,7 @@ async function initHelm(view) {
 
   // Role-based nav visibility for Task Dashboard (TL/Manager/Admin only)
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const isAgent = cu && cu.actual_role === 'Agent' && (window.ADMIN_OHRS || []).indexOf(cu.ohr_id) === -1;
   const dashNav = document.getElementById('nav-helm-dashboard');
   if (dashNav) dashNav.style.display = isAgent ? 'none' : '';
 
@@ -110,7 +110,7 @@ async function helmFetchTasks() {
 
   // Role-based tab visibility
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const isAgent = cu && cu.actual_role === 'Agent' && (window.ADMIN_OHRS || []).indexOf(cu.ohr_id) === -1;
   const isSM = cu && cu.ohr_id === '703212987';
   const newTaskBtn = document.getElementById('helm-new-btn');
   if (newTaskBtn) newTaskBtn.style.display = isAgent ? 'none' : '';
@@ -864,7 +864,7 @@ async function helmShowNewRequestForm() {
   formTitle.textContent = reqId;
 
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const isAgent = cu && cu.actual_role === 'Agent' && (window.ADMIN_OHRS || []).indexOf(cu.ohr_id) === -1;
 
   // Agents cannot create requests (OT removed, backdated tag change is non-agent only)
   if (isAgent) {
@@ -1163,7 +1163,7 @@ function helmApplyApprovalsFilters() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const role = cu ? cu.actual_role : '';
   const myOhr = cu ? (cu.ohr_id || '').trim() : '';
-  const isManager = role === 'Manager' || myOhr === '740045023';
+  const isManager = role === 'Manager' || (window.ADMIN_OHRS || []).includes(myOhr);
   const isTL = role === 'Team Leader';
 
   // 1. Task-based requests (e.g., Attendance Backdated Change Tag)
@@ -1354,7 +1354,7 @@ function helmOpenApprovalDetail(taskId) {
 
   // Comments section — hidden for agents
   const _cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const _isAgentView = _cu && _cu.actual_role === 'Agent' && _cu.ohr_id !== '740045023';
+  const _isAgentView = _cu && _cu.actual_role === 'Agent' && _(window.ADMIN_OHRS || []).indexOf(cu.ohr_id) === -1;
   if (!_isAgentView) {
     html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Comments</h4>';
     html += '<div id="helm-comments-list" style="margin-bottom:12px;"><div style="text-align:center;padding:12px;color:var(--fg-muted);font-size:12px;">Loading comments...</div></div>';
@@ -1369,7 +1369,7 @@ function helmOpenApprovalDetail(taskId) {
 
   // Footer: Approve/Reject buttons if Pending
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const isAgent = cu && cu.actual_role === 'Agent' && (window.ADMIN_OHRS || []).indexOf(cu.ohr_id) === -1;
   let footerHtml = '';
   if (approvalStatus === 'Pending' && !isAgent) {
     footerHtml += `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;" onclick="helmApproveRequest('${escapeAttr(taskId)}','Approved')">

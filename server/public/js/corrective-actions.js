@@ -57,7 +57,7 @@ async function initCorrectiveActions() {
 
     await Promise.all([caFetchRecords(), caFetchStats()]);
     // Set default view mode: admin/managers see all, others see team
-    const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+    const isAdmin740 = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
     const isManager = currentUser && currentUser.actual_role === 'Manager';
     CA.viewMode = (isAdmin740 || isManager) ? 'all' : 'team';
     caRenderSummaryCards();
@@ -134,7 +134,7 @@ function caRenderFilterBar() {
   const canCreate = currentUser && (currentUser.permissions && currentUser.permissions['compass.corrective_actions']);
 
   // Show view toggle for admin (740045023) and Managers
-  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+  const isAdmin740 = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   const isManager = currentUser && currentUser.actual_role === 'Manager';
   const showToggle = isAdmin740 || isManager;
 
@@ -199,7 +199,7 @@ function caApplyFilters() {
   // Role-based visibility (mirrors Coaching Profile rules)
   // Admin (740045023) and Managers respect the All/My Team toggle
   if (currentUser) {
-    const isAdmin740 = currentUser.ohr_id === '740045023';
+    const isAdmin740 = (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
     const role = currentUser.actual_role;
 
     if (isAdmin740 || role === 'Manager') {

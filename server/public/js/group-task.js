@@ -619,7 +619,7 @@ async function gtOpenDetail(groupTaskId) {
 
     const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
     const isCreator = cu && cu.ohr_id === task.created_by_ohr;
-    const isAdmin = cu && (cu.ohr_id === '740045023' || cu.actual_role === 'Manager');
+    const isAdmin = cu && ((window.ADMIN_OHRS || []).includes(cu.ohr_id) || cu.actual_role === 'Manager');
 
     body.innerHTML = `
       <div style="padding:20px;">
@@ -732,7 +732,7 @@ initHelm = async function(view) {
 
   // Role-based visibility for New Group Task button
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const isAgent = cu && cu.actual_role === 'Agent' && !(window.ADMIN_OHRS || []).includes(cu.ohr_id);
   const groupTaskBtn = document.getElementById('helm-new-group-task-btn');
   if (groupTaskBtn) groupTaskBtn.style.display = isAgent ? 'none' : '';
 

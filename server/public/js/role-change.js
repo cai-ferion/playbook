@@ -437,7 +437,7 @@ function initRoleChangeVisibility() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   if (!cu) return;
 
-  const ADMIN_OHRS = ['740045023', '740044909'];
+  const ADMIN_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
   const isAdmin = ADMIN_OHRS.includes(cu.ohr_id);
   const isManager = cu.actual_role === 'Manager';
   const isTL = cu.actual_role === 'Team Lead';

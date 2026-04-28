@@ -18,12 +18,11 @@ import {
 } from "../../drizzle/schema";
 import { eq, and, or, inArray, like, desc, asc, sql, gte, lte, count } from "drizzle-orm";
 import crypto from "crypto";
+import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "../config.js";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const ADMIN_OHR = "740045023";
 
 const COACHING_TYPES = [
   "cap_0",

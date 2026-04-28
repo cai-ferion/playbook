@@ -254,7 +254,7 @@ function compassApplyFilters() {
     );
   }
 
-  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+  const isAdmin740 = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   const role = currentUser ? currentUser.actual_role : '';
   const isAgent = currentUser && role === 'Agent' && !isAdmin740;
 
@@ -735,7 +735,7 @@ function compassRenderKanban() {
 
   // ---- Role-based data scoping for Disputes Area ----
   const role = currentUser ? currentUser.actual_role : '';
-  const isOwner = currentUser && currentUser.ohr_id === '740045023';
+  const isOwner = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   const qaMode = COMPASS._disputesQaMode || 'all';
 
   if (isOwner || role === 'Manager') {
@@ -1063,7 +1063,7 @@ async function compassOpenDetail(coachingId) {
       if (supEmployee) isCoachSup = cu.ohr_id === supEmployee.ohr_id;
     }
   }
-  const isAdmin = cu && cu.ohr_id === '740045023';
+  const isAdmin = cu && (window.ADMIN_OHRS || []).includes(cu.ohr_id);
   const canSeeAckDetails = isCoachSup || isAdmin; // Rating & Sentiments visible ONLY to Coach's 1-up Supervisor and admin
   const isAcknowledged = compassIsAcknowledged(log);
 
@@ -1243,7 +1243,7 @@ async function compassOpenDetail(coachingId) {
     // QA Feedback dispute workflow is handled exclusively in the Disputes Area (disputesOpenDetail).
 
     // Admin delete button — only for 740045023 and 740044909
-    if (['740045023', '740044909'].includes(ohr)) {
+    if ((window.ADMIN_OHRS || ['740045023', '740044909']).includes(ohr)) {
       footerHtml += ` <button class="btn btn-danger btn-sm" onclick="compassDeleteLog('${escapeAttr(String(log.coaching_id || log.id))}')" style="margin-left:auto;">Delete Log</button>`;
     }
   }
@@ -1509,7 +1509,7 @@ function _compassBuildInlineDetailHtml(log) {
       if (supEmployee) isCoachSup = cu.ohr_id === supEmployee.ohr_id;
     }
   }
-  const isAdmin = cu && cu.ohr_id === '740045023';
+  const isAdmin = cu && (window.ADMIN_OHRS || []).includes(cu.ohr_id);
   const canSeeAckDetails = isCoachSup || isAdmin;
   const isAcknowledged = compassIsAcknowledged(log);
   const date = log.coaching_date ? new Date(log.coaching_date).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '\u2014';
@@ -1679,7 +1679,7 @@ function _compassBuildInlineDetailHtml(log) {
       footerHtml += ' <button class="btn btn-primary btn-sm" id="compass-ack-trigger-btn" onclick="event.stopPropagation();compassShowAckForm()">Acknowledge</button>';
     }
     // Admin delete button — only for 740045023 and 740044909
-    if (['740045023', '740044909'].includes(cu.ohr_id)) {
+    if ((window.ADMIN_OHRS || ['740045023', '740044909']).includes(cu.ohr_id)) {
       footerHtml += ` <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();compassDeleteLog('${escapeAttr(String(log.coaching_id || log.id))}')" style="margin-left:auto;">Delete Log</button>`;
     }
   }
@@ -2030,7 +2030,7 @@ function _compassGetAllowedTypes() {
   ];
 
   const role = currentUser ? currentUser.actual_role : '';
-  const isOwner = currentUser && currentUser.ohr_id === '740045023';
+  const isOwner = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   if (isOwner || role === 'Manager') return allTypes;
   // QAs: QA Feedback, Incident Reporting, ZTP Coaching only
   if (role === 'Quality & Policy Expert') {
@@ -2548,7 +2548,7 @@ function compassSearchParentLogs() {
 
   // Search through logs where current user is the coach (admin sees all)
   const coach = typeof currentUser !== 'undefined' ? currentUser : null;
-  const isAdmin740 = coach && coach.ohr_id === '740045023';
+  const isAdmin740 = coach && (window.ADMIN_OHRS || []).includes(coach.ohr_id);
   const myLogs = COMPASS.logs.filter(l => {
     if (!coach) return false;
     if (isAdmin740) return true;
@@ -3043,7 +3043,7 @@ function compassCloseForm() {
 // ===== Admin Delete Coaching Log (740045023 + 740044909 only) =====
 async function compassDeleteLog(coachingId) {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  if (!cu || !['740045023', '740044909'].includes(cu.ohr_id)) {
+  if (!cu || !(window.ADMIN_OHRS || ['740045023', '740044909']).includes(cu.ohr_id)) {
     showToast('Only admin users can delete coaching logs', 'error');
     return;
   }
@@ -3282,8 +3282,8 @@ async function initCompass() {
   // Performance: prefetch ZTP + RCA catalogs in background (no await — non-blocking)
   compassPrefetchCatalogs();
 
-  const isAgent = currentUser && currentUser.actual_role === 'Agent' && currentUser.ohr_id !== '740045023';
-  const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+  const isAgent = currentUser && currentUser.actual_role === 'Agent' && !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
+  const isAdmin740 = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
 
   // Initialize dual-table pagination
   COMPASS.pageGiven = 1;
@@ -3350,7 +3350,7 @@ async function initCompassDisputes() {
 
   // Show QA toggle only for QA role
   const role = currentUser ? currentUser.actual_role : '';
-  const isOwner = currentUser && currentUser.ohr_id === '740045023';
+  const isOwner = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   const qaToggle = document.getElementById('disputes-qa-toggle');
   if (qaToggle) {
     qaToggle.style.display = (role === 'Quality & Policy Expert') ? 'inline-flex' : 'none';
@@ -3807,7 +3807,7 @@ async function disputesOpenDetail(coachingId) {
 
   if (cu) {
     const role = cu.actual_role;
-    const isAdmin = cu.ohr_id === '740045023';
+    const isAdmin = (window.ADMIN_OHRS || []).includes(cu.ohr_id);
     // Angelo Nieva (QTP Manager) — override access to ALL dispute levels
     const isQTPManager = cu.ohr_id === '740049863';
 

@@ -287,7 +287,7 @@ function sandboxOmniApply() {
   // Role-based filtering: agents see own, TLs see team, managers see all
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
-    const isAdmin = currentUser.ohr_id === '740045023';
+    const isAdmin = (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
 
     // Admin "My Team" toggle: filter to admin's direct reports using insight's supervisor_email
     if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'team') {
@@ -295,7 +295,7 @@ function sandboxOmniApply() {
     } else if (!isAdmin && (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer')) {
       // TLs/SMEs/CRs: filter to their direct reports using insight's supervisor_email
       data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
-    } else if (role !== 'Manager' && !isAdmin && currentUser.ohr_id !== '740044909') {
+    } else if (role !== 'Manager' && !isAdmin && !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id)) {
       // Agents, QAs, Trainers: own submissions only
       data = data.filter(i => i.ohr_id === currentUser.ohr_id);
     }
@@ -375,7 +375,7 @@ function sandboxToggleTeamFilter(mode) {
 function sandboxRenderTeamToggle() {
   const container = document.getElementById('sandbox-team-toggle');
   if (!container) return;
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
   if (!isAdmin) { container.style.display = 'none'; return; }
   container.style.display = 'inline-flex';
   const mode = SANDBOX_MOD._inputTeamToggle;
@@ -459,7 +459,7 @@ function sandboxRenderTable() {
 
   // Show Submitter column for TLs/SMEs/Managers who see team insights
   const showSubmitter = typeof currentUser !== 'undefined' && currentUser && (
-    currentUser.ohr_id === '740045023' ||
+    (window.ADMIN_OHRS || []).includes(currentUser.ohr_id) ||
     currentUser.actual_role === 'Manager' ||
     currentUser.actual_role === 'Team Lead' ||
     currentUser.actual_role === 'Operational SME' ||
@@ -530,8 +530,8 @@ function sandboxBuildDetailPanel(ins) {
     currentUser.actual_role !== 'Operational SME' &&
     currentUser.actual_role !== 'Trainer' &&
     currentUser.actual_role !== 'Content Reviewer' &&
-    currentUser.ohr_id !== '740045023' &&
-    currentUser.ohr_id !== '740044909';
+    !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id) &&
+    !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
 
   let html = `<div class="sandbox-detail-panel">`;
 
@@ -622,7 +622,7 @@ function sandboxBuildDetailPanel(ins) {
   </div>`;
 
   // Admin delete button in Input Portal detail panel
-  const _isAdminDel = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
+  const _isAdminDel = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
   if (_isAdminDel) {
     html += `<div class="sandbox-detail-section" style="border-top:1px solid var(--border);padding-top:12px;">
       <button class="btn btn-danger btn-sm" onclick="sandboxDeleteInsight('${escapeAttr(ins.insight_id)}')">Delete Insight</button>
@@ -843,7 +843,7 @@ function sandboxRenderReviewToolbar() {
   const pgOptions = [...pgSet].sort();
 
   // Build admin toggle HTML
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
   const reviewMode = SANDBOX_MOD._reviewTeamToggle;
   const toggleHtml = isAdmin ? `
     <div class="sandbox-team-toggle" style="display:inline-flex;flex-shrink:0;">
@@ -905,7 +905,7 @@ function sandboxRenderKanban(skipToolbar) {
   console.log('[Review Area] Total insights:', SANDBOX_MOD.insights.length, '| After role filter:', filteredInsights.length, '| Toggle:', SANDBOX_MOD._reviewTeamToggle);
 
   // Admin "My Team" toggle for Review Area — use insight's supervisor_email directly
-  const isAdminReview = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  const isAdminReview = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   if (isAdminReview && SANDBOX_MOD._reviewTeamToggle === 'team') {
     filteredInsights = filteredInsights.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
   }
@@ -931,7 +931,7 @@ function sandboxRenderKanban(skipToolbar) {
   let canActionFinal = false;
   let canActionElevated = false;
   let pgMatch = false;
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
 
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
@@ -1084,7 +1084,7 @@ function sandboxCloseReviewPanel() {
 
 function sandboxBuildPanelActions(ins) {
   let footerHtml = '';
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && ['740045023', '740044909'].includes(currentUser.ohr_id);
+  const isAdmin = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
 
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
@@ -2364,7 +2364,7 @@ function sandboxCloseForm() {
 // ===== Admin Delete Insight (740045023 + 740044909 only) =====
 async function sandboxDeleteInsight(insightId) {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  if (!cu || !['740045023', '740044909'].includes(cu.ohr_id)) {
+  if (!cu || !(window.ADMIN_OHRS || ['740045023', '740044909']).includes(cu.ohr_id)) {
     showToast('Only admin users can delete insights', 'error');
     return;
   }

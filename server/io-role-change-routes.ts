@@ -13,11 +13,11 @@ import {
   ioBillingTargetsV2,
 } from "../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, inArray, or } from "drizzle-orm";
+import { ADMIN_OHRS } from "./config.js";
 
 const router = Router();
 
 // Allowed roles for this feature: Manager, Team Lead, Admin
-const ADMIN_OHRS = ["740045023", "740044909"];
 const ALLOWED_ROLES = ["Manager", "Team Lead"];
 
 function isAllowed(role: string | undefined, ohrId: string | undefined): boolean {

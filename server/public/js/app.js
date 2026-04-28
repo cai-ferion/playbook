@@ -322,8 +322,8 @@ async function handleOnboardingSubmit() {
       return;
     }
 
-    // Send in-app notification to admin (740045023) and assistant (740044909)
-    const notifTargets = ['740045023', '740044909'];
+    // Send in-app notification to admins
+    const notifTargets = window.ADMIN_OHRS || ['740045023', '740044909'];
     for (const targetOhr of notifTargets) {
       fetch(`${IO_API_BASE}/notifications`, {
         method: 'POST',
@@ -400,6 +400,18 @@ async function loginAsEmployee(emp) {
   } catch (permErr) {
     console.warn('[RBAC] Failed to fetch permissions, using empty:', permErr);
     currentUser.permissions = {};
+  }
+
+  // Fetch centralized admin OHR list — single source of truth
+  try {
+    const cfgRes = await fetch('/api/io/config/admin-ohrs');
+    const cfgData = await cfgRes.json();
+    window.ADMIN_OHRS = cfgData.admin_ohrs || [];
+    window.OWNER_OHR = cfgData.owner_ohr || '';
+  } catch (cfgErr) {
+    console.warn('[Config] Failed to fetch admin OHRs, using fallback:', cfgErr);
+    window.ADMIN_OHRS = ['740045023', '740044909'];
+    window.OWNER_OHR = '740045023';
   }
   sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
@@ -698,6 +710,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           console.warn('[RBAC] Failed to refresh permissions on restore:', permErr2);
           if (!currentUser.permissions) currentUser.permissions = {};
         }
+
+        // ── Fetch centralized admin OHR list on session restore ──
+        try {
+          const cfgRes2 = await fetch('/api/io/config/admin-ohrs');
+          const cfgData2 = await cfgRes2.json();
+          window.ADMIN_OHRS = cfgData2.admin_ohrs || [];
+          window.OWNER_OHR = cfgData2.owner_ohr || '';
+        } catch (cfgErr2) {
+          console.warn('[Config] Failed to fetch admin OHRs on restore, using fallback:', cfgErr2);
+          window.ADMIN_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
+          window.OWNER_OHR = window.OWNER_OHR || '740045023';
+        }
         sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
         // Apply DB-driven nav visibility
@@ -957,7 +981,7 @@ function applyNavPermissions(user) {
   // Manager's Nook: Managers + Admin only (role-based, not permission-based)
   const nookNav = document.getElementById('nav-managers-nook');
   if (nookNav) {
-    const isManagerOrAdmin = user.actual_role === 'Manager' || (user.ohr_id === '740045023');
+    const isManagerOrAdmin = user.actual_role === 'Manager' || (window.ADMIN_OHRS || []).includes(user.ohr_id);
     nookNav.style.display = isManagerOrAdmin ? '' : 'none';
   }
 
@@ -979,7 +1003,7 @@ function applyNavPermissions(user) {
 
   // Agent nav simplification: agents only have one sub-tab in Compass (Coaching Profile)
   // and one in Helm (Task Board), so flatten to a direct nav item (no expandable group)
-  const isAgent = user.actual_role === 'Agent' && user.ohr_id !== '740045023';
+  const isAgent = user.actual_role === 'Agent' && !(window.ADMIN_OHRS || []).includes(user.ohr_id);
   if (isAgent) {
     // Compass: convert group to direct link to compass-input
     const compassGroup = document.getElementById('nav-group-compass');
@@ -1763,8 +1787,7 @@ function isRowLocked(record) {
   // Exempt users with edit_attendance permission, Managers, and explicit admin OHRs — never locked
   const _effRole = currentUser ? currentUser.actual_role : '';
   const _effAdmin = currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance'];
-  const _ADMIN_OHRS = ['740045023', '740044909'];
-  const _isAdminOhr = currentUser && _ADMIN_OHRS.indexOf(currentUser.ohr_id) !== -1;
+  const _isAdminOhr = currentUser && (window.ADMIN_OHRS || []).indexOf(currentUser.ohr_id) !== -1;
   if (currentUser && (_effRole === 'Manager' || _effAdmin || _isAdminOhr)) {
     return false;
   }

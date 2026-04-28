@@ -93,10 +93,10 @@ async function initBillingCompliance() {
 
   // Show Edit Targets button for owner, assistant, and managers
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const BILLING_EDIT_OHRS = ['740045023', '740044909'];
+  const BILLING_EDIT_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
   const effRole = cu ? cu.actual_role : '';
-  const effAdmin = cu && cu.ohr_id === '740045023';
-  const canEditTargets = cu && ((effAdmin && BILLING_EDIT_OHRS.includes(cu.ohr_id)) || cu.ohr_id === '740044909' || effRole === 'Manager');
+  const effAdmin = cu && (window.ADMIN_OHRS || []).includes(cu.ohr_id);
+  const canEditTargets = cu && ((effAdmin && BILLING_EDIT_OHRS.includes(cu.ohr_id)) || (window.ADMIN_OHRS || []).includes(cu.ohr_id) || effRole === 'Manager');
   if (canEditTargets) {
     const editBtn = document.getElementById('billing-edit-targets-btn');
     if (editBtn) editBtn.style.display = '';
@@ -467,10 +467,10 @@ async function saveBillingTargets() {
   }
 
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const BILLING_SAVE_OHRS = ['740045023', '740044909'];
+  const BILLING_SAVE_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
   const effRole2 = cu ? cu.actual_role : '';
-  const effAdmin2 = cu && cu.ohr_id === '740045023';
-  const canSaveTargets = cu && ((effAdmin2 && BILLING_SAVE_OHRS.includes(cu.ohr_id)) || cu.ohr_id === '740044909' || effRole2 === 'Manager');
+  const effAdmin2 = cu && (window.ADMIN_OHRS || []).includes(cu.ohr_id);
+  const canSaveTargets = cu && ((effAdmin2 && BILLING_SAVE_OHRS.includes(cu.ohr_id)) || (window.ADMIN_OHRS || []).includes(cu.ohr_id) || effRole2 === 'Manager');
   if (!canSaveTargets) {
     showToast('Only Managers and designated admins can edit billing targets.', 'error');
     return;

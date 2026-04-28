@@ -106,7 +106,7 @@ describe('Batch 47 — QA Dispute Hidden Statuses in Omnibar', () => {
   });
 
   it('admin override is present in compassApplyNow', () => {
-    expect(omnibar).toContain("ohr_id === '740045023'");
+    expect(omnibar).toContain("ADMIN_OHRS");
     expect(omnibar).toContain('isAdmin740');
   });
 });

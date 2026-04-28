@@ -95,7 +95,7 @@ const ROSTER = {
     // OHR visibility: only SMEs, Team Leads, Managers, and admin can see OHR ID
     const ohrAllowedRoles = ['Operational SME', 'Team Lead', 'Manager'];
     const userRole = (typeof currentUser !== 'undefined' && currentUser && currentUser.actual_role) || '';
-    const isAdmin = (typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023');
+    const isAdmin = (typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id));
     if (!isAdmin && !ohrAllowedRoles.includes(userRole)) {
       cols = cols.filter(c => c.key !== 'ohr_id');
     }
@@ -681,7 +681,7 @@ window.rosterToggleInlineDetail = function(ohrId) {
       html += '<div class="regimen-detail-grid">';
       g.keys.forEach(c => {
         const val = emp[c.key] != null ? emp[c.key] : '';
-        const privilegedOhrs = ['740045023', '740044909'];
+        const privilegedOhrs = window.ADMIN_OHRS || ['740045023', '740044909'];
         const currentOhr = window._currentUser?.ohr_id || '';
         const isReadOnly = (c.key === 'ohr_id' || c.key === 'full_name') && !privilegedOhrs.includes(currentOhr);
         html += '<div class="regimen-field">'
@@ -931,7 +931,7 @@ window.rosterOpenDetail = function(ohrId) {
       html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">';
       g.keys.forEach(c => {
         const val = emp[c.key] != null ? emp[c.key] : '';
-        const privilegedOhrs = ['740045023', '740044909'];
+        const privilegedOhrs = window.ADMIN_OHRS || ['740045023', '740044909'];
         const currentOhr = window._currentUser?.ohr_id || '';
         const isReadOnly = (c.key === 'ohr_id' || c.key === 'full_name') && !privilegedOhrs.includes(currentOhr);
         html += '<div>'
@@ -1565,7 +1565,7 @@ async function rosterFetchEmployees() {
   // Owner check for ownerOnly columns (Sex column)
   try {
     const u = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
-    ROSTER.isOwner = u.open_id === '740045023' || u.ohr_id === '740045023';
+    ROSTER.isOwner = (window.ADMIN_OHRS || []).includes(u.open_id) || (window.ADMIN_OHRS || []).includes(u.ohr_id);
   } catch(e) { ROSTER.isOwner = false; }
 
   // Show/hide tabs

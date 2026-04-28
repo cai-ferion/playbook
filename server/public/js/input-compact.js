@@ -305,7 +305,7 @@ function renderDetailPanel(r, idx, locked) {
   var otField;
   var OT_MECH_CUTOFF = '2026-04-10';
   var OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
-  var _ADMIN_OHRS_OT = ['740045023', '740044909'];
+  var _ADMIN_OHRS_OT = window.ADMIN_OHRS || ['740045023', '740044909'];
   var isCurrentUserAdmin = cu && (_ADMIN_OHRS_OT.indexOf(cu.ohr_id) !== -1 || (cu.permissions && cu.permissions['anchor.edit_attendance']));
   var isOtMechAgent = (r.role === 'Agent') && OT_MECH_PGS.indexOf(r.actualPlanningGroup) !== -1;
   var isAfterCutoff = r.date && r.date > OT_MECH_CUTOFF;

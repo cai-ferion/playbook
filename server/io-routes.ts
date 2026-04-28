@@ -35,10 +35,8 @@ import {
 import { eq, and, gte, lte, like, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
 import crypto from "crypto";
 import { syncEmployeesToSupabase, deleteEmployeesFromSupabase } from "./supabase-sync.js";
+import { ADMIN_OHRS, OWNER_OHR, isAdminOhr } from "./config.js";
 const router = Router();
-
-// Admin OHRs exempt from date-based locks and other restrictions
-const ADMIN_OHRS = ["740045023", "740044909"];
 
 // ── Manager OHR Cache (5-min TTL) ──────────────────────────────
 // Replaces the correlated NOT IN (SELECT ...) subquery on every attendance request.
@@ -805,9 +803,9 @@ router.patch("/coaching/:id", async (req: Request, res: Response) => {
 // DELETE /api/io/coaching/:id - delete a coaching log (admin-gated: 740045023, 740044909)
 router.delete("/coaching/:id", async (req: Request, res: Response) => {
   try {
-    // Admin-gated: only 740045023 and 740044909 can delete coaching logs
-    const actorOhr = req.body?.actor_ohr || req.query?.actor_ohr;
-    if (!actorOhr || !['740045023', '740044909'].includes(String(actorOhr))) {
+    // Admin-gated: only admins can delete coaching logs
+    const actorOhr = req.headers['x-actor-ohr'] as string;
+    if (!actorOhr || !ADMIN_OHRS.includes(String(actorOhr))) {
       return res.status(403).json({ error: "Only admin users can delete coaching logs" });
     }
     const db = await getDb();
@@ -1156,10 +1154,10 @@ router.patch("/insights/:insight_id", async (req: Request, res: Response) => {
 
 router.delete("/insights/:insight_id", async (req: Request, res: Response) => {
   try {
-    // Admin-gated: only 740045023 and 740044909 can delete insights
+    // Admin-gated: only admins can delete insights
     const actorOhr = req.body?.actor_ohr || req.query?.actor_ohr;
-    if (!actorOhr || !['740045023', '740044909'].includes(String(actorOhr))) {
-      return res.status(403).json({ error: "Only admin users can delete insights" });
+    if (!actorOhr || !ADMIN_OHRS.includes(String(actorOhr))) {
+      return res.status(403).json({ error: "Admin-only operation" });
     }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
@@ -1174,9 +1172,9 @@ router.delete("/insights/:insight_id", async (req: Request, res: Response) => {
 
 router.post("/insights-bulk-delete", async (req: Request, res: Response) => {
   try {
-    // Admin-gated: only 740045023 and 740044909 can bulk-delete insights
-    const actorOhr = req.body?.actor_ohr;
-    if (!actorOhr || !['740045023', '740044909'].includes(String(actorOhr))) {
+    // Admin-gated: only admins can bulk-delete insights
+    const actorOhr = req.headers['x-actor-ohr'] as string;
+    if (!actorOhr || !ADMIN_OHRS.includes(String(actorOhr))) {
       return res.status(403).json({ error: "Only admin users can delete insights" });
     }
     const db = await getDb();
@@ -2171,7 +2169,7 @@ router.post("/billing-targets-v2", async (req: Request, res: Response) => {
     // Permission gate: owner (740045023), assistant (740044909), and Managers
     const userOhr = (req as any).userOhr || req.headers['x-user-ohr'];
     const userRole = (req as any).userRole || req.headers['x-user-role'] || '';
-    const BILLING_EDIT_OHRS = ['740045023', '740044909'];
+    const BILLING_EDIT_OHRS = ADMIN_OHRS;
     const canEdit = BILLING_EDIT_OHRS.includes(String(userOhr)) || String(userRole) === 'Manager';
     if (!canEdit) {
       return res.status(403).json({ error: "Only Managers and designated admins can edit billing targets." });
@@ -3249,6 +3247,11 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   // 703212987 no longer gets edit_employee by default — only owner + assistant
   return b;
 }
+
+// GET /api/io/config/admin-ohrs — single source of truth for admin OHR list
+router.get("/config/admin-ohrs", (_req: Request, res: Response) => {
+  res.json({ admin_ohrs: ADMIN_OHRS, owner_ohr: OWNER_OHR });
+});
 
 // GET /api/io/my-permissions — current user's permissions (merged DB + defaults)
 router.get("/my-permissions", async (req: Request, res: Response) => {
@@ -4517,7 +4520,7 @@ router.get("/wfm-schedule/dates", async (_req: Request, res: Response) => {
 // Attendance Purge — owner-only (740045023)
 // ============================================================
 
-const OWNER_OHR = '740045023';
+// OWNER_OHR imported from ./config.js
 
 // GET /api/io/attendance-purge-preview?ohr_id=X&from_date=YYYY-MM-DD
 // Returns a summary of rows that would be deleted + first 20 rows for preview

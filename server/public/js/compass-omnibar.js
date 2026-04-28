@@ -464,7 +464,7 @@
     }
 
     // Split into given/received based on current user role
-    const isAdmin740 = currentUser && currentUser.ohr_id === '740045023';
+    const isAdmin740 = currentUser && (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
     const role = currentUser ? currentUser.actual_role : '';
 
     if (isAdmin740 && COMPASS.viewMode === 'tl') {

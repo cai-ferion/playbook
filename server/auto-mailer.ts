@@ -10,10 +10,10 @@ import cron from "node-cron";
 import { drizzle } from "drizzle-orm/mysql2";
 import { eq, and, inArray, sql, gte, lte, asc, ne, isNotNull } from "drizzle-orm";
 import { ioAttendance, ioEmployees, ioNotifications, ioLeaves, ioAuditLog, ioCoaching, ioCorrectiveActions, ioInsights } from "../drizzle/schema";
+import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "./config.js";
 
 // Philippine Time is UTC+8
 const PHT_OFFSET_HOURS = 8;
-const ADMIN_OHR = "740045023";
 
 function getTodayPHT(): string {
   const now = new Date();

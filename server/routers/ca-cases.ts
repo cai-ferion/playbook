@@ -20,12 +20,11 @@ import {
 import { eq, and, or, inArray, like, desc, asc, sql, gte, lte, count } from "drizzle-orm";
 import { storagePut } from "../storage";
 import crypto from "crypto";
+import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "../config.js";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const ADMIN_OHR = "740045023";
 
 /** CA Case status lifecycle — ordered progression */
 const CA_STATUSES = {

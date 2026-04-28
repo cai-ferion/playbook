@@ -4,7 +4,7 @@
    Only OHR 740045023 can toggle and bypass maintenance.
    ============================================================ */
 
-const ADMIN_OHR = '740045023';
+const ADMIN_OHR = (window.OWNER_OHR || '740045023');
 const MAINTENANCE_KEY = 'site_maintenance';
 
 

@@ -20,12 +20,11 @@ describe("Server — Compass Coaching DELETE Endpoint", () => {
     expect(ioRoutes).toContain('router.delete("/coaching/:id"');
   });
 
-  it("gates access to 740045023 and 740044909 only", () => {
-    // Find the coaching DELETE handler section
+  it("gates access to ADMIN_OHRS (centralized config)", () => {
+    // Find the coaching DELETE handler section — now uses ADMIN_OHRS from config
     const idx = ioRoutes.indexOf('router.delete("/coaching/:id"');
     const section = ioRoutes.slice(idx, idx + 800);
-    expect(section).toContain("740045023");
-    expect(section).toContain("740044909");
+    expect(section).toContain("ADMIN_OHRS");
     expect(section).toContain("Only admin users can delete coaching logs");
   });
 
@@ -68,19 +67,17 @@ describe("Server — Sandbox Insights DELETE Endpoint (admin-gated)", () => {
     expect(ioRoutes).toContain('router.delete("/insights/:insight_id"');
   });
 
-  it("gates single-delete to 740045023 and 740044909 only", () => {
+  it("gates single-delete to ADMIN_OHRS (centralized config)", () => {
     const idx = ioRoutes.indexOf('router.delete("/insights/:insight_id"');
     const section = ioRoutes.slice(idx, idx + 500);
-    expect(section).toContain("740045023");
-    expect(section).toContain("740044909");
-    expect(section).toContain("Only admin users can delete insights");
+    expect(section).toContain("ADMIN_OHRS");
+    expect(section).toContain("Admin-only operation");
   });
 
-  it("gates bulk-delete to 740045023 and 740044909 only", () => {
+  it("gates bulk-delete to ADMIN_OHRS (centralized config)", () => {
     const idx = ioRoutes.indexOf('router.post("/insights-bulk-delete"');
     const section = ioRoutes.slice(idx, idx + 500);
-    expect(section).toContain("740045023");
-    expect(section).toContain("740044909");
+    expect(section).toContain("ADMIN_OHRS");
     expect(section).toContain("Only admin users can delete insights");
   });
 
@@ -105,11 +102,10 @@ describe("Client — Compass Delete UI", () => {
     expect(compassJs).toContain("async function compassDeleteLog(coachingId)");
   });
 
-  it("gates compassDeleteLog to admin OHRs", () => {
+  it("gates compassDeleteLog to admin OHRs (window.ADMIN_OHRS)", () => {
     const idx = compassJs.indexOf("async function compassDeleteLog(coachingId)");
     const section = compassJs.slice(idx, idx + 600);
-    expect(section).toContain("740045023");
-    expect(section).toContain("740044909");
+    expect(section).toContain("ADMIN_OHRS");
   });
 
   it("shows styled confirmation modal before deletion", () => {
@@ -156,11 +152,10 @@ describe("Client — Sandbox Delete UI", () => {
     expect(sandboxJs).toContain("async function sandboxDeleteInsight(insightId)");
   });
 
-  it("gates sandboxDeleteInsight to admin OHRs", () => {
+  it("gates sandboxDeleteInsight to admin OHRs (window.ADMIN_OHRS)", () => {
     const idx = sandboxJs.indexOf("async function sandboxDeleteInsight(insightId)");
     const section = sandboxJs.slice(idx, idx + 600);
-    expect(section).toContain("740045023");
-    expect(section).toContain("740044909");
+    expect(section).toContain("ADMIN_OHRS");
   });
 
   it("shows styled confirmation modal before deletion", () => {
@@ -201,14 +196,10 @@ describe("Client — Sandbox Delete UI", () => {
     expect(sandboxJs).toContain(">Delete Insight</button>");
   });
 
-  it("isAdmin check includes both 740045023 and 740044909", () => {
-    // All isAdmin declarations should include both OHRs
-    const matches = sandboxJs.match(/const isAdmin = typeof currentUser.*includes\(currentUser\.ohr_id\)/g) || [];
+  it("isAdmin check uses centralized window.ADMIN_OHRS", () => {
+    // All isAdmin declarations should reference window.ADMIN_OHRS
+    const matches = sandboxJs.match(/window\.ADMIN_OHRS/g) || [];
     expect(matches.length).toBeGreaterThanOrEqual(4);
-    matches.forEach(m => {
-      expect(m).toContain("740045023");
-      expect(m).toContain("740044909");
-    });
   });
 });
 
