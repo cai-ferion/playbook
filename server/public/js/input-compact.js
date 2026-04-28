@@ -345,10 +345,11 @@ function renderDetailPanel(r, idx, locked) {
       + '</select>';
   }
 
-  // Status dropdown
+  // Status dropdown — editable only by Managers and Admins
   var STATUS_OPTIONS = ['Production', 'Training', 'Nesting', 'Attrition Backfill Training', 'Inactive', 'Exit'];
+  var isManagerOrAdmin = cu && (cu.actual_role === 'Manager' || (cu.permissions && cu.permissions['anchor.edit_attendance']));
   var statusField;
-  if (locked || isWFM) {
+  if (locked || isWFM || !isManagerOrAdmin) {
     statusField = '<span class="detail-readonly">' + escapeHtml(r.status || '\u2014') + '</span>';
   } else {
     statusField = '<select class="detail-select" data-idx="' + idx + '" data-key="status" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
