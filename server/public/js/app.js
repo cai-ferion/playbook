@@ -1846,7 +1846,7 @@ function handleCellEdit(el) {
     if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
       var spRow = serverPagState.rows.find(function(r) { return r._id === recordId; });
       if (spRow) {
-        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'] };
+        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'], status: ['status', 'snap_status'] };
         var targets = keyMap[key] || [key];
         for (var ti = 0; ti < targets.length; ti++) { spRow[targets[ti]] = value; }
         if (key === 'tag' && value !== 'UPL' && value !== 'LATE') {
@@ -1932,7 +1932,7 @@ async function confirmSave() {
     for (const [recId, changes] of Object.entries(appState.pendingEdits)) {
       // recId is now the record _id directly (not a numeric index)
       const edit = { _id: recId };
-      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', role: 'role', actualPlanningGroup: 'planning_group' };
+      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', role: 'role', actualPlanningGroup: 'planning_group', status: 'snap_status' };
       for (const [field, value] of Object.entries(changes)) {
         const dbCol = fieldMap[field] || field;
         edit[dbCol] = value;
@@ -1947,7 +1947,7 @@ async function confirmSave() {
 
       // Sync serverPagState.rows with saved values so re-render shows fresh data
       if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
-        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', role: 'role', planning_group: 'actualPlanningGroup' };
+        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', role: 'role', planning_group: 'actualPlanningGroup', snap_status: 'status' };
         for (const edit of edits) {
           const row = serverPagState.rows.find(r => r._id === edit._id);
           if (row) {

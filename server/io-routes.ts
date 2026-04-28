@@ -606,7 +606,8 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const fieldMap: Record<string, string> = {
       tag: "tag", upl_reason: "upl_reason", remarks: "remarks",
       ot_hours: "ot_hours",
-      role: "role", planning_group: "planning_group"
+      role: "role", planning_group: "planning_group",
+      snap_status: "snap_status"
     };
 
     const auditEntries: any[] = [];

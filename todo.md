@@ -3276,3 +3276,7 @@
 - [x] Mark as Complete: works for both single tasks and group task assignments
 - [x] Add single-task complete via existing PATCH /api/io/tasks/:taskId (status=Completed)
 - [x] Vitest tests for revised routes and structure (1366 passing, 2 pre-existing supabase-sync failures)
+
+## Input Portal — Status Field Editable
+- [x] Make Status field editable in inline expansion row (dropdown with status options: Production, Training, Nesting, Attrition Backfill Training, Inactive, Exit)
+- [x] Ensure backend accepts status field updates via existing cell edit endpoint (snap_status in fieldMap + audit logging)

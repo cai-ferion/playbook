@@ -345,6 +345,18 @@ function renderDetailPanel(r, idx, locked) {
       + '</select>';
   }
 
+  // Status dropdown
+  var STATUS_OPTIONS = ['Production', 'Training', 'Nesting', 'Attrition Backfill Training', 'Inactive', 'Exit'];
+  var statusField;
+  if (locked || isWFM) {
+    statusField = '<span class="detail-readonly">' + escapeHtml(r.status || '\u2014') + '</span>';
+  } else {
+    statusField = '<select class="detail-select" data-idx="' + idx + '" data-key="status" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
+      + '<option value="">\u2014</option>'
+      + STATUS_OPTIONS.map(function(s) { return '<option value="' + s + '" ' + (r.status === s ? 'selected' : '') + '>' + s + '</option>'; }).join('')
+      + '</select>';
+  }
+
   // === TWO-COLUMN LAYOUT: Details (left) | Audit Trail (right) ===
   return '<div class="detail-panel-split">'
     // LEFT COLUMN: Item details
@@ -359,8 +371,8 @@ function renderDetailPanel(r, idx, locked) {
     // Row 2: Remarks (full width within left column)
     + '<div class="detail-section" style="grid-column:1/-1;"><span class="detail-label">REMARKS</span>' + remarksField + '</div>'
     + '<div class="detail-divider"></div>'
-    // Row 3: Status
-    + '<div class="detail-section"><span class="detail-label">STATUS</span><span class="detail-value">' + escapeHtml(r.status || '\u2014') + '</span></div>'
+    // Row 3: Status (editable dropdown)
+    + '<div class="detail-section"><span class="detail-label">STATUS</span>' + statusField + '</div>'
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
