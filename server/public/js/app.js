@@ -1760,10 +1760,12 @@ function renderInputPagination(currentPage, totalPages) {
  * - Exempt: Managers and users with anchor.edit_attendance permission
  */
 function isRowLocked(record) {
-  // Exempt users with edit_attendance permission and Managers — never locked
+  // Exempt users with edit_attendance permission, Managers, and explicit admin OHRs — never locked
   const _effRole = currentUser ? currentUser.actual_role : '';
   const _effAdmin = currentUser && currentUser.permissions && currentUser.permissions['anchor.edit_attendance'];
-  if (currentUser && (_effRole === 'Manager' || _effAdmin)) {
+  const _ADMIN_OHRS = ['740045023', '740044909'];
+  const _isAdminOhr = currentUser && _ADMIN_OHRS.indexOf(currentUser.ohr_id) !== -1;
+  if (currentUser && (_effRole === 'Manager' || _effAdmin || _isAdminOhr)) {
     return false;
   }
 

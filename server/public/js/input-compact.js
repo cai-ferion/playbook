@@ -305,9 +305,11 @@ function renderDetailPanel(r, idx, locked) {
   var otField;
   var OT_MECH_CUTOFF = '2026-04-10';
   var OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
+  var _ADMIN_OHRS_OT = ['740045023', '740044909'];
+  var isCurrentUserAdmin = cu && (_ADMIN_OHRS_OT.indexOf(cu.ohr_id) !== -1 || (cu.permissions && cu.permissions['anchor.edit_attendance']));
   var isOtMechAgent = (r.role === 'Agent') && OT_MECH_PGS.indexOf(r.actualPlanningGroup) !== -1;
   var isAfterCutoff = r.date && r.date > OT_MECH_CUTOFF;
-  if (locked || isWFM || (isOtMechAgent && isAfterCutoff)) {
+  if (locked || isWFM || (isOtMechAgent && isAfterCutoff && !isCurrentUserAdmin)) {
     otField = '<span class="detail-readonly">' + escapeHtml(r.ot || '\u2014') + '</span>';
   } else {
     otField = '<input type="number" step="0.5" min="0" class="detail-input" value="' + escapeAttr(r.ot || '') + '" data-idx="' + idx + '" data-key="ot" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014">';
