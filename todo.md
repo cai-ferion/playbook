@@ -3228,3 +3228,12 @@
 - [x] Update tests: remove/update OT-related test assertions (deleted batch46, ot-revisions; updated billing-v3, notification-simulation, compass-notifications, role-change)
 - [x] Bump cache versions for modified JS files
 - [x] Update Helm "New Request" — OT Request type removed, only Backdate Tag Change remains
+
+## Visibility Revisions (April 28, 2026)
+- [x] Hide Helm nav item from all agents (removed from Agent defaults + cleared 326 DB overrides)
+- [x] Restrict Horizon nav to TL, Manager, Admin only (added to TL/Manager conditional + cleared 389 DB overrides)
+- [x] Restrict Manager's Nook (under Horizon) to Manager and Admin only (client-side role check confirmed)
+- [x] Simulate Agent role: Helm=false, Horizon=false
+- [x] Simulate TL role: Helm=true, Horizon=true, Manager's Nook=hidden
+- [x] Simulate Manager role: Helm=true, Horizon=true, Manager's Nook=visible
+- [x] Simulate Admin role: all visible

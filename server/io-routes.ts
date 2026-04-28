@@ -3006,7 +3006,7 @@ const ALL_PERMISSION_KEYS = [
 function getPermissionDefaults(role: string, ohrId: string): Record<string, boolean> {
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
-  if (role === 'Agent') { b['nav.helm'] = true; b['nav.compass'] = true; b['nav.sandbox'] = true; return b; }
+  if (role === 'Agent') { b['nav.compass'] = true; b['nav.sandbox'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
   b['anchor.dashboard'] = true;
@@ -3019,6 +3019,10 @@ function getPermissionDefaults(role: string, ohrId: string): Record<string, bool
   b['regimen.export_csv'] = true;
   b['nav.compass'] = true;
   b['compass.disputes'] = true;
+  // Horizon: TL, Manager, Admin only
+  if (role === 'Team Lead' || role === 'Manager') {
+    b['nav.horizon'] = true;
+  }
   // Corrective Actions: TLs and Managers only (not SMEs, QAs, Trainers, etc.)
   if (role === 'Team Lead' || role === 'Manager') {
     b['compass.corrective_actions'] = true;
