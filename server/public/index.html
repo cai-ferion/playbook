@@ -309,12 +309,23 @@
           </div>
         </div>
 
-        <!-- Helm (Direct link to Task Board) -->
+        <!-- Helm Section (Collapsible) -->
         <div class="nav-group" id="nav-group-helm">
-          <button class="nav-item" data-view="helm-board" onclick="switchView('helm-board')" id="nav-helm">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('helm')" id="nav-helm">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
             Helm
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
+          <div class="nav-group-items" id="nav-group-items-helm">
+            <button class="nav-item" data-view="helm-board" onclick="switchView('helm-board')" id="nav-helm-board">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Task Board
+            </button>
+            <button class="nav-item" data-view="helm-dashboard" onclick="switchView('helm-dashboard')" id="nav-helm-dashboard" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+              Task Dashboard
+            </button>
+          </div>
         </div>
 
         <!-- Horizon Section (Collapsible) -->
@@ -1595,9 +1606,9 @@
           <!-- Group Task Wizard Modal -->
           <div class="module-form-overlay" id="gt-wizard-overlay" style="display:none;">
             <div class="module-form-panel" style="max-width:680px;width:95%;">
-              <div class="module-form-header" style="background:#7C3AED;">
-                <h3 id="gt-wizard-title" style="color:#fff;">New Group Task</h3>
-                <button class="module-form-close" onclick="gtWizardClose()" style="color:#fff;">
+              <div class="module-form-header">
+                <h3 id="gt-wizard-title">New Group Task</h3>
+                <button class="module-form-close" onclick="gtWizardClose()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -1619,9 +1630,9 @@
           <!-- Group Task Detail Modal -->
           <div class="module-form-overlay" id="gt-detail-overlay" style="display:none;">
             <div class="module-form-panel" style="max-width:780px;width:95%;">
-              <div class="module-form-header" style="background:#7C3AED;">
-                <h3 id="gt-detail-title" style="color:#fff;">Group Task Details</h3>
-                <button class="module-form-close" onclick="gtDetailClose()" style="color:#fff;">
+              <div class="module-form-header">
+                <h3 id="gt-detail-title">Group Task Details</h3>
+                <button class="module-form-close" onclick="gtDetailClose()">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -1632,6 +1643,43 @@
         </div>
       </div>
 
+
+      <!-- ===== View: Task Dashboard ===== -->
+      <div class="view-container view-hidden" id="view-helm-dashboard">
+        <div class="module-page">
+          <div id="helm-dash-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text" style="margin-top:12px;">Loading Task Dashboard...</div>
+          </div>
+          <div id="helm-dash-content" style="display:none;">
+            <!-- Summary cards -->
+            <div id="helm-dash-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;"></div>
+            <!-- Filters -->
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+              <div class="filter-group">
+                <label class="filter-label">Status:</label>
+                <select class="form-select form-select-sm" id="helm-dash-filter-status" onchange="helmDashApplyFilters()">
+                  <option value="All">All</option>
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Search:</label>
+                <input type="text" class="form-input form-input-sm" id="helm-dash-search" placeholder="Task title or ID..." oninput="helmDashApplyFilters()" style="max-width:200px;">
+              </div>
+            </div>
+            <!-- Table -->
+            <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+              <table class="data-table module-table" id="helm-dash-table" style="font-size:12px;">
+                <thead id="helm-dash-table-head"></thead>
+                <tbody id="helm-dash-table-body"></tbody>
+              </table>
+            </div>
+            <div class="module-pagination" id="helm-dash-pagination"></div>
+          </div>
+        </div>
+      </div>
 
       <!-- ===== View: Manager's Nook ===== -->
       <div class="view-container view-hidden" id="view-managers-nook">
@@ -2013,6 +2061,7 @@
   <script src="js/haven.js?v=104" defer></script>
   <script src="js/helm.js?v=113" defer></script>
   <script src="js/group-task.js?v=100" defer></script>
+  <script src="js/helm-dashboard.js?v=100" defer></script>
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>

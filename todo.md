@@ -3259,3 +3259,20 @@
 - [x] Auto-mailer: Deadline reminder notifications (3 days before due date) — cron at 9AM PHT daily
 - [x] Ensure all task assignments exclude Inactive employees (resolveTargetEmployees filters Active only)
 - [x] Vitest tests for all new group task routes (43 tests passing)
+
+## Helm Restructuring — Major Revisions
+- [x] Split Helm into 2 sidebar sub-pages: "Task Board" and "Task Dashboard"
+- [x] Task Board: houses current Helm content (Tasks Received, Tasks Given, Approvals)
+- [x] Task Board: agents see ONLY Task Board (no Task Dashboard, no Tasks Given, no New Task/New Group Task buttons)
+- [x] Task Dashboard: group task completion analytics (TL/Manager/Admin only)
+- [x] Task Dashboard: filter by status (Open/Closed), search bar, progress bars per task
+- [x] Task Dashboard: due date color coding (overdue=red, ≤3 days=amber)
+- [x] Update 16 seeded group tasks to show created_by = Bantasan, Arvin Maurice Hernandez (740045023) — already correct from seed
+- [x] Remove Category field from New Group Task form and all related code
+- [x] Align New Group Task form styling/layout with existing New Task form color palette
+- [x] Tasks Given table columns: Task ID, Title, Task Type (Single/Group), Completion Rate (group only), Assigned To (single only), Due Date
+- [x] Tasks Received table columns: Task ID, Task Type (Single/Group), Status, Due Date, Action (Mark as Complete button with confirmation for both single/group)
+- [x] Tasks Received: items NOT clickable, Mark as Complete button with confirmation dialog
+- [x] Mark as Complete: works for both single tasks and group task assignments
+- [x] Add single-task complete via existing PATCH /api/io/tasks/:taskId (status=Completed)
+- [x] Vitest tests for revised routes and structure (1366 passing, 2 pre-existing supabase-sync failures)

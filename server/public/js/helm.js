@@ -49,6 +49,18 @@ const HELM = {
 
 async function initHelm(view) {
   if (HELM.employees.length === 0) await helmFetchEmployees();
+
+  // Role-based nav visibility for Task Dashboard (TL/Manager/Admin only)
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
+  const dashNav = document.getElementById('nav-helm-dashboard');
+  if (dashNav) dashNav.style.display = isAgent ? 'none' : '';
+
+  if (view === 'helm-dashboard') {
+    if (typeof initHelmDashboard === 'function') initHelmDashboard();
+    return;
+  }
+
   await helmFetchTasks();
   helmApplyFilters();
   helmApplyReceivedFilters();
@@ -86,6 +98,10 @@ async function helmFetchTasks() {
     console.error('Helm fetch error:', e);
     HELM.tasks = [];
   }
+
+  // Also fetch group tasks for Tasks Given tab
+  if (typeof gtFetchGroupTasks === 'function') await gtFetchGroupTasks();
+  if (typeof gtFetchMyGroupTasks === 'function') await gtFetchMyGroupTasks();
 
 
 
@@ -173,34 +189,62 @@ function helmSwitchBoardTab(tab) {
 
 function helmApplyFilters() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  // Filter only task records (not requests) where current user is the creator
-  let data = HELM.tasks.filter(t => t.record_type !== 'request');
-
-  // Tasks Given: EVERYONE sees only tasks they created
+  // Individual tasks where current user is the creator
+  let singleTasks = HELM.tasks.filter(t => t.record_type !== 'request');
   if (cu && cu.ohr_id) {
-    data = data.filter(t => (t.assigned_by_ohr || '').trim() === cu.ohr_id.trim());
+    singleTasks = singleTasks.filter(t => (t.assigned_by_ohr || '').trim() === cu.ohr_id.trim());
   } else {
-    data = [];
+    singleTasks = [];
   }
+
+  // Map individual tasks to unified format
+  const singles = singleTasks.map(t => ({
+    ...t,
+    _taskType: 'Single',
+    _completionRate: null,
+    _assignedTo: t.assigned_to_name || '\u2014',
+    _sortDate: t.due_date || t.created_at || '9999',
+  }));
+
+  // Group tasks created by current user
+  const groups = (typeof GT !== 'undefined' && GT.groupTasks ? GT.groupTasks : []).filter(g => {
+    if (!cu || !cu.ohr_id) return false;
+    return (g.created_by_ohr || '').trim() === cu.ohr_id.trim();
+  }).map(g => ({
+    task_id: g.task_id,
+    title: g.title,
+    status: g.status,
+    due_date: g.due_date,
+    created_at: g.created_at,
+    _taskType: 'Group',
+    _completionRate: g.completion_pct != null ? g.completion_pct : null,
+    _assignedTo: null,
+    _sortDate: g.due_date || g.created_at || '9999',
+    _groupTaskId: g.id,
+  }));
+
+  let merged = [...singles, ...groups];
 
   // Page-level status filter
   const statusFilter = document.getElementById('helm-filter-status')?.value || 'All';
   if (statusFilter !== 'All') {
-    data = data.filter(t => t.status === statusFilter);
+    merged = merged.filter(t => t.status === statusFilter);
   }
 
   // Page-level search
   const search = (document.getElementById('helm-search')?.value || '').toLowerCase().trim();
   if (search) {
-    data = data.filter(t =>
+    merged = merged.filter(t =>
       (t.title || '').toLowerCase().includes(search) ||
       (t.task_id || '').toLowerCase().includes(search) ||
-      (t.assigned_to_name || '').toLowerCase().includes(search) ||
-      (t.assigned_by_name || '').toLowerCase().includes(search)
+      (t._assignedTo || '').toLowerCase().includes(search)
     );
   }
 
-  HELM.filtered = data;
+  // Sort by due date
+  merged.sort((a, b) => (a._sortDate || '').localeCompare(b._sortDate || ''));
+
+  HELM.filtered = merged;
   helmRenderTable();
 }
 
@@ -214,8 +258,9 @@ function helmRenderTable() {
   thead.innerHTML = `<tr>
     <th>Task ID</th>
     <th>Title</th>
+    <th>Task Type</th>
+    <th>Completion Rate</th>
     <th>Assigned To</th>
-    <th>Status</th>
     <th>Due Date</th>
   </tr>`;
 
@@ -223,21 +268,41 @@ function helmRenderTable() {
   const pageData = HELM.filtered.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">Create a new task or adjust filters</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">Create a new task or adjust filters</div></div></td></tr>';
     helmRenderPagination();
     return;
   }
 
   tbody.innerHTML = pageData.map(t => {
-    const statusColor = HELM.STATUS_COLORS[t.status] || 'var(--fg-muted)';
-    const isOverdue = t.due_date && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due_date) < new Date();
-    const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const isGroup = t._taskType === 'Group';
+    const isOverdue = t.due_date && t.status !== 'Completed' && t.status !== 'Cancelled' && t.status !== 'Closed' && new Date(t.due_date) < new Date();
+    const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
 
-    return `<tr class="data-row" onclick="helmOpenDetail('${escapeAttr(t.task_id)}')">
+    const typeBadge = isGroup
+      ? '<span style="background:#7C3AED22;color:#7C3AED;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Group</span>'
+      : '<span style="background:#3B82F622;color:#3B82F6;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Single</span>';
+
+    // Completion Rate: show progress bar for group tasks only
+    let completionHtml = '\u2014';
+    if (isGroup && t._completionRate != null) {
+      const pct = t._completionRate;
+      const barColor = pct >= 100 ? '#22C55E' : pct >= 50 ? '#3B82F6' : '#F59E0B';
+      completionHtml = `<div style="display:flex;align-items:center;gap:6px;"><div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;min-width:60px;"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;"></div></div><span style="font-size:11px;font-weight:600;min-width:32px;">${pct}%</span></div>`;
+    }
+
+    // Assigned To: show only for single tasks
+    const assignedToHtml = isGroup ? '\u2014' : escapeHtml(t._assignedTo || '\u2014');
+
+    const clickHandler = isGroup
+      ? `gtOpenDetail(${t._groupTaskId})`
+      : `helmOpenDetail('${escapeAttr(t.task_id)}')`;
+
+    return `<tr class="data-row" onclick="${clickHandler}">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
-      <td><span style="font-weight:500;">${escapeHtml(t.title || '—')}</span></td>
-      <td>${escapeHtml(t.assigned_to_name || '—')}</td>
-      <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '—')}</span></td>
+      <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
+      <td>${typeBadge}</td>
+      <td>${completionHtml}</td>
+      <td>${assignedToHtml}</td>
       <td style="${isOverdue ? 'color:var(--error);font-weight:600;' : ''}">${dueStr}${isOverdue ? ' (Overdue)' : ''}</td>
     </tr>`;
   }).join('');

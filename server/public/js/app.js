@@ -1028,7 +1028,7 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'regimen', 'managers-nook', 'tardiness-validator'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-dashboard', 'regimen', 'managers-nook', 'tardiness-validator'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -1060,7 +1060,8 @@ async function switchView(view) {
     const havenGroup = document.getElementById('nav-group-haven');
     if (havenGroup) havenGroup.classList.add('expanded');
   }
-  if (view === 'helm-board') {
+  const helmViews = ['helm-board', 'helm-dashboard'];
+  if (helmViews.includes(view)) {
     const helmGroup = document.getElementById('nav-group-helm');
     if (helmGroup) helmGroup.classList.add('expanded');
   }
@@ -1077,6 +1078,7 @@ async function switchView(view) {
     'sandbox-input': 'Input Portal', 'sandbox-review': 'Review Area', 'sandbox-analytics': 'Analytics',
     'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
     'helm-board': 'Task Board',
+    'helm-dashboard': 'Task Dashboard',
     regimen: 'Regimen',
     'managers-nook': "Manager's Nook", 'tardiness-validator': 'Tardiness Validator',
   };
@@ -1118,8 +1120,7 @@ async function switchView(view) {
   if (view === 'compass-corrective') { if (typeof initCorrectiveActions === 'function') initCorrectiveActions(); }
   if (sandboxViews.includes(view)) { if (typeof initSandbox === 'function') initSandbox(view); }
   if (havenViews.includes(view)) { if (typeof initHaven === 'function') initHaven(view); }
-  const helmViews = ['helm-board'];
-  if (helmViews.includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
+  if (['helm-board', 'helm-dashboard'].includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
 
   if (view === 'tardiness-validator') { if (typeof initTardinessValidator === 'function') initTardinessValidator(); }

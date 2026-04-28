@@ -66,7 +66,7 @@ describe("Batch 40 — Helm Task Board: Tabbed Layout (Given / Received / Approv
         helmJs.indexOf("// ===== Table Rendering")
       );
       expect(givenSection).toContain(".trim()");
-      expect(givenSection).toContain("data = [];");
+      expect(givenSection).toContain("singleTasks = [];");
     });
 
     it("helmApplyReceivedFilters function exists and filters by assigned_to_ohr with trim and filter(Boolean)", () => {

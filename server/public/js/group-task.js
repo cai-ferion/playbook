@@ -23,7 +23,7 @@ const GT = {
   // My group tasks (for unified received tab)
   myGroupTasks: [],
 
-  CATEGORIES: ['Training', 'Compliance', 'HR', 'Admin', 'Benefits', 'Other'],
+  // Category removed per user request
   PLANNING_GROUPS: ['CS-ABF', 'CSO_CTR', 'FAD_CTR', 'MULTIPLE', 'QPE_CTR', 'RECALL_MEASUREMENT_CTR', 'S-ABF', 'SME_CTR'],
   DEPARTMENTS: ['Ops', 'QTP'],
   ROLES: ['Agent', 'Manager', 'Operational SME', 'Quality & Policy Expert', 'Team Lead', 'Trainer'],
@@ -72,7 +72,7 @@ function gtWizardSaveStepData() {
   if (GT.step === 1) {
     GT.title = (document.getElementById('gt-title')?.value || '').trim();
     GT.description = (document.getElementById('gt-desc')?.value || '').trim();
-    GT.category = document.getElementById('gt-category')?.value || '';
+    // Category removed
     GT.dueDate = document.getElementById('gt-due-date')?.value || '';
   }
 }
@@ -107,31 +107,22 @@ function gtRenderStep1(body, footer) {
     <div class="form-section" style="padding:20px;">
       <div class="form-field" style="margin-bottom:16px;">
         <label class="form-label">Title <span class="required">*</span></label>
-        <input type="text" class="form-input" id="gt-title" value="${escapeAttr(GT.title)}" placeholder="e.g., Complete Q2 Compliance Training" style="width:100%;">
+        <input type="text" class="form-input" id="gt-title" value="${escapeAttr(GT.title)}" placeholder="Enter a brief, descriptive title for this task" style="width:100%;">
       </div>
       <div class="form-field" style="margin-bottom:16px;">
         <label class="form-label">Description</label>
-        <textarea class="form-textarea" id="gt-desc" rows="3" placeholder="Optional details about this task..." style="width:100%;resize:vertical;">${escapeHtml(GT.description)}</textarea>
+        <textarea class="form-textarea" id="gt-desc" rows="5" placeholder="Describe the task in detail..." style="width:100%;resize:vertical;">${escapeHtml(GT.description)}</textarea>
       </div>
-      <div style="display:flex;gap:16px;">
-        <div class="form-field" style="flex:1;">
-          <label class="form-label">Category</label>
-          <select class="form-input" id="gt-category" style="width:100%;">
-            <option value="">— None —</option>
-            ${GT.CATEGORIES.map(c => `<option value="${escapeAttr(c)}" ${GT.category === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="form-field" style="flex:1;">
-          <label class="form-label">Due Date</label>
-          <input type="date" class="form-input" id="gt-due-date" value="${GT.dueDate}" style="width:100%;">
-        </div>
+      <div class="form-field">
+        <label class="form-label">Due Date</label>
+        <input type="date" class="form-input" id="gt-due-date" value="${GT.dueDate}" style="width:100%;">
       </div>
     </div>
   `;
 
   footer.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="gtWizardClose()">Cancel</button>
-    <button class="btn btn-sm" onclick="gtWizardGoTo(2)" style="background:#7C3AED;color:#fff;border:none;">Next: Filters &rarr;</button>
+    <button class="btn btn-primary btn-sm" onclick="gtWizardGoTo(2)">Next: Filters &rarr;</button>
   `;
 }
 
@@ -191,7 +182,7 @@ function gtRenderStep2(body, footer) {
 
   footer.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="gtWizardGoTo(1)">&larr; Back</button>
-    <button class="btn btn-sm" onclick="gtWizardGoTo(3)" style="background:#7C3AED;color:#fff;border:none;">Next: Preview &rarr;</button>
+    <button class="btn btn-primary btn-sm" onclick="gtWizardGoTo(3)">Next: Preview &rarr;</button>
   `;
 }
 
@@ -226,7 +217,7 @@ async function gtRenderStep3(body, footer) {
 
   footer.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="gtWizardGoTo(2)">&larr; Back</button>
-    <button class="btn btn-sm" onclick="gtWizardGoTo(4)" style="background:#7C3AED;color:#fff;border:none;" ${GT.previewCount === 0 ? 'disabled title="No employees matched"' : ''}>Next: Confirm &rarr;</button>
+    <button class="btn btn-primary btn-sm" onclick="gtWizardGoTo(4)" ${GT.previewCount === 0 ? 'disabled title="No employees matched"' : ''}>Next: Confirm &rarr;</button>
   `;
 }
 
@@ -243,7 +234,7 @@ function gtRenderPreviewContent(body) {
     <div style="padding:20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div>
-          <span style="font-size:28px;font-weight:700;color:#7C3AED;">${activeCount}</span>
+          <span style="font-size:28px;font-weight:700;color:var(--primary);">${activeCount}</span>
           <span style="font-size:14px;color:var(--fg-muted);margin-left:6px;">employees will be assigned</span>
           ${GT.excludedOhrs.length > 0 ? `<span style="font-size:12px;color:var(--fg-muted);margin-left:8px;">(${GT.excludedOhrs.length} excluded)</span>` : ''}
         </div>
@@ -298,12 +289,12 @@ function gtRenderStep4(body, footer) {
         <table style="width:100%;font-size:13px;line-height:1.8;">
           <tr><td style="color:var(--fg-muted);width:130px;">Title</td><td style="font-weight:600;">${escapeHtml(GT.title)}</td></tr>
           ${GT.description ? `<tr><td style="color:var(--fg-muted);">Description</td><td>${escapeHtml(GT.description)}</td></tr>` : ''}
-          ${GT.category ? `<tr><td style="color:var(--fg-muted);">Category</td><td><span style="background:#7C3AED22;color:#7C3AED;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;">${escapeHtml(GT.category)}</span></td></tr>` : ''}
+
           ${GT.dueDate ? `<tr><td style="color:var(--fg-muted);">Due Date</td><td>${new Date(GT.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</td></tr>` : ''}
           <tr><td style="color:var(--fg-muted);">Planning Groups</td><td>${escapeHtml(pgLabel)}</td></tr>
           <tr><td style="color:var(--fg-muted);">Departments</td><td>${escapeHtml(deptLabel)}</td></tr>
           <tr><td style="color:var(--fg-muted);">Roles</td><td>${escapeHtml(roleLabel)}</td></tr>
-          <tr><td style="color:var(--fg-muted);">Assignments</td><td><span style="font-size:20px;font-weight:700;color:#7C3AED;">${activeCount}</span> employees</td></tr>
+          <tr><td style="color:var(--fg-muted);">Assignments</td><td><span style="font-size:20px;font-weight:700;color:var(--primary);">${activeCount}</span> employees</td></tr>
           ${GT.excludedOhrs.length > 0 ? `<tr><td style="color:var(--fg-muted);">Excluded</td><td>${GT.excludedOhrs.length} employees</td></tr>` : ''}
         </table>
       </div>
@@ -313,7 +304,7 @@ function gtRenderStep4(body, footer) {
 
   footer.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="gtWizardGoTo(3)">&larr; Back</button>
-    <button class="btn btn-sm" id="gt-confirm-btn" onclick="gtWizardSubmit()" style="background:#7C3AED;color:#fff;border:none;font-weight:600;">Create Group Task</button>
+    <button class="btn btn-primary btn-sm" id="gt-confirm-btn" onclick="gtWizardSubmit()" style="font-weight:600;">Create Group Task</button>
   `;
 }
 
@@ -338,7 +329,7 @@ async function gtWizardSubmit() {
       body: JSON.stringify({
         title: GT.title,
         description: GT.description || null,
-        category: GT.category || null,
+
         planning_groups: GT.planningGroups.length > 0 ? GT.planningGroups : null,
         departments: GT.departments.length > 0 ? GT.departments : null,
         roles: GT.roles.length > 0 ? GT.roles : null,
@@ -429,7 +420,6 @@ helmApplyReceivedFilters = function() {
     task_id: g.task_id,
     title: g.title,
     description: g.description,
-    category: g.category,
     due_date: g.due_date,
     status: g.assignment_status,
     created_at: g.created_at,
@@ -455,9 +445,7 @@ helmApplyReceivedFilters = function() {
   if (search) {
     merged = merged.filter(t =>
       (t.title || '').toLowerCase().includes(search) ||
-      (t.task_id || '').toLowerCase().includes(search) ||
-      (t.assigned_by_name || '').toLowerCase().includes(search) ||
-      (t.category || '').toLowerCase().includes(search)
+      (t.task_id || '').toLowerCase().includes(search)
     );
   }
 
@@ -478,20 +466,18 @@ function gtRenderUnifiedReceivedTable() {
   if (!thead || !tbody) return;
 
   thead.innerHTML = `<tr>
-    <th style="width:50px;">Type</th>
     <th>Task ID</th>
-    <th>Title</th>
-    <th>Category</th>
+    <th>Task Type</th>
     <th>Status</th>
     <th>Due Date</th>
-    <th style="width:90px;">Action</th>
+    <th style="width:140px;">Action</th>
   </tr>`;
 
   const start = (HELM.receivedPage - 1) * HELM.pageSize;
   const pageData = HELM.filteredReceived.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">You have no assigned tasks</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">You have no assigned tasks</div></div></td></tr>';
     helmRenderReceivedPagination();
     return;
   }
@@ -502,22 +488,33 @@ function gtRenderUnifiedReceivedTable() {
     const isOverdue = t.due_date && t._isPending && new Date(t.due_date) < new Date();
     const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
     const typeBadge = isGroup
-      ? '<span style="background:#7C3AED22;color:#7C3AED;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">GROUP</span>'
-      : '<span style="background:#3B82F622;color:#3B82F6;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">TASK</span>';
+      ? '<span style="background:#7C3AED22;color:#7C3AED;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Group</span>'
+      : '<span style="background:#3B82F622;color:#3B82F6;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">Single</span>';
 
-    const actionHtml = isGroup && t.status === 'Pending'
-      ? `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;font-size:11px;padding:3px 10px;" onclick="event.stopPropagation();gtConfirmComplete(${t.group_task_id})">Complete</button>`
-      : (isGroup && t.status === 'Completed' ? '<span style="color:#22C55E;font-size:11px;font-weight:600;">Done</span>' : '');
+    // Action column: Mark as Complete button for pending tasks, "Done" label for completed
+    let actionHtml = '';
+    if (isGroup) {
+      if (t.status === 'Pending') {
+        actionHtml = `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;font-size:11px;padding:4px 12px;white-space:nowrap;" onclick="event.stopPropagation();gtConfirmComplete(${t.group_task_id})">Mark as Complete</button>`;
+      } else if (t.status === 'Completed') {
+        actionHtml = '<span style="color:#22C55E;font-size:11px;font-weight:600;">\u2714 Completed</span>';
+      } else {
+        actionHtml = '<span style="color:var(--fg-muted);font-size:11px;">N/A</span>';
+      }
+    } else {
+      if (t.status === 'Open' || t.status === 'In Progress') {
+        actionHtml = `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;font-size:11px;padding:4px 12px;white-space:nowrap;" onclick="event.stopPropagation();gtConfirmCompleteSingle('${escapeAttr(t.task_id)}')">Mark as Complete</button>`;
+      } else if (t.status === 'Completed') {
+        actionHtml = '<span style="color:#22C55E;font-size:11px;font-weight:600;">\u2714 Completed</span>';
+      } else {
+        actionHtml = `<span style="color:var(--fg-muted);font-size:11px;">${escapeHtml(t.status || '')}</span>`;
+      }
+    }
 
-    const clickHandler = isGroup
-      ? `gtOpenDetail(${t.group_task_id})`
-      : `helmOpenDetail('${escapeAttr(t.task_id)}')`;
-
-    return `<tr class="data-row" onclick="${clickHandler}">
-      <td>${typeBadge}</td>
+    // Rows are NOT clickable per user request
+    return `<tr>
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id || '\u2014')}</span></td>
-      <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
-      <td>${t.category ? `<span style="font-size:11px;color:var(--fg-muted);">${escapeHtml(t.category)}</span>` : '\u2014'}</td>
+      <td>${typeBadge}</td>
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '\u2014')}</span></td>
       <td style="${isOverdue ? 'color:var(--error);font-weight:600;' : ''}">${dueStr}${isOverdue ? ' <span style="font-size:10px;">(Overdue)</span>' : ''}</td>
       <td>${actionHtml}</td>
@@ -534,9 +531,20 @@ function gtConfirmComplete(groupTaskId) {
     title: 'Mark Task as Completed',
     message: 'Are you sure you want to mark this task as completed?',
     detail: 'This action cannot be undone.',
-    confirmText: 'Complete',
+    confirmText: 'Yes, Complete',
     confirmClass: 'btn-primary',
     onConfirm: () => gtDoComplete(groupTaskId)
+  });
+}
+
+function gtConfirmCompleteSingle(taskId) {
+  showConfirmModal({
+    title: 'Mark Task as Completed',
+    message: 'Are you sure you want to mark this task as completed?',
+    detail: 'This action cannot be undone.',
+    confirmText: 'Yes, Complete',
+    confirmClass: 'btn-primary',
+    onConfirm: () => gtDoCompleteSingle(taskId)
   });
 }
 
@@ -556,6 +564,26 @@ async function gtDoComplete(groupTaskId) {
     }
     showToast('Task marked as completed!', 'success');
     await gtFetchMyGroupTasks();
+    helmApplyReceivedFilters();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function gtDoCompleteSingle(taskId) {
+  try {
+    const resp = await fetch(`${IO_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Completed', completed_at: new Date().toISOString() })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed');
+    }
+    showToast('Task marked as completed!', 'success');
+    // Refresh task list
+    await helmFetchTasks();
     helmApplyReceivedFilters();
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
@@ -597,7 +625,7 @@ async function gtOpenDetail(groupTaskId) {
       <div style="padding:20px;">
         <div style="display:flex;gap:16px;margin-bottom:20px;">
           <div style="flex:1;background:var(--bg-subtle);border-radius:10px;padding:16px;text-align:center;">
-            <div style="font-size:28px;font-weight:700;color:#7C3AED;">${pct}%</div>
+            <div style="font-size:28px;font-weight:700;color:var(--primary);">${pct}%</div>
             <div style="font-size:11px;color:var(--fg-muted);">Completion</div>
           </div>
           <div style="flex:1;background:var(--bg-subtle);border-radius:10px;padding:16px;text-align:center;">
@@ -617,7 +645,7 @@ async function gtOpenDetail(groupTaskId) {
         ${task.description ? `<p style="font-size:13px;color:var(--fg-secondary);margin-bottom:12px;">${escapeHtml(task.description)}</p>` : ''}
 
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;">
-          ${task.category ? `<span style="background:#7C3AED22;color:#7C3AED;padding:3px 12px;border-radius:12px;font-weight:600;">${escapeHtml(task.category)}</span>` : ''}
+
           <span style="color:var(--fg-muted);">Created by ${escapeHtml(task.created_by_name || 'Unknown')}</span>
           ${task.due_date ? `<span style="color:var(--fg-muted);">Due: ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>` : ''}
           <span style="padding:3px 12px;border-radius:12px;font-weight:600;font-size:11px;background:${task.status === 'Active' ? '#22C55E22' : '#9CA3AF22'};color:${task.status === 'Active' ? '#22C55E' : '#9CA3AF'};">${escapeHtml(task.status)}</span>
