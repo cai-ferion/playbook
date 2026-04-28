@@ -48,12 +48,9 @@ describe('Billing Compliance Dashboard V3', () => {
       expect(html).toContain('id="billing-days-badge"');
     });
 
-    it('[V3] has OT Dashboard as a section (not a tab) below compliance table', () => {
-      expect(html).toContain('id="ot-dashboard-section"');
-      expect(html).toContain('OT Dashboard');
-      // Tabs were removed — no billing-tab-billing-dashboard or billing-tab-ot-dashboard
-      expect(html).not.toContain('id="billing-tab-billing-dashboard"');
-      expect(html).not.toContain('billing-tab-btn');
+    it('[V3] OT Dashboard section has been removed', () => {
+      expect(html).not.toContain('id="ot-dashboard-section"');
+      expect(html).not.toContain('OT Dashboard');
     });
   });
 
@@ -108,13 +105,10 @@ describe('Billing Compliance Dashboard V3', () => {
       expect(js).toContain('.sort((a, b) => a.compliance_pct - b.compliance_pct)');
     });
 
-    it('preserves OT Dashboard functions', () => {
-      expect(js).toContain('async function otDashInit()');
-      expect(js).toContain('async function otDashFetchRequests()');
-      expect(js).toContain('function otDashApplyFilter()');
-      expect(js).toContain('function otDashRender()');
-      expect(js).toContain('async function otDashApply()');
-      expect(js).toContain('async function otDashOpenForm()');
+    it('OT Dashboard functions have been removed', () => {
+      expect(js).not.toContain('async function otDashInit()');
+      expect(js).not.toContain('async function otDashFetchRequests()');
+      expect(js).not.toContain('function otDashRender()');
     });
 
     it('renders drill-down with daily breakdown table', () => {

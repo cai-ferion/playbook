@@ -200,13 +200,7 @@ function getNotifIcon(type) {
     login: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
     srt_upload: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
     absent_alert: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>',
-    ot_request_submitted: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M9 12l2 2 4-4"/></svg>',
-    ot_form_open: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    ot_form_reopen: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M1 4v6h6"/></svg>',
-    ot_applied: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
-    ot_waitlisted: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    ot_cancelled: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    ot_forfeited: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+
     nte_issued: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="12" y1="9" x2="12.01" y2="9"/></svg>',
     cap_issued: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
     nte_dismissed: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
@@ -239,8 +233,7 @@ function getNotifIcon(type) {
 function getNotifTagLabel(type) {
   const labels = {
     upl_notice: 'UPL', late_notice: 'LATE', absent_alert: 'Absent',
-    ot_request_submitted: 'OT', ot_form_open: 'OT Form', ot_form_reopen: 'OT Reopen',
-    ot_applied: 'OT Applied', ot_waitlisted: 'Waitlisted', ot_cancelled: 'OT Cancelled',
+
     task_assigned: 'Task', backdate_request: 'Backdate',
     record_save: 'Saved',
     coaching_issued: 'Coaching', coaching_ack: 'Acknowledged', coaching_rated: 'Rated',
@@ -271,9 +264,7 @@ function getNotifColor(type) {
     dispute_l4_decision: '#0ea5e9', dispute_l5_decision: '#d946ef', dispute_l6_decision: '#dc2626',
     dispute_overdue: '#ef4444', system_alert: '#ef4444',
     daily_summary: '#06b6d4', login: '#8b5cf6', srt_upload: '#3b82f6', absent_alert: '#ef4444',
-    ot_request_submitted: '#10b981', ot_form_open: '#3b82f6', ot_form_reopen: '#8b5cf6',
-    ot_applied: '#22c55e', ot_waitlisted: '#f59e0b', ot_cancelled: '#ef4444',
-    ot_forfeited: '#dc2626',
+
     nte_issued: '#f97316', cap_issued: '#dc2626', nte_dismissed: '#22c55e',
     nte_served: '#3b82f6', cap_expiring: '#f59e0b', nte_deadline_reminder: '#ef4444',
     coaching_ack_overdue: '#d97706', repeat_offender: '#dc2626', cap_escalated: '#dc2626',

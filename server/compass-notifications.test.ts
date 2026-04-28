@@ -18,7 +18,7 @@ describe("Notification Registration in notifications.js", () => {
 
   const REQUIRED_TYPES = [
     // Previously missing
-    "nte_issued", "cap_issued", "nte_dismissed", "ot_forfeited",
+    "nte_issued", "cap_issued", "nte_dismissed",
     // Priority 1
     "nte_served", "cap_expiring", "nte_deadline_reminder",
     // Priority 2
@@ -257,7 +257,7 @@ describe("Cache Version Bumps", () => {
   );
 
   it("should have notifications.js at v=104", () => {
-    expect(indexHtml).toContain('notifications.js?v=106');
+    expect(indexHtml).toContain('notifications.js?v=107');
   });
 
   it("should have compass.js at v=119", () => {

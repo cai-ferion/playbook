@@ -58,14 +58,12 @@ for (const m of colorRegistryBlock.matchAll(/(\w+)\s*:/g)) {
 const KNOWN_NOTIFICATION_TYPES = [
   // Auto-mailer (server cron)
   "upl_notice", "late_notice",
-  "ot_forfeited", "ot_applied", "ot_form_open",
   "dispute_overdue",
   "cap_expiring", "nte_deadline_reminder",
   "coaching_ack_overdue",
   "weekly_digest",
   // IO Routes (server real-time)
   "task_assigned", "system_maintenance",
-  "ot_request_submitted", "ot_waitlisted", "ot_cancelled", "ot_form_reopen",
   "nte_issued", "nte_served", "nte_dismissed",
   "cap_issued", "cap_escalated",
   "repeat_offender",
@@ -132,8 +130,7 @@ describe("Auto-Mailer Notification Types", () => {
   });
 
   const directTypes = [
-    "ot_forfeited", "ot_applied", "ot_form_open",
-    "dispute_overdue", "cap_expiring", "nte_deadline_reminder",
+      "dispute_overdue", "cap_expiring", "nte_deadline_reminder",
     "coaching_ack_overdue", "weekly_digest",
   ];
 
@@ -153,21 +150,7 @@ describe("IO Routes Notification Types", () => {
     expect(ioRoutesTs).toContain("type: 'task_assigned'");
   });
 
-  const doubleQuoteTypes = [
-    "ot_request_submitted", "ot_applied", "ot_waitlisted", "ot_cancelled",
-    "ot_form_reopen", "ot_form_open",
-  ];
-
-  for (const t of doubleQuoteTypes) {
-    it(`io-routes creates '${t}' notifications`, () => {
-      // io-routes uses double quotes for OT types
-      expect(ioRoutesTs).toContain(`"${t}"`);
-    });
-
-    it(`'${t}' has icon in UI registry`, () => {
-      expect(registeredTypes.has(t), `${t} missing from icon registry`).toBe(true);
-    });
-  }
+  // OT notification types removed (OT mechanism removed)
 
   const singleQuoteTypes = [
     "nte_issued", "nte_served", "nte_dismissed",
@@ -261,13 +244,7 @@ describe("Server-side notification targeting consistency", () => {
     expect(autoMailerTs).toContain("target_ohr: supervisorOhr");
   });
 
-  it("OT forfeiture notifications target specific agents", () => {
-    expect(autoMailerTs).toContain("target_ohr: otReq.ohr_id");
-  });
-
-  it("OT auto-open notifications target individual agents (not broadcast)", () => {
-    expect(autoMailerTs).toContain("target_ohr: agent.ohr_id");
-  });
+  // OT forfeiture + auto-open targeting tests — REMOVED (OT mechanism removed)
 
   it("dispute overdue notifications target the next actor", () => {
     expect(autoMailerTs).toContain("target_ohr: targetOhr");
@@ -304,7 +281,6 @@ describe("Role-Based Notification Visibility Simulation", () => {
   const testNotifications = [
     { id: 1, type: "upl_notice", target_ohr: "AGENT_001", title: "UPL Notice", is_read: false, created_at: new Date().toISOString() },
     { id: 2, type: "upl_notice", target_ohr: "TL_001", title: "UPL Notice — Supervisor", is_read: false, created_at: new Date().toISOString() },
-    { id: 3, type: "ot_form_open", target_ohr: "AGENT_001", title: "OT Form Open", is_read: false, created_at: new Date().toISOString() },
     { id: 4, type: "task_assigned", target_ohr: "AGENT_002", title: "Task Assigned", is_read: false, created_at: new Date().toISOString() },
     { id: 5, type: "weekly_digest", target_ohr: "TL_001", title: "Weekly Digest", is_read: false, created_at: new Date().toISOString() },
     { id: 6, type: "coaching_issued", target_ohr: "AGENT_001", title: "Coaching Issued", is_read: false, created_at: new Date().toISOString() },
@@ -313,7 +289,6 @@ describe("Role-Based Notification Visibility Simulation", () => {
     { id: 9, type: "system_alert", target_ohr: null, title: "System Alert", is_read: false, created_at: new Date().toISOString() },
     { id: 10, type: "cap_expiring", target_ohr: "AGENT_001", title: "CAP Expiring", is_read: false, created_at: new Date().toISOString() },
     { id: 11, type: "nte_issued", target_ohr: "AGENT_001", title: "NTE Issued", is_read: false, created_at: new Date().toISOString() },
-    { id: 12, type: "ot_forfeited", target_ohr: "AGENT_001", title: "OT Forfeited", is_read: false, created_at: new Date().toISOString() },
     { id: 13, type: "coaching_ack_overdue", target_ohr: "TL_001", title: "Ack Overdue", is_read: false, created_at: new Date().toISOString() },
     { id: 14, type: "nte_deadline_reminder", target_ohr: "AGENT_001", title: "NTE Deadline", is_read: false, created_at: new Date().toISOString() },
     { id: 15, type: "repeat_offender", target_ohr: "TL_001", title: "Repeat Offender", is_read: false, created_at: new Date().toISOString() },
@@ -325,12 +300,10 @@ describe("Role-Based Notification Visibility Simulation", () => {
     const visible = simulateFilter(testNotifications, "AGENT_001");
     const visibleIds = visible.map(n => n.id);
     expect(visibleIds).toContain(1);  // UPL for agent
-    expect(visibleIds).toContain(3);  // OT form for agent
     expect(visibleIds).toContain(6);  // Coaching for agent
     expect(visibleIds).toContain(9);  // Broadcast
     expect(visibleIds).toContain(10); // CAP expiring
     expect(visibleIds).toContain(11); // NTE issued
-    expect(visibleIds).toContain(12); // OT forfeited
     expect(visibleIds).toContain(14); // NTE deadline
     expect(visibleIds).not.toContain(2);  // TL's UPL
     expect(visibleIds).not.toContain(4);  // Other agent's task
@@ -350,7 +323,6 @@ describe("Role-Based Notification Visibility Simulation", () => {
     expect(visibleIds).toContain(15); // Repeat offender
     expect(visibleIds).toContain(17); // DOCX generated
     expect(visibleIds).not.toContain(1);  // Agent's UPL
-    expect(visibleIds).not.toContain(3);  // Agent's OT
     expect(visibleIds).not.toContain(7);  // Maintenance
     expect(visibleIds).not.toContain(16); // Manager's CAP
   });
@@ -397,13 +369,7 @@ describe("Cron Schedule Validation", () => {
     expect(autoMailerTs).toContain('cron.schedule("30 3 * * *"');
   });
 
-  it("OT Forfeiture runs at 11:15 AM PHT (03:15 UTC)", () => {
-    expect(autoMailerTs).toContain('cron.schedule("15 3 * * *"');
-  });
-
-  it("OT Auto-Open runs Saturday 1:00 AM PHT (17:00 UTC Friday)", () => {
-    expect(autoMailerTs).toContain('cron.schedule("0 17 * * 5"');
-  });
+  // OT Forfeiture + Auto-Open cron tests — REMOVED (OT mechanism removed)
 
   it("Dispute Aging runs every 4 hours", () => {
     expect(autoMailerTs).toContain('cron.schedule("0 */4 * * *"');

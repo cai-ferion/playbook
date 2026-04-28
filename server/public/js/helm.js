@@ -9,7 +9,6 @@ const HELM = {
   filteredReceived: [],
   approvals: [],
   filteredApprovals: [],
-  otRequests: [],
   employees: [],
   currentTab: 'all',
   currentBoardTab: 'tasks',
@@ -88,18 +87,7 @@ async function helmFetchTasks() {
     HELM.tasks = [];
   }
 
-  // Also fetch OT requests for the Approvals table
-  try {
-    const otResp = await fetch(`${IO_API_BASE}/ot-requests`);
-    if (otResp.ok) {
-      HELM.otRequests = await otResp.json();
-    } else {
-      HELM.otRequests = [];
-    }
-  } catch (e) {
-    console.error('Helm OT requests fetch error:', e);
-    HELM.otRequests = [];
-  }
+
 
   if (boardLoading) boardLoading.style.display = 'none';
   if (boardContent) boardContent.style.display = '';
@@ -792,8 +780,7 @@ async function helmUpdateStatus(taskId, newStatus) {
 // ===== New Request Form =====
 
 const HELM_REQUEST_TYPES = [
-  { value: 'attendance_backdated_change_tag', label: 'I want to change an already locked tag on a previous date.' },
-  { value: 'ot_request', label: 'OT Request' }
+  { value: 'attendance_backdated_change_tag', label: 'I want to change an already locked tag on a previous date.' }
 ];
 
 var _helmRequestSelectedAgent = null;
@@ -811,91 +798,16 @@ async function helmShowNewRequestForm() {
   HELM._pendingReqId = reqId;
   formTitle.textContent = reqId;
 
-  // Filter request types: hide Attendance Backdated Change Tag from agents
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
-  // OT mechanism only applies to S-ABF & CS-ABF Agents
-  const OT_MECH_PGS = ['S-ABF', 'CS-ABF'];
-  const myEmpForOt = HELM.employees.find(e => e.ohr_id === (cu ? cu.ohr_id : ''));
-  const isOtMechAgent = isAgent && myEmpForOt && OT_MECH_PGS.includes(myEmpForOt.planning_group || '');
 
-  // Pre-check: if S-ABF/CS-ABF agent, check if they already submitted an OT request this week
-  if (isOtMechAgent && cu) {
-    try {
-      const otResp = await fetch(`${IO_API_BASE}/ot-requests?ohr_id=${encodeURIComponent(cu.ohr_id)}`);
-      if (otResp.ok) {
-        const otRequests = await otResp.json();
-        // Calculate current week boundaries (Mon-Sun)
-        const now = new Date();
-        const dayOfWeek = now.getUTCDay();
-        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const weekStart = new Date(now);
-        weekStart.setUTCDate(weekStart.getUTCDate() - diffToMonday);
-        weekStart.setUTCHours(0, 0, 0, 0);
-        const thisWeekRequests = otRequests.filter(r => new Date(r.submitted_at) >= weekStart);
-        if (thisWeekRequests.length > 0) {
-          // Check if agent has used all allowed submissions
-          // Allowed = 1 (initial) + open_count for this week
-          const lastReq = thisWeekRequests.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
-          let canResubmit = false;
-          const myEmp = HELM.employees.find(e => e.ohr_id === cu.ohr_id);
-          const agentPg = myEmp ? (myEmp.planning_group || '') : '';
-          try {
-            const configResp = await fetch(`${IO_API_BASE}/ot-config`);
-            if (configResp.ok) {
-              const configs = await configResp.json();
-              const pgConfig = configs.find(c => c.planning_group === agentPg);
-              if (pgConfig) {
-                // Check if open_count is from this week
-                let openCount = 0;
-                if (pgConfig.week_start === weekStart.toISOString()) {
-                  openCount = pgConfig.open_count || 0;
-                }
-                const maxAllowed = 1 + openCount;
-                if (thisWeekRequests.length < maxAllowed) canResubmit = true;
-              }
-            }
-          } catch (e) { /* ignore */ }
-
-          if (!canResubmit) {
-            // Show "Already Submitted" indicator
-            const submittedDate = new Date(lastReq.submitted_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-            const statusLabel = (lastReq.status || 'pending').charAt(0).toUpperCase() + (lastReq.status || 'pending').slice(1);
-            const statusColor = statusLabel === 'Approved' ? '#16a34a' : statusLabel === 'Rejected' ? '#dc2626' : 'var(--fg-muted)';
-            formTitle.textContent = 'OT Commitment';
-            formBody.innerHTML = `
-              <div style="text-align:center;padding:24px 16px;">
-                <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                </div>
-                <h3 style="font-size:16px;font-weight:700;color:var(--fg);margin-bottom:8px;">Already Committed This Week</h3>
-                <p style="font-size:13px;color:var(--fg-muted);margin-bottom:20px;line-height:1.5;">You have already submitted your OT commitment (2.5 hours) for this week.<br>Only one commitment per week is allowed.</p>
-                <div style="background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:left;max-width:320px;margin:0 auto;">
-                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);margin-bottom:10px;font-weight:600;">Your Commitment Details</div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Request ID</span><span style="font-size:13px;font-weight:600;font-family:monospace;color:var(--primary);">${escapeHtml(lastReq.request_id)}</span></div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">OT Hours</span><span style="font-size:13px;font-weight:600;">2.5 hr(s)</span></div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:13px;color:var(--fg-muted);">Submitted</span><span style="font-size:13px;">${submittedDate}</span></div>
-                  <div style="display:flex;justify-content:space-between;"><span style="font-size:13px;color:var(--fg-muted);">Status</span><span style="font-size:13px;font-weight:600;color:${statusColor};">${escapeHtml(statusLabel)}</span></div>
-                </div>
-              </div>
-            `;
-            formFooter.innerHTML = `<button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Close</button>`;
-            overlay.style.display = 'flex';
-            return;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to pre-check OT requests:', e);
-    }
+  // Agents cannot create requests (OT removed, backdated tag change is non-agent only)
+  if (isAgent) {
+    showToast('No request types available for your role', 'info');
+    return;
   }
-  // Filter request types based on role (Batch 124 fix):
-  // - ALL Agents: see OT Request (and S-ABF/CS-ABF agents also get auto-OT flow)
-  // - Non-agents (TL, Manager, SME, etc.): see Attendance Backdated Change Tag only
-  const filteredRequestTypes = isAgent
-    ? HELM_REQUEST_TYPES.filter(t => t.value !== 'attendance_backdated_change_tag')
-    : HELM_REQUEST_TYPES.filter(t => t.value !== 'ot_request');
-  const typeOptions = filteredRequestTypes.map(t =>
+
+  const typeOptions = HELM_REQUEST_TYPES.map(t =>
     `<option value="${escapeAttr(t.value)}">${escapeHtml(t.label)}</option>`
   ).join('');
 
@@ -903,56 +815,17 @@ async function helmShowNewRequestForm() {
     `<div class="searchable-select-option" data-ohr="${escapeAttr(e.ohr_id)}" data-name="${escapeAttr(e.full_name)}" onclick="helmSelectRequestAgent('${escapeAttr(e.ohr_id)}','${escapeAttr(e.full_name)}')">${escapeHtml(e.full_name)} (${escapeHtml(e.ohr_id)})</div>`
   ).join('');
 
-  // For ALL agents: auto-select OT Request, hide dropdown, show OT fields immediately
-  const agentAutoOT = isAgent;
-
-  // Calculate next week ending (Friday) for the OT commitment info
-  // Week = Sat–Fri; next WE = the Friday of next week
-  const _now = new Date();
-  // Get current day in PHT (UTC+8)
-  const _phtNow = new Date(_now.getTime() + 8 * 60 * 60 * 1000);
-  const _phtDay = _phtNow.getUTCDay(); // 0=Sun, 6=Sat
-  // Next Saturday (start of next operational week)
-  const _daysToNextSat = (6 - _phtDay + 7) % 7 || 7;
-  const _nextSat = new Date(_phtNow);
-  _nextSat.setUTCDate(_nextSat.getUTCDate() + _daysToNextSat);
-  // Next Friday = next Saturday + 6
-  const _nextFri = new Date(_nextSat);
-  _nextFri.setUTCDate(_nextFri.getUTCDate() + 6);
-  const _weMonth = String(_nextFri.getUTCMonth() + 1).padStart(2, '0');
-  const _weDay = String(_nextFri.getUTCDate()).padStart(2, '0');
-  const _weYear = _nextFri.getUTCFullYear();
-  const _nextWeekEnding = `${_weMonth}/${_weDay}`;
-  const _nextWeekEndingFull = `${_weMonth}/${_weDay}/${String(_weYear).slice(2)}`;
-
   formBody.innerHTML = `
     <div class="form-section">
-      ${agentAutoOT ? '<div style="margin-bottom:12px;"><span style="font-size:15px;font-weight:600;color:var(--fg);letter-spacing:0.3px;">OT Commitment</span></div>' : ''}
-      <div class="form-field" ${agentAutoOT ? 'style="display:none;"' : ''}>
+      <div class="form-field">
         <label class="form-label">Request Type <span class="required">*</span></label>
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
           ${typeOptions}
         </select>
       </div>
 
-      <!-- OT Request fields (commitment form) -->
-      <div id="helm-req-ot-fields" style="${agentAutoOT ? '' : 'display:none;'}">
-        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px 18px;margin-bottom:16px;">
-          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <div style="font-size:14px;color:#1e3a5f;line-height:1.6;">
-              By clicking <strong>"Yes, I agree"</strong> you are committing to render <strong style="color:#1d4ed8;">2.5 hours</strong> of overtime for <strong>week ending ${_nextWeekEndingFull}</strong>.
-            </div>
-          </div>
-          <div style="background:#dbeafe;border-radius:6px;padding:10px 14px;font-size:12px;color:#1e40af;line-height:1.5;">
-            Your request will be <strong>waitlisted</strong> until your manager applies OT hours for your planning group. You will be notified once your OT has been applied.
-          </div>
-        </div>
-        <input type="hidden" id="helm-req-ot-hours" value="2.5">
-      </div>
-
       <!-- Attendance Backdated Change Tag fields -->
-      <div id="helm-req-attendance-fields" style="${agentAutoOT ? 'display:none;' : ''}">
+      <div id="helm-req-attendance-fields">
         <div class="form-field">
           <label class="form-label">Date <span class="required">*</span></label>
           <input type="date" class="form-input" id="helm-req-date" style="max-width:220px;" onchange="helmUpdateCurrentTag()">
@@ -985,18 +858,10 @@ async function helmShowNewRequestForm() {
     </div>
   `;
 
-  // For agent OT: show Yes/No commitment buttons; for others: show Cancel/Submit
-  if (agentAutoOT) {
-    formFooter.innerHTML = `
-      <button class="btn btn-outline btn-sm" onclick="helmCloseForm()" style="min-width:130px;">No, I don't agree</button>
-      <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()" style="min-width:130px;">Yes, I agree</button>
-    `;
-  } else {
-    formFooter.innerHTML = `
-      <button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Cancel</button>
-      <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit</button>
-    `;
-  }
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="helmCloseForm()">Cancel</button>
+    <button class="btn btn-primary btn-sm" onclick="helmSubmitNewRequest()">Submit</button>
+  `;
 
   overlay.style.display = 'flex';
 }
@@ -1004,12 +869,8 @@ async function helmShowNewRequestForm() {
 function helmOnRequestTypeChange() {
   const type = document.getElementById('helm-req-type')?.value || '';
   const attendanceFields = document.getElementById('helm-req-attendance-fields');
-  const otFields = document.getElementById('helm-req-ot-fields');
   if (attendanceFields) {
     attendanceFields.style.display = (type === 'attendance_backdated_change_tag') ? '' : 'none';
-  }
-  if (otFields) {
-    otFields.style.display = (type === 'ot_request') ? '' : 'none';
   }
 }
 
@@ -1201,41 +1062,6 @@ async function helmSubmitNewRequest() {
     } catch (e) {
       showToast('Failed to submit request: ' + e.message, 'error');
     }
-  } else if (reqType === 'ot_request') {
-    const otHours = '2.5'; // Fixed 2.5 hours commitment
-    if (!cu) { showToast('You must be logged in to submit an OT request', 'error'); return; }
-
-    // Check if this agent is in S-ABF or CS-ABF (only PGs eligible for OT requests)
-    const OT_SUB_PGS = ['S-ABF', 'CS-ABF'];
-    const myEmp = HELM.employees.find(e => e.ohr_id === cu.ohr_id);
-    if (!myEmp || !OT_SUB_PGS.includes(myEmp.planning_group || '')) {
-      showToast('OT requests are only available for S-ABF & CS-ABF agents', 'error');
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${IO_API_BASE}/ot-requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ohr_id: cu.ohr_id,
-          agent_name: cu.full_name || '',
-          planning_group: myEmp ? (myEmp.planning_group || '') : '',
-          requested_hours: otHours
-        })
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to submit OT request');
-      }
-      const result = await resp.json();
-      showToast('OT commitment submitted successfully (2.5 hours)', 'success');
-      helmCloseForm();
-      await helmFetchTasks();
-      helmSwitchBoardTab('approvals');
-    } catch (e) {
-      showToast(e.message || 'Failed to submit OT request', 'error');
-    }
   }
 }
 
@@ -1278,20 +1104,7 @@ function helmApplyApprovalsFilters() {
   // 1. Task-based requests (e.g., Attendance Backdated Change Tag)
   let taskRequests = HELM.tasks.filter(t => t.record_type === 'request');
 
-  // 2. OT requests from io_ot_requests — normalize to same shape
-  let otRequests = (HELM.otRequests || []).map(ot => ({
-    task_id: ot.request_id,
-    title: '[Request] OT Request — ' + (ot.agent_name || ot.ohr_id),
-    request_type: 'ot_request',
-    record_type: 'request',
-    approval_status: (ot.status || 'pending').charAt(0).toUpperCase() + (ot.status || 'pending').slice(1),
-    assigned_by_name: ot.agent_name || ot.ohr_id,
-    assigned_by_ohr: ot.ohr_id,
-    created_at: ot.submitted_at,
-    description: `Request Type: OT Request\nAgent: ${ot.agent_name || ''} (${ot.ohr_id})\nRequested Hours: ${ot.requested_hours}\nPlanning Group: ${ot.planning_group || '—'}`,
-    _isOtRequest: true,
-    _otData: ot
-  }));
+
 
   // Role-based visibility for Approvals:
   // Managers & 740045023: see ALL items
@@ -1309,7 +1122,7 @@ function helmApplyApprovalsFilters() {
       if (t.description && [...teamOhrs].some(ohr => t.description.includes(ohr))) return true;
       return false;
     });
-    otRequests = otRequests.filter(ot => teamOhrs.has((ot.assigned_by_ohr || '').trim()));
+
   } else if (cu) {
     // Anybody else: only their own requests
     taskRequests = taskRequests.filter(t => {
@@ -1317,13 +1130,13 @@ function helmApplyApprovalsFilters() {
       if (t.description && t.description.includes(myOhr)) return true;
       return false;
     });
-    otRequests = otRequests.filter(ot => (ot.assigned_by_ohr || '').trim() === myOhr);
+
   } else {
     taskRequests = [];
-    otRequests = [];
+
   }
 
-  let data = [...taskRequests, ...otRequests];
+  let data = [...taskRequests];
 
   // Sort by created_at descending (newest first)
   data.sort((a, b) => {
@@ -1456,23 +1269,6 @@ function helmOpenApprovalDetail(taskId) {
   html += `<div class="detail-row"><span class="detail-label">Approval Status</span><span class="detail-value"><span style="display:inline-flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;border-radius:50%;background:${statusColor};display:inline-block;"></span><strong style="color:${statusColor};">${escapeHtml(approvalStatus)}</strong></span></span></div>`;
   html += `<div class="detail-row"><span class="detail-label">Requested By</span><span class="detail-value">${escapeHtml(task.assigned_by_name || '—')}</span></div>`;
 
-  // OT Request specific fields
-  if (task._isOtRequest && task._otData) {
-    const ot = task._otData;
-    html += `<div class="detail-row"><span class="detail-label">Requested Hours</span><span class="detail-value" style="font-weight:600;font-size:16px;">${escapeHtml(String(ot.requested_hours))} hr(s)</span></div>`;
-    html += `<div class="detail-row"><span class="detail-label">Planning Group</span><span class="detail-value">${escapeHtml(ot.planning_group || '—')}</span></div>`;
-    if (ot.approved_at) {
-      const approvedStr = new Date(ot.approved_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-      html += `<div class="detail-row"><span class="detail-label">Approved At</span><span class="detail-value">${escapeHtml(approvedStr)}</span></div>`;
-    }
-    if (ot.approved_by) {
-      html += `<div class="detail-row"><span class="detail-label">Approved By</span><span class="detail-value">${escapeHtml(ot.approved_by)}</span></div>`;
-    }
-    if (ot.applied_date) {
-      html += `<div class="detail-row"><span class="detail-label">Applied Date</span><span class="detail-value">${escapeHtml(ot.applied_date)}</span></div>`;
-    }
-  }
-
   // Parse description for Attendance Backdated Change Tag specific fields
   if (task.request_type === 'attendance_backdated_change_tag' && task.description) {
     const descLines = task.description.split('\n');
@@ -1491,10 +1287,10 @@ function helmOpenApprovalDetail(taskId) {
   html += `<div class="detail-row"><span class="detail-label">Request Date</span><span class="detail-value">${createdStr}</span></div>`;
   html += '</div>';
 
-  // Comments section — hidden for agents and OT requests
+  // Comments section — hidden for agents
   const _cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const _isAgentView = _cu && _cu.actual_role === 'Agent' && _cu.ohr_id !== '740045023';
-  if (!_isAgentView && !task._isOtRequest) {
+  if (!_isAgentView) {
     html += '<div class="detail-section" style="margin-top:16px;"><h4 class="detail-section-title" style="font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--fg-muted);border-bottom:2px solid var(--primary);padding-bottom:6px;margin-bottom:12px;">Comments</h4>';
     html += '<div id="helm-comments-list" style="margin-bottom:12px;"><div style="text-align:center;padding:12px;color:var(--fg-muted);font-size:12px;">Loading comments...</div></div>';
     html += `<div style="display:flex;gap:8px;align-items:flex-start;">
@@ -1506,11 +1302,11 @@ function helmOpenApprovalDetail(taskId) {
 
   formBody.innerHTML = html;
 
-  // Footer: Approve/Reject buttons if Pending (not for OT requests — those are managed via billing dashboard)
+  // Footer: Approve/Reject buttons if Pending
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const isAgent = cu && cu.actual_role === 'Agent' && cu.ohr_id !== '740045023';
   let footerHtml = '';
-  if (approvalStatus === 'Pending' && !task._isOtRequest && !isAgent) {
+  if (approvalStatus === 'Pending' && !isAgent) {
     footerHtml += `<button class="btn btn-sm" style="background:#22C55E;color:#fff;border:none;" onclick="helmApproveRequest('${escapeAttr(taskId)}','Approved')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>
       Approve
@@ -1520,18 +1316,11 @@ function helmOpenApprovalDetail(taskId) {
       Reject
     </button>`;
   }
-  // Cancel OT button: shown to the requesting agent (or admin) when OT is approved
-  if (task._isOtRequest && approvalStatus === 'Approved' && cu && (cu.ohr_id === task._otData?.ohr_id || cu.ohr_id === '740045023')) {
-    footerHtml += `<button class="btn btn-sm" style="background:#EF4444;color:#fff;border:none;" onclick="helmCancelOt('${escapeAttr(taskId)}')" id="btn-cancel-ot">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      Cancel OT
-    </button>`;
-  }
   formFooter.innerHTML = footerHtml;
 
   overlay.style.display = 'flex';
   // Only load comments if the comments section is shown
-  if (!_isAgentView && !task._isOtRequest) {
+  if (!_isAgentView) {
     helmLoadComments(taskId);
   }
 }
@@ -1567,50 +1356,7 @@ async function helmApproveRequest(taskId, decision) {
   }
 }
 
-/**
- * Cancel an approved OT request. Redistributes to next waitlisted agent automatically.
- */
-async function helmCancelOt(taskId) {
-  try {
-    const task = HELM.tasks.find(t => t.task_id === taskId);
-    if (!task || !task._isOtRequest) throw new Error('OT request not found');
-    const requestId = task._otData?.request_id;
-    if (!requestId) throw new Error('Missing OT request ID');
 
-    // Confirmation dialog
-    if (!confirm('Are you sure you want to cancel this OT commitment? Your OT slot will be redistributed to the next waitlisted agent.')) return;
-
-    const btn = document.getElementById('btn-cancel-ot');
-    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling...'; }
-
-    const cu = (typeof currentUser !== 'undefined') ? currentUser : {};
-    const resp = await fetch(`${IO_API_BASE}/ot-requests/${requestId}/cancel`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Actor-Ohr': cu.ohr_id || '',
-        'X-Actor-Name': cu.full_name || '',
-      },
-    });
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Cancel failed');
-
-    let msg = 'OT cancelled successfully.';
-    if (data.redistributed) {
-      msg += ` Redistributed to ${data.redistributed.agent_name} on ${data.redistributed.applied_date}.`;
-    } else {
-      msg += ' No waitlisted agents to redistribute to.';
-    }
-    showToast(msg, 'success');
-    helmCloseForm();
-    await helmFetchTasks();
-    helmApplyApprovalsFilters();
-  } catch (e) {
-    showToast('Failed to cancel OT: ' + e.message, 'error');
-    const btn = document.getElementById('btn-cancel-ot');
-    if (btn) { btn.disabled = false; btn.textContent = 'Cancel OT'; }
-  }
-}
 
 /**
  * Apply the approved tag change to the attendance record.

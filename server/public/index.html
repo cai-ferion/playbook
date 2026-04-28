@@ -685,56 +685,7 @@
             </div>
           </div>
 
-          <!-- OT Dashboard Section -->
-          <div id="ot-dashboard-section" class="ot-dash-section">
 
-            <!-- Section Header -->
-            <div class="ot-dash-header">
-              <div class="ot-dash-header-left">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-primary, #3b82f6);">
-                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <h3 class="ot-dash-title">OT Dashboard</h3>
-                <span class="ot-dash-subtitle" id="ot-dash-count-badge"></span>
-              </div>
-            </div>
-
-            <!-- Approval Controls -->
-            <div id="ot-dash-approval-controls" class="ot-dash-controls">
-              <div class="ot-dash-control-group">
-                <label class="ot-dash-label">Planning Group <span style="color:var(--danger, #ef4444);">*</span></label>
-                <select class="form-input ot-dash-select" id="ot-dash-pg-select" onchange="otDashOnPgChange()">
-                  <option value="">— Select Planning Group —</option>
-                </select>
-              </div>
-              <div class="ot-dash-control-group">
-                <label class="ot-dash-label">OT Hours Needed</label>
-                <input type="number" class="form-input ot-dash-input" id="ot-dash-hours-input" placeholder="e.g. 10" min="0.5" step="0.5">
-              </div>
-              <div class="ot-dash-control-actions">
-                <button class="btn btn-primary btn-sm ot-dash-btn-apply" id="ot-dash-apply-btn" onclick="otDashApply()" disabled>Apply</button>
-                <button class="btn btn-outline btn-sm ot-dash-btn-open" id="ot-dash-open-form-btn" onclick="otDashOpenForm()">Open OT Form</button>
-              </div>
-            </div>
-
-            <!-- OT Requests Table -->
-            <div class="ot-dash-table-wrap">
-              <table class="ot-dash-table" id="ot-dash-table">
-                <thead>
-                  <tr>
-                    <th>Date Submitted</th>
-                    <th>Agent Name</th>
-                    <th>Planning Group</th>
-                    <th style="text-align:center;">Status</th>
-                    <th>Applied Date</th>
-                  </tr>
-                </thead>
-                <tbody id="ot-dash-table-body">
-                  <tr><td colspan="5" class="ot-dash-empty">Loading...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div><!-- end ot-dashboard-section -->
 
           </div><!-- end billing-tab-compliance -->
 
@@ -1998,13 +1949,13 @@
   <script src="js/data.js?v=107"></script>
   <script src="js/app.js?v=125"></script>
   <script src="js/dashboard-anim.js?v=121b"></script>
-  <script src="js/input-portal.js?v=121"></script>
+  <script src="js/input-portal.js?v=122"></script>
   <script src="js/input-compact.js?v=121"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
-  <script src="js/notifications.js?v=106"></script>
+  <script src="js/notifications.js?v=107"></script>
   <script src="js/maintenance.js?v=105"></script>
   <script src="js/admin.js?v=108"></script>
-  <script src="js/billing.js?v=135"></script>
+  <script src="js/billing.js?v=136"></script>
   <script src="js/billing-v2.js?v=122"></script>
   <script src="js/billing-v2-page.js?v=101"></script>
   <script src="js/role-change.js?v=103"></script>
@@ -2018,7 +1969,7 @@
   <script src="js/sandbox.js?v=121" defer></script>
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
   <script src="js/haven.js?v=104" defer></script>
-  <script src="js/helm.js?v=112" defer></script>
+  <script src="js/helm.js?v=113" defer></script>
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>

@@ -3212,3 +3212,19 @@
 
 ## Manager's Nook Fixes (April 28, 2026 - Batch 4)
 - [x] Fix: Coaching coverage exceeding 100% — JOIN coaching with active employees under same supervisor, cap at 100%
+
+## OT Mechanism Removal (April 28, 2026)
+- [x] Remove OT Dashboard HTML section from Billing Compliance (index.html lines 688-737)
+- [x] Remove OT Dashboard JS functions from billing.js (otDash* functions + init call)
+- [x] Remove OT Dashboard CSS from styles.css
+- [x] Remove OT Request submission from Helm (helm.js: OT request type, fields, task board items)
+- [x] Remove OT server routes from io-routes.ts (GET/POST ot-requests, approve, cancel, open-form, ot-config)
+- [x] Remove OT mechanism lock from io-routes.ts (S-ABF/CS-ABF agent lock)
+- [x] Remove OT Forfeiture + Auto-Open from auto-mailer.ts (functions + cron jobs + manual triggers)
+- [x] Unlock S-ABF/CS-ABF OT fields in input-portal.js (OT mechanism lock removed)
+- [x] Remove OT notification types from notifications.js
+- [x] Remove ioOtRequests and ioOtConfig from drizzle/schema.ts
+- [x] Drop io_ot_requests and io_ot_config tables via migration
+- [x] Update tests: remove/update OT-related test assertions (deleted batch46, ot-revisions; updated billing-v3, notification-simulation, compass-notifications, role-change)
+- [x] Bump cache versions for modified JS files
+- [x] Update Helm "New Request" — OT Request type removed, only Backdate Tag Change remains

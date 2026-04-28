@@ -75,7 +75,6 @@ describe('Role Change Email Automation', () => {
       expect(html).toContain('id="billing-kpi-cards"');
       expect(html).toContain('id="billing-v3-table"');
       expect(html).toContain('id="billing-drilldown"');
-      expect(html).toContain('id="ot-dashboard-section"');
     });
   });
 

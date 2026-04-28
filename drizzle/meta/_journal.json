@@ -176,6 +176,13 @@
       "when": 1777324352359,
       "tag": "0024_friendly_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1777334009940,
+      "tag": "0025_yummy_adam_destine",
+      "breakpoints": true
     }
   ]
 }

@@ -424,7 +424,7 @@ describe("Tardiness — Auto-calculation Helpers", () => {
 // ── 10. Cache Version Consistency ───────────────────────────────
 describe("Tardiness — Cache Versions", () => {
   it("notifications.js cache version is current", () => {
-    expect(indexHtml).toContain("notifications.js?v=106");
+    expect(indexHtml).toContain("notifications.js?v=107");
   });
   it("tardiness.js is included in index.html with version", () => {
     expect(indexHtml).toMatch(/tardiness\.js\?v=\d+/);
