@@ -212,6 +212,6 @@ describe("Cache Versions — Admin Delete", () => {
   });
 
   it("sandbox.js bumped to v116", () => {
-    expect(indexHtml).toContain("sandbox.js?v=122");
+    expect(indexHtml).toContain("sandbox.js?v=123");
   });
 });

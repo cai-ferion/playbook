@@ -3302,3 +3302,10 @@
 
 ## OT Field Lock Bug — Assistant
 - [x] Fix: Assistant OHR 740044909 cannot edit OT field — root cause: cache-busting version strings not bumped after OT bypass code was added, so browsers served stale JS
+
+## Sandbox Input Portal — Visibility Rules
+- [x] Remove "All | My Team" toggle for all users except OHR 740045023
+- [x] SMEs: see insights of their team lead's team (supervisor_email match)
+- [x] Team Leads: see insights of their own team (supervisor_email match)
+- [x] Managers and Trainers: see all insights (no filter)
+- [x] QAs and Agents: see only their own insights (ohr_id match)

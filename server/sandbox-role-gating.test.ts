@@ -331,7 +331,7 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
 describe("Cache Version Alignment", () => {
   it("sandbox.js cache version is bumped to v120", () => {
-    expect(indexHtml).toContain("sandbox.js?v=122");
+    expect(indexHtml).toContain("sandbox.js?v=123");
   });
 
   it("STATUSES array uses dash-format for Pending statuses", () => {
@@ -454,5 +454,170 @@ describe("Review Area Search Focus Preservation", () => {
     const fn = sandboxJs.slice(sandboxJs.indexOf('function sandboxReviewPgFilter'));
     expect(fn).toContain('sandboxRenderKanban()');
     expect(fn).not.toContain('sandboxRenderKanban(true)');
+  });
+});
+
+describe("Input Portal — Visibility Rules", () => {
+  // The sandboxOmniApply function contains the role-based visibility logic.
+  // Verify the code structure matches the required rules.
+
+  it("toggle is restricted to owner OHR 740045023 only (not all ADMIN_OHRS)", () => {
+    // sandboxRenderTeamToggle should check for owner specifically
+    expect(sandboxJs).toContain("currentUser.ohr_id === '740045023'");
+    // Should NOT use ADMIN_OHRS for the toggle
+    const toggleFn = sandboxJs.slice(
+      sandboxJs.indexOf("function sandboxRenderTeamToggle"),
+      sandboxJs.indexOf("function sandboxRenderTeamToggle") + 400
+    );
+    expect(toggleFn).not.toContain("ADMIN_OHRS");
+  });
+
+  it("Managers see all insights (no filter applied)", () => {
+    // The visibility block should have Manager in the 'see all' branch
+    const visBlock = sandboxJs.slice(
+      sandboxJs.indexOf("Role-based visibility"),
+      sandboxJs.indexOf("Apply search bar text filter")
+    );
+    expect(visBlock).toContain("role === 'Manager'");
+    // Manager should be in the no-filter branch alongside Trainer
+    expect(visBlock).toMatch(/role === 'Manager'.*role === 'Trainer'/s);
+  });
+
+  it("Trainers see all insights (no filter applied)", () => {
+    const visBlock = sandboxJs.slice(
+      sandboxJs.indexOf("Role-based visibility"),
+      sandboxJs.indexOf("Apply search bar text filter")
+    );
+    expect(visBlock).toContain("role === 'Trainer'");
+  });
+
+  it("Team Leads see their team via supervisor_email match", () => {
+    const visBlock = sandboxJs.slice(
+      sandboxJs.indexOf("Role-based visibility"),
+      sandboxJs.indexOf("Apply search bar text filter")
+    );
+    // TL block should filter by supervisor_email === currentUser.meta_email
+    const tlBlock = visBlock.slice(
+      visBlock.indexOf("role === 'Team Lead'"),
+      visBlock.indexOf("role === 'Operational SME'")
+    );
+    expect(tlBlock).toContain("supervisor_email === currentUser.meta_email");
+  });
+
+  it("SMEs see their TL's team via supervisor_email match to own supervisor_email", () => {
+    const visBlock = sandboxJs.slice(
+      sandboxJs.indexOf("Role-based visibility"),
+      sandboxJs.indexOf("Apply search bar text filter")
+    );
+    const smeBlock = visBlock.slice(
+      visBlock.indexOf("role === 'Operational SME'"),
+      visBlock.indexOf("QAs, Agents")
+    );
+    expect(smeBlock).toContain("supervisor_email === currentUser.supervisor_email");
+  });
+
+  it("QAs and Agents see only their own insights (ohr_id match)", () => {
+    const visBlock = sandboxJs.slice(
+      sandboxJs.indexOf("Role-based visibility"),
+      sandboxJs.indexOf("Apply search bar text filter")
+    );
+    // The else/fallback block should filter by ohr_id
+    expect(visBlock).toContain("i.ohr_id === currentUser.ohr_id");
+  });
+
+  it("Submitter column is shown for Trainers", () => {
+    expect(sandboxJs).toContain("currentUser.actual_role === 'Trainer'");
+    // The showSubmitter check should include Trainer
+    const submitterBlock = sandboxJs.slice(
+      sandboxJs.indexOf("Show Submitter column"),
+      sandboxJs.indexOf("Show Submitter column") + 400
+    );
+    expect(submitterBlock).toContain("'Trainer'");
+  });
+});
+
+describe("Input Portal Visibility — Simulation", () => {
+  // Simulate the sandboxOmniApply visibility logic
+  function getVisibleInsights(
+    userRole: string, userOhr: string, userMetaEmail: string,
+    userSupervisorEmail: string, inputTeamToggle: string,
+    insights: Array<{ ohr_id: string; supervisor_email: string }>
+  ): Array<{ ohr_id: string; supervisor_email: string }> {
+    let data = [...insights];
+    const isOwner = userOhr === '740045023';
+
+    if (isOwner && inputTeamToggle === 'team') {
+      data = data.filter(i => i.supervisor_email === userMetaEmail || i.ohr_id === userOhr);
+    } else if (userRole === 'Manager' || userRole === 'Trainer' || isOwner) {
+      // See all
+    } else if (userRole === 'Team Lead') {
+      data = data.filter(i => i.supervisor_email === userMetaEmail || i.ohr_id === userOhr);
+    } else if (userRole === 'Operational SME' || userRole === 'Content Reviewer') {
+      data = data.filter(i => i.supervisor_email === userSupervisorEmail || i.ohr_id === userOhr);
+    } else {
+      data = data.filter(i => i.ohr_id === userOhr);
+    }
+    return data;
+  }
+
+  const sampleInsights = [
+    { ohr_id: '100', supervisor_email: 'tl1@meta.com' },
+    { ohr_id: '101', supervisor_email: 'tl1@meta.com' },
+    { ohr_id: '102', supervisor_email: 'tl2@meta.com' },
+    { ohr_id: '200', supervisor_email: 'tl2@meta.com' },
+    { ohr_id: '740045023', supervisor_email: '' },
+  ];
+
+  it("Owner (740045023) in 'all' mode sees all insights", () => {
+    const result = getVisibleInsights('Manager', '740045023', 'owner@meta.com', '', 'all', sampleInsights);
+    expect(result.length).toBe(5);
+  });
+
+  it("Owner (740045023) in 'team' mode sees only their team", () => {
+    const result = getVisibleInsights('Manager', '740045023', 'tl1@meta.com', '', 'team', sampleInsights);
+    expect(result.length).toBe(3); // 100, 101 (tl1), plus own
+  });
+
+  it("Manager sees all insights", () => {
+    const result = getVisibleInsights('Manager', '999', 'mgr@meta.com', '', 'all', sampleInsights);
+    expect(result.length).toBe(5);
+  });
+
+  it("Trainer sees all insights", () => {
+    const result = getVisibleInsights('Trainer', '888', 'trainer@meta.com', '', 'all', sampleInsights);
+    expect(result.length).toBe(5);
+  });
+
+  it("Team Lead sees only their team's insights + own", () => {
+    const result = getVisibleInsights('Team Lead', '100', 'tl1@meta.com', '', 'all', sampleInsights);
+    // 100 (own + tl1 team), 101 (tl1 team) = 2 insights
+    expect(result.length).toBe(2);
+  });
+
+  it("SME sees their TL's team insights + own", () => {
+    // SME's supervisor_email is tl1@meta.com (their TL)
+    const result = getVisibleInsights('Operational SME', '300', 'sme@meta.com', 'tl1@meta.com', 'all', sampleInsights);
+    expect(result.length).toBe(2); // 100, 101 (tl1 team)
+  });
+
+  it("Agent sees only own insights", () => {
+    const result = getVisibleInsights('Agent', '100', 'agent@meta.com', 'tl1@meta.com', 'all', sampleInsights);
+    expect(result.length).toBe(1); // only ohr_id=100
+  });
+
+  it("QA sees only own insights", () => {
+    const result = getVisibleInsights('Quality & Policy Expert', '102', 'qa@meta.com', 'tl2@meta.com', 'all', sampleInsights);
+    expect(result.length).toBe(1); // only ohr_id=102
+  });
+
+  it("Assistant (740044909, Operational SME) does NOT see the toggle", () => {
+    // The toggle is owner-only, so 740044909 should not see it
+    // This is a code structure test, not simulation
+    const toggleFn = sandboxJs.slice(
+      sandboxJs.indexOf("function sandboxRenderTeamToggle"),
+      sandboxJs.indexOf("function sandboxRenderTeamToggle") + 400
+    );
+    expect(toggleFn).toContain("ohr_id === '740045023'");
+    expect(toggleFn).not.toContain("740044909");
   });
 });

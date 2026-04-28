@@ -284,25 +284,26 @@ function sandboxOmnibarClearAll() {
 function sandboxOmniApply() {
   let data = [...SANDBOX_MOD.insights];
 
-  // Role-based filtering: agents see own, TLs see team, managers see all
+  // Role-based visibility: Managers/Trainers see all, TLs see team, SMEs see TL's team, QAs/Agents see own
   if (typeof currentUser !== 'undefined' && currentUser) {
     const role = currentUser.actual_role;
-    const isAdmin = (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
+    const isOwner = currentUser.ohr_id === '740045023';
 
-    // Admin "My Team" toggle: filter to admin's direct reports using insight's supervisor_email
-    if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'team') {
+    // Owner "My Team" toggle: filter to owner's direct reports
+    if (isOwner && SANDBOX_MOD._inputTeamToggle === 'team') {
       data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
-    } else if (!isAdmin && role === 'Team Lead') {
-      // TLs: filter to their direct reports using insight's supervisor_email
+    } else if (role === 'Manager' || role === 'Trainer' || isOwner) {
+      // Managers, Trainers, and owner (All mode) see all — no filter
+    } else if (role === 'Team Lead') {
+      // TLs: see their direct reports using insight's supervisor_email
       data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
-    } else if (!isAdmin && (role === 'Operational SME' || role === 'Content Reviewer')) {
-      // SMEs/CRs: their "team" is their TL's team, so match insight's supervisor_email to the SME's own supervisor_email
+    } else if (role === 'Operational SME' || role === 'Content Reviewer') {
+      // SMEs/CRs: their "team" is their TL's team — match insight's supervisor_email to the SME's own supervisor_email
       data = data.filter(i => i.supervisor_email === currentUser.supervisor_email || i.ohr_id === currentUser.ohr_id);
-    } else if (role !== 'Manager' && !isAdmin && !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id)) {
-      // Agents, QAs, Trainers: own submissions only
+    } else {
+      // QAs, Agents, and all other roles: own submissions only
       data = data.filter(i => i.ohr_id === currentUser.ohr_id);
     }
-    // Managers and admin (All mode) see all — no filter
   }
 
   // Apply search bar text filter
@@ -378,8 +379,9 @@ function sandboxToggleTeamFilter(mode) {
 function sandboxRenderTeamToggle() {
   const container = document.getElementById('sandbox-team-toggle');
   if (!container) return;
-  const isAdmin = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
-  if (!isAdmin) { container.style.display = 'none'; return; }
+  // Toggle visible only for owner OHR 740045023
+  const isOwner = typeof currentUser !== 'undefined' && currentUser && currentUser.ohr_id === '740045023';
+  if (!isOwner) { container.style.display = 'none'; return; }
   container.style.display = 'inline-flex';
   const mode = SANDBOX_MOD._inputTeamToggle;
   container.innerHTML = `
@@ -460,10 +462,11 @@ function sandboxRenderTable() {
   const tbody = document.getElementById('sandbox-table-body');
   if (!thead || !tbody) return;
 
-  // Show Submitter column for TLs/SMEs/Managers who see team insights
+  // Show Submitter column for roles that see more than just their own insights
   const showSubmitter = typeof currentUser !== 'undefined' && currentUser && (
     (window.ADMIN_OHRS || []).includes(currentUser.ohr_id) ||
     currentUser.actual_role === 'Manager' ||
+    currentUser.actual_role === 'Trainer' ||
     currentUser.actual_role === 'Team Lead' ||
     currentUser.actual_role === 'Operational SME' ||
     currentUser.actual_role === 'Content Reviewer'
