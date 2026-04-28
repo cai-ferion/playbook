@@ -852,5 +852,90 @@ export function registerAutoMailer(app: Express): void {
     }
   });
 
+  // ── Group Task Deadline Reminders ──
+  // Notifies supervisors and assignees when a group task is due within 3 days
+  async function checkGroupTaskDeadlines(db: ReturnType<typeof drizzle>): Promise<{ alerts: number; errors: number }> {
+    let alerts = 0, errors = 0;
+    const today = getTodayPHT();
+    // 3 days from now
+    const d = new Date(today + 'T00:00:00Z');
+    d.setDate(d.getDate() + 3);
+    const threeDaysOut = d.toISOString().slice(0, 10);
+
+    try {
+      // Find open group tasks with due_date between today and 3 days out
+      const [tasks] = await db.execute(sql`
+        SELECT gt.id, gt.task_id, gt.title, gt.due_date, gt.created_by_ohr, gt.created_by_name,
+          COUNT(ta.id) AS total,
+          SUM(CASE WHEN ta.status = 'Completed' THEN 1 ELSE 0 END) AS completed,
+          SUM(CASE WHEN ta.status = 'Pending' THEN 1 ELSE 0 END) AS pending
+        FROM io_group_tasks gt
+        LEFT JOIN io_task_assignments ta ON ta.group_task_id = gt.id
+        WHERE gt.status = 'Open'
+          AND gt.due_date IS NOT NULL
+          AND gt.due_date >= ${today}
+          AND gt.due_date <= ${threeDaysOut}
+        GROUP BY gt.id
+      `) as any;
+
+      for (const task of tasks as any[]) {
+        if (Number(task.pending) === 0) continue; // All done, skip
+
+        const dueDate = formatDateReadable(typeof task.due_date === 'string' ? task.due_date.slice(0, 10) : task.due_date);
+        const pct = Number(task.total) > 0 ? Math.round((Number(task.completed) / Number(task.total)) * 100) : 0;
+
+        // Notify the task creator (TL/Manager)
+        await createNotification(db, {
+          type: 'group_task_deadline',
+          title: `⏰ Group Task Due Soon: ${task.title}`,
+          message: `"${task.title}" is due on ${dueDate}. Progress: ${pct}% (${task.pending} pending). Please follow up with your team.`,
+          actor_ohr: 'SYSTEM',
+          actor_name: 'Playbook System',
+          target_ohr: task.created_by_ohr,
+        });
+        alerts++;
+
+        // Notify each pending assignee
+        const [pendingAssignees] = await db.execute(sql`
+          SELECT ta.employee_ohr
+          FROM io_task_assignments ta
+          WHERE ta.group_task_id = ${task.id} AND ta.status = 'Pending'
+        `) as any;
+
+        for (const assignee of pendingAssignees as any[]) {
+          await createNotification(db, {
+            type: 'group_task_deadline',
+            title: `⏰ Task Due Soon: ${task.title}`,
+            message: `"${task.title}" is due on ${dueDate}. Please complete it before the deadline.`,
+            actor_ohr: 'SYSTEM',
+            actor_name: 'Playbook System',
+            target_ohr: assignee.employee_ohr,
+          });
+          alerts++;
+        }
+      }
+    } catch (err) {
+      console.error('[GroupTaskDeadline] Error:', err);
+      errors++;
+    }
+
+    console.log(`[GroupTaskDeadline] Sent ${alerts} reminders, ${errors} errors`);
+    return { alerts, errors };
+  }
+
+  // Schedule: 9:00 AM PHT = 01:00 UTC daily
+  cron.schedule("0 1 * * *", async () => {
+    try { await checkGroupTaskDeadlines(db); } catch (err) { console.error('[GroupTaskDeadline] Cron error:', err); }
+  });
+  console.log("[AutoNotifier] Scheduled: 9:00 AM PHT daily (Group Task Deadline Reminders)");
+  app.post("/api/io/group-task-deadline-check", async (req, res) => {
+    try {
+      const result = await checkGroupTaskDeadlines(db);
+      res.json({ success: true, ...result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   console.log("[AutoNotifier] All cron jobs and manual triggers initialized.");
 }

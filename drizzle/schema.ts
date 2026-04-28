@@ -397,6 +397,41 @@ export type InsertIoTaskComment = typeof ioTaskComments.$inferInsert;
 // OT Request & Approval System — REMOVED (tables dropped)
 
 // ============================================================
+// Group Tasks (Helm — bulk task assignment)
+// ============================================================
+export const ioGroupTasks = mysqlTable("io_group_tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  task_id: varchar("task_id", { length: 20 }).notNull(),       // GT-XXXXXX
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),              // Training, Compliance, HR, Admin, Benefits
+  planning_groups: text("planning_groups"),                     // JSON array of PG codes, null = all
+  departments: text("departments"),                             // JSON array ["Ops","QTP"], null = all
+  roles: text("roles"),                                        // JSON array of role names, null = all
+  excluded_ohrs: text("excluded_ohrs"),                         // JSON array of excluded OHR IDs
+  due_date: varchar("due_date", { length: 64 }),                // optional ISO date
+  status: varchar("status", { length: 50 }).default("Active"),  // Active, Closed
+  created_by_ohr: varchar("created_by_ohr", { length: 20 }).notNull(),
+  created_by_name: varchar("created_by_name", { length: 255 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+export type IoGroupTask = typeof ioGroupTasks.$inferSelect;
+export type InsertIoGroupTask = typeof ioGroupTasks.$inferInsert;
+
+export const ioTaskAssignments = mysqlTable("io_task_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  group_task_id: int("group_task_id").notNull(),                // FK to io_group_tasks.id
+  employee_ohr: varchar("employee_ohr", { length: 20 }).notNull(),
+  employee_name: varchar("employee_name", { length: 255 }),
+  status: varchar("status", { length: 50 }).default("Pending"), // Pending, Completed, Not Applicable
+  completed_at: varchar("completed_at", { length: 64 }),
+  created_at: varchar("created_at", { length: 64 }),
+});
+export type IoTaskAssignment = typeof ioTaskAssignments.$inferSelect;
+export type InsertIoTaskAssignment = typeof ioTaskAssignments.$inferInsert;
+
+// ============================================================
 // Productivity Hours (Horizon)
 // ============================================================
 export const ioProductivityHours = mysqlTable("io_productivity_hours", {

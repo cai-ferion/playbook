@@ -1508,6 +1508,10 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 New Request
               </button>
+              <button class="btn btn-sm" id="helm-new-group-task-btn" onclick="helmShowGroupTaskWizard()" style="background:#7C3AED;color:#fff;border:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                New Group Task
+              </button>
             </div>
 
             <!-- Page-level filters (shared across all tabs) -->
@@ -1585,6 +1589,44 @@
               </div>
               <div class="module-form-body" id="helm-form-body"></div>
               <div class="module-form-footer" id="helm-form-footer"></div>
+            </div>
+          </div>
+
+          <!-- Group Task Wizard Modal -->
+          <div class="module-form-overlay" id="gt-wizard-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:680px;width:95%;">
+              <div class="module-form-header" style="background:#7C3AED;">
+                <h3 id="gt-wizard-title" style="color:#fff;">New Group Task</h3>
+                <button class="module-form-close" onclick="gtWizardClose()" style="color:#fff;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <!-- Step indicators -->
+              <div id="gt-wizard-steps" style="display:flex;align-items:center;gap:0;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--bg-subtle);">
+                <div class="gt-step active" data-step="1"><span class="gt-step-num">1</span> Details</div>
+                <div class="gt-step-line"></div>
+                <div class="gt-step" data-step="2"><span class="gt-step-num">2</span> Filters</div>
+                <div class="gt-step-line"></div>
+                <div class="gt-step" data-step="3"><span class="gt-step-num">3</span> Preview</div>
+                <div class="gt-step-line"></div>
+                <div class="gt-step" data-step="4"><span class="gt-step-num">4</span> Confirm</div>
+              </div>
+              <div class="module-form-body" id="gt-wizard-body" style="max-height:480px;overflow-y:auto;"></div>
+              <div class="module-form-footer" id="gt-wizard-footer" style="display:flex;justify-content:space-between;align-items:center;"></div>
+            </div>
+          </div>
+
+          <!-- Group Task Detail Modal -->
+          <div class="module-form-overlay" id="gt-detail-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:780px;width:95%;">
+              <div class="module-form-header" style="background:#7C3AED;">
+                <h3 id="gt-detail-title" style="color:#fff;">Group Task Details</h3>
+                <button class="module-form-close" onclick="gtDetailClose()" style="color:#fff;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="gt-detail-body" style="max-height:520px;overflow-y:auto;"></div>
+              <div class="module-form-footer" id="gt-detail-footer"></div>
             </div>
           </div>
         </div>
@@ -1970,6 +2012,7 @@
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
   <script src="js/haven.js?v=104" defer></script>
   <script src="js/helm.js?v=113" defer></script>
+  <script src="js/group-task.js?v=100" defer></script>
   <script src="js/roster.js?v=205" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=102g" defer></script>

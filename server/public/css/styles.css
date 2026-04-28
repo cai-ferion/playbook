@@ -5588,3 +5588,56 @@ body {
 #nook-coaching-modal .data-table td {
   padding: 6px 8px;
 }
+
+/* ===== Group Task Wizard ===== */
+
+.gt-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  padding: 6px 12px;
+  border-radius: 20px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.gt-step.active {
+  color: #7C3AED;
+  background: #7C3AED15;
+}
+.gt-step.completed {
+  color: #22C55E;
+}
+.gt-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--border);
+  color: var(--fg-muted);
+}
+.gt-step.active .gt-step-num {
+  background: #7C3AED;
+  color: #fff;
+}
+.gt-step.completed .gt-step-num {
+  background: #22C55E;
+  color: #fff;
+}
+.gt-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  min-width: 20px;
+}
+
+/* Group Task badge in received table */
+#helm-received-table-body tr.data-row:hover {
+  background: var(--bg-surface-hover);
+}

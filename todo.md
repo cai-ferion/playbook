@@ -3237,3 +3237,25 @@
 - [x] Simulate TL role: Helm=true, Horizon=true, Manager's Nook=hidden
 - [x] Simulate Manager role: Helm=true, Horizon=true, Manager's Nook=visible
 - [x] Simulate Admin role: all visible
+
+## Group Task System in Helm (April 29, 2026)
+- [x] Schema: io_group_tasks table (id, title, description, category, created_by, planning_groups, departments, roles, due_date, status, timestamps)
+- [x] Schema: io_task_assignments table (id, group_task_id, employee_ohr, status, completed_at, timestamps)
+- [x] Run migrations for both tables
+- [x] Server route: POST /api/io/group-tasks — create group task + auto-assign to matching active employees
+- [x] Server route: GET /api/io/group-tasks — list all group tasks with progress stats
+- [x] Server route: GET /api/io/group-tasks/:id — single task detail with assignment list
+- [x] Server route: POST /api/io/group-tasks/:id/complete — mark assignment as completed (with confirmation)
+- [x] Server route: GET /api/io/group-tasks/my-tasks — unified task list for current user
+- [x] Server route: POST /api/io/group-tasks/preview — preview assignment count before creating
+- [x] Server route: POST /api/io/group-tasks/:id/exclude — exclude specific people from a group task
+- [x] Frontend: "New Group Task" button in Helm (TL/Manager/Admin only)
+- [x] Frontend: Group Task creation wizard (PG picker, department picker, role picker, exclusion list, due date)
+- [x] Frontend: Smart exclusion preview — show count + filterable list of affected employees
+- [x] Frontend: Unified task list in Helm showing both individual and group tasks
+- [x] Frontend: Completion confirmation dialog before marking task as done
+- [x] Frontend: Group task badge to distinguish from individual tasks
+- [x] Seed data: Import 16 existing tasks from Google Sheet TASK-TABLE (354 employees, 16 tasks seeded with statuses)
+- [x] Auto-mailer: Deadline reminder notifications (3 days before due date) — cron at 9AM PHT daily
+- [x] Ensure all task assignments exclude Inactive employees (resolveTargetEmployees filters Active only)
+- [x] Vitest tests for all new group task routes (43 tests passing)
