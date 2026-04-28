@@ -292,9 +292,12 @@ function sandboxOmniApply() {
     // Admin "My Team" toggle: filter to admin's direct reports using insight's supervisor_email
     if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'team') {
       data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
-    } else if (!isAdmin && (role === 'Team Lead' || role === 'Operational SME' || role === 'Content Reviewer')) {
-      // TLs/SMEs/CRs: filter to their direct reports using insight's supervisor_email
+    } else if (!isAdmin && role === 'Team Lead') {
+      // TLs: filter to their direct reports using insight's supervisor_email
       data = data.filter(i => i.supervisor_email === currentUser.meta_email || i.ohr_id === currentUser.ohr_id);
+    } else if (!isAdmin && (role === 'Operational SME' || role === 'Content Reviewer')) {
+      // SMEs/CRs: their "team" is their TL's team, so match insight's supervisor_email to the SME's own supervisor_email
+      data = data.filter(i => i.supervisor_email === currentUser.supervisor_email || i.ohr_id === currentUser.ohr_id);
     } else if (role !== 'Manager' && !isAdmin && !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id)) {
       // Agents, QAs, Trainers: own submissions only
       data = data.filter(i => i.ohr_id === currentUser.ohr_id);

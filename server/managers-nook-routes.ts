@@ -171,23 +171,32 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     }
 
     // ── 5. Insights per supervisor per month ──
-    // io_insights.supervisor is the supervisor name, week_ending is YYYY-MM-DD
+    // io_insights.week_ending is stored as MM/DD/YY or M/D/YYYY — parse robustly to YYYY-MM
+    // LEFT JOIN via supervisor_email to io_employees for canonical name; fallback to i.supervisor
+    const dateExpr = sql`CASE
+      WHEN i.week_ending LIKE '__/__/__' THEN DATE_FORMAT(STR_TO_DATE(i.week_ending, '%m/%d/%y'), '%Y-%m')
+      WHEN i.week_ending LIKE '_/__/____' OR i.week_ending LIKE '__/__/____' OR i.week_ending LIKE '_/_/____'
+        THEN DATE_FORMAT(STR_TO_DATE(i.week_ending, '%c/%e/%Y'), '%Y-%m')
+      ELSE NULL
+    END`;
     const [insightRows] = (await db.execute(sql`
-      SELECT supervisor,
-             LEFT(week_ending, 7) as month,
+      SELECT COALESCE(e.full_name, i.supervisor) as supervisor,
+             ${dateExpr} as month,
              COUNT(*) as total_submitted,
-             SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as total_approved
-      FROM io_insights
-      WHERE LEFT(week_ending, 7) >= ${oldestMonth}
-        AND LEFT(week_ending, 7) <= ${newestMonth}
-        AND supervisor IS NOT NULL
-        AND supervisor != ''
-      GROUP BY supervisor, LEFT(week_ending, 7)
+             SUM(CASE WHEN i.status = 'Approved' OR i.status = 'Implemented' THEN 1 ELSE 0 END) as total_approved
+      FROM io_insights i
+      LEFT JOIN io_employees e ON i.supervisor_email = e.meta_email
+        AND e.employement_status = 'Active'
+      WHERE i.week_ending IS NOT NULL
+        AND i.week_ending != ''
+      GROUP BY COALESCE(e.full_name, i.supervisor), ${dateExpr}
+      HAVING month IS NOT NULL AND month >= ${oldestMonth} AND month <= ${newestMonth}
     `)) as unknown as [any[], any];
     const insightsMap: Record<string, Record<string, { submitted: number; approved: number }>> = {};
     for (const row of insightRows) {
       const sup = row.supervisor;
       const m = row.month;
+      if (!sup || !m) continue;
       if (!insightsMap[sup]) insightsMap[sup] = {};
       insightsMap[sup][m] = {
         submitted: Number(row.total_submitted) || 0,
