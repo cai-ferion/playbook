@@ -3326,3 +3326,9 @@
 
 ## Billing Compliance — Status Filter UI
 - [x] Add status filter dropdown to Billing Compliance frontend so user can include/exclude statuses (Production, Nesting, Training, Exit, Inactive, NULL)
+
+## Task Board & Task Dashboard UI Revisions
+- [x] Disable modal popup when clicking rows in Tasks Received table (Task Board)
+- [x] Rename "Complete" button text to "Mark as Complete" in Tasks Received table
+- [x] Increase table row height in Task Dashboard to reduce cramped feeling
+- [x] Add Completed/Pending filter to Task Dashboard drill-down modal

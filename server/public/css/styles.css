@@ -5637,7 +5637,23 @@ body {
   min-width: 20px;
 }
 
-/* Group Task badge in received table */
+/* Task Dashboard — increase row height for readability */
+#helm-dash-table-body tr {
+  height: 48px;
+}
+#helm-dash-table-body td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+#helm-dash-table-head th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* Group Task badge in received table — rows are NOT clickable */
+#helm-received-table-body tr.data-row {
+  cursor: default;
+}
 #helm-received-table-body tr.data-row:hover {
   background: var(--bg-surface-hover);
 }

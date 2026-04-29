@@ -263,15 +263,23 @@ async function gtOpenDashDetail(groupTaskId) {
           <div style="background:#22C55E;height:100%;width:${pct}%;border-radius:6px;transition:width 0.3s;"></div>
         </div>
 
-        <!-- Assignment list -->
-        <div style="margin-bottom:8px;font-size:13px;font-weight:600;">Assignments</div>
-        <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+        <!-- Assignment list with status filter -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:600;">Assignments</div>
+          <div style="display:flex;gap:4px;" id="gt-dash-assign-filter">
+            <button class="btn btn-xs" style="font-size:11px;padding:3px 10px;background:var(--primary);color:#fff;border:none;border-radius:12px;" onclick="gtDashFilterAssignments('All')">All</button>
+            <button class="btn btn-xs" style="font-size:11px;padding:3px 10px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:12px;" onclick="gtDashFilterAssignments('Completed')">Completed</button>
+            <button class="btn btn-xs" style="font-size:11px;padding:3px 10px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:12px;" onclick="gtDashFilterAssignments('Pending')">Pending</button>
+            <button class="btn btn-xs" style="font-size:11px;padding:3px 10px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:12px;" onclick="gtDashFilterAssignments('Not Applicable')">N/A</button>
+          </div>
+        </div>
+        <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;" id="gt-dash-assign-table-wrap">
           <table class="data-table" style="font-size:12px;width:100%;">
             <thead><tr><th>Name</th><th>OHR</th><th>PG</th><th>Role</th><th>Status</th><th>Completed</th></tr></thead>
-            <tbody>
+            <tbody id="gt-dash-assign-tbody">
               ${assignments.map(a => {
-                const sc = (typeof GT !== 'undefined' ? GT.STATUS_COLORS : {})[ a.status] || 'var(--fg-muted)';
-                return `<tr>
+                const sc = (typeof GT !== 'undefined' ? GT.STATUS_COLORS : {})[a.status] || 'var(--fg-muted)';
+                return `<tr data-assign-status="${escapeAttr(a.status)}">
                   <td>${escapeHtml(a.employee_name || '\u2014')}</td>
                   <td style="font-family:monospace;font-size:11px;">${escapeHtml(a.employee_ohr)}</td>
                   <td style="font-size:11px;">${escapeHtml(a.planning_group || '\u2014')}</td>
@@ -324,6 +332,33 @@ async function gtDashCloseTask(groupTaskId) {
       } catch (e) {
         showToast('Error: ' + e.message, 'error');
       }
+    }
+  });
+}
+
+// ===== Assignment Status Filter in Detail Modal =====
+
+function gtDashFilterAssignments(status) {
+  const tbody = document.getElementById('gt-dash-assign-tbody');
+  const filterBar = document.getElementById('gt-dash-assign-filter');
+  if (!tbody || !filterBar) return;
+
+  // Update filter button styles
+  filterBar.querySelectorAll('button').forEach(btn => {
+    const isActive = btn.textContent.trim() === status ||
+      (status === 'Not Applicable' && btn.textContent.trim() === 'N/A');
+    btn.style.background = isActive ? 'var(--primary)' : 'transparent';
+    btn.style.color = isActive ? '#fff' : 'var(--fg-muted)';
+    btn.style.border = isActive ? 'none' : '1px solid var(--border)';
+  });
+
+  // Filter rows
+  const rows = tbody.querySelectorAll('tr[data-assign-status]');
+  rows.forEach(row => {
+    if (status === 'All') {
+      row.style.display = '';
+    } else {
+      row.style.display = row.dataset.assignStatus === status ? '' : 'none';
     }
   });
 }

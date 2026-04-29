@@ -742,7 +742,7 @@ async function helmOpenDetail(taskId) {
       footerHtml += `<button class="btn btn-primary btn-sm" onclick="helmUpdateStatus('${escapeAttr(taskId)}','In Progress')">Start</button>`;
     }
     if (task.status === 'In Progress') {
-      footerHtml += `<button class="btn btn-success btn-sm" onclick="helmUpdateStatus('${escapeAttr(taskId)}','Completed')">Complete</button>`;
+      footerHtml += `<button class="btn btn-success btn-sm" onclick="helmUpdateStatus('${escapeAttr(taskId)}','Completed')">Mark as Complete</button>`;
     }
     footerHtml += ` <button class="btn btn-outline btn-sm" onclick="helmUpdateStatus('${escapeAttr(taskId)}','Cancelled')">Cancel Task</button>`;
   }
