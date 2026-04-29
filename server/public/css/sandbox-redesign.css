@@ -1346,8 +1346,12 @@
   flex: 1;
   min-width: 0;
 }
+#view-sandbox-input .sandbox-dual-layout.analytics-visible .sandbox-main-col {
+  flex: 0 1 auto;
+  width: calc(100% - 536px);
+}
 #view-sandbox-input .sandbox-analytics-col {
-  width: 420px;
+  width: 520px;
   flex-shrink: 0;
 }
 @media (max-width: 1200px) {

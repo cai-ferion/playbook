@@ -2575,22 +2575,27 @@ var _saExpandedAgent = null; // drill-down tracking
 function sandboxShouldShowAnalytics() {
   if (typeof currentUser === 'undefined' || !currentUser) return false;
   const role = currentUser.actual_role;
+  const isAdmin = currentUser.ohr_id === '740045023' || (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
+  // Hide analytics when admin has "All" toggle active (too many agents)
+  if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'all') return false;
   // TLs, Managers, owner, and admins see the analytics panel
-  return role === 'Team Lead' || role === 'Manager' || role === 'Trainer' ||
-    currentUser.ohr_id === '740045023' || (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
+  return role === 'Team Lead' || role === 'Manager' || role === 'Trainer' || isAdmin;
 }
 
 function sandboxRenderAnalytics() {
   const col = document.getElementById('sandbox-analytics-col');
   const body = document.getElementById('sandbox-analytics-body');
   const subtitle = document.getElementById('sandbox-analytics-subtitle');
+  const dualLayout = col ? col.closest('.sandbox-dual-layout') : null;
   if (!col || !body) return;
 
   if (!sandboxShouldShowAnalytics()) {
     col.style.display = 'none';
+    if (dualLayout) dualLayout.classList.remove('analytics-visible');
     return;
   }
   col.style.display = '';
+  if (dualLayout) dualLayout.classList.add('analytics-visible');
 
   // Use the same visibility-filtered data as the main table
   const data = SANDBOX_MOD.filtered;

@@ -3388,3 +3388,7 @@
 ## Helm — Task Dashboard Table Fixes
 - [x] Center-align Pending and Completed columns
 - [x] Rename "N/A" column to "Not Applicable" and center-align it
+
+## Sandbox — Team Analytics Fixes
+- [x] Hide Team Analytics panel when "All" toggle is active (only show on "My Team")
+- [x] Increase Team Analytics panel width (420px → 520px), main table shrinks when analytics visible
