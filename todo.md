@@ -3354,3 +3354,13 @@
 - [x] Update backend completion endpoints to accept file upload and store in S3
 - [x] Update frontend Mark as Complete modal with optional file attachment
 - [x] Add Attachments column to Tasks Received table with view capability
+
+## Helm — Shift Extension Request Feature
+- [x] Create io_shift_extensions DB table and migration
+- [x] Build backend API routes (CRUD + TL approve/reject + OM approve/reject)
+- [x] Add "I want to extend my time to complete my production hours" to New Request dropdown
+- [x] Build agent shift extension request form (date picker, extension minutes, reason details)
+- [x] Build TL review UI in Helm Shift Extensions tab (approve/reject with comments)
+- [x] Build OM review UI in Helm Shift Extensions tab (final approve/reject with comments)
+- [x] Send notifications to Agent and TL only when OM approves
+- [x] Show shift extension request status to agents in Helm

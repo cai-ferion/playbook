@@ -883,9 +883,9 @@ initHelm = async function(view) {
   const groupTaskBtn = document.getElementById('helm-new-group-task-btn');
   if (groupTaskBtn) groupTaskBtn.style.display = isAgent ? 'none' : '';
 
-  // New Request button: also hide from agents
+  // New Request button: visible to all roles (agents can submit shift extension requests)
   const reqBtn = document.getElementById('helm-new-request-btn');
-  if (reqBtn) reqBtn.style.display = isAgent ? 'none' : '';
+  if (reqBtn) reqBtn.style.display = '';
 
   // Re-apply received filters to include group tasks
   if (HELM.currentBoardTab === 'received') {

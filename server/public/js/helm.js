@@ -118,8 +118,12 @@ async function helmFetchTasks() {
   // Hide tab buttons based on role
   const givenTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="given"]');
   const receivedTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="received"]');
+  const approvalsTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="approvals"]');
+  const shiftExtTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="shift-ext"]');
   if (givenTabBtn) givenTabBtn.style.display = isAgent ? 'none' : '';
   if (receivedTabBtn) receivedTabBtn.style.display = isSM ? 'none' : '';
+  if (approvalsTabBtn) approvalsTabBtn.style.display = isAgent ? 'none' : '';
+  if (shiftExtTabBtn) shiftExtTabBtn.style.display = ''; // visible to all roles
 
   // Set initial active tab based on role
   let initialTab = 'given';
@@ -158,6 +162,7 @@ function helmApplyActiveTabFilters() {
   if (tab === 'given') helmApplyFilters();
   else if (tab === 'received') helmApplyReceivedFilters();
   else if (tab === 'approvals') helmApplyApprovalsFilters();
+  else if (tab === 'shift-ext' && typeof seRenderTab === 'function') seRenderTab();
 }
 
 // ===== Board Tab Switcher (Tabbed layout) =====
@@ -175,9 +180,13 @@ function helmSwitchBoardTab(tab) {
   const tasksPanel = document.getElementById('helm-tab-tasks');
   const receivedPanel = document.getElementById('helm-tab-received');
   const approvalsPanel = document.getElementById('helm-tab-approvals');
+  const shiftExtPanel = document.getElementById('helm-tab-shift-ext');
   if (tasksPanel) tasksPanel.style.display = (tab === 'given') ? 'block' : 'none';
   if (receivedPanel) receivedPanel.style.display = (tab === 'received') ? 'block' : 'none';
   if (approvalsPanel) approvalsPanel.style.display = (tab === 'approvals') ? 'block' : 'none';
+  if (shiftExtPanel) shiftExtPanel.style.display = (tab === 'shift-ext') ? 'block' : 'none';
+  // Render shift extensions content when switching to that tab
+  if (tab === 'shift-ext' && typeof seRenderTab === 'function') seRenderTab();
   // Reset page-level filter to 'All' when switching tabs
   const statusSel = document.getElementById('helm-filter-status');
   if (statusSel) statusSel.value = 'All';
@@ -843,7 +852,8 @@ async function helmUpdateStatus(taskId, newStatus) {
 // ===== New Request Form =====
 
 const HELM_REQUEST_TYPES = [
-  { value: 'attendance_backdated_change_tag', label: 'I want to change an already locked tag on a previous date.' }
+  { value: 'attendance_backdated_change_tag', label: 'I want to change an already locked tag on a previous date.' },
+  { value: 'shift_extension', label: 'I want to extend my time to complete my production hours' }
 ];
 
 var _helmRequestSelectedAgent = null;
@@ -864,13 +874,16 @@ async function helmShowNewRequestForm() {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   const isAgent = cu && cu.actual_role === 'Agent' && (window.ADMIN_OHRS || []).indexOf(cu.ohr_id) === -1;
 
-  // Agents cannot create requests (OT removed, backdated tag change is non-agent only)
-  if (isAgent) {
+  // Filter request types by role: agents can only see shift_extension
+  const availableTypes = isAgent
+    ? HELM_REQUEST_TYPES.filter(t => t.value === 'shift_extension')
+    : HELM_REQUEST_TYPES;
+  if (availableTypes.length === 0) {
     showToast('No request types available for your role', 'info');
     return;
   }
 
-  const typeOptions = HELM_REQUEST_TYPES.map(t =>
+  const typeOptions = availableTypes.map(t =>
     `<option value="${escapeAttr(t.value)}">${escapeHtml(t.label)}</option>`
   ).join('');
 
@@ -885,6 +898,22 @@ async function helmShowNewRequestForm() {
         <select class="form-input" id="helm-req-type" onchange="helmOnRequestTypeChange()" style="width:100%;">
           ${typeOptions}
         </select>
+      </div>
+
+      <!-- Shift Extension fields -->
+      <div id="helm-req-shift-ext-fields" style="display:none;">
+        <div class="form-field">
+          <label class="form-label">Shift Date <span class="required">*</span></label>
+          <input type="date" class="form-input" id="helm-req-se-date" style="max-width:220px;">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Extension (minutes) <span class="required">*</span></label>
+          <input type="number" class="form-input" id="helm-req-se-minutes" min="1" max="480" placeholder="e.g. 60" style="max-width:180px;">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Reason Details <span class="required">*</span></label>
+          <textarea class="form-textarea" id="helm-req-se-reason" rows="4" placeholder="Explain why you need to extend your shift..." style="width:100%;resize:vertical;"></textarea>
+        </div>
       </div>
 
       <!-- Attendance Backdated Change Tag fields -->
@@ -932,8 +961,12 @@ async function helmShowNewRequestForm() {
 function helmOnRequestTypeChange() {
   const type = document.getElementById('helm-req-type')?.value || '';
   const attendanceFields = document.getElementById('helm-req-attendance-fields');
+  const shiftExtFields = document.getElementById('helm-req-shift-ext-fields');
   if (attendanceFields) {
     attendanceFields.style.display = (type === 'attendance_backdated_change_tag') ? '' : 'none';
+  }
+  if (shiftExtFields) {
+    shiftExtFields.style.display = (type === 'shift_extension') ? '' : 'none';
   }
 }
 
@@ -1124,6 +1157,51 @@ async function helmSubmitNewRequest() {
       helmSwitchBoardTab('approvals');
     } catch (e) {
       showToast('Failed to submit request: ' + e.message, 'error');
+    }
+  } else if (reqType === 'shift_extension') {
+    const shiftDate = document.getElementById('helm-req-se-date')?.value || '';
+    const minutes = parseInt(document.getElementById('helm-req-se-minutes')?.value || '0');
+    const reasonDetails = (document.getElementById('helm-req-se-reason')?.value || '').trim();
+
+    if (!shiftDate) { showToast('Please select the shift date', 'error'); return; }
+    if (!minutes || minutes <= 0) { showToast('Please enter the extension in minutes', 'error'); return; }
+    if (!reasonDetails) { showToast('Please provide reason details', 'error'); return; }
+
+    // Resolve agent info (self for agents, or selected agent for TLs)
+    const agentOhr = cu ? cu.ohr_id : '';
+    const agentName = cu ? cu.full_name : '';
+    const agentEmp = HELM.employees.find(e => (e.ohr_id || '').trim() === agentOhr.trim());
+    const supervisorName = agentEmp ? (agentEmp.supervisor_name || '') : '';
+    let supervisorOhr = '';
+    if (supervisorName) {
+      const supEmp = HELM.employees.find(e => e.full_name === supervisorName);
+      if (supEmp) supervisorOhr = supEmp.ohr_id;
+    }
+    const planningGroup = agentEmp ? (agentEmp.planning_group || '') : '';
+
+    try {
+      const resp = await fetch(`${IO_API_BASE}/shift-extensions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_ohr: agentOhr,
+          agent_name: agentName,
+          supervisor_ohr: supervisorOhr,
+          supervisor_name: supervisorName,
+          planning_group: planningGroup,
+          shift_date: shiftDate,
+          extension_minutes: minutes,
+          reason_details: reasonDetails
+        })
+      });
+      if (!resp.ok) throw new Error('Failed to submit shift extension request');
+      showToast('Shift extension request submitted successfully', 'success');
+      helmCloseForm();
+      // Switch to shift extensions tab to see the new request
+      if (typeof seFetchData === 'function') await seFetchData();
+      helmSwitchBoardTab('shift-ext');
+    } catch (e) {
+      showToast('Failed to submit: ' + e.message, 'error');
     }
   }
 }

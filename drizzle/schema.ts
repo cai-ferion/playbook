@@ -358,6 +358,33 @@ export const ioAuditLog = mysqlTable("io_audit_log", {
 export type IoAuditLog = typeof ioAuditLog.$inferSelect;
 export type InsertIoAuditLog = typeof ioAuditLog.$inferInsert;
 
+export const ioShiftExtensions = mysqlTable("io_shift_extensions", {
+  id: int("id").autoincrement().primaryKey(),
+  request_id: varchar("request_id", { length: 20 }),
+  agent_ohr: varchar("agent_ohr", { length: 20 }),
+  agent_name: varchar("agent_name", { length: 255 }),
+  supervisor_ohr: varchar("supervisor_ohr", { length: 20 }),
+  supervisor_name: varchar("supervisor_name", { length: 255 }),
+  planning_group: varchar("planning_group", { length: 100 }),
+  shift_date: varchar("shift_date", { length: 30 }),
+  extension_minutes: int("extension_minutes"),
+  reason_details: text("reason_details"),
+  tl_status: varchar("tl_status", { length: 30 }),
+  tl_comments: text("tl_comments"),
+  tl_actioned_by: varchar("tl_actioned_by", { length: 255 }),
+  tl_actioned_at: varchar("tl_actioned_at", { length: 64 }),
+  om_status: varchar("om_status", { length: 30 }),
+  om_comments: text("om_comments"),
+  om_actioned_by: varchar("om_actioned_by", { length: 255 }),
+  om_actioned_at: varchar("om_actioned_at", { length: 64 }),
+  overall_status: varchar("overall_status", { length: 30 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+
+export type IoShiftExtension = typeof ioShiftExtensions.$inferSelect;
+export type InsertIoShiftExtension = typeof ioShiftExtensions.$inferInsert;
+
 export const ioTasks = mysqlTable("io_tasks", {
   id: int("id").autoincrement().primaryKey(),
   task_id: varchar("task_id", { length: 20 }),

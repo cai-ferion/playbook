@@ -1583,6 +1583,7 @@
               <button class="helm-board-tab active" data-board-tab="given" onclick="helmSwitchBoardTab('given')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Tasks Given</button>
               <button class="helm-board-tab" data-board-tab="received" onclick="helmSwitchBoardTab('received')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Tasks Received</button>
               <button class="helm-board-tab" data-board-tab="approvals" onclick="helmSwitchBoardTab('approvals')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Approvals</button>
+              <button class="helm-board-tab" data-board-tab="shift-ext" onclick="helmSwitchBoardTab('shift-ext')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Shift Extensions</button>
             </div>
 
             <!-- Tasks Given Panel -->
@@ -1605,6 +1606,12 @@
                 </table>
               </div>
               <div class="module-pagination" id="helm-received-pagination"></div>
+            </div>
+
+            <!-- Shift Extensions Panel -->
+            <div id="helm-tab-shift-ext" style="display:none;">
+              <div id="se-sub-tabs" style="display:flex;gap:8px;margin-bottom:12px;"></div>
+              <div id="se-content"></div>
             </div>
 
             <!-- Approvals Panel -->
@@ -2105,8 +2112,9 @@
   <script src="js/sandbox.js?v=124" defer></script>
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
   <script src="js/haven.js?v=105" defer></script>
-  <script src="js/helm.js?v=116" defer></script>
-  <script src="js/group-task.js?v=104" defer></script>
+  <script src="js/helm.js?v=117" defer></script>
+  <script src="js/group-task.js?v=105" defer></script>
+  <script src="js/shift-extension.js?v=100" defer></script>
   <script src="js/helm-dashboard.js?v=102" defer></script>
   <script src="js/roster.js?v=206" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
