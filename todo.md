@@ -3404,3 +3404,8 @@
 ## Manager's Nook — Coaching Coverage Bug
 - [x] Fix coaching coverage numerator exceeding denominator (e.g., 16/15, 20/19)
 - [x] Fix "missing" count inconsistency (e.g., 17/18 showing 2 missing instead of 1)
+
+## Corrective Action — Import CAP/PIP Historical Data
+- [x] Import CAP 1-3 records into io_corrective_actions table (12 records: 3 CAP 1, 6 CAP 2, 3 CAP 3)
+- [x] Import CAP 0 records as General Coaching into io_coaching table (27 records)
+- [x] Verify data integrity after import
