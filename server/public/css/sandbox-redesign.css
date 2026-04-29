@@ -421,6 +421,7 @@
 #view-sandbox-input .sandbox-detail-cell {
   padding: 0 !important;
   border-top: none !important;
+  overflow: hidden;
 }
 
 #view-sandbox-input .sandbox-detail-panel {
@@ -428,6 +429,9 @@
   padding: 16px 20px 12px;
   border-top: 2px solid var(--sandbox-accent);
   animation: sandboxSlideDown 0.2s ease-out;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Section group */
@@ -464,6 +468,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px 14px;
+  overflow: hidden;
 }
 
 #view-sandbox-input .sandbox-detail-grid.two-col {
@@ -492,6 +497,9 @@
   font-size: 13px;
   color: var(--sandbox-text);
   word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
 }
 
 #view-sandbox-input .sandbox-detail-field-value.multiline {
@@ -503,6 +511,9 @@
   border-radius: var(--sandbox-radius-sm);
   border: 1px solid var(--sandbox-border-subtle);
   margin-top: 2px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 /* Review trail */
@@ -1176,6 +1187,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+  overflow: hidden;
 }
 .sandbox-side-panel-body .cdp-grid-full {
   grid-column: 1 / -1;
@@ -1192,6 +1204,10 @@
   font-size: 13px;
   color: var(--sandbox-text, #1a1a2e);
   line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
 }
 .sandbox-side-panel-body .cdp-field-value.multiline {
   white-space: pre-wrap;

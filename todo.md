@@ -3392,3 +3392,7 @@
 ## Sandbox — Team Analytics Fixes
 - [x] Hide Team Analytics panel when "All" toggle is active (only show on "My Team")
 - [x] Increase Team Analytics panel width (420px → 520px), main table shrinks when analytics visible
+
+## Sandbox — Text Wrapping Fix
+- [x] Fix text overflow in inline expansion panels (Problem Statement, Proposed Changes, etc.)
+- [x] Ensure text wrapping is applied to all inline expansion content areas (Sandbox + Compass)
