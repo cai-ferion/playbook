@@ -101,6 +101,12 @@
 /* Filter pills row */
 #view-regimen .regimen-filter-pills {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#view-regimen .regimen-filter-row {
+  display: flex;
   align-items: center;
   gap: 5px;
   flex-wrap: wrap;

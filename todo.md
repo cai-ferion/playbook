@@ -3396,3 +3396,11 @@
 ## Sandbox — Text Wrapping Fix
 - [x] Fix text overflow in inline expansion panels (Problem Statement, Proposed Changes, etc.)
 - [x] Ensure text wrapping is applied to all inline expansion content areas (Sandbox + Compass)
+
+## Regimen — Filter Layout Rearrangement
+- [x] Rearrange filters: 1st line = all date range filters, 2nd line = all non-date range filters
+- [x] Rearrange buttons: Add | Export | Purge | Clear | Search Bar | Filtered Records
+
+## Manager's Nook — Coaching Coverage Bug
+- [x] Fix coaching coverage numerator exceeding denominator (e.g., 16/15, 20/19)
+- [x] Fix "missing" count inconsistency (e.g., 17/18 showing 2 missing instead of 1)

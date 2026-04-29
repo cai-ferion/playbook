@@ -245,13 +245,18 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         const allAgents = agentsBySup[sup] || [];
         const missingAgents = allAgents.filter(a => !coachedSet.has(a.ohr_id));
 
+        // The true coached count is total_agents minus missing (agents on current roster who were coached)
+        // This prevents numerator > denominator when transferred agents inflate the coaching query count
+        const actualCoached = totalAgents - missingAgents.length;
+        const coveragePct = totalAgents > 0 ? Math.min(100, Math.round((actualCoached / totalAgents) * 100)) : 0;
+
         months[m] = {
           tardiness: tardinessMap[sup]?.[m] || 0,
           coaching: {
-            unique_agents_coached: coaching.unique,
+            unique_agents_coached: actualCoached,
             total_sessions: coaching.total,
             total_agents: totalAgents,
-            coverage_pct: totalAgents > 0 ? Math.min(100, Math.round((coaching.unique / totalAgents) * 100)) : 0,
+            coverage_pct: coveragePct,
             missing_agents: missingAgents.map(a => ({ ohr_id: a.ohr_id, full_name: a.full_name })),
           },
           insights: insightsMap[sup]?.[m] || { submitted: 0, approved: 0 },

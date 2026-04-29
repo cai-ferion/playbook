@@ -239,7 +239,9 @@ function rosterRenderFilterBar() {
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-purge-btn" onclick="rosterShowPurgeModal()" style="display:none;white-space:nowrap;color:#ef4444;border-color:#ef4444;">' 
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Purge'
       + '</button>';
-    // Sync to Sheet
+    // Clear filters
+    tbHtml += '<button class="btn btn-ghost btn-xs" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
+    // Sync to Sheet (hidden by default)
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-sync-sheet-btn" onclick="rosterSyncToSheet()" style="display:none;white-space:nowrap;">'
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync'
       + '</button>';
@@ -248,11 +250,10 @@ function rosterRenderFilterBar() {
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
       + '<input type="text" id="roster-search-input" placeholder="Search OHR / Name..." '
       + 'value="' + escapeAttr(ROSTER.searchQuery) + '" '
-      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();">'
+      + 'oninput="ROSTER.searchQuery=this.value;rosterDebouncedApply();">' 
       + '</div>';
-    // Count + Clear
+    // Filtered count
     tbHtml += '<span class="regimen-filter-count" id="roster-filter-count"></span>';
-    tbHtml += '<button class="btn btn-ghost btn-xs" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
     toolbar.innerHTML = tbHtml;
   }
 
@@ -262,12 +263,15 @@ function rosterRenderFilterBar() {
 
   let html = '';
 
-  // Row 1: Date filters
+  // Row 1: All date range filters
+  html += '<div class="regimen-filter-row">';
   dateFields.forEach(f => { html += renderPill(f); });
-  // Row 2: Identity filters
-  identityFields.forEach(f => { html += renderPill(f); });
-  // Row 3: Rest (role, system, asset, attrition non-date)
-  restFields.forEach(f => { html += renderPill(f); });
+  html += '</div>';
+  // Row 2: All non-date filters (identity + rest combined)
+  const allNonDate = identityFields.concat(restFields);
+  html += '<div class="regimen-filter-row">';
+  allNonDate.forEach(f => { html += renderPill(f); });
+  html += '</div>';
 
   container.innerHTML = html;
 }
