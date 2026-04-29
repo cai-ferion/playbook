@@ -3376,3 +3376,11 @@
 - [x] Update backend completion endpoint to handle multiple file uploads and store all in S3 (JSON array format)
 - [x] Store multiple attachment URLs in the database (JSON array of {name, url} objects in attachment_url column)
 - [x] Update Attachments column display to show/download multiple files (popup menu for multi-file)
+
+## Helm — Move Shift Extensions to Approvals Tab
+- [x] Remove "Shift Extensions" from Helm Task Board tabs
+- [x] Merge shift extension requests into "Approvals" tab
+- [x] Update status flow: Pending → FLM Approved → OM Approved (mapped from Pending TL/Pending OM/Approved)
+- [x] Approvals tab visibility: Agents see own, TLs see their agents', Managers/Admin see all
+- [x] Agents can still submit shift extension requests via New Request button
+- [x] Detail view opens existing shift extension modal with approve/reject actions

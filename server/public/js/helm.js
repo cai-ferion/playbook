@@ -62,6 +62,8 @@ async function initHelm(view) {
   }
 
   await helmFetchTasks();
+  // Fetch shift extension data for Approvals tab
+  if (typeof seFetchData === 'function') await seFetchData();
   helmApplyFilters();
   helmApplyReceivedFilters();
   helmApplyApprovalsFilters();
@@ -119,11 +121,9 @@ async function helmFetchTasks() {
   const givenTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="given"]');
   const receivedTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="received"]');
   const approvalsTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="approvals"]');
-  const shiftExtTabBtn = document.querySelector('#helm-board-tabs [data-board-tab="shift-ext"]');
   if (givenTabBtn) givenTabBtn.style.display = isAgent ? 'none' : '';
   if (receivedTabBtn) receivedTabBtn.style.display = isSM ? 'none' : '';
-  if (approvalsTabBtn) approvalsTabBtn.style.display = isAgent ? 'none' : '';
-  if (shiftExtTabBtn) shiftExtTabBtn.style.display = ''; // visible to all roles
+  if (approvalsTabBtn) approvalsTabBtn.style.display = ''; // visible to all roles (includes shift extensions now)
 
   // Set initial active tab based on role
   let initialTab = 'given';
@@ -162,7 +162,6 @@ function helmApplyActiveTabFilters() {
   if (tab === 'given') helmApplyFilters();
   else if (tab === 'received') helmApplyReceivedFilters();
   else if (tab === 'approvals') helmApplyApprovalsFilters();
-  else if (tab === 'shift-ext' && typeof seRenderTab === 'function') seRenderTab();
 }
 
 // ===== Board Tab Switcher (Tabbed layout) =====
@@ -180,13 +179,9 @@ function helmSwitchBoardTab(tab) {
   const tasksPanel = document.getElementById('helm-tab-tasks');
   const receivedPanel = document.getElementById('helm-tab-received');
   const approvalsPanel = document.getElementById('helm-tab-approvals');
-  const shiftExtPanel = document.getElementById('helm-tab-shift-ext');
   if (tasksPanel) tasksPanel.style.display = (tab === 'given') ? 'block' : 'none';
   if (receivedPanel) receivedPanel.style.display = (tab === 'received') ? 'block' : 'none';
   if (approvalsPanel) approvalsPanel.style.display = (tab === 'approvals') ? 'block' : 'none';
-  if (shiftExtPanel) shiftExtPanel.style.display = (tab === 'shift-ext') ? 'block' : 'none';
-  // Render shift extensions content when switching to that tab
-  if (tab === 'shift-ext' && typeof seRenderTab === 'function') seRenderTab();
   // Reset page-level filter to 'All' when switching tabs
   const statusSel = document.getElementById('helm-filter-status');
   if (statusSel) statusSel.value = 'All';
@@ -1241,6 +1236,8 @@ function helmExtractRequestType(title) {
 const HELM_APPROVAL_COLORS = {
   'Pending': '#F59E0B',
   'Approved': '#22C55E',
+  'FLM Approved': '#3B82F6',
+  'OM Approved': '#22C55E',
   'Rejected': '#EF4444'
 };
 
@@ -1250,43 +1247,68 @@ function helmApplyApprovalsFilters() {
   const myOhr = cu ? (cu.ohr_id || '').trim() : '';
   const isManager = role === 'Manager' || (window.ADMIN_OHRS || []).includes(myOhr);
   const isTL = role === 'Team Leader';
+  const isAgent = cu && cu.actual_role === 'Agent' && !(window.ADMIN_OHRS || []).includes(myOhr);
 
   // 1. Task-based requests (e.g., Attendance Backdated Change Tag)
   let taskRequests = HELM.tasks.filter(t => t.record_type === 'request');
 
-
-
-  // Role-based visibility for Approvals:
-  // Managers & 740045023: see ALL items
-  // Team Leaders: see items from their team (supervisor_ohr matches)
-  // Anybody else (Agents, etc.): see only their own requests
+  // Role-based visibility for task requests:
   if (isManager) {
     // No filtering — see everything
   } else if (isTL && cu) {
-    // TL sees requests from agents in their team
     const teamOhrs = new Set(HELM.employees.filter(e => (e.supervisor_ohr || '').trim() === myOhr).map(e => (e.ohr_id || '').trim()));
-    teamOhrs.add(myOhr); // Include own requests too
+    teamOhrs.add(myOhr);
     taskRequests = taskRequests.filter(t => {
       const submitterOhr = (t.assigned_by_ohr || '').trim();
       if (teamOhrs.has(submitterOhr)) return true;
       if (t.description && [...teamOhrs].some(ohr => t.description.includes(ohr))) return true;
       return false;
     });
-
   } else if (cu) {
-    // Anybody else: only their own requests
     taskRequests = taskRequests.filter(t => {
       if ((t.assigned_by_ohr || '').trim() === myOhr) return true;
       if (t.description && t.description.includes(myOhr)) return true;
       return false;
     });
-
   } else {
     taskRequests = [];
-
   }
 
-  let data = [...taskRequests];
+  // 2. Shift Extension requests — normalize into approvals shape
+  let seRequests = [];
+  if (typeof SE !== 'undefined' && SE.data && SE.data.length > 0) {
+    let seRows = SE.data;
+    // Role-based visibility for shift extensions:
+    // Agents: only their own
+    // TLs: their direct reports
+    // Managers/Admin: all
+    if (isAgent) {
+      seRows = seRows.filter(r => r.agent_ohr === myOhr);
+    } else if (isTL) {
+      seRows = seRows.filter(r => r.supervisor_ohr === myOhr || r.agent_ohr === myOhr);
+    }
+    // Map SE status to approval status: Pending TL → Pending, Pending OM → FLM Approved, Approved → OM Approved, Rejected → Rejected
+    seRequests = seRows.map(r => {
+      let approvalStatus = 'Pending';
+      if (r.overall_status === 'Pending TL') approvalStatus = 'Pending';
+      else if (r.overall_status === 'Pending OM') approvalStatus = 'FLM Approved';
+      else if (r.overall_status === 'Approved') approvalStatus = 'OM Approved';
+      else if (r.overall_status === 'Rejected') approvalStatus = 'Rejected';
+      return {
+        task_id: 'SE-' + r.id,
+        title: 'Shift Extension',
+        request_type: 'shift_extension',
+        assigned_by_name: r.agent_name || '—',
+        assigned_by_ohr: r.agent_ohr || '',
+        approval_status: approvalStatus,
+        created_at: r.created_at,
+        _seId: r.id,
+        _isShiftExt: true
+      };
+    });
+  }
+
+  let data = [...taskRequests, ...seRequests];
 
   // Sort by created_at descending (newest first)
   data.sort((a, b) => {
@@ -1322,13 +1344,15 @@ function helmRenderApprovalsStats() {
   if (!el) return;
   const total = HELM.filteredApprovals.length;
   const pending = HELM.filteredApprovals.filter(t => (t.approval_status || 'Pending') === 'Pending').length;
-  const approved = HELM.filteredApprovals.filter(t => t.approval_status === 'Approved').length;
+  const flmApproved = HELM.filteredApprovals.filter(t => t.approval_status === 'FLM Approved').length;
+  const omApproved = HELM.filteredApprovals.filter(t => t.approval_status === 'OM Approved' || t.approval_status === 'Approved').length;
   const rejected = HELM.filteredApprovals.filter(t => t.approval_status === 'Rejected').length;
 
   el.innerHTML = `
     <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>
     <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['Pending']}">${pending}</div><div class="stat-label">Pending</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['Approved']}">${approved}</div><div class="stat-label">Approved</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['FLM Approved']}">${flmApproved}</div><div class="stat-label">FLM Approved</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['OM Approved']}">${omApproved}</div><div class="stat-label">OM Approved</div></div>
     <div class="stat-card"><div class="stat-value" style="color:${HELM_APPROVAL_COLORS['Rejected']}">${rejected}</div><div class="stat-label">Rejected</div></div>
   `;
 }
@@ -1394,6 +1418,12 @@ function helmRenderApprovalsPagination() {
 // ===== Approval Detail View =====
 
 function helmOpenApprovalDetail(taskId) {
+  // Check if this is a shift extension item
+  if (taskId.startsWith('SE-')) {
+    const seId = parseInt(taskId.replace('SE-', ''), 10);
+    if (typeof seShowDetail === 'function') seShowDetail(seId);
+    return;
+  }
   // Search in both tasks and filteredApprovals (which includes OT requests)
   let task = HELM.tasks.find(t => t.task_id === taskId);
   if (!task) {

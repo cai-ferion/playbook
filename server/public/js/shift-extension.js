@@ -338,7 +338,8 @@ async function seSubmitAction(id, level, action, comments, actionedBy) {
     if (!resp.ok) throw new Error('Action failed');
     showToast(`Request ${action.toLowerCase()} successfully`, 'success');
     await seFetchData();
-    seRenderTab();
+    // Refresh the Approvals tab (shift extensions are now merged there)
+    if (typeof helmApplyApprovalsFilters === 'function') helmApplyApprovalsFilters();
   } catch (e) {
     showToast('Failed: ' + e.message, 'error');
   }
