@@ -13,6 +13,7 @@
 import { Router, Request, Response } from "express";
 import { getDb } from "./db.js";
 import { sql } from "drizzle-orm";
+import { ioNotifications } from "../drizzle/schema.js";
 
 const router = Router();
 
@@ -131,6 +132,40 @@ router.post("/", async (req: Request, res: Response) => {
           VALUES ${valueRows}
         `));
       }
+    }
+
+    // ── Send in-app notification to each assigned employee ──
+    if (employees.length > 0) {
+      const dueStr = due_date
+        ? new Date(due_date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+        : 'No due date';
+      const notifMsg = `${taskId}: ${title} — Due: ${dueStr}. Assigned by ${created_by_name || 'System'}.`;
+
+      // Batch insert notifications in chunks of 100 (fire-and-forget, don't block response)
+      (async () => {
+        try {
+          for (let i = 0; i < employees.length; i += 100) {
+            const chunk = employees.slice(i, i + 100);
+            await db.insert(ioNotifications).values(
+              chunk.map(e => ({
+                type: 'group_task_assigned',
+                title: 'New Group Task Assigned',
+                message: notifMsg,
+                actor_ohr: created_by_ohr || null,
+                actor_name: created_by_name || 'System',
+                target_ohr: e.ohr_id,
+                target_role: 'agent',
+                metadata: JSON.stringify({ task_id: taskId, group_task_id: groupTaskId, title, due_date: due_date || null }),
+                is_read: false,
+                created_at: now,
+              }))
+            );
+          }
+          console.log(`[GroupTask] Sent ${employees.length} assignment notifications for ${taskId}`);
+        } catch (notifErr) {
+          console.error('[GroupTask] Notification insert error:', notifErr);
+        }
+      })();
     }
 
     res.json({

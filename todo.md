@@ -3340,3 +3340,6 @@
 - [x] Fix: Group task not reflecting in "Tasks Received" after submission
 - [x] Fix: Agents cannot see the Helm nav bar — restore Helm visibility with Tasks Received table for agents
 - [x] Fix: Task Dashboard table too cramped — extend table height/spacing
+
+## Helm — Group Task Assignment Notifications
+- [x] Send in-app notification to each agent when they are assigned a new group task
