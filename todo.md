@@ -3313,3 +3313,10 @@
 
 ## Anchor Input Portal — Status Field Not Editable
 - [x] Fix: Owner (740045023) and Assistant (740044909) cannot edit the Status field in Anchor Input Portal — added ADMIN_OHRS check to isStatusEditor (was only checking Manager role + permissions object, which may not be populated reliably)
+
+## Task Board / Dashboard UI Fixes
+- [x] Fix: "New Group Task" button now matches "New Task" button color (btn-primary)
+- [x] Fix: "Category" field already removed from New Group Task form
+- [x] Fix: Disabled modal popup on Tasks Given and Tasks Received table rows (removed onclick handlers)
+- [x] Fix: Extended table heights (removed max-height:600px on all 3 tab panels)
+- [x] Fix: Task Dashboard modal now opens in Dashboard context (added gt-dash-detail-overlay + gtOpenDashDetail function)

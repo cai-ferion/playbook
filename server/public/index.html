@@ -1530,7 +1530,7 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 New Request
               </button>
-              <button class="btn btn-sm" id="helm-new-group-task-btn" onclick="helmShowGroupTaskWizard()" style="background:#7C3AED;color:#fff;border:none;">
+              <button class="btn btn-primary btn-sm" id="helm-new-group-task-btn" onclick="helmShowGroupTaskWizard()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 New Group Task
               </button>
@@ -1566,7 +1566,7 @@
 
             <!-- Tasks Given Panel -->
             <div id="helm-tab-tasks" style="display:block;">
-              <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+              <div class="module-table-wrapper">
                 <table class="data-table module-table" id="helm-table" style="font-size:12px;">
                   <thead id="helm-table-head"></thead>
                   <tbody id="helm-table-body"></tbody>
@@ -1577,7 +1577,7 @@
 
             <!-- Tasks Received Panel -->
             <div id="helm-tab-received" style="display:none;">
-              <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+              <div class="module-table-wrapper">
                 <table class="data-table module-table" id="helm-received-table" style="font-size:12px;">
                   <thead id="helm-received-table-head"></thead>
                   <tbody id="helm-received-table-body"></tbody>
@@ -1589,7 +1589,7 @@
             <!-- Approvals Panel -->
             <div id="helm-tab-approvals" style="display:none;">
 
-              <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+              <div class="module-table-wrapper">
                 <table class="data-table module-table" id="helm-approvals-table" style="font-size:12px;">
                   <thead id="helm-approvals-table-head"></thead>
                   <tbody id="helm-approvals-table-body"></tbody>
@@ -1688,6 +1688,20 @@
               </table>
             </div>
             <div class="module-pagination" id="helm-dash-pagination"></div>
+          </div>
+
+          <!-- Group Task Detail Modal (Dashboard context) -->
+          <div class="module-form-overlay" id="gt-dash-detail-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:780px;width:95%;">
+              <div class="module-form-header">
+                <h3 id="gt-dash-detail-title">Group Task Details</h3>
+                <button class="module-form-close" onclick="gtDashDetailClose()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="gt-dash-detail-body" style="max-height:520px;overflow-y:auto;"></div>
+              <div class="module-form-footer" id="gt-dash-detail-footer"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -2070,9 +2084,9 @@
   <script src="js/sandbox.js?v=123" defer></script>
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
   <script src="js/haven.js?v=105" defer></script>
-  <script src="js/helm.js?v=114" defer></script>
+  <script src="js/helm.js?v=115" defer></script>
   <script src="js/group-task.js?v=100" defer></script>
-  <script src="js/helm-dashboard.js?v=100" defer></script>
+  <script src="js/helm-dashboard.js?v=101" defer></script>
   <script src="js/roster.js?v=206" defer></script>
   <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=103" defer></script>

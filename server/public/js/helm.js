@@ -293,11 +293,9 @@ function helmRenderTable() {
     // Assigned To: show only for single tasks
     const assignedToHtml = isGroup ? '\u2014' : escapeHtml(t._assignedTo || '\u2014');
 
-    const clickHandler = isGroup
-      ? `gtOpenDetail(${t._groupTaskId})`
-      : `helmOpenDetail('${escapeAttr(t.task_id)}')`;
+    // Click handlers disabled per user request — no modal on Tasks Given rows
 
-    return `<tr class="data-row" onclick="${clickHandler}">
+    return `<tr class="data-row">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
       <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
       <td>${typeBadge}</td>
@@ -393,7 +391,7 @@ function helmRenderReceivedTable() {
     const isOverdue = t.due_date && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due_date) < new Date();
     const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
 
-    return `<tr class="data-row" onclick="helmOpenDetail('${escapeAttr(t.task_id)}')">
+    return `<tr class="data-row">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
       <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '\u2014')}</span></td>

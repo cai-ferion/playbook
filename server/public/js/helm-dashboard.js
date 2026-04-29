@@ -155,7 +155,7 @@ function helmDashRenderTable() {
     const pendingCount = (t.total_assigned || 0) - completedCount - (t.na_count || 0);
     const naCount = t.na_count || 0;
 
-    return `<tr class="data-row" onclick="gtOpenDetail(${t.id})" style="cursor:pointer;">
+    return `<tr class="data-row" onclick="gtOpenDashDetail(${t.id})" style="cursor:pointer;">
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id)}</span></td>
       <td><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
       <td>${statusBadge}</td>
@@ -195,4 +195,135 @@ function helmDashRenderPagination() {
       <button class="btn btn-outline btn-xs" ${HELM_DASH.page >= totalPages ? 'disabled' : ''} onclick="HELM_DASH.page++;helmDashRenderTable();">Next</button>
     </div>
   `;
+}
+
+// ===== Dashboard-local Group Task Detail =====
+// Opens the detail modal within the Dashboard view (not the Task Board overlay)
+
+async function gtOpenDashDetail(groupTaskId) {
+  const overlay = document.getElementById('gt-dash-detail-overlay');
+  const body = document.getElementById('gt-dash-detail-body');
+  const footer = document.getElementById('gt-dash-detail-footer');
+  const title = document.getElementById('gt-dash-detail-title');
+  if (!overlay || !body) return;
+
+  overlay.style.display = 'flex';
+  body.innerHTML = '<div style="padding:40px;text-align:center;"><div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div><div class="loading-text" style="margin-top:12px;">Loading task details...</div></div>';
+  footer.innerHTML = '';
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/group-tasks/${groupTaskId}`);
+    if (!resp.ok) throw new Error('Failed to load');
+    const task = await resp.json();
+
+    if (title) title.textContent = task.task_id + ' — ' + (task.title || 'Group Task');
+
+    const assignments = task.assignments || [];
+    const completed = assignments.filter(a => a.status === 'Completed').length;
+    const pending = assignments.filter(a => a.status === 'Pending').length;
+    const na = assignments.filter(a => a.status === 'Not Applicable').length;
+    const effective = assignments.length - na;
+    const pct = effective > 0 ? Math.round((completed / effective) * 100) : 0;
+
+    const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+    const isCreator = cu && cu.ohr_id === task.created_by_ohr;
+    const isAdmin = cu && ((window.ADMIN_OHRS || []).includes(cu.ohr_id) || cu.actual_role === 'Manager');
+
+    body.innerHTML = `
+      <div style="padding:20px;">
+        <div style="display:flex;gap:16px;margin-bottom:20px;">
+          <div style="flex:1;background:var(--bg-subtle);border-radius:10px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:var(--primary);">${pct}%</div>
+            <div style="font-size:11px;color:var(--fg-muted);">Completion</div>
+          </div>
+          <div style="flex:1;background:var(--bg-subtle);border-radius:10px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#22C55E;">${completed}</div>
+            <div style="font-size:11px;color:var(--fg-muted);">Completed</div>
+          </div>
+          <div style="flex:1;background:var(--bg-subtle);border-radius:10px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#F59E0B;">${pending}</div>
+            <div style="font-size:11px;color:var(--fg-muted);">Pending</div>
+          </div>
+          <div style="flex:1;background:var(--bg-subtle);border-radius:10px;padding:16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:var(--fg-muted);">${effective}</div>
+            <div style="font-size:11px;color:var(--fg-muted);">Total</div>
+          </div>
+        </div>
+
+        ${task.description ? `<p style="font-size:13px;color:var(--fg-secondary);margin-bottom:12px;">${escapeHtml(task.description)}</p>` : ''}
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;font-size:12px;">
+          <span style="color:var(--fg-muted);">Created by ${escapeHtml(task.created_by_name || 'Unknown')}</span>
+          ${task.due_date ? `<span style="color:var(--fg-muted);">Due: ${new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>` : ''}
+          <span style="padding:3px 12px;border-radius:12px;font-weight:600;font-size:11px;background:${task.status === 'Active' ? '#22C55E22' : '#9CA3AF22'};color:${task.status === 'Active' ? '#22C55E' : '#9CA3AF'};">${escapeHtml(task.status)}</span>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="background:var(--border);border-radius:6px;height:8px;margin-bottom:20px;overflow:hidden;">
+          <div style="background:#22C55E;height:100%;width:${pct}%;border-radius:6px;transition:width 0.3s;"></div>
+        </div>
+
+        <!-- Assignment list -->
+        <div style="margin-bottom:8px;font-size:13px;font-weight:600;">Assignments</div>
+        <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          <table class="data-table" style="font-size:12px;width:100%;">
+            <thead><tr><th>Name</th><th>OHR</th><th>PG</th><th>Role</th><th>Status</th><th>Completed</th></tr></thead>
+            <tbody>
+              ${assignments.map(a => {
+                const sc = (typeof GT !== 'undefined' ? GT.STATUS_COLORS : {})[ a.status] || 'var(--fg-muted)';
+                return `<tr>
+                  <td>${escapeHtml(a.employee_name || '\u2014')}</td>
+                  <td style="font-family:monospace;font-size:11px;">${escapeHtml(a.employee_ohr)}</td>
+                  <td style="font-size:11px;">${escapeHtml(a.planning_group || '\u2014')}</td>
+                  <td style="font-size:11px;">${escapeHtml(a.actual_role || '\u2014')}</td>
+                  <td><span style="color:${sc};font-weight:600;">${escapeHtml(a.status)}</span></td>
+                  <td style="font-size:11px;">${a.completed_at ? new Date(a.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '\u2014'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Footer with close action (and close task for creators/admins)
+    let footerHtml = '<button class="btn btn-outline btn-sm" onclick="gtDashDetailClose()">Close</button>';
+    if ((isCreator || isAdmin) && task.status === 'Active') {
+      footerHtml += ` <button class="btn btn-sm" style="background:#EF4444;color:#fff;border:none;" onclick="gtDashCloseTask(${groupTaskId})">Close Task</button>`;
+    }
+    footer.innerHTML = footerHtml;
+
+  } catch (e) {
+    body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--error);">Failed to load task details: ${escapeHtml(e.message)}</div>`;
+    footer.innerHTML = '<button class="btn btn-outline btn-sm" onclick="gtDashDetailClose()">Close</button>';
+  }
+}
+
+function gtDashDetailClose() {
+  const overlay = document.getElementById('gt-dash-detail-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+async function gtDashCloseTask(groupTaskId) {
+  showConfirmModal({
+    title: 'Close Group Task',
+    message: 'Are you sure you want to close this group task? Pending assignments will remain but no new completions can be recorded.',
+    confirmText: 'Close Task',
+    confirmClass: 'btn-danger',
+    onConfirm: async () => {
+      try {
+        const resp = await fetch(`${IO_API_BASE}/group-tasks/${groupTaskId}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (!resp.ok) throw new Error('Failed');
+        showToast('Group task closed', 'success');
+        gtDashDetailClose();
+        // Refresh dashboard data
+        await initHelmDashboard();
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+  });
 }
