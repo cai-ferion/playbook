@@ -804,7 +804,7 @@ router.patch("/coaching/:id", async (req: Request, res: Response) => {
 router.delete("/coaching/:id", async (req: Request, res: Response) => {
   try {
     // Admin-gated: only admins can delete coaching logs
-    const actorOhr = req.headers['x-actor-ohr'] as string;
+    const actorOhr = (req.headers['x-actor-ohr'] as string) || req.body?.actor_ohr;
     if (!actorOhr || !ADMIN_OHRS.includes(String(actorOhr))) {
       return res.status(403).json({ error: "Only admin users can delete coaching logs" });
     }

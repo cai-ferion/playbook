@@ -3454,3 +3454,6 @@
 - [x] Update purge preview endpoint to accept date range
 - [x] Update purge execution to delete within date range
 - [x] Update frontend preview and confirm logic for date range
+
+## Bug Fix — Coaching Delete Admin Check
+- [x] Fix: Coaching delete endpoint checked x-actor-ohr header but frontend sends actor_ohr in body — now checks both
