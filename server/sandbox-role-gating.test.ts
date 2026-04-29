@@ -331,7 +331,7 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
 describe("Cache Version Alignment", () => {
   it("sandbox.js cache version is bumped to v120", () => {
-    expect(indexHtml).toContain("sandbox.js?v=123");
+    expect(indexHtml).toContain("sandbox.js?v=124");
   });
 
   it("STATUSES array uses dash-format for Pending statuses", () => {

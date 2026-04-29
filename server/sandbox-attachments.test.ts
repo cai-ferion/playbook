@@ -157,6 +157,6 @@ describe("Sandbox Attachment — Review Area Preview", () => {
 
 describe("Sandbox Attachment — Cache Version", () => {
   it("sandbox.js cache version is bumped to v115", () => {
-    expect(indexHtml).toContain("sandbox.js?v=123");
+    expect(indexHtml).toContain("sandbox.js?v=124");
   });
 });

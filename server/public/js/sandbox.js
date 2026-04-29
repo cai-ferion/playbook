@@ -26,6 +26,7 @@ const SANDBOX_MOD = {
   _reviewPgFilter: '',     // Review Area Planning Group filter
   _reviewTeamToggle: 'all', // Review Area All|My Team toggle (admin only)
   _inputTeamToggle: 'all', // Input Portal All|My Team toggle (admin only)
+  _adminEditId: null,       // admin inline edit tracking for Input Portal
 
   STATUSES: [
     'Pending - Initial Review',
@@ -539,83 +540,161 @@ function sandboxBuildDetailPanel(ins) {
     !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id) &&
     !(window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
 
+  // Admin check — admins can edit all fields inline
+  const _isAdmin = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
+  const isEditing = _isAdmin && SANDBOX_MOD._adminEditId === ins.insight_id;
+
   let html = `<div class="sandbox-detail-panel">`;
+
+  // Admin edit toggle button
+  if (_isAdmin) {
+    html += `<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">`;
+    if (isEditing) {
+      html += `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();sandboxAdminCancelEdit()" style="font-size:11px;margin-right:6px;">Cancel</button>`;
+      html += `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();sandboxAdminSaveEdit('${escapeAttr(ins.insight_id)}')" style="font-size:11px;">Save Changes</button>`;
+    } else {
+      html += `<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();sandboxAdminStartEdit('${escapeAttr(ins.insight_id)}')" style="font-size:11px;display:flex;align-items:center;gap:4px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit
+      </button>`;
+    }
+    html += `</div>`;
+  }
+
+  // Helper: build a select dropdown for edit mode
+  function _sel(id, current, options) {
+    return `<select class="form-select" id="${id}" onclick="event.stopPropagation()" style="font-size:12px;padding:4px 8px;">${options.map(o => `<option value="${escapeAttr(o)}"${o === current ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>`;
+  }
+  function _inp(id, current, type) {
+    if (type === 'textarea') return `<textarea class="form-textarea" id="${id}" onclick="event.stopPropagation()" rows="3" style="font-size:12px;">${escapeHtml(current || '')}</textarea>`;
+    return `<input type="text" class="form-input" id="${id}" onclick="event.stopPropagation()" value="${escapeAttr(current || '')}" style="font-size:12px;padding:4px 8px;">`;
+  }
+
+  // Status options for admin edit
+  const allStatuses = SANDBOX_MOD.STATUSES;
 
   // Section: Insight Details
   html += `<div class="sandbox-detail-section">
     <div class="sandbox-detail-section-title">INSIGHT DETAILS</div>
-    <div class="sandbox-detail-grid">
-      <div class="sandbox-detail-field">
-        <div class="sandbox-detail-field-label">Status</div>
-        <div class="sandbox-detail-field-value"><span class="sandbox-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status || '')}</span></div>
-      </div>
-      <div class="sandbox-detail-field">
-        <div class="sandbox-detail-field-label">Submission Date</div>
-        <div class="sandbox-detail-field-value">${date}</div>
-      </div>
-      <div class="sandbox-detail-field">
-        <div class="sandbox-detail-field-label">Category</div>
-        <div class="sandbox-detail-field-value">${escapeHtml(cat)}</div>
-      </div>
-      <div class="sandbox-detail-field">
-        <div class="sandbox-detail-field-label">Proposal Type</div>
-        <div class="sandbox-detail-field-value">${escapeHtml(ins.proposal_type || '\u2014')}</div>
-      </div>
-      <div class="sandbox-detail-field">
-        <div class="sandbox-detail-field-label">Impact</div>
-        <div class="sandbox-detail-field-value">${escapeHtml(ins.impact_level || ins.impact || '\u2014')}</div>
-      </div>
-      <div class="sandbox-detail-field">
-        <div class="sandbox-detail-field-label">Reach</div>
-        <div class="sandbox-detail-field-value">${escapeHtml(ins.reach || '\u2014')}</div>
-      </div>
-    </div>
+    <div class="sandbox-detail-grid">`;
+
+  // Status
+  html += `<div class="sandbox-detail-field">
+    <div class="sandbox-detail-field-label">Status</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-status', ins.status || '', allStatuses) : `<span class="sandbox-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(ins.status || '')}</span>`}</div>
   </div>`;
+
+  // Submission Date (read-only always)
+  html += `<div class="sandbox-detail-field">
+    <div class="sandbox-detail-field-label">Submission Date</div>
+    <div class="sandbox-detail-field-value">${date}</div>
+  </div>`;
+
+  // Category
+  html += `<div class="sandbox-detail-field">
+    <div class="sandbox-detail-field-label">Category</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-category', cat, ['Efficiency', 'Effectiveness']) : escapeHtml(cat)}</div>
+  </div>`;
+
+  // Proposal Type
+  html += `<div class="sandbox-detail-field">
+    <div class="sandbox-detail-field-label">Proposal Type</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-proposal-type', ins.proposal_type || '', ['IS Impacting', 'Process/Workflow Related', 'Tooling']) : escapeHtml(ins.proposal_type || '\u2014')}</div>
+  </div>`;
+
+  // Impact
+  html += `<div class="sandbox-detail-field">
+    <div class="sandbox-detail-field-label">Impact</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-impact', ins.impact_level || ins.impact || '', ['High', 'Medium', 'Low']) : escapeHtml(ins.impact_level || ins.impact || '\u2014')}</div>
+  </div>`;
+
+  // Reach
+  html += `<div class="sandbox-detail-field">
+    <div class="sandbox-detail-field-label">Reach</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-reach', ins.reach || '', ['High', 'Medium', 'Low']) : escapeHtml(ins.reach || '\u2014')}</div>
+  </div>`;
+
+  html += `</div></div>`;
 
   // Section: Title & Content
   html += `<div class="sandbox-detail-section">
     <div class="sandbox-detail-section-title">CONTENT</div>
-    <div class="sandbox-detail-grid two-col">
-      <div class="sandbox-detail-field full-width">
-        <div class="sandbox-detail-field-label">Title</div>
-        <div class="sandbox-detail-field-value">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</div>
-      </div>
-      <div class="sandbox-detail-field full-width">
-        <div class="sandbox-detail-field-label">Problem Statement</div>
-        <div class="sandbox-detail-field-value multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</div>
-      </div>
-      <div class="sandbox-detail-field full-width">
-        <div class="sandbox-detail-field-label">Proposed Changes</div>
-        <div class="sandbox-detail-field-value multiline">${escapeHtml(ins.proposed_change || ins.impact || '\u2014')}</div>
-      </div>
-    </div>
+    <div class="sandbox-detail-grid two-col">`;
+
+  // Title
+  html += `<div class="sandbox-detail-field full-width">
+    <div class="sandbox-detail-field-label">Title</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _inp('sbox-edit-title', ins.title || ins.insight_title || '', 'text') : escapeHtml(ins.title || ins.insight_title || '\u2014')}</div>
   </div>`;
 
+  // Problem Statement
+  html += `<div class="sandbox-detail-field full-width">
+    <div class="sandbox-detail-field-label">Problem Statement</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _inp('sbox-edit-problem', ins.description || ins.problem_statement || '', 'textarea') : `<span class="multiline">${escapeHtml(ins.description || ins.problem_statement || '\u2014')}</span>`}</div>
+  </div>`;
+
+  // Proposed Changes
+  html += `<div class="sandbox-detail-field full-width">
+    <div class="sandbox-detail-field-label">Proposed Changes</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _inp('sbox-edit-proposed', ins.proposed_change || '', 'textarea') : `<span class="multiline">${escapeHtml(ins.proposed_change || '\u2014')}</span>`}</div>
+  </div>`;
+
+  html += `</div></div>`;
+
   // Section: Implementation Standards
-  if (ins.implementation_standards) {
+  const IMPL_STANDARDS = [
+    'Adult Sexual Solicitation & Sexually Explicit Language', 'Adult Sexual Exploitation',
+    'Adult Nudity & Sexual Activity', 'Bullying & Harassment',
+    'Child Sexual Exploitation, Abuse, & Nudity', 'Coordinating Harm & Promoting Crime',
+    'Cybersecurity', 'Dangerous Individuals & Organizations',
+    'Fraud, Scam, & Deceptive Practices', 'Hateful Conduct',
+    'Hate Speech Descriptive Labelling', 'Human Exploitation',
+    'Manipulated Media', 'Misinformation',
+    'Personal Fundraiser Policies & Guidelines', 'Privacy Violations',
+    'Recalled Products', 'RGS - Health & Wellness',
+    'RGS - Tobacco & Alcohol', 'RGS - Weapons, Ammunition, & Explosives',
+    'RGS - Online Gambling & Games', 'RGS - Drugs & Pharmaceuticals',
+    'Spam', 'SSI Banking Guidelines',
+    'Suicide, Self-Injury, & Eating Disorders', 'Violence & Incitement',
+    'Violent & Graphic Content'
+  ];
+
+  if (isEditing || ins.implementation_standards) {
     html += `<div class="sandbox-detail-section">
       <div class="sandbox-detail-section-title">IMPLEMENTATION</div>
       <div class="sandbox-detail-grid two-col">
         <div class="sandbox-detail-field full-width">
           <div class="sandbox-detail-field-label">Implementation Standards</div>
-          <div class="sandbox-detail-field-value">${escapeHtml(ins.implementation_standards)}</div>
+          <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-impl', ins.implementation_standards || '', ['', ...IMPL_STANDARDS]) : escapeHtml(ins.implementation_standards)}</div>
         </div>
       </div>
     </div>`;
   }
 
-  // Section: Job IDs (if any)
-  const jobIdEntries = [];
-  for (let i = 1; i <= 10; i++) {
-    if (ins[`job_id_${i}`]) jobIdEntries.push({ num: i, val: ins[`job_id_${i}`] });
-  }
-  if (jobIdEntries.length > 0) {
+  // Section: Job IDs
+  if (isEditing) {
     html += `<div class="sandbox-detail-section">
       <div class="sandbox-detail-section-title">JOB IDS</div>
       <div class="sandbox-detail-grid">
-        ${jobIdEntries.map(j => `<div class="sandbox-detail-field"><div class="sandbox-detail-field-label">Job ID ${j.num}</div><div class="sandbox-detail-field-value" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;">${escapeHtml(j.val)}</div></div>`).join('')}
+        ${Array.from({length:10}, (_,i) => {
+          const val = ins[`job_id_${i+1}`] || '';
+          return `<div class="sandbox-detail-field"><div class="sandbox-detail-field-label">Job ID ${i+1}</div><div class="sandbox-detail-field-value">${_inp('sbox-edit-jobid-'+(i+1), val, 'text')}</div></div>`;
+        }).join('')}
       </div>
     </div>`;
+  } else {
+    const jobIdEntries = [];
+    for (let i = 1; i <= 10; i++) {
+      if (ins[`job_id_${i}`]) jobIdEntries.push({ num: i, val: ins[`job_id_${i}`] });
+    }
+    if (jobIdEntries.length > 0) {
+      html += `<div class="sandbox-detail-section">
+        <div class="sandbox-detail-section-title">JOB IDS</div>
+        <div class="sandbox-detail-grid">
+          ${jobIdEntries.map(j => `<div class="sandbox-detail-field"><div class="sandbox-detail-field-label">Job ID ${j.num}</div><div class="sandbox-detail-field-value" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;">${escapeHtml(j.val)}</div></div>`).join('')}
+        </div>
+      </div>`;
+    }
   }
 
   // Section: Attachments
@@ -627,11 +706,10 @@ function sandboxBuildDetailPanel(ins) {
     ${sandboxRenderReviewTrail(ins, isAgent)}
   </div>`;
 
-  // Admin delete button in Input Portal detail panel
-  const _isAdminDel = typeof currentUser !== 'undefined' && currentUser && (window.ADMIN_OHRS || ['740045023', '740044909']).includes(currentUser.ohr_id);
-  if (_isAdminDel) {
+  // Admin actions: delete button
+  if (_isAdmin) {
     html += `<div class="sandbox-detail-section" style="border-top:1px solid var(--border);padding-top:12px;">
-      <button class="btn btn-danger btn-sm" onclick="sandboxDeleteInsight('${escapeAttr(ins.insight_id)}')">Delete Insight</button>
+      <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();sandboxDeleteInsight('${escapeAttr(ins.insight_id)}')">Delete Insight</button>
     </div>`;
   }
 
@@ -2407,6 +2485,84 @@ async function sandboxDeleteInsight(insightId) {
       }
     }
   });
+}
+
+// ===== Admin Inline Edit (Input Portal) =====
+
+function sandboxAdminStartEdit(insightId) {
+  SANDBOX_MOD._adminEditId = insightId;
+  sandboxRenderTable();
+}
+
+function sandboxAdminCancelEdit() {
+  SANDBOX_MOD._adminEditId = null;
+  sandboxRenderTable();
+}
+
+async function sandboxAdminSaveEdit(insightId) {
+  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+  if (!cu || !(window.ADMIN_OHRS || ['740045023', '740044909']).includes(cu.ohr_id)) {
+    showToast('Only admin users can edit insights', 'error');
+    return;
+  }
+
+  const updates = {};
+
+  // Collect field values from edit form
+  const status = document.getElementById('sbox-edit-status')?.value;
+  const category = document.getElementById('sbox-edit-category')?.value;
+  const proposalType = document.getElementById('sbox-edit-proposal-type')?.value;
+  const impact = document.getElementById('sbox-edit-impact')?.value;
+  const reach = document.getElementById('sbox-edit-reach')?.value;
+  const title = document.getElementById('sbox-edit-title')?.value?.trim();
+  const problem = document.getElementById('sbox-edit-problem')?.value?.trim();
+  const proposed = document.getElementById('sbox-edit-proposed')?.value?.trim();
+  const impl = document.getElementById('sbox-edit-impl')?.value;
+
+  if (status !== undefined) updates.status = status;
+  if (category !== undefined) updates.insight_category = category;
+  if (proposalType !== undefined) updates.proposal_type = proposalType;
+  if (impact !== undefined) updates.impact = impact;
+  if (reach !== undefined) updates.reach = reach;
+  if (title !== undefined) {
+    updates.insight_title = title;
+    updates.title = title; // alias used in frontend
+  }
+  if (problem !== undefined) {
+    updates.problem_statement = problem;
+    updates.description = problem; // alias used in frontend
+  }
+  if (proposed !== undefined) updates.proposed_change = proposed;
+  if (impl !== undefined) updates.implementation_standards = impl;
+
+  // Job IDs
+  for (let i = 1; i <= 10; i++) {
+    const jid = document.getElementById('sbox-edit-jobid-' + i)?.value?.trim();
+    if (jid !== undefined) updates['job_id_' + i] = jid || null;
+  }
+
+  // Timestamp
+  updates.updated_at = new Date().toISOString();
+
+  try {
+    const url = `${IO_API_BASE}/insights/${encodeURIComponent(insightId)}`;
+    const resp = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!resp.ok) throw new Error('Failed to save changes');
+
+    showToast('Insight updated successfully', 'success');
+    SANDBOX_MOD._adminEditId = null;
+
+    // Refresh data and re-render
+    await sandboxFetchInsights();
+    sandboxOmniApply();
+  } catch (e) {
+    console.error('Admin edit save error:', e);
+    showToast('Failed to save: ' + e.message, 'error');
+  }
 }
 
 // ===== Init =====

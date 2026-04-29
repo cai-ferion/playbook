@@ -3332,3 +3332,6 @@
 - [x] Rename "Complete" button text to "Mark as Complete" in Tasks Received table
 - [x] Increase table row height in Task Dashboard to reduce cramped feeling
 - [x] Add Completed/Pending filter to Task Dashboard drill-down modal
+
+## Sandbox Input Portal — Admin Edit All Items
+- [x] Enable Admin users to edit all fields in the inline expansion view of Input Portal
