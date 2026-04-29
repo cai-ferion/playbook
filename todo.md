@@ -3343,3 +3343,7 @@
 
 ## Helm — Group Task Assignment Notifications
 - [x] Send in-app notification to each agent when they are assigned a new group task
+
+## Helm — Tasks Received Table
+- [x] Add Task Title column to the Tasks Received table
+- [x] Add Completion Date column to the Tasks Received table
