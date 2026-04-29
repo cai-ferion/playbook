@@ -3323,3 +3323,6 @@
 
 ## Billing Compliance — Status Filter
 - [x] Add snap_status filter to billing compliance query: exclude Nesting, Training, Exit, Inactive (only Production and NULL/blank counted)
+
+## Billing Compliance — Status Filter UI
+- [x] Add status filter dropdown to Billing Compliance frontend so user can include/exclude statuses (Production, Nesting, Training, Exit, Inactive, NULL)

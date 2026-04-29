@@ -2246,6 +2246,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
 
     // Work week: Saturday to Friday. week_ending = Friday.
     const weDate = new Date(weekEnding + 'T00:00:00Z');
+    if (isNaN(weDate.getTime())) return res.status(400).json({ error: 'Invalid week_ending date' });
     const wsDate = new Date(weDate);
     wsDate.setUTCDate(wsDate.getUTCDate() - 6); // Saturday
     const weekStart = wsDate.toISOString().slice(0, 10);
@@ -2282,14 +2283,19 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
     ];
 
     // 1. Attendance data for this week
-    // Exclude non-billable statuses: Nesting, Training, Exit, Inactive
-    const EXCLUDED_STATUSES = ['Nesting', 'Training', 'Exit', 'Inactive'];
+    // Status filter: accept optional exclude_statuses param (comma-separated), default to Nesting,Training,Exit,Inactive
+    const excludeParam = String(req.query.exclude_statuses || 'Nesting,Training,Exit,Inactive');
+    const EXCLUDED_STATUSES = excludeParam === 'none' ? [] : excludeParam.split(',').map(s => s.trim()).filter(Boolean);
+
+    let statusFilter = sql``;
+    if (EXCLUDED_STATUSES.length > 0) {
+      statusFilter = sql` AND (snap_status IS NULL OR snap_status NOT IN (${sql.join(EXCLUDED_STATUSES.map(s => sql`${s}`), sql`, `)}))`;
+    }
     const attResult: any = await db.execute(
       sql`SELECT ohr_id, log_date, tag, ot_hours, planning_group, role, snap_status
           FROM io_attendance
           WHERE log_date >= ${weekStart} AND log_date <= ${weekEnd}
-            AND planning_group IS NOT NULL AND role IS NOT NULL
-            AND (snap_status IS NULL OR snap_status NOT IN ('Nesting', 'Training', 'Exit', 'Inactive'))`
+            AND planning_group IS NOT NULL AND role IS NOT NULL${statusFilter}`
     );
     const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
 
@@ -2565,7 +2571,8 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
       is_current_week: isCurrentWeek,
       is_completed_week: isCompletedWeek,
       compliance: complianceRows,
-      totals
+      totals,
+      excluded_statuses: EXCLUDED_STATUSES
     });
   } catch (err: any) {
     console.error("[IO API] billing-compliance error:", err);

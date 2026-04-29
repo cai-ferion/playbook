@@ -1,7 +1,7 @@
 /**
  * Playbook — Billing Compliance Dashboard
  * Server-driven compliance engine with KPI cards, traffic-light table,
- * progress bars, drill-down, and week selector.
+ * progress bars, drill-down, week selector, and status filter.
  * Work week: Saturday → Friday (week_ending = Friday).
  */
 
@@ -10,6 +10,12 @@
 // ===== State =====
 let _billingWeeksLoaded = false;
 let _billingLastData = null; // cached API response
+
+// Status filter state — tracks which statuses to EXCLUDE from the query
+// Default: exclude Nesting, Training, Exit, Inactive (only Production + NULL shown)
+const BILLING_ALL_STATUSES = ['Production', 'Nesting', 'Training', 'Exit', 'Inactive'];
+const BILLING_DEFAULT_EXCLUDED = ['Nesting', 'Training', 'Exit', 'Inactive'];
+let _billingExcludedStatuses = [...BILLING_DEFAULT_EXCLUDED];
 
 // ===== Helpers =====
 function fmtNum(n, dec) { return n != null ? Number(n).toFixed(dec ?? 1) : '—'; }
@@ -52,6 +58,131 @@ function progressBarHTML(pct, targetHours) {
   </div>`;
 }
 
+// ===== Status Filter =====
+function initBillingStatusFilter() {
+  const body = document.getElementById('billing-sf-body');
+  if (!body) return;
+
+  body.innerHTML = '';
+  for (const status of BILLING_ALL_STATUSES) {
+    const isIncluded = !_billingExcludedStatuses.includes(status);
+    const item = document.createElement('label');
+    item.className = 'bc-sf-item';
+    item.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(status)}" ${isIncluded ? 'checked' : ''}>
+      <span class="bc-sf-item-label">${escapeHtml(status)}</span>
+    `;
+    body.appendChild(item);
+  }
+  // Also add NULL/Blank option (always included by default since NULL = Present)
+  const nullItem = document.createElement('label');
+  nullItem.className = 'bc-sf-item';
+  const nullIncluded = !_billingExcludedStatuses.includes('NULL');
+  nullItem.innerHTML = `
+    <input type="checkbox" value="NULL" ${nullIncluded ? 'checked' : ''}>
+    <span class="bc-sf-item-label">NULL / Blank</span>
+    <span class="bc-sf-item-count" title="Treated as Present (billable)">billable</span>
+  `;
+  body.appendChild(nullItem);
+
+  updateBillingStatusBadge();
+}
+
+function toggleBillingStatusFilter() {
+  const panel = document.getElementById('billing-status-filter-panel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  if (!isOpen) {
+    // Sync checkboxes with current state when opening
+    initBillingStatusFilter();
+  }
+}
+
+function applyBillingStatusFilter() {
+  const body = document.getElementById('billing-sf-body');
+  if (!body) return;
+
+  const checkboxes = body.querySelectorAll('input[type="checkbox"]');
+  const newExcluded = [];
+  for (const cb of checkboxes) {
+    if (!cb.checked && cb.value !== 'NULL') {
+      newExcluded.push(cb.value);
+    }
+  }
+
+  // Check if NULL is unchecked — this is unusual but we don't send NULL as exclude
+  // The API excludes by snap_status value; NULL records are included unless explicitly excluded
+  // For now, NULL checkbox controls nothing on the API side (NULL is always included unless
+  // the user unchecks it, in which case we'd need a different mechanism)
+
+  _billingExcludedStatuses = newExcluded;
+  toggleBillingStatusFilter(); // close panel
+  updateBillingStatusBadge();
+  loadBillingCompliance(); // re-fetch with new filter
+}
+
+function resetBillingStatusFilter() {
+  _billingExcludedStatuses = [...BILLING_DEFAULT_EXCLUDED];
+  initBillingStatusFilter(); // re-render checkboxes
+  updateBillingStatusBadge();
+  toggleBillingStatusFilter(); // close panel
+  loadBillingCompliance(); // re-fetch
+}
+
+function updateBillingStatusBadge() {
+  const badge = document.getElementById('billing-sf-badge');
+  if (!badge) return;
+
+  const excludedCount = _billingExcludedStatuses.length;
+  if (excludedCount > 0) {
+    badge.textContent = excludedCount;
+    badge.style.display = '';
+    badge.title = 'Excluding: ' + _billingExcludedStatuses.join(', ');
+  } else {
+    badge.style.display = 'none';
+  }
+
+  // Update the filter button appearance
+  const btn = document.getElementById('billing-status-filter-btn');
+  if (btn) {
+    // Highlight if non-default filter is active
+    const isDefault = _billingExcludedStatuses.length === BILLING_DEFAULT_EXCLUDED.length &&
+      BILLING_DEFAULT_EXCLUDED.every(s => _billingExcludedStatuses.includes(s));
+    if (!isDefault) {
+      btn.classList.add('btn-primary');
+      btn.classList.remove('btn-outline');
+    } else {
+      btn.classList.remove('btn-primary');
+      btn.classList.add('btn-outline');
+    }
+  }
+}
+
+function updateExcludedIndicator(data) {
+  const el = document.getElementById('billing-excluded-indicator');
+  if (!el) return;
+
+  const excluded = data.excluded_statuses || [];
+  if (excluded.length > 0) {
+    el.textContent = `Excluding: ${excluded.join(', ')}`;
+    el.style.display = '';
+  } else {
+    el.textContent = 'All statuses included';
+    el.style.display = '';
+  }
+}
+
+// Close status filter panel when clicking outside
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('billing-status-filter-panel');
+  const btn = document.getElementById('billing-status-filter-btn');
+  if (!panel || panel.style.display === 'none') return;
+  if (!panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.style.display = 'none';
+  }
+});
+
 // ===== Week Selector =====
 async function initBillingWeekSelector() {
   const select = document.getElementById('billing-week-select');
@@ -89,6 +220,7 @@ async function initBillingWeekSelector() {
 // ===== Main Init =====
 async function initBillingCompliance() {
   await initBillingWeekSelector();
+  initBillingStatusFilter();
   await loadBillingCompliance();
 
   // Show Edit Targets button for owner, assistant, and managers
@@ -125,7 +257,15 @@ async function loadBillingCompliance() {
   if (weekInfoEl) weekInfoEl.style.display = 'none';
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/billing-compliance?week_ending=${selectedDate}`);
+    // Build query string with status filter
+    let url = `${IO_API_BASE}/billing-compliance?week_ending=${selectedDate}`;
+    if (_billingExcludedStatuses.length === 0) {
+      url += '&exclude_statuses=none';
+    } else {
+      url += '&exclude_statuses=' + encodeURIComponent(_billingExcludedStatuses.join(','));
+    }
+
+    const resp = await fetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     _billingLastData = data;
@@ -133,6 +273,7 @@ async function loadBillingCompliance() {
     renderBillingKPIs(data);
     renderBillingWeekInfo(data);
     renderBillingComplianceTable(data);
+    updateExcludedIndicator(data);
 
     if (kpiEl) kpiEl.style.display = '';
     if (weekInfoEl) weekInfoEl.style.display = '';

@@ -48,6 +48,17 @@ describe('Billing Compliance Dashboard V3', () => {
       expect(html).toContain('id="billing-days-badge"');
     });
 
+    it('has status filter button and panel', () => {
+      expect(html).toContain('id="billing-status-filter-btn"');
+      expect(html).toContain('id="billing-status-filter-panel"');
+      expect(html).toContain('id="billing-sf-body"');
+      expect(html).toContain('id="billing-sf-badge"');
+    });
+
+    it('has excluded status indicator in week info bar', () => {
+      expect(html).toContain('id="billing-excluded-indicator"');
+    });
+
     it('[V3] OT Dashboard section has been removed', () => {
       expect(html).not.toContain('id="ot-dashboard-section"');
       expect(html).not.toContain('OT Dashboard');
@@ -80,6 +91,36 @@ describe('Billing Compliance Dashboard V3', () => {
     it('fetches from /billing-compliance API (not client-side calculation)', () => {
       expect(js).toContain('/billing-compliance?week_ending=');
       expect(js).toContain('/billing-compliance/weeks');
+    });
+
+    it('defines status filter functions', () => {
+      expect(js).toContain('function initBillingStatusFilter()');
+      expect(js).toContain('function toggleBillingStatusFilter()');
+      expect(js).toContain('function applyBillingStatusFilter()');
+      expect(js).toContain('function resetBillingStatusFilter()');
+      expect(js).toContain('function updateBillingStatusBadge()');
+      expect(js).toContain('function updateExcludedIndicator(data)');
+    });
+
+    it('defines all status constants', () => {
+      expect(js).toContain("'Production'");
+      expect(js).toContain("'Nesting'");
+      expect(js).toContain("'Training'");
+      expect(js).toContain("'Exit'");
+      expect(js).toContain("'Inactive'");
+    });
+
+    it('defaults to excluding Nesting, Training, Exit, Inactive', () => {
+      expect(js).toContain("BILLING_DEFAULT_EXCLUDED = ['Nesting', 'Training', 'Exit', 'Inactive']");
+    });
+
+    it('passes exclude_statuses param to API', () => {
+      expect(js).toContain('exclude_statuses=');
+      expect(js).toContain('exclude_statuses=none');
+    });
+
+    it('renders excluded_statuses indicator from API response', () => {
+      expect(js).toContain('data.excluded_statuses');
     });
 
     it('does NOT use old billing code constants', () => {
@@ -148,6 +189,15 @@ describe('Billing Compliance Dashboard V3', () => {
     it('defines drill-down summary styles', () => {
       expect(css).toContain('.bc-drill-summary');
       expect(css).toContain('.bc-drill-stat');
+    });
+
+    it('defines status filter panel styles', () => {
+      expect(css).toContain('.bc-status-filter-panel');
+      expect(css).toContain('.bc-sf-header');
+      expect(css).toContain('.bc-sf-body');
+      expect(css).toContain('.bc-sf-item');
+      expect(css).toContain('.bc-sf-footer');
+      expect(css).toContain('.bc-sf-badge');
     });
 
     it('defines KPI state classes', () => {

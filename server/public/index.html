@@ -8,7 +8,7 @@
   <!-- Preconnect to CDN origins for faster script loading -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin>
-  <link rel="stylesheet" href="css/styles.css?v=137">
+  <link rel="stylesheet" href="css/styles.css?v=138">
   <link rel="stylesheet" href="css/input-redesign.css?v=121">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
@@ -592,6 +592,26 @@
                 <option value="">Select Week Ending</option>
               </select>
             </div>
+            <!-- Status Filter Dropdown -->
+            <div class="bc-status-filter-wrap" style="position:relative;">
+              <button class="btn btn-outline btn-sm" id="billing-status-filter-btn" onclick="toggleBillingStatusFilter()" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span>Status Filter</span>
+                <span class="bc-sf-badge" id="billing-sf-badge" style="display:none;"></span>
+              </button>
+              <div class="bc-status-filter-panel" id="billing-status-filter-panel" style="display:none;">
+                <div class="bc-sf-header">
+                  <span class="bc-sf-title">Include Statuses</span>
+                  <button class="bc-sf-close" onclick="toggleBillingStatusFilter()" type="button">&times;</button>
+                </div>
+                <div class="bc-sf-body" id="billing-sf-body"></div>
+                <div class="bc-sf-footer">
+                  <button class="btn btn-sm bc-sf-apply" id="billing-sf-apply" onclick="applyBillingStatusFilter()" type="button">Apply</button>
+                  <button class="btn btn-sm btn-outline bc-sf-reset" onclick="resetBillingStatusFilter()" type="button">Reset</button>
+                </div>
+              </div>
+            </div>
+
             <button class="btn btn-outline btn-sm" id="billing-edit-targets-btn" onclick="openBillingTargetsEditor()" style="display:none;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Edit Targets
@@ -668,6 +688,7 @@
           <div id="billing-week-info" style="display:none;margin-bottom:12px;">
             <span id="billing-week-range" style="font-size:12px;color:var(--text-secondary);"></span>
             <span id="billing-days-badge" style="margin-left:12px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span>
+            <span id="billing-excluded-indicator" style="margin-left:12px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;background:rgba(107,114,128,0.1);color:var(--fg-muted);"></span>
           </div>
 
           <!-- Compliance Table -->
@@ -2070,7 +2091,7 @@
   <script src="js/notifications.js?v=107"></script>
   <script src="js/maintenance.js?v=105"></script>
   <script src="js/admin.js?v=109"></script>
-  <script src="js/billing.js?v=137"></script>
+  <script src="js/billing.js?v=138"></script>
   <script src="js/billing-v2.js?v=122"></script>
   <script src="js/billing-v2-page.js?v=101"></script>
   <script src="js/role-change.js?v=103"></script>
