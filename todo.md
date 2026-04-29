@@ -3409,3 +3409,8 @@
 - [x] Import CAP 1-3 records into io_corrective_actions table (12 records: 3 CAP 1, 6 CAP 2, 3 CAP 3)
 - [x] Import CAP 0 records as General Coaching into io_coaching table (27 records)
 - [x] Verify data integrity after import
+
+## Tardiness — Upload Failed Bug Fix
+- [x] Fix: primary_business_unit column doesn't exist in io_employees (replaced with department)
+- [x] Fix: Actual Login column contains Excel serial numbers (e.g., 46112.56) — added Excel serial-to-datetime conversion
+- [x] Fix: Department gating was rejecting all records ('Ops' not in ALLOWED_DEPTS) — removed gating

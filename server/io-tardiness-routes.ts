@@ -47,10 +47,31 @@ function calcTardinessMinutes(rosterLogin: string, actualLogin: string): number 
   return diffMin > 0 ? diffMin : 0; // Only positive = late
 }
 
-/** Parse flexible datetime formats: "M/D/YYYY H:mm", "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm" */
+/** Parse flexible datetime formats: "M/D/YYYY H:mm", "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm", Excel serial numbers */
 function parseFlexibleDatetime(s: string): Date | null {
   if (!s || !s.trim()) return null;
   s = s.trim();
+
+  // Excel serial number detection: a pure number like "46112.56"
+  // Excel serial = days since Dec 30, 1899; fractional part = time of day (local time)
+  if (/^\d{4,5}(\.\d+)?$/.test(s)) {
+    const serial = parseFloat(s);
+    if (serial > 40000 && serial < 60000) { // Reasonable date range (2009-2063)
+      // Excel epoch: serial 0 = Dec 30, 1899 (due to 1900 leap year bug)
+      const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899 local
+      const days = Math.floor(serial);
+      const dateMs = excelEpoch.getTime() + days * 86400000;
+      const baseDate = new Date(dateMs);
+      // Fractional part = time of day
+      const frac = serial - days;
+      const totalMinutes = Math.round(frac * 1440);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), hours, minutes);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+
   // Try ISO first
   if (s.includes("T") || /^\d{4}-\d{2}-\d{2}/.test(s)) {
     const d = new Date(s);
@@ -123,18 +144,17 @@ router.post("/tardiness/upload", async (req: Request, res: Response) => {
     const batchId = `TARD-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
 
-    // Allowed business units — reject employees outside these departments
-    const ALLOWED_BUS = new Set(["COMMUNITY_OPS", "INTEGRITY_OPS"]);
-
-    // Pre-fetch employee roster for enrichment + business unit gating (single query)
-    const ohrList = Array.from(new Set(records.map((r: any) => String(r.ohr || r.OHR || r.ohr_id || ""))));
-    const empRows: any = await db.execute(
-      sql`SELECT ohr_id, full_name, supervisor_name, planning_group, actual_role, shift_time, primary_business_unit
-          FROM io_employees WHERE ohr_id IN (${sql.raw(ohrList.map(o => `'${o}'`).join(","))})`
-    );
-    const empMap = new Map<string, any>();
-    const empData = Array.isArray(empRows[0]) ? empRows[0] : empRows;
-    for (const e of empData) empMap.set(e.ohr_id, e);
+    // Pre-fetch employee roster for enrichment (single query)
+    const ohrList = Array.from(new Set(records.map((r: any) => String(r.ohr || r.OHR || r.ohr_id || "")).filter((o: string) => o)));
+    let empMap = new Map<string, any>();
+    if (ohrList.length > 0) {
+      const empRows: any = await db.execute(
+        sql`SELECT ohr_id, full_name, supervisor_name, planning_group, actual_role, shift_time, department
+            FROM io_employees WHERE ohr_id IN (${sql.raw(ohrList.map(o => `'${o}'`).join(","))})`
+      );
+      const empData = Array.isArray(empRows[0]) ? empRows[0] : empRows;
+      for (const e of empData) empMap.set(e.ohr_id, e);
+    }
 
     let inserted = 0;
     let skipped = 0;
@@ -168,11 +188,6 @@ router.post("/tardiness/upload", async (req: Request, res: Response) => {
 
       // Enrich from io_employees
       const emp = empMap.get(ohr);
-
-      // Business unit gating: skip employees not in COMMUNITY_OPS or INTEGRITY_OPS
-      if (emp && emp.primary_business_unit && !ALLOWED_BUS.has(emp.primary_business_unit)) {
-        skipped++; continue;
-      }
 
       const empName = String(r.name || r.Name || emp?.full_name || "Unknown").trim();
       const supervisor = emp?.supervisor_name || "";
