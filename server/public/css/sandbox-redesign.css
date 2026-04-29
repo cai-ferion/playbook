@@ -1335,3 +1335,183 @@
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* ===== TL TEAM ANALYTICS — Side-by-side layout ===== */
+#view-sandbox-input .sandbox-dual-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+#view-sandbox-input .sandbox-main-col {
+  flex: 1;
+  min-width: 0;
+}
+#view-sandbox-input .sandbox-analytics-col {
+  width: 420px;
+  flex-shrink: 0;
+}
+@media (max-width: 1200px) {
+  #view-sandbox-input .sandbox-dual-layout {
+    flex-direction: column;
+  }
+  #view-sandbox-input .sandbox-analytics-col {
+    width: 100%;
+  }
+}
+
+.sandbox-analytics-panel {
+  background: var(--sandbox-surface);
+  border: 1px solid var(--sandbox-border);
+  border-radius: var(--sandbox-radius);
+  box-shadow: var(--sandbox-shadow-sm);
+  overflow: hidden;
+  animation: sandboxFadeUp 0.3s ease-out;
+}
+.sandbox-analytics-header {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-bottom: 1px solid var(--sandbox-border);
+  padding: 14px 16px;
+}
+.sandbox-analytics-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sandbox-text);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sandbox-analytics-title::before {
+  content: '';
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--sandbox-accent), #7DD3FC);
+  flex-shrink: 0;
+}
+.sandbox-analytics-subtitle {
+  font-size: 11px;
+  color: var(--sandbox-text-muted);
+  margin-top: 2px;
+}
+
+/* Analytics table */
+.sandbox-analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.sandbox-analytics-table th {
+  padding: 8px 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sandbox-text-muted);
+  background: var(--sandbox-surface-alt);
+  border-bottom: 1px solid var(--sandbox-border);
+  text-align: center;
+  white-space: nowrap;
+}
+.sandbox-analytics-table th:first-child {
+  text-align: left;
+  padding-left: 14px;
+}
+.sandbox-analytics-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--sandbox-border-subtle);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.sandbox-analytics-table td:first-child {
+  text-align: left;
+  padding-left: 14px;
+  font-weight: 600;
+  color: var(--sandbox-text);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sandbox-analytics-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sandbox-analytics-table tbody tr:hover {
+  background: var(--sandbox-accent-bg);
+}
+.sandbox-analytics-table tbody tr.sa-expanded {
+  background: rgba(0, 181, 226, 0.06);
+}
+
+/* Approval rate cell coloring */
+.sa-rate-high { color: #10B981; font-weight: 700; }
+.sa-rate-mid { color: #F59E0B; font-weight: 700; }
+.sa-rate-low { color: #EF4444; font-weight: 700; }
+
+/* Totals row */
+.sandbox-analytics-table tfoot td {
+  padding: 8px 10px;
+  font-weight: 700;
+  border-top: 2px solid var(--sandbox-border);
+  background: var(--sandbox-surface-alt);
+  text-align: center;
+  font-size: 12px;
+}
+.sandbox-analytics-table tfoot td:first-child {
+  text-align: left;
+  padding-left: 14px;
+}
+
+/* Drill-down row */
+.sa-drilldown-row td {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+.sa-drilldown-panel {
+  padding: 10px 14px 14px;
+  background: var(--sandbox-surface-alt);
+  border-bottom: 1px solid var(--sandbox-border);
+}
+.sa-drilldown-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sandbox-accent);
+  margin-bottom: 8px;
+}
+.sa-drilldown-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+.sa-drilldown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 11.5px;
+}
+.sa-drilldown-item:last-child { border-bottom: none; }
+.sa-drilldown-id {
+  font-weight: 600;
+  color: var(--sandbox-accent);
+  white-space: nowrap;
+}
+.sa-drilldown-title-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sandbox-text);
+}
+.sa-drilldown-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}

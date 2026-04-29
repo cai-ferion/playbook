@@ -12,9 +12,9 @@
   <link rel="stylesheet" href="css/input-redesign.css?v=121">
   <link rel="stylesheet" href="css/filter-bar.css?v=118">
   <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
-  <link rel="stylesheet" href="css/compass-redesign.css?v=111">
+  <link rel="stylesheet" href="css/compass-redesign.css?v=112">
   <link rel="stylesheet" href="css/regimen-redesign.css?v=100">
-  <link rel="stylesheet" href="css/sandbox-redesign.css?v=107">
+  <link rel="stylesheet" href="css/sandbox-redesign.css?v=108">
   <link rel="stylesheet" href="css/corrective-actions.css?v=7">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <link rel="stylesheet" href="css/tardiness-restyle.css?v=100">
@@ -1404,14 +1404,27 @@
             <div class="loading-text">Loading Insights...</div>
           </div>
 
-          <!-- Table -->
-          <div class="sandbox-table-wrapper">
-            <table class="sandbox-table" id="sandbox-table">
-              <thead id="sandbox-table-head"></thead>
-              <tbody id="sandbox-table-body"></tbody>
-            </table>
+          <!-- Table + TL Team Analytics side-by-side -->
+          <div class="sandbox-dual-layout" id="sandbox-dual-layout">
+            <div class="sandbox-main-col">
+              <div class="sandbox-table-wrapper">
+                <table class="sandbox-table" id="sandbox-table">
+                  <thead id="sandbox-table-head"></thead>
+                  <tbody id="sandbox-table-body"></tbody>
+                </table>
+              </div>
+              <div class="sandbox-pagination" id="sandbox-pagination"></div>
+            </div>
+            <div class="sandbox-analytics-col" id="sandbox-analytics-col" style="display:none;">
+              <div class="sandbox-analytics-panel">
+                <div class="sandbox-analytics-header">
+                  <div class="sandbox-analytics-title">Team Analytics</div>
+                  <div class="sandbox-analytics-subtitle" id="sandbox-analytics-subtitle">Per-agent insight metrics</div>
+                </div>
+                <div id="sandbox-analytics-body"></div>
+              </div>
+            </div>
           </div>
-          <div class="sandbox-pagination" id="sandbox-pagination"></div>
         </div>
       </div>
 
@@ -2109,10 +2122,10 @@
   <script src="js/ca-knowledge-base.js?v=1" defer></script>
   <script src="js/corrective-actions.js?v=13" defer></script>
   <script src="js/compass-omnibar.js?v=104" defer></script>
-  <script src="js/sandbox.js?v=124" defer></script>
+  <script src="js/sandbox.js?v=125" defer></script>
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
   <script src="js/haven.js?v=105" defer></script>
-  <script src="js/helm.js?v=117" defer></script>
+  <script src="js/helm.js?v=118" defer></script>
   <script src="js/group-task.js?v=105" defer></script>
   <script src="js/shift-extension.js?v=100" defer></script>
   <script src="js/helm-dashboard.js?v=102" defer></script>

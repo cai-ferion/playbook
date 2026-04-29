@@ -1960,9 +1960,10 @@
   padding: 0 20px;
 }
 .compass-detail-panel.open {
-  max-height: 3000px;
+  max-height: 5000px;
   opacity: 1;
   padding: 0 20px 16px;
+  overflow-y: visible;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2179,6 +2180,11 @@
   padding-top: 8px;
   margin-top: 4px;
   border-top: 1px solid var(--compass-border-subtle, #F1F5F9);
+  background: var(--compass-surface, #fff);
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-bottom: 4px;
 }
 
 /* ---- Staggered entrance animation ---- */

@@ -363,6 +363,9 @@ function sandboxOmniApply() {
   // Update stats strip
   sandboxRenderStats();
   sandboxRenderTable();
+
+  // Update TL Team Analytics panel (if visible)
+  if (typeof sandboxRenderAnalytics === 'function') sandboxRenderAnalytics();
 }
 
 // ===== All | My Team Toggle (admin only) =====
@@ -2563,6 +2566,156 @@ async function sandboxAdminSaveEdit(insightId) {
     console.error('Admin edit save error:', e);
     showToast('Failed to save: ' + e.message, 'error');
   }
+}
+
+// ===== TL Team Analytics =====
+
+var _saExpandedAgent = null; // drill-down tracking
+
+function sandboxShouldShowAnalytics() {
+  if (typeof currentUser === 'undefined' || !currentUser) return false;
+  const role = currentUser.actual_role;
+  // TLs, Managers, owner, and admins see the analytics panel
+  return role === 'Team Lead' || role === 'Manager' || role === 'Trainer' ||
+    currentUser.ohr_id === '740045023' || (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
+}
+
+function sandboxRenderAnalytics() {
+  const col = document.getElementById('sandbox-analytics-col');
+  const body = document.getElementById('sandbox-analytics-body');
+  const subtitle = document.getElementById('sandbox-analytics-subtitle');
+  if (!col || !body) return;
+
+  if (!sandboxShouldShowAnalytics()) {
+    col.style.display = 'none';
+    return;
+  }
+  col.style.display = '';
+
+  // Use the same visibility-filtered data as the main table
+  const data = SANDBOX_MOD.filtered;
+
+  // Group by agent (ohr_id + submitter name)
+  const agentMap = {};
+  data.forEach(ins => {
+    const key = ins.ohr_id || 'unknown';
+    if (!agentMap[key]) {
+      agentMap[key] = {
+        ohr_id: ins.ohr_id,
+        name: ins.submitter || ins.ohr_id || 'Unknown',
+        submitted: 0,
+        pending_initial: 0,
+        approved_initial: 0,
+        pending_final: 0,
+        approved_final: 0,
+        rejected: 0,
+        insights: []
+      };
+    }
+    const a = agentMap[key];
+    a.submitted++;
+    a.insights.push(ins);
+    const st = (ins.status || '').toLowerCase();
+    if (st === 'pending - initial review') a.pending_initial++;
+    else if (st === 'pending - final review') a.pending_final++;
+    else if (st === 'approved - final review' || st.startsWith('elevated') || st === 'implemented') a.approved_final++;
+    else if (st.startsWith('rejected')) a.rejected++;
+    // "Approved Initial" = anything that passed initial review (pending final + approved final + elevated + implemented)
+    if (st !== 'pending - initial review' && !st.startsWith('rejected - initial')) {
+      // Exclude rejected-initial; everything else passed initial
+      if (!st.startsWith('rejected')) a.approved_initial++;
+    }
+  });
+
+  const agents = Object.values(agentMap).sort((a, b) => b.submitted - a.submitted);
+
+  if (agents.length === 0) {
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--sandbox-text-muted);font-size:12px;">No data for current filters</div>';
+    if (subtitle) subtitle.textContent = 'No agents to display';
+    return;
+  }
+
+  if (subtitle) subtitle.textContent = `${agents.length} agent${agents.length !== 1 ? 's' : ''} \u2022 ${data.length} insight${data.length !== 1 ? 's' : ''}`;
+
+  // Totals
+  const totals = { submitted: 0, pending_initial: 0, approved_initial: 0, pending_final: 0, approved_final: 0, rejected: 0 };
+  agents.forEach(a => {
+    totals.submitted += a.submitted;
+    totals.pending_initial += a.pending_initial;
+    totals.approved_initial += a.approved_initial;
+    totals.pending_final += a.pending_final;
+    totals.approved_final += a.approved_final;
+    totals.rejected += a.rejected;
+  });
+  const totalRate = totals.submitted > 0 ? ((totals.approved_final / totals.submitted) * 100).toFixed(1) : '0.0';
+
+  let html = `<table class="sandbox-analytics-table">
+    <thead><tr>
+      <th>Agent</th><th>Sub</th><th>P.Init</th><th>A.Init</th><th>P.Fin</th><th>A.Fin</th><th>Rej</th><th>Rate</th>
+    </tr></thead><tbody>`;
+
+  agents.forEach(a => {
+    const rate = a.submitted > 0 ? ((a.approved_final / a.submitted) * 100).toFixed(1) : '0.0';
+    const rateClass = parseFloat(rate) >= 60 ? 'sa-rate-high' : parseFloat(rate) >= 30 ? 'sa-rate-mid' : 'sa-rate-low';
+    const isExpanded = _saExpandedAgent === a.ohr_id;
+    const shortName = (a.name || '').split(',')[0] || a.name;
+
+    html += `<tr class="${isExpanded ? 'sa-expanded' : ''}" onclick="sandboxToggleAgentDrill('${escapeAttr(a.ohr_id)}')" title="${escapeAttr(a.name)}">
+      <td>${escapeHtml(shortName)}</td>
+      <td>${a.submitted}</td>
+      <td>${a.pending_initial || '\u2014'}</td>
+      <td>${a.approved_initial || '\u2014'}</td>
+      <td>${a.pending_final || '\u2014'}</td>
+      <td>${a.approved_final || '\u2014'}</td>
+      <td>${a.rejected || '\u2014'}</td>
+      <td class="${rateClass}">${rate}%</td>
+    </tr>`;
+
+    if (isExpanded) {
+      html += `<tr class="sa-drilldown-row"><td colspan="8">${sandboxBuildAgentDrilldown(a)}</td></tr>`;
+    }
+  });
+
+  html += `</tbody><tfoot><tr>
+    <td>Total</td>
+    <td>${totals.submitted}</td>
+    <td>${totals.pending_initial || '\u2014'}</td>
+    <td>${totals.approved_initial || '\u2014'}</td>
+    <td>${totals.pending_final || '\u2014'}</td>
+    <td>${totals.approved_final || '\u2014'}</td>
+    <td>${totals.rejected || '\u2014'}</td>
+    <td>${totalRate}%</td>
+  </tr></tfoot></table>`;
+
+  body.innerHTML = html;
+}
+
+function sandboxToggleAgentDrill(ohrId) {
+  _saExpandedAgent = (_saExpandedAgent === ohrId) ? null : ohrId;
+  sandboxRenderAnalytics();
+}
+
+function sandboxBuildAgentDrilldown(agent) {
+  const insights = agent.insights.sort((a, b) => {
+    const da = a.created_at || '', db_ = b.created_at || '';
+    return db_.localeCompare(da);
+  });
+
+  let items = '';
+  insights.forEach(ins => {
+    const statusColor = sandboxGetStatusColor(ins.status);
+    const shortStatus = (ins.status || '').replace('Rejected - Initial Review ', 'Rej-IR ').replace('Rejected - Final Review ', 'Rej-FR ').replace('Pending - ', 'Pend. ').replace('Approved - ', 'Appr. ');
+    items += `<div class="sa-drilldown-item">
+      <span class="sa-drilldown-id">${escapeHtml(ins.insight_id || '')}</span>
+      <span class="sa-drilldown-title-text">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</span>
+      <span class="sa-drilldown-status" style="background:${statusColor}15;color:${statusColor};">${escapeHtml(shortStatus)}</span>
+    </div>`;
+  });
+
+  return `<div class="sa-drilldown-panel">
+    <div class="sa-drilldown-title">${escapeHtml(agent.name)} \u2014 ${agent.submitted} Insight${agent.submitted !== 1 ? 's' : ''}</div>
+    <div class="sa-drilldown-list">${items || '<div style="color:var(--sandbox-text-muted);font-size:11px;">No insights</div>'}</div>
+  </div>`;
 }
 
 // ===== Init =====

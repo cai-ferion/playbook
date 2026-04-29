@@ -956,6 +956,9 @@ async function helmShowNewRequestForm() {
   `;
 
   overlay.style.display = 'flex';
+
+  // Auto-trigger type change so correct fields show (especially for agents who only see shift_extension)
+  helmOnRequestTypeChange();
 }
 
 function helmOnRequestTypeChange() {

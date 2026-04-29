@@ -3364,3 +3364,9 @@
 - [x] Build OM review UI in Helm Shift Extensions tab (final approve/reject with comments)
 - [x] Send notifications to Agent and TL only when OM approves
 - [x] Show shift extension request status to agents in Helm
+
+## Bug Fixes & Updates — Current Batch
+- [x] Fix: Agents cannot see the "New Request" button in Helm
+- [x] Fix: Coaching inline expansion overflow — Acknowledge button hidden when content is long (make panel scrollable with sticky footer)
+- [x] Update supervisor alignments from Google Sheet into io_employees (361/402 matched, 41 unmatched due to employees/supervisors not in DB)
+- [x] Build TL Team Analytics table in Sandbox Input Portal (side-by-side, per-agent metrics, drill-down, uses existing filters)
