@@ -3448,3 +3448,9 @@
 - [x] Select All / Deselect All buttons in employee checklist
 - [x] Search/filter employees by name in the checklist
 - [x] Dynamic count updates as checkboxes are toggled
+
+## Purge Modal — Date Range Selector
+- [x] Convert Purge modal from single "Starting Date" to date range (From/To)
+- [x] Update purge preview endpoint to accept date range
+- [x] Update purge execution to delete within date range
+- [x] Update frontend preview and confirm logic for date range

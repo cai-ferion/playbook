@@ -1699,8 +1699,17 @@ window.rosterShowPurgeModal = function() {
             </select>
           </div>
           <div style="margin-bottom:20px;">
-            <label class="filter-label" style="display:block;margin-bottom:6px;">Starting Date (inclusive)</label>
-            <input type="date" id="purge-from-date" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
+            <label class="filter-label" style="display:block;margin-bottom:6px;">Date Range</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:11px;color:var(--fg-muted,#5E6C84);display:block;margin-bottom:4px;">From</label>
+                <input type="date" id="purge-from-date" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--fg-muted,#5E6C84);display:block;margin-bottom:4px;">To</label>
+                <input type="date" id="purge-to-date" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
+              </div>
+            </div>
           </div>
           <button onclick="rosterPurgePreview()" class="btn btn-primary btn-sm" style="width:100%;">Preview Affected Records</button>
         </div>
@@ -1716,9 +1725,11 @@ window.rosterShowPurgeModal = function() {
 window.rosterPurgePreview = async function() {
   const ohrId = document.getElementById('purge-employee-select').value;
   const fromDate = document.getElementById('purge-from-date').value;
+  const toDate = document.getElementById('purge-to-date').value;
 
   if (!ohrId) { showToast('Please select an employee.', 'error'); return; }
-  if (!fromDate) { showToast('Please select a starting date.', 'error'); return; }
+  if (!fromDate || !toDate) { showToast('Please select both From and To dates.', 'error'); return; }
+  if (fromDate > toDate) { showToast('From date must be before or equal to To date.', 'error'); return; }
 
   const previewSection = document.getElementById('purge-preview-section');
   previewSection.style.display = 'block';
@@ -1727,7 +1738,7 @@ window.rosterPurgePreview = async function() {
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
     const actorOhr = user.ohr_id || '';
-    const resp = await fetch(`/api/io/attendance-purge-preview?ohr_id=${ohrId}&from_date=${fromDate}&actor_ohr=${actorOhr}`);
+    const resp = await fetch(`/api/io/attendance-purge-preview?ohr_id=${ohrId}&from_date=${fromDate}&to_date=${toDate}&actor_ohr=${actorOhr}`);
     const data = await resp.json();
 
     if (!resp.ok) {
@@ -1800,14 +1811,14 @@ window.rosterPurgePreview = async function() {
 
       <div style="display:flex;gap:12px;">
         <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
-        <button onclick="rosterExecutePurge('${emp.ohr_id}','${fromDate}',${data.total_rows})" class="btn btn-danger btn-sm" style="flex:1;">
+        <button onclick="rosterExecutePurge('${emp.ohr_id}','${fromDate}','${toDate}',${data.total_rows})" class="btn btn-danger btn-sm" style="flex:1;">
           Delete ${data.total_rows} Record${data.total_rows !== 1 ? 's' : ''}
         </button>
       </div>
     `;
 
     // Store for confirm
-    window._purgeTarget = { ohr_id: ohrId, from_date: fromDate, total: data.total_rows, name: emp.full_name };
+    window._purgeTarget = { ohr_id: ohrId, from_date: fromDate, to_date: toDate, total: data.total_rows, name: emp.full_name };
   } catch (err) {
     previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
       <strong>Error:</strong> ${escapeHtml(err.message)}
@@ -1815,9 +1826,9 @@ window.rosterPurgePreview = async function() {
   }
 };
 
-window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
+window.rosterExecutePurge = async function(ohrId, fromDate, toDate, expectedCount) {
   // Double-confirm
-  const confirmed = confirm(`FINAL CONFIRMATION\n\nYou are about to permanently delete ${expectedCount} attendance records for OHR ${ohrId} from ${fromDate} onwards.\n\nThis action CANNOT be undone.\n\nProceed?`);
+  const confirmed = confirm(`FINAL CONFIRMATION\n\nYou are about to permanently delete ${expectedCount} attendance records for OHR ${ohrId} from ${fromDate} to ${toDate}.\n\nThis action CANNOT be undone.\n\nProceed?`);
   if (!confirmed) return;
 
   const previewSection = document.getElementById('purge-preview-section');
@@ -1828,7 +1839,7 @@ window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
     const resp = await fetch('/api/io/attendance-purge', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actor_ohr: user.ohr_id, ohr_id: ohrId, from_date: fromDate }),
+      body: JSON.stringify({ actor_ohr: user.ohr_id, ohr_id: ohrId, from_date: fromDate, to_date: toDate }),
     });
     const data = await resp.json();
 
@@ -1842,7 +1853,7 @@ window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
     previewSection.innerHTML = `
       <div style="padding:16px;background:var(--success-bg,rgba(34,197,94,.1));border:1px solid var(--success,#22C55E);border-radius:var(--radius,6px);color:var(--success,#22C55E);">
         <strong>✓ Purge Complete</strong><br>
-        <span style="font-size:13px;">Successfully deleted <strong>${data.deleted}</strong> attendance record${data.deleted !== 1 ? 's' : ''} for OHR ${ohrId} from ${fromDate} onwards.</span>
+        <span style="font-size:13px;">Successfully deleted <strong>${data.deleted}</strong> attendance record${data.deleted !== 1 ? 's' : ''} for OHR ${ohrId} from ${fromDate} to ${toDate}.</span>
       </div>
       <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;">Close</button>
     `;

@@ -4541,8 +4541,10 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
 
     const ohrId = String(req.query.ohr_id || '').trim();
     const fromDate = String(req.query.from_date || '').trim();
+    const toDate = String(req.query.to_date || '').trim();
     if (!ohrId) return res.status(400).json({ error: "ohr_id is required" });
     if (!fromDate || !/^\d{4}-\d{2}-\d{2}$/.test(fromDate)) return res.status(400).json({ error: "from_date is required (YYYY-MM-DD)" });
+    if (!toDate || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) return res.status(400).json({ error: "to_date is required (YYYY-MM-DD)" });
 
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
@@ -4557,9 +4559,9 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
     }
     const employee = empArr[0];
 
-    // Count matching attendance rows
+    // Count matching attendance rows (within date range)
     const countResult: any = await db.execute(
-      sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}`
+      sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate} AND log_date <= ${toDate}`
     );
     const countArr = Array.isArray(countResult[0]) ? countResult[0] : countResult;
     const totalRows = Number(countArr[0]?.cnt || 0);
@@ -4570,13 +4572,13 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
         employee: { ohr_id: employee.ohr_id, full_name: employee.full_name, actual_role: employee.actual_role, planning_group: employee.planning_group },
         total_rows: 0,
         error: "no_attendance_rows",
-        message: `No attendance records found for ${employee.full_name} (${ohrId}) from ${fromDate} onwards.`
+        message: `No attendance records found for ${employee.full_name} (${ohrId}) from ${fromDate} to ${toDate}.`
       });
     }
 
     // Get date range
     const rangeResult: any = await db.execute(
-      sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}`
+      sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate} AND log_date <= ${toDate}`
     );
     const rangeArr = Array.isArray(rangeResult[0]) ? rangeResult[0] : rangeResult;
     const { min_date, max_date } = rangeArr[0] || {};
@@ -4584,7 +4586,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
     // Get first 20 rows for preview
     const previewRows: any = await db.execute(
       sql`SELECT id, log_date, tag, ot_hours, remarks, snap_planning_group, snap_shift_time, wfm_tag
-          FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}
+          FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate} AND log_date <= ${toDate}
           ORDER BY log_date ASC LIMIT 20`
     );
     const preview = Array.isArray(previewRows[0]) ? previewRows[0] : previewRows;
@@ -4592,7 +4594,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
     // Tag distribution
     const tagResult: any = await db.execute(
       sql`SELECT COALESCE(tag, '(empty)') as tag_name, COUNT(*) as cnt
-          FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}
+          FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate} AND log_date <= ${toDate}
           GROUP BY tag ORDER BY cnt DESC`
     );
     const tagDist = Array.isArray(tagResult[0]) ? tagResult[0] : tagResult;
@@ -4614,17 +4616,18 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
 // DELETE /api/io/attendance-purge - hard delete attendance rows (owner-only)
 router.delete("/attendance-purge", async (req: Request, res: Response) => {
   try {
-    const { actor_ohr, ohr_id, from_date } = req.body;
+    const { actor_ohr, ohr_id, from_date, to_date } = req.body;
     if (String(actor_ohr) !== OWNER_OHR) return res.status(403).json({ error: "Owner-only operation" });
     if (!ohr_id) return res.status(400).json({ error: "ohr_id is required" });
     if (!from_date || !/^\d{4}-\d{2}-\d{2}$/.test(from_date)) return res.status(400).json({ error: "from_date is required (YYYY-MM-DD)" });
+    if (!to_date || !/^\d{4}-\d{2}-\d{2}$/.test(to_date)) return res.status(400).json({ error: "to_date is required (YYYY-MM-DD)" });
 
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
 
     // Count before delete for confirmation
     const countResult: any = await db.execute(
-      sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date}`
+      sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date} AND log_date <= ${to_date}`
     );
     const countArr = Array.isArray(countResult[0]) ? countResult[0] : countResult;
     const totalRows = Number(countArr[0]?.cnt || 0);
@@ -4636,7 +4639,7 @@ router.delete("/attendance-purge", async (req: Request, res: Response) => {
     // Log the purge action to audit log
     await db.insert(ioAuditLog).values({
       record_type: "attendance_purge",
-      record_id: `${ohr_id}_from_${from_date}`,
+      record_id: `${ohr_id}_${from_date}_to_${to_date}`,
       action: "purge",
       field_name: "bulk_delete",
       old_value: `${totalRows} rows`,
@@ -4647,10 +4650,10 @@ router.delete("/attendance-purge", async (req: Request, res: Response) => {
 
     // Execute the delete
     await db.execute(
-      sql`DELETE FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date}`
+      sql`DELETE FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date} AND log_date <= ${to_date}`
     );
 
-    console.log(`[IO API] PURGE: Deleted ${totalRows} attendance rows for ${ohr_id} from ${from_date} onwards (actor: ${actor_ohr})`);
+    console.log(`[IO API] PURGE: Deleted ${totalRows} attendance rows for ${ohr_id} from ${from_date} to ${to_date} (actor: ${actor_ohr})`);
     res.json({ success: true, deleted: totalRows });
   } catch (err: any) {
     console.error("[IO API] attendance-purge error:", err);
