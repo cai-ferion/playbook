@@ -1957,13 +1957,18 @@ window.rosterBulkInsertPreview = async function() {
   if (!fromDate || !toDate) { showToast('Please select both From and To dates.', 'error'); return; }
   if (fromDate > toDate) { showToast('From date must be before or equal to To date.', 'error'); return; }
 
-  // Generate date array
+  // Generate date array using local date math to avoid timezone issues
   const dates = [];
-  let d = new Date(fromDate + 'T00:00:00');
-  const end = new Date(toDate + 'T00:00:00');
-  while (d <= end) {
-    dates.push(d.toISOString().slice(0, 10));
-    d.setDate(d.getDate() + 1);
+  const [fy, fm, fd] = fromDate.split('-').map(Number);
+  const [ey, em, ed] = toDate.split('-').map(Number);
+  let cur = new Date(fy, fm - 1, fd);
+  const endD = new Date(ey, em - 1, ed);
+  while (cur <= endD) {
+    const yyyy = cur.getFullYear();
+    const mm = String(cur.getMonth() + 1).padStart(2, '0');
+    const dd = String(cur.getDate()).padStart(2, '0');
+    dates.push(`${yyyy}-${mm}-${dd}`);
+    cur.setDate(cur.getDate() + 1);
   }
 
   if (dates.length > 31) { showToast('Maximum 31 days allowed per bulk insert.', 'error'); return; }
@@ -1984,7 +1989,7 @@ window.rosterBulkInsertPreview = async function() {
 
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
-    const resp = await fetch('/api/io/insights-bulk-insert-preview', {
+    const resp = await fetch('/api/io/attendance-bulk-insert-preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ actor_ohr: user.ohr_id, dates, employee_filters: filters }),
@@ -1998,41 +2003,64 @@ window.rosterBulkInsertPreview = async function() {
       return;
     }
 
-    let dupHtml = '';
-    if (data.total_duplicate > 0) {
-      dupHtml = `<div style="margin-top:12px;padding:12px;background:#FFF3E0;border:1px solid #FF9800;border-radius:var(--radius,6px);font-size:12px;">
-        <strong style="color:#E65100;">⚠ ${data.total_duplicate} duplicate${data.total_duplicate !== 1 ? 's' : ''} detected</strong> (will be skipped)
-        <div style="max-height:120px;overflow-y:auto;margin-top:8px;">
-          <table style="width:100%;font-size:11px;border-collapse:collapse;">
-            <tr style="border-bottom:1px solid #FFE0B2;"><th style="text-align:left;padding:2px 4px;">OHR</th><th style="text-align:left;padding:2px 4px;">Name</th><th style="text-align:left;padding:2px 4px;">Date</th></tr>
-            ${data.duplicates.map(d => `<tr><td style="padding:2px 4px;">${escapeHtml(d.ohr_id)}</td><td style="padding:2px 4px;">${escapeHtml(d.full_name)}</td><td style="padding:2px 4px;">${escapeHtml(d.date)}</td></tr>`).join('')}
-            ${data.total_duplicate > 50 ? `<tr><td colspan="3" style="padding:4px;color:#E65100;">... and ${data.total_duplicate - 50} more</td></tr>` : ''}
-          </table>
-        </div>
-      </div>`;
+    // Build selectable employee checklist
+    const emps = data.employees || [];
+    let empListHtml = '';
+    for (const emp of emps) {
+      const checked = emp.is_duplicate ? '' : 'checked';
+      const disabled = emp.is_duplicate ? 'disabled' : '';
+      const opacity = emp.is_duplicate ? 'opacity:0.5;' : '';
+      const dupBadge = emp.is_duplicate ? '<span style="font-size:10px;background:#FFF3E0;color:#E65100;padding:1px 5px;border-radius:3px;margin-left:6px;">duplicate</span>' : '';
+      empListHtml += `<tr style="${opacity}border-bottom:1px solid var(--border,#eee);">
+        <td style="padding:4px 6px;text-align:center;"><input type="checkbox" class="bi-emp-check" data-ohr="${escapeAttr(emp.ohr_id)}" ${checked} ${disabled}></td>
+        <td style="padding:4px 6px;font-size:12px;">${escapeHtml(emp.ohr_id)}</td>
+        <td style="padding:4px 6px;font-size:12px;">${escapeHtml(emp.full_name)}${dupBadge}</td>
+        <td style="padding:4px 6px;font-size:12px;color:var(--fg-muted,#666);">${escapeHtml(emp.supervisor)}</td>
+      </tr>`;
     }
 
     previewSection.innerHTML = `
       <div style="padding:16px;background:var(--surface,#f8f9fa);border:1px solid var(--border);border-radius:var(--radius,6px);">
         <h4 style="margin:0 0 12px 0;font-size:14px;">Preview Summary</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:12px;">
           <div><strong>Employees matched:</strong> ${data.total_employees}</div>
           <div><strong>Dates selected:</strong> ${data.total_dates}</div>
-          <div style="color:#22C55E;"><strong>New rows to insert:</strong> ${data.total_new}</div>
-          <div style="color:#F59E0B;"><strong>Duplicates (skipped):</strong> ${data.total_duplicate}</div>
+          <div style="color:#22C55E;"><strong>New (selectable):</strong> <span id="bi-selected-count">${data.total_new}</span></div>
+          <div style="color:#F59E0B;"><strong>Duplicates (grayed):</strong> ${data.total_duplicate}</div>
         </div>
-        ${dupHtml}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <label style="font-size:12px;font-weight:600;">Select employees to insert:</label>
+          <button onclick="biToggleAll(true)" class="btn btn-outline" style="font-size:10px;padding:2px 8px;">Select All</button>
+          <button onclick="biToggleAll(false)" class="btn btn-outline" style="font-size:10px;padding:2px 8px;">Deselect All</button>
+          <input type="text" id="bi-emp-search" placeholder="Search name..." oninput="biFilterEmployees()" style="margin-left:auto;font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:140px;">
+        </div>
+        <div style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius,4px);">
+          <table style="width:100%;border-collapse:collapse;" id="bi-emp-table">
+            <thead><tr style="background:var(--surface-hover,#f0f0f0);position:sticky;top:0;">
+              <th style="padding:4px 6px;width:30px;"></th>
+              <th style="padding:4px 6px;font-size:11px;text-align:left;">OHR</th>
+              <th style="padding:4px 6px;font-size:11px;text-align:left;">Name</th>
+              <th style="padding:4px 6px;font-size:11px;text-align:left;">Supervisor</th>
+            </tr></thead>
+            <tbody>${empListHtml}</tbody>
+          </table>
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:16px;">
         <button onclick="document.getElementById('bulk-insert-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
-        <button onclick="rosterExecuteBulkInsert()" class="btn btn-primary btn-sm" style="flex:1;" ${data.total_new === 0 ? 'disabled' : ''}>
-          Insert ${data.total_new} Row${data.total_new !== 1 ? 's' : ''}
+        <button id="bi-commit-btn" onclick="rosterExecuteBulkInsert()" class="btn btn-primary btn-sm" style="flex:1;">
+          Insert <span id="bi-commit-count">${data.total_new * data.total_dates}</span> Rows
         </button>
       </div>
     `;
 
-    // Store params for execution
-    window._bulkInsertParams = { dates, filters };
+    // Store dates for execution
+    window._bulkInsertDates = dates;
+
+    // Attach change listener to update count
+    document.querySelectorAll('.bi-emp-check').forEach(cb => {
+      cb.addEventListener('change', biUpdateSelectedCount);
+    });
   } catch (err) {
     previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
       <strong>Error:</strong> ${escapeHtml(err.message)}
@@ -2040,19 +2068,53 @@ window.rosterBulkInsertPreview = async function() {
   }
 };
 
+// Helper: toggle all non-disabled checkboxes
+window.biToggleAll = function(state) {
+  document.querySelectorAll('.bi-emp-check:not(:disabled)').forEach(cb => { cb.checked = state; });
+  biUpdateSelectedCount();
+};
+
+// Helper: filter employee rows by search
+window.biFilterEmployees = function() {
+  const q = (document.getElementById('bi-emp-search')?.value || '').toLowerCase();
+  document.querySelectorAll('#bi-emp-table tbody tr').forEach(tr => {
+    const text = tr.textContent.toLowerCase();
+    tr.style.display = text.includes(q) ? '' : 'none';
+  });
+};
+
+// Helper: update selected count display
+function biUpdateSelectedCount() {
+  const checked = document.querySelectorAll('.bi-emp-check:checked:not(:disabled)').length;
+  const dates = window._bulkInsertDates || [];
+  const countEl = document.getElementById('bi-selected-count');
+  const commitCountEl = document.getElementById('bi-commit-count');
+  const commitBtn = document.getElementById('bi-commit-btn');
+  if (countEl) countEl.textContent = checked;
+  if (commitCountEl) commitCountEl.textContent = checked * dates.length;
+  if (commitBtn) commitBtn.disabled = checked === 0;
+}
+
 window.rosterExecuteBulkInsert = async function() {
-  if (!window._bulkInsertParams) return;
-  const { dates, filters } = window._bulkInsertParams;
+  if (!window._bulkInsertDates) return;
+  const dates = window._bulkInsertDates;
+
+  // Collect selected OHRs from checkboxes
+  const selectedOhrs = [];
+  document.querySelectorAll('.bi-emp-check:checked:not(:disabled)').forEach(cb => {
+    selectedOhrs.push(cb.dataset.ohr);
+  });
+  if (selectedOhrs.length === 0) { showToast('No employees selected.', 'error'); return; }
 
   const previewSection = document.getElementById('bi-preview-section');
   previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted,#5E6C84);">Inserting rows...</div>';
 
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
-    const resp = await fetch('/api/io/insights-bulk-insert', {
+    const resp = await fetch('/api/io/attendance-bulk-insert', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actor_ohr: user.ohr_id, dates, employee_filters: filters }),
+      body: JSON.stringify({ actor_ohr: user.ohr_id, dates, selected_ohrs: selectedOhrs }),
     });
     const data = await resp.json();
 
@@ -2065,8 +2127,9 @@ window.rosterExecuteBulkInsert = async function() {
 
     previewSection.innerHTML = `
       <div style="padding:16px;background:var(--success-bg,rgba(34,197,94,.1));border:1px solid var(--success,#22C55E);border-radius:var(--radius,6px);color:var(--success,#22C55E);">
-        <strong>✓ Bulk Insert Complete</strong><br>
+        <strong>\u2713 Bulk Insert Complete</strong><br>
         <span style="font-size:13px;">Successfully inserted <strong>${data.inserted}</strong> attendance row${data.inserted !== 1 ? 's' : ''}. ${data.skipped > 0 ? `(${data.skipped} duplicates skipped)` : ''}</span>
+        <br><span style="font-size:11px;color:var(--fg-muted,#666);">Batch ID: ${escapeHtml(data.batch_id || '')}</span>
       </div>
       <button onclick="document.getElementById('bulk-insert-modal-overlay').remove()" class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;">Close</button>
     `;
@@ -2077,7 +2140,6 @@ window.rosterExecuteBulkInsert = async function() {
     </div>`;
   }
 };
-
 // ===== Undo Last Batch (Admin-only) =====
 
 window.rosterShowUndoBatchModal = async function() {
