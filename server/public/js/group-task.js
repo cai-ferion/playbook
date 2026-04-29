@@ -352,8 +352,9 @@ async function gtWizardSubmit() {
     // Refresh tasks
     await gtFetchGroupTasks();
     await gtFetchMyGroupTasks();
-    // If on received tab, re-render
-    if (HELM.currentBoardTab === 'received') helmApplyReceivedFilters();
+    // Always re-render received tab and switch to it so the new task is visible
+    helmApplyReceivedFilters();
+    if (typeof helmSwitchBoardTab === 'function') helmSwitchBoardTab('received');
 
   } catch (e) {
     console.error('[GT] Submit error:', e);

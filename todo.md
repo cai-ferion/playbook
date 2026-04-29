@@ -3335,3 +3335,8 @@
 
 ## Sandbox Input Portal — Admin Edit All Items
 - [x] Enable Admin users to edit all fields in the inline expansion view of Input Portal
+
+## Helm — Bug Fixes & Revisions
+- [x] Fix: Group task not reflecting in "Tasks Received" after submission
+- [x] Fix: Agents cannot see the Helm nav bar — restore Helm visibility with Tasks Received table for agents
+- [x] Fix: Task Dashboard table too cramped — extend table height/spacing

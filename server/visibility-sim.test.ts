@@ -16,11 +16,11 @@ const indexHtml = readFile("server/public/index.html");
 
 // ── 1. Permission Defaults (server-side) ──
 describe("Visibility — Permission Defaults", () => {
-  it("Agent default does NOT include nav.helm", () => {
-    // The Agent early return line should not set nav.helm
+  it("Agent default DOES include nav.helm", () => {
+    // The Agent early return line should set nav.helm for Task Board visibility
     const agentLine = ioRoutes.match(/if \(role === 'Agent'\) \{[^}]+\}/);
     expect(agentLine).toBeTruthy();
-    expect(agentLine![0]).not.toContain("nav.helm");
+    expect(agentLine![0]).toContain("nav.helm");
   });
 
   it("Agent default does NOT include nav.horizon", () => {

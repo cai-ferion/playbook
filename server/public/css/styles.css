@@ -5639,15 +5639,16 @@ body {
 
 /* Task Dashboard — increase row height for readability */
 #helm-dash-table-body tr {
-  height: 48px;
+  height: 56px;
 }
 #helm-dash-table-body td {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  line-height: 1.5;
 }
 #helm-dash-table-head th {
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 14px;
+  padding-bottom: 14px;
 }
 
 /* Group Task badge in received table — rows are NOT clickable */
