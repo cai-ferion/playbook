@@ -3414,3 +3414,7 @@
 - [x] Fix: primary_business_unit column doesn't exist in io_employees (replaced with department)
 - [x] Fix: Actual Login column contains Excel serial numbers (e.g., 46112.56) — added Excel serial-to-datetime conversion
 - [x] Fix: Department gating was rejecting all records ('Ops' not in ALLOWED_DEPTS) — removed gating
+
+## Tardiness — Absurd Minutes Late Bug
+- [x] Fix: Excel serial actual_login — use time-of-day fraction on roster date (same-day comparison), cap at 480 min
+- [x] Clean up existing bad records (967 + 3 deleted)

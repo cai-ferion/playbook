@@ -40,11 +40,33 @@ function deriveShiftType(rosterLogin: string): string {
 function calcTardinessMinutes(rosterLogin: string, actualLogin: string): number {
   if (!rosterLogin || !actualLogin) return 0;
   const rDate = parseFlexibleDatetime(rosterLogin);
+  if (!rDate) return 0;
+
+  // For Excel serial actual_login, extract only the time-of-day and apply to roster date
+  // This prevents cross-day comparison bugs (e.g., serial date != roster date)
+  const actualTrimmed = actualLogin.trim();
+  if (/^\d{4,5}(\.\d+)?$/.test(actualTrimmed)) {
+    const serial = parseFloat(actualTrimmed);
+    if (serial > 40000 && serial < 60000) {
+      const frac = serial - Math.floor(serial);
+      const totalMinutes = Math.round(frac * 1440);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      // Apply time-of-day to the ROSTER LOGIN date (same day comparison)
+      const aDate = new Date(rDate.getFullYear(), rDate.getMonth(), rDate.getDate(), hours, minutes);
+      const diffMs = aDate.getTime() - rDate.getTime();
+      const diffMin = Math.round(diffMs / 60000);
+      // Cap at reasonable max (480 min = 8 hours) to catch any remaining edge cases
+      return diffMin > 0 ? Math.min(diffMin, 480) : 0;
+    }
+  }
+
   const aDate = parseFlexibleDatetime(actualLogin);
-  if (!rDate || !aDate) return 0;
+  if (!aDate) return 0;
   const diffMs = aDate.getTime() - rDate.getTime();
   const diffMin = Math.round(diffMs / 60000);
-  return diffMin > 0 ? diffMin : 0; // Only positive = late
+  // Cap at reasonable max (480 min = 8 hours)
+  return diffMin > 0 ? Math.min(diffMin, 480) : 0;
 }
 
 /** Parse flexible datetime formats: "M/D/YYYY H:mm", "YYYY-MM-DD HH:mm", "YYYY-MM-DDTHH:mm", Excel serial numbers */
