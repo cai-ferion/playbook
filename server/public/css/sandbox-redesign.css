@@ -1348,10 +1348,10 @@
 }
 #view-sandbox-input .sandbox-dual-layout.analytics-visible .sandbox-main-col {
   flex: 0 1 auto;
-  width: calc(100% - 536px);
+  width: calc(100% - 636px);
 }
 #view-sandbox-input .sandbox-analytics-col {
-  width: 520px;
+  width: 620px;
   flex-shrink: 0;
 }
 @media (max-width: 1200px) {
