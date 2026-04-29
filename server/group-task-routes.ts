@@ -231,6 +231,7 @@ router.get("/my-tasks", async (req: Request, res: Response) => {
         ta.id AS assignment_id,
         ta.status AS assignment_status,
         ta.completed_at,
+        ta.attachment_url,
         gt.id AS group_task_id,
         gt.task_id,
         gt.title,
@@ -304,17 +305,18 @@ router.post("/:id/complete", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
     const groupTaskId = parseInt(req.params.id);
-    const { ohr } = req.body;
+    const { ohr, attachment_url } = req.body;
     if (!ohr || isNaN(groupTaskId)) {
       return res.status(400).json({ error: "ohr and valid task ID required" });
     }
 
     const now = new Date().toISOString();
     const ohrEsc = ohr.replace(/'/g, "''");
+    const attachClause = attachment_url ? `, attachment_url = '${String(attachment_url).replace(/'/g, "''")}'` : '';
 
     const [result] = (await db.execute(sql.raw(`
       UPDATE io_task_assignments
-      SET status = 'Completed', completed_at = '${now}'
+      SET status = 'Completed', completed_at = '${now}'${attachClause}
       WHERE group_task_id = ${groupTaskId}
         AND employee_ohr = '${ohrEsc}'
         AND status = 'Pending'

@@ -3348,3 +3348,9 @@
 - [x] Add Task Title column to the Tasks Received table
 - [x] Add Completion Date column to the Tasks Received table
 - [x] Add "Created By" column to Tasks Received table (show assigner for Single tasks, dash for Group tasks)
+
+## Helm — Task Completion Attachments
+- [x] Add attachment_url column to io_task_assignments and io_tasks tables
+- [x] Update backend completion endpoints to accept file upload and store in S3
+- [x] Update frontend Mark as Complete modal with optional file attachment
+- [x] Add Attachments column to Tasks Received table with view capability

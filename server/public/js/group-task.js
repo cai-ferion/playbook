@@ -428,6 +428,7 @@ helmApplyReceivedFilters = function() {
     group_task_id: g.group_task_id,
     assignment_id: g.assignment_id,
     completed_at: g.completed_at,
+    attachment_url: g.attachment_url,
     _type: 'group',
     _sortDate: g.due_date || g.created_at || '9999',
     _isPending: g.assignment_status === 'Pending',
@@ -474,6 +475,7 @@ function gtRenderUnifiedReceivedTable() {
     <th>Status</th>
     <th>Due Date</th>
     <th>Completed On</th>
+    <th>Attachment</th>
     <th style="width:140px;">Action</th>
   </tr>`;
 
@@ -481,7 +483,7 @@ function gtRenderUnifiedReceivedTable() {
   const pageData = HELM.filteredReceived.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">You have no assigned tasks</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">You have no assigned tasks</div></div></td></tr>';
     helmRenderReceivedPagination();
     return;
   }
@@ -524,6 +526,7 @@ function gtRenderUnifiedReceivedTable() {
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '\u2014')}</span></td>
       <td style="${isOverdue ? 'color:var(--error);font-weight:600;' : ''}">${dueStr}${isOverdue ? ' <span style="font-size:10px;">(Overdue)</span>' : ''}</td>
       <td>${t.completed_at ? new Date(t.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014'}</td>
+      <td>${gtRenderAttachmentCell(t)}</td>
       <td>${actionHtml}</td>
     </tr>`;
   }).join('');
@@ -533,68 +536,183 @@ function gtRenderUnifiedReceivedTable() {
 
 // ===== Completion Confirmation =====
 
-function gtConfirmComplete(groupTaskId) {
-  showConfirmModal({
-    title: 'Mark Task as Completed',
-    message: 'Are you sure you want to mark this task as completed?',
-    detail: 'This action cannot be undone.',
-    confirmText: 'Yes, Complete',
-    confirmClass: 'btn-primary',
-    onConfirm: () => gtDoComplete(groupTaskId)
+// ===== Completion Modal with Optional Attachment =====
+
+function gtShowCompleteModal(type, id) {
+  // type: 'group' or 'single', id: groupTaskId or taskId string
+  const existing = document.getElementById('gt-complete-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'gt-complete-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '9999';
+
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:440px;">
+      <div class="modal-header">
+        <h3 style="color:var(--primary);display:flex;align-items:center;gap:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          Mark Task as Completed
+        </h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to mark this task as completed?</p>
+        <p class="modal-detail" style="margin-top:4px">This action cannot be undone.</p>
+        <div style="margin-top:16px;">
+          <label style="font-size:13px;font-weight:600;color:var(--fg-secondary);display:block;margin-bottom:6px;">Attachment (optional)</label>
+          <div id="gt-complete-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+            <span style="font-size:12px;color:var(--fg-muted);">Click or drag a file here</span>
+            <input type="file" id="gt-complete-file" style="display:none;" accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.pptx,.ppt">
+          </div>
+          <div id="gt-complete-file-preview" style="display:none;margin-top:8px;padding:8px 12px;background:var(--bg-secondary);border-radius:6px;font-size:12px;display:none;align-items:center;gap:8px;">
+            <span id="gt-complete-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+            <button id="gt-complete-file-remove" style="background:none;border:none;color:var(--error);cursor:pointer;font-size:14px;font-weight:700;padding:0 4px;">&times;</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="gt-complete-cancel">Cancel</button>
+        <button class="btn btn-primary" id="gt-complete-ok">Yes, Complete</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  let selectedFile = null;
+  const fileInput = document.getElementById('gt-complete-file');
+  const dropZone = document.getElementById('gt-complete-drop-zone');
+  const preview = document.getElementById('gt-complete-file-preview');
+  const fileName = document.getElementById('gt-complete-file-name');
+  const removeBtn = document.getElementById('gt-complete-file-remove');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
+  dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'var(--border)'; });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--border)';
+    if (e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0]);
   });
+  fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) setFile(fileInput.files[0]); });
+
+  function setFile(f) {
+    if (f.size > 10 * 1024 * 1024) { showToast('File too large (max 10 MB)', 'error'); return; }
+    selectedFile = f;
+    fileName.textContent = f.name;
+    preview.style.display = 'flex';
+    dropZone.style.display = 'none';
+  }
+
+  removeBtn.addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    preview.style.display = 'none';
+    dropZone.style.display = 'block';
+  });
+
+  const close = () => overlay.remove();
+  document.getElementById('gt-complete-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  document.getElementById('gt-complete-ok').addEventListener('click', async () => {
+    const btn = document.getElementById('gt-complete-ok');
+    btn.disabled = true;
+    btn.textContent = 'Completing...';
+    try {
+      let attachmentUrl = null;
+      if (selectedFile) {
+        attachmentUrl = await gtUploadAttachment(selectedFile);
+      }
+      if (type === 'group') {
+        await gtDoComplete(id, attachmentUrl);
+      } else {
+        await gtDoCompleteSingle(id, attachmentUrl);
+      }
+      close();
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Yes, Complete';
+    }
+  });
+
+  document.getElementById('gt-complete-cancel').focus();
+}
+
+async function gtUploadAttachment(file) {
+  const reader = new FileReader();
+  const base64 = await new Promise((resolve, reject) => {
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const resp = await fetch(`${IO_API_BASE}/upload`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: file.type || 'application/octet-stream',
+      data: base64,
+      folder: 'task-attachments'
+    })
+  });
+  if (!resp.ok) throw new Error('File upload failed');
+  const result = await resp.json();
+  return result.url;
+}
+
+function gtConfirmComplete(groupTaskId) {
+  gtShowCompleteModal('group', groupTaskId);
 }
 
 function gtConfirmCompleteSingle(taskId) {
-  showConfirmModal({
-    title: 'Mark Task as Completed',
-    message: 'Are you sure you want to mark this task as completed?',
-    detail: 'This action cannot be undone.',
-    confirmText: 'Yes, Complete',
-    confirmClass: 'btn-primary',
-    onConfirm: () => gtDoCompleteSingle(taskId)
-  });
+  gtShowCompleteModal('single', taskId);
 }
 
-async function gtDoComplete(groupTaskId) {
+async function gtDoComplete(groupTaskId, attachmentUrl) {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   if (!cu) return;
 
-  try {
-    const resp = await fetch(`${IO_API_BASE}/group-tasks/${groupTaskId}/complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ohr: cu.ohr_id })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed');
-    }
-    showToast('Task marked as completed!', 'success');
-    await gtFetchMyGroupTasks();
-    helmApplyReceivedFilters();
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
+  const body = { ohr: cu.ohr_id };
+  if (attachmentUrl) body.attachment_url = attachmentUrl;
+
+  const resp = await fetch(`${IO_API_BASE}/group-tasks/${groupTaskId}/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed');
   }
+  showToast('Task marked as completed!', 'success');
+  await gtFetchMyGroupTasks();
+  helmApplyReceivedFilters();
 }
 
-async function gtDoCompleteSingle(taskId) {
-  try {
-    const resp = await fetch(`${IO_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'Completed', completed_at: new Date().toISOString() })
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed');
-    }
-    showToast('Task marked as completed!', 'success');
-    // Refresh task list
-    await helmFetchTasks();
-    helmApplyReceivedFilters();
-  } catch (e) {
-    showToast('Error: ' + e.message, 'error');
+async function gtDoCompleteSingle(taskId, attachmentUrl) {
+  const body = { status: 'Completed', completed_at: new Date().toISOString() };
+  if (attachmentUrl) body.attachments = attachmentUrl;
+
+  const resp = await fetch(`${IO_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed');
   }
+  showToast('Task marked as completed!', 'success');
+  await helmFetchTasks();
+  helmApplyReceivedFilters();
 }
 
 // ===== Group Task Detail Modal =====
@@ -730,6 +848,28 @@ async function gtCloseTask(groupTaskId) {
 }
 
 // ===== Hook into Helm initialization =====
+
+// ===== Attachment Cell Renderer =====
+
+function gtRenderAttachmentCell(t) {
+  // For group tasks, attachment_url is directly on the unified object
+  // For individual tasks, the attachments field may hold a URL
+  const url = t.attachment_url || t.attachments || '';
+  if (!url) return '\u2014';
+
+  // Determine file type from URL for icon
+  const lower = url.toLowerCase();
+  const isImage = /\.(png|jpg|jpeg|gif|webp|svg)/.test(lower);
+  const isPdf = /\.pdf/.test(lower);
+
+  const icon = isImage
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+    : isPdf
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+
+  return `<a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-size:11px;font-weight:600;text-decoration:none;" title="View attachment">${icon} View</a>`;
+}
 
 const _originalInitHelm = initHelm;
 initHelm = async function(view) {

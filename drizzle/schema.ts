@@ -426,6 +426,7 @@ export const ioTaskAssignments = mysqlTable("io_task_assignments", {
   employee_name: varchar("employee_name", { length: 255 }),
   status: varchar("status", { length: 50 }).default("Pending"), // Pending, Completed, Not Applicable
   completed_at: varchar("completed_at", { length: 64 }),
+  attachment_url: text("attachment_url"),
   created_at: varchar("created_at", { length: 64 }),
 });
 export type IoTaskAssignment = typeof ioTaskAssignments.$inferSelect;
