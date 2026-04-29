@@ -2578,8 +2578,8 @@ function sandboxShouldShowAnalytics() {
   const isAdmin = currentUser.ohr_id === '740045023' || (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
   // Hide analytics when admin has "All" toggle active (too many agents)
   if (isAdmin && SANDBOX_MOD._inputTeamToggle === 'all') return false;
-  // TLs, Managers, owner, and admins see the analytics panel
-  return role === 'Team Lead' || role === 'Manager' || role === 'Trainer' || isAdmin;
+  // TLs, Managers, SMEs, Content Reviewers, owner, and admins see the analytics panel
+  return role === 'Team Lead' || role === 'Manager' || role === 'Trainer' || role === 'Operational SME' || role === 'Content Reviewer' || isAdmin;
 }
 
 function sandboxRenderAnalytics() {

@@ -3457,3 +3457,6 @@
 
 ## Bug Fix — Coaching Delete Admin Check
 - [x] Fix: Coaching delete endpoint checked x-actor-ohr header but frontend sends actor_ohr in body — now checks both
+
+## Sandbox Input Portal — Team Analytics for SMEs
+- [x] Show Team Analytics table to SMEs of the Team Lead's team (not just the TL)
