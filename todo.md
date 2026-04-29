@@ -3384,3 +3384,7 @@
 - [x] Approvals tab visibility: Agents see own, TLs see their agents', Managers/Admin see all
 - [x] Agents can still submit shift extension requests via New Request button
 - [x] Detail view opens existing shift extension modal with approve/reject actions
+
+## Helm — Task Dashboard Table Fixes
+- [x] Center-align Pending and Completed columns
+- [x] Rename "N/A" column to "Not Applicable" and center-align it

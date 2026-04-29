@@ -108,9 +108,9 @@ function helmDashRenderTable() {
     <th>Title</th>
     <th>Status</th>
     <th style="width:200px;">Completion Rate</th>
-    <th>Completed</th>
-    <th>Pending</th>
-    <th>N/A</th>
+    <th style="text-align:center;">Completed</th>
+    <th style="text-align:center;">Pending</th>
+    <th style="text-align:center;">Not Applicable</th>
     <th>Due Date</th>
   </tr>`;
 
