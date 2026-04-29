@@ -2086,7 +2086,7 @@ window.rosterShowUndoBatchModal = async function() {
   // Fetch last batch info
   let batchInfo;
   try {
-    const resp = await fetch('/api/io/insights-last-batch');
+    const resp = await fetch('/api/io/attendance-last-batch');
     batchInfo = await resp.json();
   } catch (err) {
     showToast('Failed to fetch batch info', 'error');
@@ -2134,7 +2134,7 @@ window.rosterExecuteUndoBatch = async function(batchId) {
   if (btn) { btn.disabled = true; btn.textContent = 'Undoing...'; }
 
   try {
-    const resp = await fetch('/api/io/insights-bulk-undo', {
+    const resp = await fetch('/api/io/attendance-bulk-undo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ actor_ohr: user.ohr_id, batch_id: batchId }),

@@ -3434,3 +3434,17 @@
 - [x] Add "Undo Last Batch" button for Bulk Insert (deletes all rows with that batch_id)
 - [ ] Add "Undo Last Purge" functionality (restore purged rows)
 - [x] Both undo buttons admin-only
+
+## Bulk Insert — Duplicate Detection Fix v2 + Selectable Employee Preview
+- [x] Fix: Duplicate detection checks io_insights but should check io_attendance (Input Portal table)
+- [x] Rebuild preview UI: show full employee checklist with checkboxes after dry-run
+- [x] Duplicates auto-unchecked and grayed out in the list
+- [x] Allow admin to untick employees they don't want to insert rows for
+- [x] Update commit endpoint to accept selected employee OHR list from frontend
+- [x] Fix: Date generation timezone bug (toISOString shifts dates back 1 day for PHT users) — use local date formatting
+- [x] Bulk insert now creates rows in io_attendance (not io_insights)
+- [x] Undo and last-batch endpoints target io_attendance
+- [x] Added batch_id column to io_attendance table
+- [x] Select All / Deselect All buttons in employee checklist
+- [x] Search/filter employees by name in the checklist
+- [x] Dynamic count updates as checkboxes are toggled

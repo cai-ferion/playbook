@@ -211,6 +211,13 @@
       "when": 1777501722379,
       "tag": "0029_breezy_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1777503278938,
+      "tag": "0030_perfect_lord_tyger",
+      "breakpoints": true
     }
   ]
 }

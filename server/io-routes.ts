@@ -4662,10 +4662,10 @@ router.delete("/attendance-purge", async (req: Request, res: Response) => {
 // Bulk Insert Attendance Rows into Input Portal (Admin-only)
 // ============================================================
 
-// POST /api/io/insights-bulk-insert-preview
+// POST /api/io/attendance-bulk-insert-preview
 // Body: { actor_ohr, dates: string[], employee_filters: { status?, planning_group?, role?, supervisor? } }
-// Returns: { total_new, total_duplicate, employees: [...], duplicates: [...] }
-router.post("/insights-bulk-insert-preview", async (req: Request, res: Response) => {
+// Returns: { total_new, total_duplicate, total_employees, total_dates, employees: [{ohr_id, full_name, is_duplicate}...] }
+router.post("/attendance-bulk-insert-preview", async (req: Request, res: Response) => {
   try {
     const { actor_ohr, dates, employee_filters } = req.body;
     if (!actor_ohr || !ADMIN_OHRS.includes(String(actor_ohr))) {
@@ -4679,17 +4679,6 @@ router.post("/insights-bulk-insert-preview", async (req: Request, res: Response)
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     // Fetch employees with optional filters
-    let empQuery = db.select({
-      ohr_id: ioEmployees.ohr_id,
-      full_name: ioEmployees.full_name,
-      actual_role: ioEmployees.actual_role,
-      planning_group: ioEmployees.planning_group,
-      supervisor_name: ioEmployees.supervisor_name,
-      supervisor_email: ioEmployees.supervisor_email,
-      meta_email: ioEmployees.meta_email,
-      employement_status: ioEmployees.employement_status,
-    }).from(ioEmployees);
-
     const conditions: any[] = [];
     if (employee_filters?.status) {
       conditions.push(eq(ioEmployees.employement_status, employee_filters.status));
@@ -4703,136 +4692,148 @@ router.post("/insights-bulk-insert-preview", async (req: Request, res: Response)
     if (employee_filters?.supervisor) {
       conditions.push(eq(ioEmployees.supervisor_name, employee_filters.supervisor));
     }
-
     // Always exclude Managers from attendance tracking
     conditions.push(sql`${ioEmployees.actual_role} != 'Manager'`);
 
-    let employees: any[];
-    employees = await empQuery.where(and(...conditions));
+    const employees = await db.select({
+      ohr_id: ioEmployees.ohr_id,
+      full_name: ioEmployees.full_name,
+      actual_role: ioEmployees.actual_role,
+      planning_group: ioEmployees.planning_group,
+      supervisor_name: ioEmployees.supervisor_name,
+    }).from(ioEmployees).where(and(...conditions));
 
-    // Check for existing insights (duplicates) — match on ohr_id + created_date
+    // Check for existing attendance rows (duplicates) — match on ohr_id + log_date
+    // Only fetch attendance for the requested dates to avoid scanning entire table
     const existingRows = await db.select({
-      ohr_id: ioInsights.ohr_id,
-      created_date: ioInsights.created_date,
-    }).from(ioInsights);
+      ohr_id: ioAttendance.ohr_id,
+      log_date: ioAttendance.log_date,
+    }).from(ioAttendance)
+      .where(inArray(ioAttendance.log_date, dates.map(d => d.slice(0, 10))));
 
     const existingSet = new Set(
-      existingRows.map(r => `${r.ohr_id}||${String(r.created_date || '').slice(0, 10)}`)
+      existingRows.map(r => `${r.ohr_id}||${String(r.log_date || '').slice(0, 10)}`)
     );
 
+    // Build employee list with duplicate status per date
     let totalNew = 0;
     let totalDuplicate = 0;
-    const duplicates: { ohr_id: string; full_name: string; date: string }[] = [];
+    const employeeList: { ohr_id: string; full_name: string; supervisor: string; is_duplicate: boolean }[] = [];
 
     for (const emp of employees) {
+      // For multi-date ranges, an employee is a "duplicate" if they have attendance for ALL requested dates
+      let dupCount = 0;
       for (const date of dates) {
         const key = `${emp.ohr_id}||${date.slice(0, 10)}`;
-        if (existingSet.has(key)) {
-          totalDuplicate++;
-          duplicates.push({ ohr_id: emp.ohr_id, full_name: emp.full_name || '', date });
-        } else {
-          totalNew++;
-        }
+        if (existingSet.has(key)) dupCount++;
       }
+      const isDuplicate = dupCount === dates.length; // duplicate only if ALL dates already have rows
+      if (isDuplicate) {
+        totalDuplicate++;
+      } else {
+        totalNew++;
+      }
+      employeeList.push({
+        ohr_id: emp.ohr_id,
+        full_name: emp.full_name || '',
+        supervisor: emp.supervisor_name || '',
+        is_duplicate: isDuplicate,
+      });
     }
+
+    // Sort: non-duplicates first, then alphabetically by name
+    employeeList.sort((a, b) => {
+      if (a.is_duplicate !== b.is_duplicate) return a.is_duplicate ? 1 : -1;
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
 
     res.json({
       total_new: totalNew,
       total_duplicate: totalDuplicate,
       total_employees: employees.length,
       total_dates: dates.length,
-      duplicates: duplicates.slice(0, 50), // Cap preview at 50
+      employees: employeeList,
     });
   } catch (err: any) {
-    console.error("[IO API] insights-bulk-insert-preview error:", err);
+    console.error("[IO API] attendance-bulk-insert-preview error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/io/insights-bulk-insert
-// Body: { actor_ohr, dates: string[], employee_filters: { status?, planning_group?, role?, supervisor? } }
-router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
+// POST /api/io/attendance-bulk-insert
+// Body: { actor_ohr, dates: string[], selected_ohrs: string[] }
+// Inserts blank attendance rows into io_attendance for selected employees on selected dates
+router.post("/attendance-bulk-insert", async (req: Request, res: Response) => {
   try {
-    const { actor_ohr, dates, employee_filters } = req.body;
+    const { actor_ohr, dates, selected_ohrs } = req.body;
     if (!actor_ohr || !ADMIN_OHRS.includes(String(actor_ohr))) {
       return res.status(403).json({ error: "Admin-only operation" });
     }
     if (!Array.isArray(dates) || dates.length === 0) {
       return res.status(400).json({ error: "At least one date is required" });
     }
+    if (!Array.isArray(selected_ohrs) || selected_ohrs.length === 0) {
+      return res.status(400).json({ error: "At least one employee must be selected" });
+    }
 
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    // Fetch employees with optional filters
-    const conditions: any[] = [];
-    if (employee_filters?.status) {
-      conditions.push(eq(ioEmployees.employement_status, employee_filters.status));
-    }
-    if (employee_filters?.planning_group) {
-      conditions.push(eq(ioEmployees.planning_group, employee_filters.planning_group));
-    }
-    if (employee_filters?.role) {
-      conditions.push(eq(ioEmployees.actual_role, employee_filters.role));
-    }
-    if (employee_filters?.supervisor) {
-      conditions.push(eq(ioEmployees.supervisor_name, employee_filters.supervisor));
-    }
-
-    let empQuery = db.select({
+    // Fetch employee details for selected OHRs
+    const employees = await db.select({
       ohr_id: ioEmployees.ohr_id,
       full_name: ioEmployees.full_name,
       actual_role: ioEmployees.actual_role,
       planning_group: ioEmployees.planning_group,
       supervisor_name: ioEmployees.supervisor_name,
-      supervisor_email: ioEmployees.supervisor_email,
-      meta_email: ioEmployees.meta_email,
-    }).from(ioEmployees);
+      shift_time: ioEmployees.shift_time,
+      employement_status: ioEmployees.employement_status,
+      billing_name: ioEmployees.billing_name,
+    }).from(ioEmployees)
+      .where(inArray(ioEmployees.ohr_id, selected_ohrs));
 
-    // Always exclude Managers from attendance tracking
-    conditions.push(sql`${ioEmployees.actual_role} != 'Manager'`);
-
-    let employees: any[];
-    employees = await empQuery.where(and(...conditions));
-
-    // Check for existing insights
+    // Check for existing attendance rows to skip true duplicates
     const existingRows = await db.select({
-      ohr_id: ioInsights.ohr_id,
-      created_date: ioInsights.created_date,
-    }).from(ioInsights);
+      ohr_id: ioAttendance.ohr_id,
+      log_date: ioAttendance.log_date,
+    }).from(ioAttendance)
+      .where(inArray(ioAttendance.log_date, dates.map(d => d.slice(0, 10))));
 
     const existingSet = new Set(
-      existingRows.map(r => `${r.ohr_id}||${String(r.created_date || '').slice(0, 10)}`)
+      existingRows.map(r => `${r.ohr_id}||${String(r.log_date || '').slice(0, 10)}`)
     );
 
     // Generate batch_id for tracking/undo
     const batchId = `BULK-${Date.now().toString(36).toUpperCase()}`;
-
-    // Build insert batch (skip duplicates)
     const now = new Date().toISOString();
     const rows: any[] = [];
     let skipped = 0;
 
     for (const emp of employees) {
       for (const date of dates) {
-        const key = `${emp.ohr_id}||${date.slice(0, 10)}`;
+        const dateStr = date.slice(0, 10);
+        const key = `${emp.ohr_id}||${dateStr}`;
         if (existingSet.has(key)) {
           skipped++;
           continue;
         }
-        const insightId = 'INS-' + (Date.now() + rows.length).toString(36).toUpperCase();
+        // ID format: YYYYMMDD + ohr_id (matches existing pattern)
+        const id = dateStr.replace(/-/g, '') + emp.ohr_id;
         rows.push({
-          insight_id: insightId,
+          id,
           ohr_id: emp.ohr_id,
-          submitter: emp.full_name || '',
-          meta_email: emp.meta_email || '',
-          supervisor: emp.supervisor_name || '',
-          supervisor_email: emp.supervisor_email || '',
-          planning_group: emp.planning_group || '',
-          status: 'Pending - Initial Review',
-          created_date: date,
+          log_date: dateStr,
+          tag: null,
           created_at: now,
-          updated_at: now,
+          snap_full_name: emp.full_name || '',
+          snap_supervisor: emp.supervisor_name || '',
+          snap_planning_group: emp.planning_group || '',
+          snap_shift_time: emp.shift_time || '',
+          snap_actual_role: emp.actual_role || '',
+          snap_billing_name: emp.billing_name || '',
+          snap_status: emp.employement_status || '',
+          internal_role: emp.actual_role || '',
+          internal_planning_group: emp.planning_group || '',
           batch_id: batchId,
         });
       }
@@ -4842,13 +4843,13 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
     let inserted = 0;
     for (let i = 0; i < rows.length; i += 100) {
       const batch = rows.slice(i, i + 100);
-      await db.insert(ioInsights).values(batch);
+      await db.insert(ioAttendance).values(batch);
       inserted += batch.length;
     }
 
     // Audit log
     await db.insert(ioAuditLog).values({
-      record_type: "insights_bulk_insert",
+      record_type: "attendance_bulk_insert",
       record_id: batchId,
       action: "bulk_insert",
       field_name: "attendance_rows",
@@ -4858,16 +4859,16 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
       actor_name: "Admin",
     });
 
-    console.log(`[IO API] BULK INSERT: ${inserted} insight rows inserted, ${skipped} duplicates skipped, batch: ${batchId} (actor: ${actor_ohr})`);
+    console.log(`[IO API] BULK INSERT: ${inserted} attendance rows inserted, ${skipped} duplicates skipped, batch: ${batchId} (actor: ${actor_ohr})`);
     res.json({ success: true, inserted, skipped, batch_id: batchId });
   } catch (err: any) {
-    console.error("[IO API] insights-bulk-insert error:", err);
+    console.error("[IO API] attendance-bulk-insert error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Undo last bulk insert batch
-router.post("/insights-bulk-undo", async (req: Request, res: Response) => {
+// Undo last bulk insert batch (deletes from io_attendance)
+router.post("/attendance-bulk-undo", async (req: Request, res: Response) => {
   try {
     const { actor_ohr, batch_id } = req.body;
     if (!actor_ohr || !ADMIN_OHRS.includes(String(actor_ohr))) {
@@ -4882,8 +4883,8 @@ router.post("/insights-bulk-undo", async (req: Request, res: Response) => {
 
     // Count rows in this batch
     const [countResult] = await db.select({ count: sql<number>`COUNT(*)` })
-      .from(ioInsights)
-      .where(eq(ioInsights.batch_id, batch_id));
+      .from(ioAttendance)
+      .where(eq(ioAttendance.batch_id, batch_id));
     const rowCount = Number(countResult?.count || 0);
 
     if (rowCount === 0) {
@@ -4891,11 +4892,11 @@ router.post("/insights-bulk-undo", async (req: Request, res: Response) => {
     }
 
     // Delete all rows with this batch_id
-    await db.delete(ioInsights).where(eq(ioInsights.batch_id, batch_id));
+    await db.delete(ioAttendance).where(eq(ioAttendance.batch_id, batch_id));
 
     // Audit log
     await db.insert(ioAuditLog).values({
-      record_type: "insights_bulk_undo",
+      record_type: "attendance_bulk_undo",
       record_id: batch_id,
       action: "bulk_undo",
       field_name: "attendance_rows",
@@ -4905,31 +4906,31 @@ router.post("/insights-bulk-undo", async (req: Request, res: Response) => {
       actor_name: "Admin",
     });
 
-    console.log(`[IO API] BULK UNDO: ${rowCount} rows deleted for batch ${batch_id} (actor: ${actor_ohr})`);
+    console.log(`[IO API] BULK UNDO: ${rowCount} attendance rows deleted for batch ${batch_id} (actor: ${actor_ohr})`);
     res.json({ success: true, deleted: rowCount, batch_id });
   } catch (err: any) {
-    console.error("[IO API] insights-bulk-undo error:", err);
+    console.error("[IO API] attendance-bulk-undo error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get last batch info (for undo button)
-router.get("/insights-last-batch", async (req: Request, res: Response) => {
+// Get last attendance bulk insert batch info (for undo button)
+router.get("/attendance-last-batch", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    // Find the most recent batch_id
+    // Find the most recent batch_id in io_attendance
     const [lastBatch] = await db.select({
-      batch_id: ioInsights.batch_id,
+      batch_id: ioAttendance.batch_id,
       count: sql<number>`COUNT(*)`,
-      min_date: sql<string>`MIN(created_date)`,
-      max_date: sql<string>`MAX(created_date)`,
+      min_date: sql<string>`MIN(${ioAttendance.log_date})`,
+      max_date: sql<string>`MAX(${ioAttendance.log_date})`,
     })
-      .from(ioInsights)
-      .where(sql`${ioInsights.batch_id} IS NOT NULL AND ${ioInsights.batch_id} != ''`)
-      .groupBy(ioInsights.batch_id)
-      .orderBy(sql`MAX(${ioInsights.created_at}) DESC`)
+      .from(ioAttendance)
+      .where(sql`${ioAttendance.batch_id} IS NOT NULL AND ${ioAttendance.batch_id} != ''`)
+      .groupBy(ioAttendance.batch_id)
+      .orderBy(sql`MAX(${ioAttendance.created_at}) DESC`)
       .limit(1);
 
     if (!lastBatch || !lastBatch.batch_id) {
@@ -4943,7 +4944,7 @@ router.get("/insights-last-batch", async (req: Request, res: Response) => {
       date_range: `${lastBatch.min_date?.slice(0, 10) || ''} to ${lastBatch.max_date?.slice(0, 10) || ''}`,
     });
   } catch (err: any) {
-    console.error("[IO API] insights-last-batch error:", err);
+    console.error("[IO API] attendance-last-batch error:", err);
     res.status(500).json({ error: err.message });
   }
 });
