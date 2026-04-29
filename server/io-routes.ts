@@ -2282,11 +2282,14 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
     ];
 
     // 1. Attendance data for this week
+    // Exclude non-billable statuses: Nesting, Training, Exit, Inactive
+    const EXCLUDED_STATUSES = ['Nesting', 'Training', 'Exit', 'Inactive'];
     const attResult: any = await db.execute(
-      sql`SELECT ohr_id, log_date, tag, ot_hours, planning_group, role
+      sql`SELECT ohr_id, log_date, tag, ot_hours, planning_group, role, snap_status
           FROM io_attendance
           WHERE log_date >= ${weekStart} AND log_date <= ${weekEnd}
-            AND planning_group IS NOT NULL AND role IS NOT NULL`
+            AND planning_group IS NOT NULL AND role IS NOT NULL
+            AND (snap_status IS NULL OR snap_status NOT IN ('Nesting', 'Training', 'Exit', 'Inactive'))`
     );
     const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
 

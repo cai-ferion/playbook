@@ -3320,3 +3320,6 @@
 - [x] Fix: Disabled modal popup on Tasks Given and Tasks Received table rows (removed onclick handlers)
 - [x] Fix: Extended table heights (removed max-height:600px on all 3 tab panels)
 - [x] Fix: Task Dashboard modal now opens in Dashboard context (added gt-dash-detail-overlay + gtOpenDashDetail function)
+
+## Billing Compliance — Status Filter
+- [x] Add snap_status filter to billing compliance query: exclude Nesting, Training, Exit, Inactive (only Production and NULL/blank counted)
