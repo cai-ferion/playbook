@@ -4658,6 +4658,210 @@ router.delete("/attendance-purge", async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// Bulk Insert Attendance Rows into Input Portal (Admin-only)
+// ============================================================
+
+// POST /api/io/insights-bulk-insert-preview
+// Body: { actor_ohr, dates: string[], employee_filters: { status?, planning_group?, role?, supervisor? } }
+// Returns: { total_new, total_duplicate, employees: [...], duplicates: [...] }
+router.post("/insights-bulk-insert-preview", async (req: Request, res: Response) => {
+  try {
+    const { actor_ohr, dates, employee_filters } = req.body;
+    if (!actor_ohr || !ADMIN_OHRS.includes(String(actor_ohr))) {
+      return res.status(403).json({ error: "Admin-only operation" });
+    }
+    if (!Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({ error: "At least one date is required" });
+    }
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    // Fetch employees with optional filters
+    let empQuery = db.select({
+      ohr_id: ioEmployees.ohr_id,
+      full_name: ioEmployees.full_name,
+      actual_role: ioEmployees.actual_role,
+      planning_group: ioEmployees.planning_group,
+      supervisor_name: ioEmployees.supervisor_name,
+      supervisor_email: ioEmployees.supervisor_email,
+      meta_email: ioEmployees.meta_email,
+      employement_status: ioEmployees.employement_status,
+    }).from(ioEmployees);
+
+    const conditions: any[] = [];
+    if (employee_filters?.status) {
+      conditions.push(eq(ioEmployees.employement_status, employee_filters.status));
+    }
+    if (employee_filters?.planning_group) {
+      conditions.push(eq(ioEmployees.planning_group, employee_filters.planning_group));
+    }
+    if (employee_filters?.role) {
+      conditions.push(eq(ioEmployees.actual_role, employee_filters.role));
+    }
+    if (employee_filters?.supervisor) {
+      conditions.push(eq(ioEmployees.supervisor_name, employee_filters.supervisor));
+    }
+
+    // Always exclude Managers from attendance tracking
+    conditions.push(sql`${ioEmployees.actual_role} != 'Manager'`);
+
+    let employees: any[];
+    employees = await empQuery.where(and(...conditions));
+
+    // Check for existing insights (duplicates) — match on ohr_id + created_date
+    const existingRows = await db.select({
+      ohr_id: ioInsights.ohr_id,
+      created_date: ioInsights.created_date,
+    }).from(ioInsights);
+
+    const existingSet = new Set(
+      existingRows.map(r => `${r.ohr_id}||${r.created_date}`)
+    );
+
+    let totalNew = 0;
+    let totalDuplicate = 0;
+    const duplicates: { ohr_id: string; full_name: string; date: string }[] = [];
+
+    for (const emp of employees) {
+      for (const date of dates) {
+        const key = `${emp.ohr_id}||${date}`;
+        if (existingSet.has(key)) {
+          totalDuplicate++;
+          duplicates.push({ ohr_id: emp.ohr_id, full_name: emp.full_name || '', date });
+        } else {
+          totalNew++;
+        }
+      }
+    }
+
+    res.json({
+      total_new: totalNew,
+      total_duplicate: totalDuplicate,
+      total_employees: employees.length,
+      total_dates: dates.length,
+      duplicates: duplicates.slice(0, 50), // Cap preview at 50
+    });
+  } catch (err: any) {
+    console.error("[IO API] insights-bulk-insert-preview error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/insights-bulk-insert
+// Body: { actor_ohr, dates: string[], employee_filters: { status?, planning_group?, role?, supervisor? } }
+router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
+  try {
+    const { actor_ohr, dates, employee_filters } = req.body;
+    if (!actor_ohr || !ADMIN_OHRS.includes(String(actor_ohr))) {
+      return res.status(403).json({ error: "Admin-only operation" });
+    }
+    if (!Array.isArray(dates) || dates.length === 0) {
+      return res.status(400).json({ error: "At least one date is required" });
+    }
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    // Fetch employees with optional filters
+    const conditions: any[] = [];
+    if (employee_filters?.status) {
+      conditions.push(eq(ioEmployees.employement_status, employee_filters.status));
+    }
+    if (employee_filters?.planning_group) {
+      conditions.push(eq(ioEmployees.planning_group, employee_filters.planning_group));
+    }
+    if (employee_filters?.role) {
+      conditions.push(eq(ioEmployees.actual_role, employee_filters.role));
+    }
+    if (employee_filters?.supervisor) {
+      conditions.push(eq(ioEmployees.supervisor_name, employee_filters.supervisor));
+    }
+
+    let empQuery = db.select({
+      ohr_id: ioEmployees.ohr_id,
+      full_name: ioEmployees.full_name,
+      actual_role: ioEmployees.actual_role,
+      planning_group: ioEmployees.planning_group,
+      supervisor_name: ioEmployees.supervisor_name,
+      supervisor_email: ioEmployees.supervisor_email,
+      meta_email: ioEmployees.meta_email,
+    }).from(ioEmployees);
+
+    // Always exclude Managers from attendance tracking
+    conditions.push(sql`${ioEmployees.actual_role} != 'Manager'`);
+
+    let employees: any[];
+    employees = await empQuery.where(and(...conditions));
+
+    // Check for existing insights
+    const existingRows = await db.select({
+      ohr_id: ioInsights.ohr_id,
+      created_date: ioInsights.created_date,
+    }).from(ioInsights);
+
+    const existingSet = new Set(
+      existingRows.map(r => `${r.ohr_id}||${r.created_date}`)
+    );
+
+    // Build insert batch (skip duplicates)
+    const now = new Date().toISOString();
+    const rows: any[] = [];
+    let skipped = 0;
+
+    for (const emp of employees) {
+      for (const date of dates) {
+        const key = `${emp.ohr_id}||${date}`;
+        if (existingSet.has(key)) {
+          skipped++;
+          continue;
+        }
+        const insightId = 'INS-' + (Date.now() + rows.length).toString(36).toUpperCase();
+        rows.push({
+          insight_id: insightId,
+          ohr_id: emp.ohr_id,
+          submitter: emp.full_name || '',
+          meta_email: emp.meta_email || '',
+          supervisor: emp.supervisor_name || '',
+          supervisor_email: emp.supervisor_email || '',
+          planning_group: emp.planning_group || '',
+          status: 'Pending - Initial Review',
+          created_date: date,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+
+    // Insert in batches of 100
+    let inserted = 0;
+    for (let i = 0; i < rows.length; i += 100) {
+      const batch = rows.slice(i, i + 100);
+      await db.insert(ioInsights).values(batch);
+      inserted += batch.length;
+    }
+
+    // Audit log
+    await db.insert(ioAuditLog).values({
+      record_type: "insights_bulk_insert",
+      record_id: `bulk_${dates[0]}_to_${dates[dates.length - 1]}`,
+      action: "bulk_insert",
+      field_name: "attendance_rows",
+      old_value: null,
+      new_value: `${inserted} rows inserted, ${skipped} duplicates skipped`,
+      actor_ohr: String(actor_ohr),
+      actor_name: "Admin",
+    });
+
+    console.log(`[IO API] BULK INSERT: ${inserted} insight rows inserted, ${skipped} duplicates skipped (actor: ${actor_ohr})`);
+    res.json({ success: true, inserted, skipped });
+  } catch (err: any) {
+    console.error("[IO API] insights-bulk-insert error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export function registerIORoutes(app: import("express").Express) {
   app.use("/api/io", router);
   console.log("[IO API] Routes registered under /api/io/*");

@@ -3418,3 +3418,11 @@
 ## Tardiness — Absurd Minutes Late Bug
 - [x] Fix: Excel serial actual_login — use time-of-day fraction on roster date (same-day comparison), cap at 480 min
 - [x] Clean up existing bad records (967 + 3 deleted)
+
+## Regimen — Bulk Insert Attendance Rows
+- [x] Build backend endpoint for bulk insert with dry-run (preview) and commit modes
+- [x] Build frontend modal with date range picker, employee filters (Status, PG, Role, Supervisor), and Select All
+- [x] Add dry-run preview showing new vs duplicate counts before committing
+- [x] Enrich inserted rows with employee data (Internal Role, Internal Planning Group) from io_employees
+- [x] Restrict Purge and Bulk Insert buttons to admin-only
+- [x] Exclude Managers from bulk insert (per existing rule)

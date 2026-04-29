@@ -235,9 +235,13 @@ function rosterRenderFilterBar() {
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-export-btn" onclick="rosterExportCSV()" style="white-space:nowrap;">'
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export'
       + '</button>';
-    // Purge Attendance (owner-only)
+    // Purge Attendance (admin-only)
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-purge-btn" onclick="rosterShowPurgeModal()" style="display:none;white-space:nowrap;color:#ef4444;border-color:#ef4444;">' 
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Purge'
+      + '</button>';
+    // Bulk Insert (admin-only)
+    tbHtml += '<button class="btn btn-outline btn-sm" id="roster-bulk-insert-btn" onclick="rosterShowBulkInsertModal()" style="display:none;white-space:nowrap;color:#2563eb;border-color:#2563eb;">' 
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Bulk Insert'
       + '</button>';
     // Clear filters
     tbHtml += '<button class="btn btn-ghost btn-xs" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
@@ -1596,10 +1600,15 @@ async function rosterFetchEmployees() {
     syncSheetBtn.style.display = (isWfm || hasSyncPerm) ? '' : 'none';
   }
 
-  // Show/hide Purge button — owner-only
+  // Show/hide Purge button — admin-only
   const purgeBtn = document.getElementById('roster-purge-btn');
   if (purgeBtn) {
     purgeBtn.style.display = ROSTER.isOwner ? '' : 'none';
+  }
+  // Show/hide Bulk Insert button — admin-only
+  const bulkInsertBtn = document.getElementById('roster-bulk-insert-btn');
+  if (bulkInsertBtn) {
+    bulkInsertBtn.style.display = ROSTER.isOwner ? '' : 'none';
   }
 }
 
@@ -1829,6 +1838,230 @@ window.rosterExecutePurge = async function(ohrId, fromDate, expectedCount) {
       <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;">Close</button>
     `;
     showToast(`Purged ${data.deleted} attendance records`, 'success');
+  } catch (err) {
+    previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
+      <strong>Error:</strong> ${escapeHtml(err.message)}
+    </div>`;
+  }
+};
+
+// ===== Bulk Insert Attendance Rows (Admin-only) =====
+
+window.rosterShowBulkInsertModal = function() {
+  // Build filter options from ROSTER.employees
+  const employees = ROSTER.employees || [];
+  const statuses = [...new Set(employees.map(e => e.employement_status || e.status).filter(Boolean))].sort();
+  const planningGroups = [...new Set(employees.map(e => e.planning_group).filter(Boolean))].sort();
+  const roles = [...new Set(employees.map(e => e.actual_role).filter(Boolean))].sort();
+  const supervisors = [...new Set(employees.map(e => e.supervisor_name || e.supervisor).filter(Boolean))].sort();
+
+  const statusOpts = statuses.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
+  const pgOpts = planningGroups.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
+  const roleOpts = roles.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
+  const supOpts = supervisors.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'bulk-insert-modal-overlay';
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '9999';
+  overlay.innerHTML = `
+    <div class="modal-dialog" style="max-width:720px;width:720px;flex-direction:column;max-height:90vh;overflow-y:auto;">
+      <div class="modal-header">
+        <h3 style="display:flex;align-items:center;gap:8px;margin:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Bulk Insert Attendance Rows
+        </h3>
+        <button class="modal-close-btn" onclick="document.getElementById('bulk-insert-modal-overlay').remove()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="bi-form-section">
+          <p style="font-size:13px;color:var(--fg-muted,#5E6C84);margin-bottom:16px;">
+            This will create blank attendance rows in the Input Portal for the selected employees on the specified dates. Rows with Internal Role and Planning Group will be auto-populated from the roster.
+          </p>
+
+          <div style="margin-bottom:16px;">
+            <label class="filter-label" style="display:block;margin-bottom:6px;font-weight:600;">Date Range</label>
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="flex:1;">
+                <label style="font-size:11px;color:var(--fg-muted);">From</label>
+                <input type="date" id="bi-date-from" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:11px;color:var(--fg-muted);">To</label>
+                <input type="date" id="bi-date-to" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label class="filter-label" style="display:block;margin-bottom:6px;font-weight:600;">Employee Filters</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="font-size:11px;color:var(--fg-muted);">Employee Status</label>
+                <select id="bi-filter-status" class="form-select" style="width:100%;padding:8px 12px;">
+                  <option value="">All Statuses</option>
+                  ${statusOpts}
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--fg-muted);">Planning Group</label>
+                <select id="bi-filter-pg" class="form-select" style="width:100%;padding:8px 12px;">
+                  <option value="">All Groups</option>
+                  ${pgOpts}
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--fg-muted);">Role</label>
+                <select id="bi-filter-role" class="form-select" style="width:100%;padding:8px 12px;">
+                  <option value="">All Roles</option>
+                  ${roleOpts}
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--fg-muted);">Supervisor</label>
+                <select id="bi-filter-supervisor" class="form-select" style="width:100%;padding:8px 12px;">
+                  <option value="">All Supervisors</option>
+                  ${supOpts}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="rosterBulkInsertPreview()" class="btn btn-primary btn-sm" style="width:100%;">Preview Insert</button>
+        </div>
+
+        <div id="bi-preview-section" style="display:none;margin-top:20px;"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+};
+
+window.rosterBulkInsertPreview = async function() {
+  const fromDate = document.getElementById('bi-date-from').value;
+  const toDate = document.getElementById('bi-date-to').value;
+
+  if (!fromDate || !toDate) { showToast('Please select both From and To dates.', 'error'); return; }
+  if (fromDate > toDate) { showToast('From date must be before or equal to To date.', 'error'); return; }
+
+  // Generate date array
+  const dates = [];
+  let d = new Date(fromDate + 'T00:00:00');
+  const end = new Date(toDate + 'T00:00:00');
+  while (d <= end) {
+    dates.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+
+  if (dates.length > 31) { showToast('Maximum 31 days allowed per bulk insert.', 'error'); return; }
+
+  const filters = {};
+  const status = document.getElementById('bi-filter-status').value;
+  const pg = document.getElementById('bi-filter-pg').value;
+  const role = document.getElementById('bi-filter-role').value;
+  const supervisor = document.getElementById('bi-filter-supervisor').value;
+  if (status) filters.status = status;
+  if (pg) filters.planning_group = pg;
+  if (role) filters.role = role;
+  if (supervisor) filters.supervisor = supervisor;
+
+  const previewSection = document.getElementById('bi-preview-section');
+  previewSection.style.display = 'block';
+  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted,#5E6C84);">Calculating preview...</div>';
+
+  try {
+    const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const resp = await fetch('/api/io/insights-bulk-insert-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_ohr: user.ohr_id, dates, employee_filters: filters }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
+        <strong>Error:</strong> ${escapeHtml(data.error || 'Unknown error')}
+      </div>`;
+      return;
+    }
+
+    let dupHtml = '';
+    if (data.total_duplicate > 0) {
+      dupHtml = `<div style="margin-top:12px;padding:12px;background:#FFF3E0;border:1px solid #FF9800;border-radius:var(--radius,6px);font-size:12px;">
+        <strong style="color:#E65100;">⚠ ${data.total_duplicate} duplicate${data.total_duplicate !== 1 ? 's' : ''} detected</strong> (will be skipped)
+        <div style="max-height:120px;overflow-y:auto;margin-top:8px;">
+          <table style="width:100%;font-size:11px;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid #FFE0B2;"><th style="text-align:left;padding:2px 4px;">OHR</th><th style="text-align:left;padding:2px 4px;">Name</th><th style="text-align:left;padding:2px 4px;">Date</th></tr>
+            ${data.duplicates.map(d => `<tr><td style="padding:2px 4px;">${escapeHtml(d.ohr_id)}</td><td style="padding:2px 4px;">${escapeHtml(d.full_name)}</td><td style="padding:2px 4px;">${escapeHtml(d.date)}</td></tr>`).join('')}
+            ${data.total_duplicate > 50 ? `<tr><td colspan="3" style="padding:4px;color:#E65100;">... and ${data.total_duplicate - 50} more</td></tr>` : ''}
+          </table>
+        </div>
+      </div>`;
+    }
+
+    previewSection.innerHTML = `
+      <div style="padding:16px;background:var(--surface,#f8f9fa);border:1px solid var(--border);border-radius:var(--radius,6px);">
+        <h4 style="margin:0 0 12px 0;font-size:14px;">Preview Summary</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+          <div><strong>Employees matched:</strong> ${data.total_employees}</div>
+          <div><strong>Dates selected:</strong> ${data.total_dates}</div>
+          <div style="color:#22C55E;"><strong>New rows to insert:</strong> ${data.total_new}</div>
+          <div style="color:#F59E0B;"><strong>Duplicates (skipped):</strong> ${data.total_duplicate}</div>
+        </div>
+        ${dupHtml}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button onclick="document.getElementById('bulk-insert-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
+        <button onclick="rosterExecuteBulkInsert()" class="btn btn-primary btn-sm" style="flex:1;" ${data.total_new === 0 ? 'disabled' : ''}>
+          Insert ${data.total_new} Row${data.total_new !== 1 ? 's' : ''}
+        </button>
+      </div>
+    `;
+
+    // Store params for execution
+    window._bulkInsertParams = { dates, filters };
+  } catch (err) {
+    previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
+      <strong>Error:</strong> ${escapeHtml(err.message)}
+    </div>`;
+  }
+};
+
+window.rosterExecuteBulkInsert = async function() {
+  if (!window._bulkInsertParams) return;
+  const { dates, filters } = window._bulkInsertParams;
+
+  const previewSection = document.getElementById('bi-preview-section');
+  previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted,#5E6C84);">Inserting rows...</div>';
+
+  try {
+    const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const resp = await fetch('/api/io/insights-bulk-insert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_ohr: user.ohr_id, dates, employee_filters: filters }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
+        <strong>Error:</strong> ${escapeHtml(data.error || 'Unknown error')}
+      </div>`;
+      return;
+    }
+
+    previewSection.innerHTML = `
+      <div style="padding:16px;background:var(--success-bg,rgba(34,197,94,.1));border:1px solid var(--success,#22C55E);border-radius:var(--radius,6px);color:var(--success,#22C55E);">
+        <strong>✓ Bulk Insert Complete</strong><br>
+        <span style="font-size:13px;">Successfully inserted <strong>${data.inserted}</strong> attendance row${data.inserted !== 1 ? 's' : ''}. ${data.skipped > 0 ? `(${data.skipped} duplicates skipped)` : ''}</span>
+      </div>
+      <button onclick="document.getElementById('bulk-insert-modal-overlay').remove()" class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;">Close</button>
+    `;
+    showToast(`Inserted ${data.inserted} attendance rows`, 'success');
   } catch (err) {
     previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
       <strong>Error:</strong> ${escapeHtml(err.message)}
