@@ -395,6 +395,9 @@
 
     let data = [...COMPASS.logs];
 
+    // Exclude NTE Log entries from Coaching Profile — they belong in Corrective Actions
+    data = data.filter(l => l.coaching_type !== 'NTE Log');
+
     // Hide QA Feedback logs with active dispute statuses from Coaching Profile
     const QA_DISPUTE_HIDDEN_STATUSES = [
       'Markdown Disputed - SME',

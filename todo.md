@@ -3460,3 +3460,6 @@
 
 ## Sandbox Input Portal — Team Analytics for SMEs
 - [x] Show Team Analytics table to SMEs of the Team Lead's team (not just the TL)
+
+## Bug Fix — NTE Logs Duplicated in Coaching Profile
+- [x] Fix: NTE Logs are being saved to both io_coaching (Coaching Profile) and Corrective Action — should only go to CA (filter added to compass-omnibar.js)
