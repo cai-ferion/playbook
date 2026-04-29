@@ -4717,7 +4717,7 @@ router.post("/insights-bulk-insert-preview", async (req: Request, res: Response)
     }).from(ioInsights);
 
     const existingSet = new Set(
-      existingRows.map(r => `${r.ohr_id}||${r.created_date}`)
+      existingRows.map(r => `${r.ohr_id}||${String(r.created_date || '').slice(0, 10)}`)
     );
 
     let totalNew = 0;
@@ -4726,7 +4726,7 @@ router.post("/insights-bulk-insert-preview", async (req: Request, res: Response)
 
     for (const emp of employees) {
       for (const date of dates) {
-        const key = `${emp.ohr_id}||${date}`;
+        const key = `${emp.ohr_id}||${date.slice(0, 10)}`;
         if (existingSet.has(key)) {
           totalDuplicate++;
           duplicates.push({ ohr_id: emp.ohr_id, full_name: emp.full_name || '', date });
@@ -4802,8 +4802,11 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
     }).from(ioInsights);
 
     const existingSet = new Set(
-      existingRows.map(r => `${r.ohr_id}||${r.created_date}`)
+      existingRows.map(r => `${r.ohr_id}||${String(r.created_date || '').slice(0, 10)}`)
     );
+
+    // Generate batch_id for tracking/undo
+    const batchId = `BULK-${Date.now().toString(36).toUpperCase()}`;
 
     // Build insert batch (skip duplicates)
     const now = new Date().toISOString();
@@ -4812,7 +4815,7 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
 
     for (const emp of employees) {
       for (const date of dates) {
-        const key = `${emp.ohr_id}||${date}`;
+        const key = `${emp.ohr_id}||${date.slice(0, 10)}`;
         if (existingSet.has(key)) {
           skipped++;
           continue;
@@ -4830,6 +4833,7 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
           created_date: date,
           created_at: now,
           updated_at: now,
+          batch_id: batchId,
         });
       }
     }
@@ -4845,7 +4849,7 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
     // Audit log
     await db.insert(ioAuditLog).values({
       record_type: "insights_bulk_insert",
-      record_id: `bulk_${dates[0]}_to_${dates[dates.length - 1]}`,
+      record_id: batchId,
       action: "bulk_insert",
       field_name: "attendance_rows",
       old_value: null,
@@ -4854,10 +4858,92 @@ router.post("/insights-bulk-insert", async (req: Request, res: Response) => {
       actor_name: "Admin",
     });
 
-    console.log(`[IO API] BULK INSERT: ${inserted} insight rows inserted, ${skipped} duplicates skipped (actor: ${actor_ohr})`);
-    res.json({ success: true, inserted, skipped });
+    console.log(`[IO API] BULK INSERT: ${inserted} insight rows inserted, ${skipped} duplicates skipped, batch: ${batchId} (actor: ${actor_ohr})`);
+    res.json({ success: true, inserted, skipped, batch_id: batchId });
   } catch (err: any) {
     console.error("[IO API] insights-bulk-insert error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Undo last bulk insert batch
+router.post("/insights-bulk-undo", async (req: Request, res: Response) => {
+  try {
+    const { actor_ohr, batch_id } = req.body;
+    if (!actor_ohr || !ADMIN_OHRS.includes(String(actor_ohr))) {
+      return res.status(403).json({ error: "Admin-only operation" });
+    }
+    if (!batch_id) {
+      return res.status(400).json({ error: "batch_id is required" });
+    }
+
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    // Count rows in this batch
+    const [countResult] = await db.select({ count: sql<number>`COUNT(*)` })
+      .from(ioInsights)
+      .where(eq(ioInsights.batch_id, batch_id));
+    const rowCount = Number(countResult?.count || 0);
+
+    if (rowCount === 0) {
+      return res.status(404).json({ error: "No rows found for this batch" });
+    }
+
+    // Delete all rows with this batch_id
+    await db.delete(ioInsights).where(eq(ioInsights.batch_id, batch_id));
+
+    // Audit log
+    await db.insert(ioAuditLog).values({
+      record_type: "insights_bulk_undo",
+      record_id: batch_id,
+      action: "bulk_undo",
+      field_name: "attendance_rows",
+      old_value: `${rowCount} rows`,
+      new_value: "deleted",
+      actor_ohr: String(actor_ohr),
+      actor_name: "Admin",
+    });
+
+    console.log(`[IO API] BULK UNDO: ${rowCount} rows deleted for batch ${batch_id} (actor: ${actor_ohr})`);
+    res.json({ success: true, deleted: rowCount, batch_id });
+  } catch (err: any) {
+    console.error("[IO API] insights-bulk-undo error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get last batch info (for undo button)
+router.get("/insights-last-batch", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    // Find the most recent batch_id
+    const [lastBatch] = await db.select({
+      batch_id: ioInsights.batch_id,
+      count: sql<number>`COUNT(*)`,
+      min_date: sql<string>`MIN(created_date)`,
+      max_date: sql<string>`MAX(created_date)`,
+    })
+      .from(ioInsights)
+      .where(sql`${ioInsights.batch_id} IS NOT NULL AND ${ioInsights.batch_id} != ''`)
+      .groupBy(ioInsights.batch_id)
+      .orderBy(sql`MAX(${ioInsights.created_at}) DESC`)
+      .limit(1);
+
+    if (!lastBatch || !lastBatch.batch_id) {
+      return res.json({ has_batch: false });
+    }
+
+    res.json({
+      has_batch: true,
+      batch_id: lastBatch.batch_id,
+      row_count: Number(lastBatch.count),
+      date_range: `${lastBatch.min_date?.slice(0, 10) || ''} to ${lastBatch.max_date?.slice(0, 10) || ''}`,
+    });
+  } catch (err: any) {
+    console.error("[IO API] insights-last-batch error:", err);
     res.status(500).json({ error: err.message });
   }
 });

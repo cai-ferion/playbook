@@ -310,6 +310,7 @@ export const ioInsights = mysqlTable("io_insights", {
   task_id: varchar("task_id", { length: 100 }),
   month: varchar("month", { length: 30 }),
   locked_by: varchar("locked_by", { length: 255 }),
+  batch_id: varchar("batch_id", { length: 50 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
 });

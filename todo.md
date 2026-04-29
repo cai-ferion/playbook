@@ -3426,3 +3426,11 @@
 - [x] Enrich inserted rows with employee data (Internal Role, Internal Planning Group) from io_employees
 - [x] Restrict Purge and Bulk Insert buttons to admin-only
 - [x] Exclude Managers from bulk insert (per existing rule)
+
+## Bulk Insert — Duplicate Detection Fix + Batch Undo
+- [x] Fix: Duplicate detection not working (date format mismatch between DB and comparison)
+- [x] Add batch_id column to io_insights for tracking bulk insert batches
+- [x] Tag each bulk insert with a unique batch_id
+- [x] Add "Undo Last Batch" button for Bulk Insert (deletes all rows with that batch_id)
+- [ ] Add "Undo Last Purge" functionality (restore purged rows)
+- [x] Both undo buttons admin-only

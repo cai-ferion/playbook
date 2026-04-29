@@ -243,6 +243,10 @@ function rosterRenderFilterBar() {
     tbHtml += '<button class="btn btn-outline btn-sm" id="roster-bulk-insert-btn" onclick="rosterShowBulkInsertModal()" style="display:none;white-space:nowrap;color:#2563eb;border-color:#2563eb;">' 
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Bulk Insert'
       + '</button>';
+    // Undo Last Batch (admin-only)
+    tbHtml += '<button class="btn btn-outline btn-sm" id="roster-undo-batch-btn" onclick="rosterShowUndoBatchModal()" style="display:none;white-space:nowrap;color:#f59e0b;border-color:#f59e0b;">' 
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Undo Batch'
+      + '</button>';
     // Clear filters
     tbHtml += '<button class="btn btn-ghost btn-xs" onclick="rosterClearAllFilters()" title="Clear all filters" style="white-space:nowrap;flex-shrink:0;">✕ Clear</button>';
     // Sync to Sheet (hidden by default)
@@ -1610,6 +1614,11 @@ async function rosterFetchEmployees() {
   if (bulkInsertBtn) {
     bulkInsertBtn.style.display = ROSTER.isOwner ? '' : 'none';
   }
+  // Show/hide Undo Batch button — admin-only
+  const undoBatchBtn = document.getElementById('roster-undo-batch-btn');
+  if (undoBatchBtn) {
+    undoBatchBtn.style.display = ROSTER.isOwner ? '' : 'none';
+  }
 }
 
 // ===== Sync to Google Sheet (WFM) =====
@@ -2066,5 +2075,82 @@ window.rosterExecuteBulkInsert = async function() {
     previewSection.innerHTML = `<div style="padding:16px;background:var(--error-bg,#FFEBEE);border:1px solid var(--error,#E53935);border-radius:var(--radius,6px);color:var(--error,#E53935);">
       <strong>Error:</strong> ${escapeHtml(err.message)}
     </div>`;
+  }
+};
+
+// ===== Undo Last Batch (Admin-only) =====
+
+window.rosterShowUndoBatchModal = async function() {
+  const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+
+  // Fetch last batch info
+  let batchInfo;
+  try {
+    const resp = await fetch('/api/io/insights-last-batch');
+    batchInfo = await resp.json();
+  } catch (err) {
+    showToast('Failed to fetch batch info', 'error');
+    return;
+  }
+
+  if (!batchInfo.has_batch) {
+    showToast('No batch found to undo', 'warning');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'undo-batch-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface,#fff);border-radius:var(--radius,8px);padding:28px 32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h3 style="margin:0;font-size:18px;display:flex;align-items:center;gap:8px;">
+          <span style="color:#f59e0b;">⟲</span> Undo Last Batch
+        </h3>
+        <button class="modal-close-btn" onclick="document.getElementById('undo-batch-modal-overlay').remove()">✕</button>
+      </div>
+
+      <div style="padding:16px;background:var(--warning-bg,rgba(245,158,11,.1));border:1px solid #f59e0b;border-radius:var(--radius,6px);margin-bottom:20px;">
+        <p style="margin:0 0 8px;font-weight:600;color:#f59e0b;">⚠ This will delete the following batch:</p>
+        <table style="width:100%;font-size:13px;">
+          <tr><td style="padding:4px 0;color:var(--muted,#666);">Batch ID:</td><td style="padding:4px 0;font-weight:500;">${escapeHtml(batchInfo.batch_id)}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--muted,#666);">Rows:</td><td style="padding:4px 0;font-weight:500;">${batchInfo.row_count}</td></tr>
+          <tr><td style="padding:4px 0;color:var(--muted,#666);">Date Range:</td><td style="padding:4px 0;font-weight:500;">${escapeHtml(batchInfo.date_range)}</td></tr>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <button onclick="document.getElementById('undo-batch-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
+        <button onclick="rosterExecuteUndoBatch('${escapeAttr(batchInfo.batch_id)}')" class="btn btn-sm" style="flex:1;background:#f59e0b;color:#fff;border:none;">Undo ${batchInfo.row_count} Rows</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+};
+
+window.rosterExecuteUndoBatch = async function(batchId) {
+  const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+  const btn = document.querySelector('#undo-batch-modal-overlay button[onclick*="rosterExecuteUndoBatch"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Undoing...'; }
+
+  try {
+    const resp = await fetch('/api/io/insights-bulk-undo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_ohr: user.ohr_id, batch_id: batchId }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showToast(data.error || 'Undo failed', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Retry'; }
+      return;
+    }
+
+    document.getElementById('undo-batch-modal-overlay').remove();
+    showToast(`Undo complete: ${data.deleted} rows removed`, 'success');
+  } catch (err) {
+    showToast('Undo failed: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Retry'; }
   }
 };
