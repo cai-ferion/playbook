@@ -470,6 +470,7 @@ function gtRenderUnifiedReceivedTable() {
     <th>Task ID</th>
     <th>Title</th>
     <th>Task Type</th>
+    <th>Created By</th>
     <th>Status</th>
     <th>Due Date</th>
     <th>Completed On</th>
@@ -480,7 +481,7 @@ function gtRenderUnifiedReceivedTable() {
   const pageData = HELM.filteredReceived.slice(start, start + HELM.pageSize);
 
   if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">You have no assigned tasks</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No tasks found</div><div class="empty-subtitle">You have no assigned tasks</div></div></td></tr>';
     helmRenderReceivedPagination();
     return;
   }
@@ -519,6 +520,7 @@ function gtRenderUnifiedReceivedTable() {
       <td><span style="font-family:monospace;font-size:12px;color:var(--primary);">${escapeHtml(t.task_id || '\u2014')}</span></td>
       <td style="max-width:250px;"><span style="font-weight:500;">${escapeHtml(t.title || '\u2014')}</span></td>
       <td>${typeBadge}</td>
+      <td>${isGroup ? '\u2014' : `<span style="font-size:12px;">${escapeHtml(t.assigned_by_name || '\u2014')}</span>`}</td>
       <td><span style="color:${statusColor};font-weight:600;font-size:12px;">${escapeHtml(t.status || '\u2014')}</span></td>
       <td style="${isOverdue ? 'color:var(--error);font-weight:600;' : ''}">${dueStr}${isOverdue ? ' <span style="font-size:10px;">(Overdue)</span>' : ''}</td>
       <td>${t.completed_at ? new Date(t.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014'}</td>

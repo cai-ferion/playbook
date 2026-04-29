@@ -3347,3 +3347,4 @@
 ## Helm — Tasks Received Table
 - [x] Add Task Title column to the Tasks Received table
 - [x] Add Completion Date column to the Tasks Received table
+- [x] Add "Created By" column to Tasks Received table (show assigner for Single tasks, dash for Group tasks)
