@@ -562,18 +562,15 @@ function gtShowCompleteModal(type, id) {
         <p>Are you sure you want to mark this task as completed?</p>
         <p class="modal-detail" style="margin-top:4px">This action cannot be undone.</p>
         <div style="margin-top:16px;">
-          <label style="font-size:13px;font-weight:600;color:var(--fg-secondary);display:block;margin-bottom:6px;">Attachment (optional)</label>
+          <label style="font-size:13px;font-weight:600;color:var(--fg-secondary);display:block;margin-bottom:6px;">Attachments (optional)</label>
           <div id="gt-complete-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;">
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
             </svg>
-            <span style="font-size:12px;color:var(--fg-muted);">Click or drag a file here</span>
-            <input type="file" id="gt-complete-file" style="display:none;" accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.pptx,.ppt">
+            <span style="font-size:12px;color:var(--fg-muted);">Click or drag files here (max 5 files, 10 MB each)</span>
+            <input type="file" id="gt-complete-file" style="display:none;" multiple accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.pptx,.ppt">
           </div>
-          <div id="gt-complete-file-preview" style="display:none;margin-top:8px;padding:8px 12px;background:var(--bg-secondary);border-radius:6px;font-size:12px;display:none;align-items:center;gap:8px;">
-            <span id="gt-complete-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-            <button id="gt-complete-file-remove" style="background:none;border:none;color:var(--error);cursor:pointer;font-size:14px;font-weight:700;padding:0 4px;">&times;</button>
-          </div>
+          <div id="gt-complete-file-list" style="margin-top:8px;"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -585,12 +582,46 @@ function gtShowCompleteModal(type, id) {
 
   document.body.appendChild(overlay);
 
-  let selectedFile = null;
+  let selectedFiles = []; // Array of File objects
   const fileInput = document.getElementById('gt-complete-file');
   const dropZone = document.getElementById('gt-complete-drop-zone');
-  const preview = document.getElementById('gt-complete-file-preview');
-  const fileName = document.getElementById('gt-complete-file-name');
-  const removeBtn = document.getElementById('gt-complete-file-remove');
+  const fileListEl = document.getElementById('gt-complete-file-list');
+
+  function renderFileList() {
+    if (selectedFiles.length === 0) {
+      fileListEl.innerHTML = '';
+      dropZone.style.display = 'block';
+      return;
+    }
+    let html = '';
+    selectedFiles.forEach((f, idx) => {
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:6px;font-size:12px;margin-bottom:4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(f.name)}</span>
+        <span style="color:var(--fg-muted);font-size:11px;white-space:nowrap;">${(f.size / 1024).toFixed(0)} KB</span>
+        <button onclick="gtRemoveFile(${idx})" style="background:none;border:none;color:var(--error);cursor:pointer;font-size:14px;font-weight:700;padding:0 4px;">&times;</button>
+      </div>`;
+    });
+    fileListEl.innerHTML = html;
+    // Keep drop zone visible if under max
+    dropZone.style.display = selectedFiles.length >= 5 ? 'none' : 'block';
+  }
+
+  window.gtRemoveFile = function(idx) {
+    selectedFiles.splice(idx, 1);
+    renderFileList();
+  };
+
+  function addFiles(files) {
+    for (const f of files) {
+      if (selectedFiles.length >= 5) { showToast('Maximum 5 files allowed', 'error'); break; }
+      if (f.size > 10 * 1024 * 1024) { showToast(`"${f.name}" is too large (max 10 MB)`, 'error'); continue; }
+      // Avoid duplicates by name+size
+      if (selectedFiles.some(sf => sf.name === f.name && sf.size === f.size)) continue;
+      selectedFiles.push(f);
+    }
+    renderFileList();
+  }
 
   dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--primary)'; });
@@ -598,26 +629,11 @@ function gtShowCompleteModal(type, id) {
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.style.borderColor = 'var(--border)';
-    if (e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
   });
-  fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) setFile(fileInput.files[0]); });
+  fileInput.addEventListener('change', () => { if (fileInput.files.length > 0) addFiles(fileInput.files); fileInput.value = ''; });
 
-  function setFile(f) {
-    if (f.size > 10 * 1024 * 1024) { showToast('File too large (max 10 MB)', 'error'); return; }
-    selectedFile = f;
-    fileName.textContent = f.name;
-    preview.style.display = 'flex';
-    dropZone.style.display = 'none';
-  }
-
-  removeBtn.addEventListener('click', () => {
-    selectedFile = null;
-    fileInput.value = '';
-    preview.style.display = 'none';
-    dropZone.style.display = 'block';
-  });
-
-  const close = () => overlay.remove();
+  const close = () => { window.gtRemoveFile = undefined; overlay.remove(); };
   document.getElementById('gt-complete-cancel').addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
@@ -626,14 +642,17 @@ function gtShowCompleteModal(type, id) {
     btn.disabled = true;
     btn.textContent = 'Completing...';
     try {
-      let attachmentUrl = null;
-      if (selectedFile) {
-        attachmentUrl = await gtUploadAttachment(selectedFile);
+      let attachmentUrls = [];
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const url = await gtUploadAttachment(file);
+          attachmentUrls.push({ name: file.name, url: url });
+        }
       }
       if (type === 'group') {
-        await gtDoComplete(id, attachmentUrl);
+        await gtDoComplete(id, attachmentUrls);
       } else {
-        await gtDoCompleteSingle(id, attachmentUrl);
+        await gtDoCompleteSingle(id, attachmentUrls);
       }
       close();
     } catch (e) {
@@ -676,12 +695,12 @@ function gtConfirmCompleteSingle(taskId) {
   gtShowCompleteModal('single', taskId);
 }
 
-async function gtDoComplete(groupTaskId, attachmentUrl) {
+async function gtDoComplete(groupTaskId, attachmentUrls) {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
   if (!cu) return;
 
   const body = { ohr: cu.ohr_id };
-  if (attachmentUrl) body.attachment_url = attachmentUrl;
+  if (attachmentUrls && attachmentUrls.length > 0) body.attachment_urls = attachmentUrls;
 
   const resp = await fetch(`${IO_API_BASE}/group-tasks/${groupTaskId}/complete`, {
     method: 'POST',
@@ -697,9 +716,9 @@ async function gtDoComplete(groupTaskId, attachmentUrl) {
   helmApplyReceivedFilters();
 }
 
-async function gtDoCompleteSingle(taskId, attachmentUrl) {
+async function gtDoCompleteSingle(taskId, attachmentUrls) {
   const body = { status: 'Completed', completed_at: new Date().toISOString() };
-  if (attachmentUrl) body.attachments = attachmentUrl;
+  if (attachmentUrls && attachmentUrls.length > 0) body.attachments = JSON.stringify(attachmentUrls);
 
   const resp = await fetch(`${IO_API_BASE}/tasks/${encodeURIComponent(taskId)}`, {
     method: 'PATCH',
@@ -853,22 +872,67 @@ async function gtCloseTask(groupTaskId) {
 
 function gtRenderAttachmentCell(t) {
   // For group tasks, attachment_url is directly on the unified object
-  // For individual tasks, the attachments field may hold a URL
-  const url = t.attachment_url || t.attachments || '';
-  if (!url) return '\u2014';
+  // For individual tasks, the attachments field may hold a URL or JSON array
+  const raw = t.attachment_url || t.attachments || '';
+  if (!raw) return '\u2014';
 
-  // Determine file type from URL for icon
-  const lower = url.toLowerCase();
-  const isImage = /\.(png|jpg|jpeg|gif|webp|svg)/.test(lower);
-  const isPdf = /\.pdf/.test(lower);
+  // Try to parse as JSON array (new multi-attachment format)
+  let attachments = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) attachments = parsed;
+  } catch (e) {
+    // Legacy: plain URL string
+    attachments = [{ name: 'attachment', url: raw }];
+  }
 
-  const icon = isImage
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
-    : isPdf
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
-    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+  if (attachments.length === 0) return '\u2014';
 
-  return `<a href="${escapeAttr(url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-size:11px;font-weight:600;text-decoration:none;" title="View attachment">${icon} View</a>`;
+  const clipIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+
+  if (attachments.length === 1) {
+    return `<a href="${escapeAttr(attachments[0].url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-size:11px;font-weight:600;text-decoration:none;" title="${escapeAttr(attachments[0].name || 'View')}">${clipIcon} View</a>`;
+  }
+
+  // Multiple: show count with a dropdown-style tooltip
+  return `<span class="gt-multi-attach" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;position:relative;" onclick="gtShowAttachPopup(event, ${escapeAttr(JSON.stringify(JSON.stringify(attachments)))})">${clipIcon} ${attachments.length} files</span>`;
+}
+
+function gtShowAttachPopup(event, jsonStr) {
+  event.stopPropagation();
+  // Remove any existing popup
+  const old = document.getElementById('gt-attach-popup');
+  if (old) old.remove();
+
+  const attachments = JSON.parse(jsonStr);
+  const popup = document.createElement('div');
+  popup.id = 'gt-attach-popup';
+  popup.style.cssText = 'position:fixed;z-index:99999;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:8px 0;min-width:200px;max-width:300px;';
+
+  let html = '';
+  attachments.forEach(a => {
+    html += `<a href="${escapeAttr(a.url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;color:var(--fg);text-decoration:none;transition:background 0.1s;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.name || 'File')}</span>
+    </a>`;
+  });
+  popup.innerHTML = html;
+
+  document.body.appendChild(popup);
+
+  // Position near the click
+  const rect = event.target.getBoundingClientRect();
+  popup.style.top = (rect.bottom + 4) + 'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth - 320) + 'px';
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function _closePopup() {
+      const el = document.getElementById('gt-attach-popup');
+      if (el) el.remove();
+      document.removeEventListener('click', _closePopup);
+    });
+  }, 10);
 }
 
 const _originalInitHelm = initHelm;

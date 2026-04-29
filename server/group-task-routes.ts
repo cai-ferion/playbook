@@ -300,19 +300,29 @@ router.get("/:id", async (req: Request, res: Response) => {
 });
 
 // ── POST /:id/complete — mark own assignment as completed ──
+// Accepts either `attachment_url` (string, legacy) or `attachment_urls` (JSON array of {name,url})
 router.post("/:id/complete", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
     const groupTaskId = parseInt(req.params.id);
-    const { ohr, attachment_url } = req.body;
+    const { ohr, attachment_url, attachment_urls } = req.body;
     if (!ohr || isNaN(groupTaskId)) {
       return res.status(400).json({ error: "ohr and valid task ID required" });
     }
 
     const now = new Date().toISOString();
     const ohrEsc = ohr.replace(/'/g, "''");
-    const attachClause = attachment_url ? `, attachment_url = '${String(attachment_url).replace(/'/g, "''")}'` : '';
+
+    // Support multiple attachments: store as JSON array string
+    let attachValue: string | null = null;
+    if (attachment_urls && Array.isArray(attachment_urls) && attachment_urls.length > 0) {
+      attachValue = JSON.stringify(attachment_urls);
+    } else if (attachment_url) {
+      // Legacy single URL — wrap in array format for consistency
+      attachValue = JSON.stringify([{ name: 'attachment', url: attachment_url }]);
+    }
+    const attachClause = attachValue ? `, attachment_url = '${attachValue.replace(/'/g, "''")}'` : '';
 
     const [result] = (await db.execute(sql.raw(`
       UPDATE io_task_assignments

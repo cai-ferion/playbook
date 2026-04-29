@@ -713,21 +713,27 @@ async function helmOpenDetail(taskId) {
 
 
 
-  // Attachments
-  if (task.attachments) {
+  // Attachments (supports both legacy single URL and JSON array of {name,url})
+  const rawAttach = task.attachment_url || task.attachments || '';
+  if (rawAttach) {
+    let atts = [];
     try {
-      const atts = JSON.parse(task.attachments);
-      if (atts.length > 0) {
-        html += '<div class="detail-row"><span class="detail-label">Attachments</span><span class="detail-value">';
-        atts.forEach(a => {
-          html += `<a href="${escapeAttr(a.url)}" target="_blank" download="${escapeAttr(a.name)}" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--primary);text-decoration:none;margin-right:10px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            ${escapeHtml(a.name)}
-          </a>`;
-        });
-        html += '</span></div>';
-      }
-    } catch (e) {}
+      const parsed = JSON.parse(rawAttach);
+      if (Array.isArray(parsed)) atts = parsed;
+    } catch (e) {
+      // Legacy plain URL
+      if (rawAttach.startsWith('http')) atts = [{ name: 'Attachment', url: rawAttach }];
+    }
+    if (atts.length > 0) {
+      html += '<div class="detail-row"><span class="detail-label">Attachments</span><span class="detail-value" style="display:flex;flex-direction:column;gap:4px;">';
+      atts.forEach(a => {
+        html += `<a href="${escapeAttr(a.url)}" target="_blank" download="${escapeAttr(a.name)}" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--primary);text-decoration:none;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          ${escapeHtml(a.name)}
+        </a>`;
+      });
+      html += '</span></div>';
+    }
   }
 
   html += '</div>';

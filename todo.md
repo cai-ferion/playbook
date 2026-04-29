@@ -3370,3 +3370,9 @@
 - [x] Fix: Coaching inline expansion overflow — Acknowledge button hidden when content is long (make panel scrollable with sticky footer)
 - [x] Update supervisor alignments from Google Sheet into io_employees (361/402 matched, 41 unmatched due to employees/supervisors not in DB)
 - [x] Build TL Team Analytics table in Sandbox Input Portal (side-by-side, per-agent metrics, drill-down, uses existing filters)
+
+## Helm — Multiple Attachments in Mark as Complete
+- [x] Update "Mark as Complete" modal to support multiple file uploads (multi-select input, max 5 files, 10MB each)
+- [x] Update backend completion endpoint to handle multiple file uploads and store all in S3 (JSON array format)
+- [x] Store multiple attachment URLs in the database (JSON array of {name, url} objects in attachment_url column)
+- [x] Update Attachments column display to show/download multiple files (popup menu for multi-file)
