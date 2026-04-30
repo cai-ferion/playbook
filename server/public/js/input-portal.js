@@ -151,7 +151,11 @@ function inputRenderFilterBar() {
     + ' Clear Filters'
     + '</button>';
 
-  // Inline blanks status indicator (sits in the filter bar's right side)
+  // Record count — preserve current value across re-renders
+  var curCount = serverPagState.total || 0;
+  html += '<span class="filter-bar-meta" id="input-filter-count">Filtered Records: ' + formatNumber(curCount) + '</span>';
+
+  // Inline blanks status indicator (very end of filter bar)
   html += '<div class="blanks-inline-status" id="blanks-status-banner" onclick="toggleBlanksFromBanner()" style="display:none;">' 
     + '<span class="blanks-inline-icon" id="blanks-inline-icon">&#9888;</span>'
     + '<span class="blanks-inline-msg" id="blanks-banner-message"></span>'
@@ -160,10 +164,6 @@ function inputRenderFilterBar() {
     + '<span class="blanks-inline-progress-label" id="blanks-progress-label"></span>'
     + '</div>'
     + '</div>';
-
-  // Record count — preserve current value across re-renders
-  var curCount = serverPagState.total || 0;
-  html += '<span class="filter-bar-meta" id="input-filter-count">Filtered Records: ' + formatNumber(curCount) + '</span>';
 
   container.innerHTML = html;
 }
@@ -1384,7 +1384,8 @@ function initMultiSelects() {
 function setDefaultOmnibarFilters() {
   var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
   omnibarState.filters = {
-    date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today }
+    date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today },
+    blanks: { key: 'blanks', label: 'Blank Tags', type: 'toggle', values: [true] }
   };
   omnibarState.sort = { key: 'date', direction: 'desc', recordKey: 'date' };
   omnibarState.openPill = null;
