@@ -1818,12 +1818,13 @@ window.rosterPurgePreview = async function() {
         ${data.total_rows > 20 ? `<div style="font-size:11px;color:var(--fg-muted,#5E6C84);margin-top:4px;">Showing 20 of ${data.total_rows} rows</div>` : ''}
       </div>
 
-      <div style="display:flex;gap:12px;">
+      <div id="purge-action-buttons" style="display:flex;gap:12px;">
         <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="flex:1;">Cancel</button>
-        <button onclick="rosterExecutePurge('${emp.ohr_id}','${fromDate}','${toDate}',${data.total_rows})" class="btn btn-danger btn-sm" style="flex:1;">
+        <button onclick="rosterShowPurgeConfirm('${emp.ohr_id}','${fromDate}','${toDate}',${data.total_rows},'${escapeHtml(emp.full_name)}')" class="btn btn-danger btn-sm" style="flex:1;">
           Delete ${data.total_rows} Record${data.total_rows !== 1 ? 's' : ''}
         </button>
       </div>
+      <div id="purge-inline-confirm" style="display:none;"></div>
     `;
 
     // Store for confirm
@@ -1835,11 +1836,27 @@ window.rosterPurgePreview = async function() {
   }
 };
 
-window.rosterExecutePurge = async function(ohrId, fromDate, toDate, expectedCount) {
-  // Double-confirm
+window.rosterShowPurgeConfirm = function(ohrId, fromDate, toDate, expectedCount, empName) {
   const dateRangeLabel = toDate ? `from ${fromDate} to ${toDate}` : `from ${fromDate} onwards`;
-  const confirmed = confirm(`FINAL CONFIRMATION\n\nYou are about to permanently delete ${expectedCount} attendance records for OHR ${ohrId} ${dateRangeLabel}.\n\nThis action CANNOT be undone.\n\nProceed?`);
-  if (!confirmed) return;
+  document.getElementById('purge-action-buttons').style.display = 'none';
+  document.getElementById('purge-inline-confirm').style.display = 'block';
+  document.getElementById('purge-inline-confirm').innerHTML = `
+    <div style="padding:16px;background:#FFF3E0;border:2px solid #FF9800;border-radius:var(--radius,6px);margin-top:12px;">
+      <div style="font-size:14px;font-weight:700;color:#E65100;margin-bottom:8px;">⚠ Final Confirmation</div>
+      <div style="font-size:13px;color:var(--fg,#1A1C1F);line-height:1.6;margin-bottom:12px;">
+        You are about to permanently delete <strong>${expectedCount} attendance record${expectedCount !== 1 ? 's' : ''}</strong> for <strong>${empName}</strong> (${ohrId}) ${dateRangeLabel}.<br><br>
+        <strong style="color:#E65100;">This action CANNOT be undone.</strong>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button onclick="document.getElementById('purge-action-buttons').style.display='flex';document.getElementById('purge-inline-confirm').style.display='none';" class="btn btn-outline btn-sm" style="flex:1;">Go Back</button>
+        <button onclick="rosterExecutePurge('${ohrId}','${fromDate}','${toDate}',${expectedCount})" class="btn btn-sm" style="flex:1;background:#E65100;color:#fff;border:none;font-weight:600;">Yes, Permanently Delete</button>
+      </div>
+    </div>
+  `;
+};
+
+window.rosterExecutePurge = async function(ohrId, fromDate, toDate, expectedCount) {
+  const dateRangeLabel = toDate ? `from ${fromDate} to ${toDate}` : `from ${fromDate} onwards`;
 
   const previewSection = document.getElementById('purge-preview-section');
   previewSection.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted,#5E6C84);">Deleting records...</div>';
