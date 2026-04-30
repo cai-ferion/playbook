@@ -2688,7 +2688,17 @@ function compassAutoPopulateZtpDesc() {
   descDiv.textContent = match?.description || 'No description available.';
 }
 
+let _compassSubmitting = false;
 async function compassSubmitNew() {
+  // Double-submit guard — prevent duplicate coaching logs from rapid clicks
+  if (_compassSubmitting) return;
+  _compassSubmitting = true;
+  const submitBtn = document.getElementById('compass-submit-btn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating...'; }
+
+  // Wrap entire function in try/finally to always reset the guard
+  try {
+
   const type = document.getElementById('compass-new-type')?.value;
   if (!type) { showToast('Please select a coaching type', 'error'); return; }
 
@@ -2971,6 +2981,13 @@ async function compassSubmitNew() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record)
     });
+    if (resp.status === 409) {
+      // Server detected a duplicate — log already exists
+      showToast('This coaching log already exists (duplicate prevented)', 'warning');
+      _compassResetFormFieldsForNext();
+      await compassFetchLogs();
+      return;
+    }
     if (!resp.ok) throw new Error('Failed to create coaching log');
 
     const created = await resp.json();
@@ -3019,6 +3036,13 @@ async function compassSubmitNew() {
   } catch (e) {
     console.error('Failed to create coaching log:', e);
     showToast('Failed to create coaching log: ' + e.message, 'error');
+  }
+
+  } finally {
+    // Always reset the double-submit guard
+    _compassSubmitting = false;
+    const _btn = document.getElementById('compass-submit-btn');
+    if (_btn) { _btn.disabled = false; _btn.textContent = 'Create'; }
   }
 }
 

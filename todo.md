@@ -3463,3 +3463,6 @@
 
 ## Bug Fix — NTE Logs Duplicated in Coaching Profile
 - [x] Fix: NTE Logs are being saved to both io_coaching (Coaching Profile) and Corrective Action — should only go to CA (filter added to compass-omnibar.js)
+
+## Bug Fix — Coaching Log Duplication
+- [x] Fix: Coaching logs are being duplicated (two different IDs, same content) — double submission issue (frontend guard + server-side 409 dedup)

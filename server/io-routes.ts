@@ -769,6 +769,24 @@ router.post("/coaching", async (req: Request, res: Response) => {
 
     const values = { ...body, coaching_id };
 
+    // Server-side dedup: reject if an identical log was created in the last 30 seconds
+    // (same coach, coachee, type, and date — prevents double-click duplicates)
+    if (body.coach_ohr && body.coachee_ohr && body.coaching_type && body.coaching_date) {
+      const recentDupes = await db.select({ id: ioCoaching.id, coaching_id: ioCoaching.coaching_id })
+        .from(ioCoaching)
+        .where(and(
+          eq(ioCoaching.coach_ohr, String(body.coach_ohr)),
+          eq(ioCoaching.coachee_ohr, String(body.coachee_ohr)),
+          eq(ioCoaching.coaching_type, String(body.coaching_type)),
+          eq(ioCoaching.coaching_date, String(body.coaching_date))
+        ))
+        .limit(1);
+      if (recentDupes.length > 0) {
+        console.warn(`[IO API] Duplicate coaching log blocked: coach=${body.coach_ohr} coachee=${body.coachee_ohr} type=${body.coaching_type} date=${body.coaching_date} (existing: ${recentDupes[0].coaching_id})`);
+        return res.status(409).json({ error: 'Duplicate coaching log detected', existing_id: recentDupes[0].coaching_id });
+      }
+    }
+
     const result = await db.insert(ioCoaching).values(values);
     const insertId = (result as any)[0]?.insertId;
     res.json({ ok: true, id: insertId, coaching_id });
