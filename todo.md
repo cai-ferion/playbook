@@ -3478,3 +3478,8 @@
 - [x] Click-to-filter: clicking the banner filters table to show only blank rows
 - [x] Visible to all users who can see the Input Portal
 - [x] Exclude Managers from the blank count
+
+## Input Portal — Relocate Blanks Banner into Filter Bar
+- [x] Move blanks status banner from standalone element into the filter bar row (inline with pills)
+- [x] Restyle banner as compact inline element that fits within the filter bar's empty space
+- [x] Remove the standalone banner HTML element

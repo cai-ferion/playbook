@@ -151,6 +151,16 @@ function inputRenderFilterBar() {
     + ' Clear Filters'
     + '</button>';
 
+  // Inline blanks status indicator (sits in the filter bar's right side)
+  html += '<div class="blanks-inline-status" id="blanks-status-banner" onclick="toggleBlanksFromBanner()" style="display:none;">' 
+    + '<span class="blanks-inline-icon" id="blanks-inline-icon">&#9888;</span>'
+    + '<span class="blanks-inline-msg" id="blanks-banner-message"></span>'
+    + '<div class="blanks-inline-progress">'
+    + '<div class="blanks-inline-progress-bar"><div class="blanks-inline-progress-fill" id="blanks-progress-fill"></div></div>'
+    + '<span class="blanks-inline-progress-label" id="blanks-progress-label"></span>'
+    + '</div>'
+    + '</div>';
+
   // Record count — preserve current value across re-renders
   var curCount = serverPagState.total || 0;
   html += '<span class="filter-bar-meta" id="input-filter-count">Filtered Records: ' + formatNumber(curCount) + '</span>';
@@ -1454,18 +1464,22 @@ async function updateBlanksBanner() {
     const fillEl = document.getElementById('blanks-progress-fill');
     const labelEl = document.getElementById('blanks-progress-label');
 
+    const iconEl = document.getElementById('blanks-inline-icon');
+
     if (blanksCount === 0) {
       // All filled — success state
-      banner.className = 'blanks-banner banner-success';
+      banner.className = 'blanks-inline-status blanks-inline-success';
       banner.style.display = '';
-      if (msgEl) msgEl.innerHTML = `<strong>All attendance filled for today!</strong> ${filledCount} of ${totalCount} records tagged.`;
+      if (iconEl) iconEl.innerHTML = '&#10003;';
+      if (msgEl) msgEl.innerHTML = `<strong>All filled!</strong> ${filledCount}/${totalCount} tagged`;
       if (fillEl) { fillEl.style.width = '100%'; fillEl.style.backgroundColor = '#4CAF50'; }
       if (labelEl) labelEl.textContent = '100%';
     } else {
       // Still have blanks — warning state
-      banner.className = 'blanks-banner banner-warning';
+      banner.className = 'blanks-inline-status blanks-inline-warning';
       banner.style.display = '';
-      if (msgEl) msgEl.innerHTML = `<strong>${blanksCount} blank${blanksCount !== 1 ? 's' : ''} remaining</strong> for today \u2014 ${filledCount} of ${totalCount} filled. <span style="font-size:11px;opacity:0.7;">(Click to ${omnibarState.filters['blanks'] ? 'show all' : 'filter blanks'})</span>`;
+      if (iconEl) iconEl.innerHTML = '&#9888;';
+      if (msgEl) msgEl.innerHTML = `<strong>${blanksCount}</strong> blank${blanksCount !== 1 ? 's' : ''} \u2014 ${filledCount}/${totalCount} filled`;
       if (fillEl) {
         fillEl.style.width = filledPct + '%';
         fillEl.style.backgroundColor = filledPct >= 80 ? '#FF9800' : '#F44336';
