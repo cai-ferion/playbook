@@ -3483,3 +3483,6 @@
 - [x] Move blanks status banner from standalone element into the filter bar row (inline with pills)
 - [x] Restyle banner as compact inline element that fits within the filter bar's empty space
 - [x] Remove the standalone banner HTML element
+
+## Helm — Task Dashboard Nav Visibility on Login
+- [x] Show Task Dashboard nav button immediately on login for TL/Manager/Admin (not just after clicking Task Board)

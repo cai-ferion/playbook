@@ -974,6 +974,12 @@ function applyNavPermissions(user) {
 
   // Helm
   vis('nav-group-helm', 'nav.helm');
+  // Task Dashboard: visible for TL/Manager/Admin (not Agents)
+  const helmDashNav = document.getElementById('nav-helm-dashboard');
+  if (helmDashNav) {
+    const isAgentOnly = user.actual_role === 'Agent' && !(window.ADMIN_OHRS || []).includes(user.ohr_id);
+    helmDashNav.style.display = (p['nav.helm'] && !isAgentOnly) ? '' : 'none';
+  }
 
   // Regimen
   vis('nav-regimen', 'nav.regimen');
