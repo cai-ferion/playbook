@@ -471,64 +471,54 @@ function havenShowDayLeaves(dateStr) {
   havenOpenForm();
 }
 
-// ─── File Leave Form ───────────────────────────────────────────────────────────
+// ─── File Leave Form ───────────────────────────────────────────────────────────────────────────
 function havenShowFileForm(prefillDate) {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) { showToast('Please log in first', 'error'); return; }
-
   const role = havenGetRole();
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
   if (!formBody) return;
-
   formTitle.textContent = 'File Leave Request';
-
-  const leaveTypeField = (role === 'tl')
-    ? `<div class="form-group">
-        <label class="form-label">Leave Type <span class="required">*</span></label>
-        <select class="form-select" id="haven-file-type">
-          <option value="">Select type...</option>
-          <option value="PTO">PTO</option>
-          <option value="CTO">CTO</option>
-        </select>
+  // Leave Type: only visible to TL/OM — agents get auto-assigned "PTO"
+  const leaveTypeField = (role === 'tl' || role === 'om')
+    ? `<div class="haven-form-field">
+        <label class="haven-form-label">Leave Type <span class="haven-form-req">*</span></label>
+        <div class="haven-form-select-wrap">
+          <select class="haven-form-select" id="haven-file-type">
+            <option value="">Select type...</option>
+            <option value="PTO">PTO</option>
+            <option value="CTO">CTO</option>
+          </select>
+          <svg class="haven-form-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
       </div>`
-    : `<div class="form-group">
-        <label class="form-label">Leave Type <span class="required">*</span></label>
-        <select class="form-select" id="haven-file-type">
-          <option value="">Select type...</option>
-          <option value="PL">Planned Leave (PL)</option>
-          <option value="CO">Comp Off (CO)</option>
-          <option value="PH">Public Holiday (PH)</option>
-        </select>
-      </div>`;
-
+    : '';
   formBody.innerHTML = `
-    <div class="form-group">
-      <label class="form-label">Date <span class="required">*</span></label>
-      <input type="date" class="form-input" id="haven-file-date" value="${prefillDate || havenGetTodayPHT()}">
+    <div class="haven-form-field">
+      <label class="haven-form-label">Date <span class="haven-form-req">*</span></label>
+      <input type="date" class="haven-form-input" id="haven-file-date" value="${prefillDate || havenGetTodayPHT()}">
     </div>
     ${leaveTypeField}
-    <div class="form-group">
-      <label class="form-label">Reason</label>
-      <textarea class="form-input" id="haven-file-reason" rows="3" placeholder="Optional reason..."></textarea>
+    <div class="haven-form-field">
+      <label class="haven-form-label">Reason</label>
+      <textarea class="haven-form-input haven-form-textarea" id="haven-file-reason" rows="3" placeholder="Brief reason (optional)"></textarea>
     </div>
   `;
-
   formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="havenSubmitLeave()">Submit</button>
+    <button class="haven-form-btn haven-form-btn-cancel" onclick="havenCloseForm()">Cancel</button>
+    <button class="haven-form-btn haven-form-btn-submit" onclick="havenSubmitLeave()">Submit Request</button>
   `;
-
   havenOpenForm();
 }
-
 function havenSubmitLeave() {
   const dateVal = document.getElementById('haven-file-date')?.value;
-  const typeVal = document.getElementById('haven-file-type')?.value;
+  const typeEl = document.getElementById('haven-file-type');
+  const typeVal = typeEl ? typeEl.value : 'PTO'; // Agents don't see the field; default to PTO
   const reasonVal = document.getElementById('haven-file-reason')?.value || '';
-
   if (!dateVal) { showToast('Please select a date', 'error'); return; }
+  if (typeEl && !typeVal) { showToast('Please select a leave type', 'error'); return; }
   if (!typeVal) { showToast('Please select a leave type', 'error'); return; }
 
   havenConfirm(`File a <b>${escapeHtml(typeVal)}</b> leave for <b>${dateVal}</b>?`, async () => {

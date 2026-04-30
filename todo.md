@@ -3547,3 +3547,8 @@
 - [x] Updated RBAC defaults: nav.haven = true for Agent role and all non-Agent roles
 - [x] Bulk-updated 388 DB permission rows (nav.haven: false → true) via bulk-key-update endpoint
 - [x] Verified: Agent, SME, Manager, TL all now get nav.haven = true
+
+## Haven — File Leave Form Restyle & Logic
+- [x] Restyle the File Leave modal (modern look matching app design)
+- [x] Hide "Leave Type" field for agents (only visible to Team Leaders)
+- [x] Limit Leave Type dropdown options to "PTO" and "CTO" only

@@ -547,3 +547,100 @@
   color: var(--fg-muted);
   font-size: 13px;
 }
+
+/* ─── Restyled File Leave Form ─────────────────────────────────────────────── */
+.haven-form-field {
+  margin-bottom: 18px;
+}
+.haven-form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+}
+.haven-form-req {
+  color: #ef4444;
+  font-weight: 700;
+}
+.haven-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--fg);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.haven-form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.haven-form-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+.haven-form-select-wrap {
+  position: relative;
+}
+.haven-form-select {
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--fg);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.haven-form-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.haven-form-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+/* Form buttons */
+.haven-form-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, transform 0.1s;
+}
+.haven-form-btn:active {
+  transform: scale(0.97);
+}
+.haven-form-btn-cancel {
+  background: transparent;
+  color: var(--fg-muted);
+  border: 1.5px solid var(--border);
+}
+.haven-form-btn-cancel:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.haven-form-btn-submit {
+  background: var(--primary);
+  color: #fff;
+}
+.haven-form-btn-submit:hover {
+  background: var(--primary-hover, #2563eb);
+}
