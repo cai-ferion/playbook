@@ -365,95 +365,84 @@ function havenStatusColor(status) {
   }
 }
 
-// ─── Leave Detail Popup (with approve/reject actions) ─────────────────────────
+
+// ─── Leave Detail Popup (with inline approve/reject/cancel/delete) ─────────────
 function havenShowLeaveDetail(leaveId) {
   const lv = HAVEN.leaves.find(l => l.leave_id === leaveId);
   if (!lv) return;
-
   const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
-
+  const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
   const canCancel = (role === 'agent' || role === 'tl') && lv.status === 'Pending TL' && user && lv.ohr_id === user.ohr_id;
   const canTLApprove = role === 'tl' && lv.status === 'Pending TL' && user && lv.ohr_id !== user.ohr_id;
   const canOMApprove = role === 'om' && lv.status === 'Pending OM';
-
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
   if (!formBody || !formTitle || !formFooter) return;
-
   formTitle.textContent = 'Leave Details';
-
   const statusBadge = `<span class="module-status-badge" style="background:${havenStatusColor(lv.status)}20;color:${havenStatusColor(lv.status)};border:1px solid ${havenStatusColor(lv.status)}40;">${escapeHtml(lv.status || '')}</span>`;
-
   formBody.innerHTML = `
     <div class="haven-detail-grid">
       <div class="haven-detail-row"><span class="haven-detail-label">Status</span><span>${statusBadge}</span></div>
-      <div class="haven-detail-row"><span class="haven-detail-label">Employee</span><span>${escapeHtml(lv.full_name || '—')}</span></div>
-      <div class="haven-detail-row"><span class="haven-detail-label">OHR</span><span>${escapeHtml(lv.ohr_id || '—')}</span></div>
-      <div class="haven-detail-row"><span class="haven-detail-label">Date</span><span>${escapeHtml(lv.start_date || '—')}</span></div>
-      <div class="haven-detail-row"><span class="haven-detail-label">Leave Type</span><span>${escapeHtml(lv.leave_type || '—')}</span></div>
-      <div class="haven-detail-row"><span class="haven-detail-label">Reason</span><span>${escapeHtml(lv.reason || '—')}</span></div>
-      <div class="haven-detail-row"><span class="haven-detail-label">Supervisor</span><span>${escapeHtml(lv.supervisor || '—')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Employee</span><span>${escapeHtml(lv.full_name || '\u2014')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">OHR</span><span>${escapeHtml(lv.ohr_id || '\u2014')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Date</span><span>${escapeHtml(lv.start_date || '\u2014')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Leave Type</span><span>${escapeHtml(lv.leave_type || '\u2014')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Reason</span><span>${escapeHtml(lv.reason || '\u2014')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Supervisor</span><span>${escapeHtml(lv.supervisor || '\u2014')}</span></div>
       ${lv.tl_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">TL Reviewer</span><span>${escapeHtml(lv.tl_reviewer)}</span></div>` : ''}
       ${lv.om_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">OM Reviewer</span><span>${escapeHtml(lv.om_reviewer)}</span></div>` : ''}
       ${lv.rejection_reason ? `<div class="haven-detail-row"><span class="haven-detail-label">Rejection Reason</span><span style="color:#dc2626;">${escapeHtml(lv.rejection_reason)}</span></div>` : ''}
-      <div class="haven-detail-row"><span class="haven-detail-label">Filed</span><span>${lv.created_at ? new Date(lv.created_at).toLocaleString() : '—'}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Filed</span><span>${lv.created_at ? new Date(lv.created_at).toLocaleString() : '\u2014'}</span></div>
     </div>
+    <div id="haven-inline-action-zone"></div>
   `;
-
+  // Footer: action buttons only (no Close — X suffices)
   let footerHtml = '';
-  if (canTLApprove) {
-    footerHtml += `<button class="btn btn-success btn-sm" onclick="havenSingleApprove('${escapeHtml(lv.leave_id)}')">Approve</button>`;
-    footerHtml += `<button class="btn btn-danger btn-sm" onclick="havenSingleReject('${escapeHtml(lv.leave_id)}')">Reject</button>`;
-  } else if (canOMApprove) {
-    footerHtml += `<button class="btn btn-success btn-sm" onclick="havenSingleApprove('${escapeHtml(lv.leave_id)}')">Approve</button>`;
-    footerHtml += `<button class="btn btn-danger btn-sm" onclick="havenSingleReject('${escapeHtml(lv.leave_id)}')">Reject</button>`;
-  } else if (canCancel) {
-    footerHtml += `<button class="btn btn-danger btn-sm" onclick="havenCancelLeave('${escapeHtml(lv.leave_id)}')">Cancel Leave</button>`;
+  if (canTLApprove || canOMApprove) {
+    footerHtml += `<button class="haven-form-btn haven-form-btn-approve" onclick="havenInlineApprove('${escapeHtml(lv.leave_id)}')">Approve</button>`;
+    footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineReject('${escapeHtml(lv.leave_id)}')">Reject</button>`;
   }
-  footerHtml += `<button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Close</button>`;
+  if (canCancel) {
+    footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineCancel('${escapeHtml(lv.leave_id)}')">Cancel Leave</button>`;
+  }
+  if (isAdmin) {
+    footerHtml += `<button class="haven-form-btn haven-form-btn-delete" onclick="havenInlineDelete('${escapeHtml(lv.leave_id)}')">Delete</button>`;
+  }
   formFooter.innerHTML = footerHtml;
-
   havenOpenForm();
 }
-
 // ─── Show Day Leaves (when +N more is clicked) ─────────────────────────────────
 function havenShowDayLeaves(dateStr) {
   const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   let dayLeaves = HAVEN.leaves.filter(l => l.start_date === dateStr);
-
   if (role === 'agent') {
     dayLeaves = dayLeaves.filter(l => user && l.ohr_id === user.ohr_id);
   } else if (role === 'tl') {
     const myAgents = havenGetMyAgentOhrs();
     dayLeaves = dayLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
   }
-
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
   if (!formBody) return;
-
   formTitle.textContent = `Leaves on ${new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
-
   let html = '<div class="haven-day-list">';
   for (const lv of dayLeaves) {
     const statusClass = havenStatusClass(lv.status);
     html += `<div class="haven-day-item ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')">
-      <span class="haven-day-item-name">${escapeHtml(lv.full_name || '—')}</span>
+      <span class="haven-day-item-name">${escapeHtml(lv.full_name || '\u2014')}</span>
       <span class="haven-day-item-type">${escapeHtml(lv.leave_type || '')}</span>
       <span class="haven-day-item-status">${escapeHtml(lv.status || '')}</span>
     </div>`;
   }
   html += '</div>';
-
   // Bulk actions
   const tier = role === 'tl' ? 'tl' : 'om';
   const actionableStatus = role === 'tl' ? 'Pending TL' : 'Pending OM';
   const actionable = dayLeaves.filter(l => l.status === actionableStatus);
-
   let bulkHtml = '';
   if ((role === 'tl' || role === 'om') && actionable.length > 0) {
     const ids = actionable.map(l => l.leave_id);
@@ -465,13 +454,11 @@ function havenShowDayLeaves(dateStr) {
       </div>
     `;
   }
-
   formBody.innerHTML = html + bulkHtml;
-  formFooter.innerHTML = `<button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Close</button>`;
+  formFooter.innerHTML = ''; // No Close button — X suffices
   havenOpenForm();
 }
-
-// ─── File Leave Form ───────────────────────────────────────────────────────────────────────────
+// ─── File Leave Form ───────────────────────────────────────────────────────────
 function havenShowFileForm(prefillDate) {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) { showToast('Please log in first', 'error'); return; }
@@ -481,7 +468,6 @@ function havenShowFileForm(prefillDate) {
   const formFooter = document.getElementById('haven-form-footer');
   if (!formBody) return;
   formTitle.textContent = 'File Leave Request';
-  // Leave Type: only visible to TL/OM — agents get auto-assigned "PTO"
   const leaveTypeField = (role === 'tl' || role === 'om')
     ? `<div class="haven-form-field">
         <label class="haven-form-label">Leave Type <span class="haven-form-req">*</span></label>
@@ -505,6 +491,7 @@ function havenShowFileForm(prefillDate) {
       <label class="haven-form-label">Reason</label>
       <textarea class="haven-form-input haven-form-textarea" id="haven-file-reason" rows="3" placeholder="Brief reason (optional)"></textarea>
     </div>
+    <div id="haven-file-confirm-zone"></div>
   `;
   formFooter.innerHTML = `
     <button class="haven-form-btn haven-form-btn-cancel" onclick="havenCloseForm()">Cancel</button>
@@ -515,17 +502,28 @@ function havenShowFileForm(prefillDate) {
 function havenSubmitLeave() {
   const dateVal = document.getElementById('haven-file-date')?.value;
   const typeEl = document.getElementById('haven-file-type');
-  const typeVal = typeEl ? typeEl.value : 'PTO'; // Agents don't see the field; default to PTO
+  const typeVal = typeEl ? typeEl.value : 'PTO';
   const reasonVal = document.getElementById('haven-file-reason')?.value || '';
   if (!dateVal) { showToast('Please select a date', 'error'); return; }
   if (typeEl && !typeVal) { showToast('Please select a leave type', 'error'); return; }
-  if (!typeVal) { showToast('Please select a leave type', 'error'); return; }
-
-  havenConfirm(`File a <b>${escapeHtml(typeVal)}</b> leave for <b>${dateVal}</b>?`, async () => {
+  // Inline confirmation
+  const zone = document.getElementById('haven-file-confirm-zone');
+  if (!zone) return;
+  zone.innerHTML = `
+    <div class="haven-inline-confirm">
+      <p class="haven-inline-confirm-msg">File a <b>${escapeHtml(typeVal)}</b> leave for <b>${dateVal}</b>?</p>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-file-confirm-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-submit" id="haven-file-confirm-yes">Yes, Submit</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-file-confirm-yes').onclick = async () => {
+    zone.innerHTML = '';
     const user = currentUser;
     const leaveId = 'LV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
     const now = new Date().toISOString();
-
     const payload = {
       leave_id: leaveId,
       leave_type: typeVal,
@@ -542,7 +540,6 @@ function havenSubmitLeave() {
       created_at: now,
       updated_at: now,
     };
-
     try {
       const res = await fetch(`${IO_API_BASE}/leaves`, {
         method: 'POST',
@@ -561,12 +558,26 @@ function havenSubmitLeave() {
     } catch (e) {
       showToast('Network error', 'error');
     }
-  });
+  };
 }
-
-// ─── Cancel Leave ──────────────────────────────────────────────────────────────
+// ─── Inline Cancel Leave ───────────────────────────────────────────────────────
 function havenCancelLeave(leaveId) {
-  havenConfirm('Are you sure you want to <b>cancel</b> this leave request?', async () => {
+  havenInlineCancel(leaveId);
+}
+function havenInlineCancel(leaveId) {
+  const zone = document.getElementById('haven-inline-action-zone');
+  if (!zone) return;
+  zone.innerHTML = `
+    <div class="haven-inline-confirm haven-inline-confirm-danger">
+      <p class="haven-inline-confirm-msg">Are you sure you want to <b>cancel</b> this leave request?</p>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-reject" id="haven-cancel-yes">Yes, Cancel It</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-cancel-yes').onclick = async () => {
     try {
       const res = await fetch(`${IO_API_BASE}/leaves/${leaveId}/cancel`, {
         method: 'POST',
@@ -584,64 +595,157 @@ function havenCancelLeave(leaveId) {
     } catch (e) {
       showToast('Network error', 'error');
     }
-  });
+  };
 }
-
-// ─── Single Approve/Reject ─────────────────────────────────────────────────────
+// ─── Inline Approve ────────────────────────────────────────────────────────────
 function havenSingleApprove(leaveId) {
+  havenInlineApprove(leaveId);
+}
+function havenInlineApprove(leaveId) {
+  const zone = document.getElementById('haven-inline-action-zone');
+  if (!zone) return;
   const role = havenGetRole();
   const tier = role === 'tl' ? 'tl' : 'om';
-  havenConfirm('Approve this leave request?', async () => {
+  zone.innerHTML = `
+    <div class="haven-inline-confirm haven-inline-confirm-success">
+      <p class="haven-inline-confirm-msg">Approve this leave request?</p>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-approve" id="haven-approve-yes">Yes, Approve</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-approve-yes').onclick = async () => {
     await havenDoBulkAction([leaveId], 'approve', tier, '');
-  });
+  };
 }
-
+// ─── Inline Reject ─────────────────────────────────────────────────────────────
 function havenSingleReject(leaveId) {
-  havenShowRejectForm([leaveId]);
+  havenInlineReject(leaveId);
 }
-
+function havenInlineReject(leaveId) {
+  const zone = document.getElementById('haven-inline-action-zone');
+  if (!zone) return;
+  const role = havenGetRole();
+  const tier = role === 'tl' ? 'tl' : 'om';
+  zone.innerHTML = `
+    <div class="haven-inline-confirm haven-inline-confirm-danger">
+      <p class="haven-inline-confirm-msg">Reject this leave request?</p>
+      <div class="haven-form-field" style="margin-top:8px;">
+        <label class="haven-form-label">Remarks (optional)</label>
+        <textarea class="haven-form-input haven-form-textarea" id="haven-inline-reject-remarks" rows="2" placeholder="Reason for rejection..."></textarea>
+      </div>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-reject" id="haven-reject-yes">Yes, Reject</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-reject-yes').onclick = async () => {
+    const remarks = document.getElementById('haven-inline-reject-remarks')?.value || '';
+    await havenDoBulkAction([leaveId], 'reject', tier, remarks);
+  };
+}
+// ─── Admin Delete (inline confirm) ─────────────────────────────────────────────
+function havenInlineDelete(leaveId) {
+  const zone = document.getElementById('haven-inline-action-zone');
+  if (!zone) return;
+  zone.innerHTML = `
+    <div class="haven-inline-confirm haven-inline-confirm-danger">
+      <p class="haven-inline-confirm-msg"><strong>Permanently delete</strong> this leave entry? This cannot be undone.</p>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-delete" id="haven-delete-yes">Yes, Delete</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-delete-yes').onclick = async () => {
+    try {
+      const res = await fetch(`${IO_API_BASE}/leaves/${leaveId}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (result.ok) {
+        showToast('Leave deleted', 'success');
+        havenCloseForm();
+        await havenLoadLeaves();
+        havenRefreshCalendar();
+      } else {
+        showToast('Error: ' + (result.error || 'Unknown'), 'error');
+      }
+    } catch (e) {
+      showToast('Network error', 'error');
+    }
+  };
+}
 // ─── Bulk Approve/Reject from Day View ─────────────────────────────────────────
 function havenBulkApproveList(ids) {
   if (!ids || ids.length === 0) return;
   const role = havenGetRole();
   const tier = role === 'tl' ? 'tl' : 'om';
-  havenConfirm(`Approve <b>${ids.length}</b> leave request(s)?`, async () => {
-    await havenDoBulkAction(ids, 'approve', tier, '');
-  });
-}
-
-function havenBulkRejectList(ids) {
-  if (!ids || ids.length === 0) return;
-  havenShowRejectForm(ids);
-}
-
-// ─── Reject Form (inline remarks) ─────────────────────────────────────────────
-function havenShowRejectForm(leaveIds) {
-  const role = havenGetRole();
-  const tier = role === 'tl' ? 'tl' : 'om';
-
+  // Inline confirm in the day-view form body
   const formBody = document.getElementById('haven-form-body');
-  const formTitle = document.getElementById('haven-form-title');
-  const formFooter = document.getElementById('haven-form-footer');
   if (!formBody) return;
-
-  formTitle.textContent = `Reject ${leaveIds.length} Leave Request(s)`;
-  formBody.innerHTML = `
-    <div class="form-group">
-      <label class="form-label">Remarks (optional)</label>
-      <textarea class="form-input" id="haven-reject-remarks" rows="3" placeholder="Reason for rejection..."></textarea>
+  let zone = document.getElementById('haven-bulk-confirm-zone');
+  if (!zone) {
+    zone = document.createElement('div');
+    zone.id = 'haven-bulk-confirm-zone';
+    formBody.appendChild(zone);
+  }
+  zone.innerHTML = `
+    <div class="haven-inline-confirm haven-inline-confirm-success" style="margin-top:12px;">
+      <p class="haven-inline-confirm-msg">Approve <b>${ids.length}</b> leave request(s)?</p>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-bulk-confirm-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-approve" id="haven-bulk-approve-yes">Yes, Approve All</button>
+      </div>
     </div>
   `;
-  formFooter.innerHTML = `
-    <button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Cancel</button>
-    <button class="btn btn-danger btn-sm" onclick="havenDoReject()">Reject</button>
-  `;
-
-  HAVEN._rejectIds = leaveIds;
-  HAVEN._rejectTier = tier;
-  havenOpenForm();
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-bulk-approve-yes').onclick = async () => {
+    await havenDoBulkAction(ids, 'approve', tier, '');
+  };
 }
-
+function havenBulkRejectList(ids) {
+  if (!ids || ids.length === 0) return;
+  const role = havenGetRole();
+  const tier = role === 'tl' ? 'tl' : 'om';
+  const formBody = document.getElementById('haven-form-body');
+  if (!formBody) return;
+  let zone = document.getElementById('haven-bulk-confirm-zone');
+  if (!zone) {
+    zone = document.createElement('div');
+    zone.id = 'haven-bulk-confirm-zone';
+    formBody.appendChild(zone);
+  }
+  zone.innerHTML = `
+    <div class="haven-inline-confirm haven-inline-confirm-danger" style="margin-top:12px;">
+      <p class="haven-inline-confirm-msg">Reject <b>${ids.length}</b> leave request(s)?</p>
+      <div class="haven-form-field" style="margin-top:8px;">
+        <label class="haven-form-label">Remarks (optional)</label>
+        <textarea class="haven-form-input haven-form-textarea" id="haven-bulk-reject-remarks" rows="2" placeholder="Reason for rejection..."></textarea>
+      </div>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-bulk-confirm-zone').innerHTML=''">No</button>
+        <button class="haven-form-btn haven-form-btn-reject" id="haven-bulk-reject-yes">Yes, Reject All</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-bulk-reject-yes').onclick = async () => {
+    const remarks = document.getElementById('haven-bulk-reject-remarks')?.value || '';
+    await havenDoBulkAction(ids, 'reject', tier, remarks);
+  };
+}
+// ─── Reject Form (legacy, kept for bulk compatibility) ─────────────────────────
+function havenShowRejectForm(leaveIds) {
+  if (leaveIds.length === 1) {
+    havenInlineReject(leaveIds[0]);
+    return;
+  }
+  havenBulkRejectList(leaveIds);
+}
 async function havenDoReject() {
   const remarks = document.getElementById('haven-reject-remarks')?.value || '';
   const ids = HAVEN._rejectIds || [];
@@ -649,7 +753,6 @@ async function havenDoReject() {
   havenCloseForm();
   await havenDoBulkAction(ids, 'reject', tier, remarks);
 }
-
 // ─── Bulk Action API Call ──────────────────────────────────────────────────────
 async function havenDoBulkAction(leaveIds, action, tier, rejectionReason) {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
@@ -678,54 +781,30 @@ async function havenDoBulkAction(leaveIds, action, tier, rejectionReason) {
     showToast('Network error', 'error');
   }
 }
-
 // ─── Form Open/Close ──────────────────────────────────────────────────────────
 function havenOpenForm() {
   const overlay = document.getElementById('haven-form-overlay');
   if (overlay) overlay.style.display = 'flex';
 }
-
 function havenCloseForm() {
   const overlay = document.getElementById('haven-form-overlay');
   if (overlay) overlay.style.display = 'none';
 }
-
-// ─── Confirmation Dialog ───────────────────────────────────────────────────────
-function havenConfirm(message, callback) {
-  const overlay = document.getElementById('haven-confirm-overlay');
-  const msg = document.getElementById('haven-confirm-msg');
-  if (!overlay || !msg) { callback(); return; }
-  msg.innerHTML = message;
-  HAVEN.confirmCallback = callback;
-  overlay.style.display = 'flex';
-}
-
-function havenConfirmYes() {
-  document.getElementById('haven-confirm-overlay').style.display = 'none';
-  if (HAVEN.confirmCallback) {
-    HAVEN.confirmCallback();
-    HAVEN.confirmCallback = null;
-  }
-}
-
-function havenConfirmCancel() {
-  document.getElementById('haven-confirm-overlay').style.display = 'none';
-  HAVEN.confirmCallback = null;
-}
-
 // ─── Expose globally ───────────────────────────────────────────────────────────
 window.initHaven = initHaven;
 window.havenShowFileForm = havenShowFileForm;
 window.havenSubmitLeave = havenSubmitLeave;
 window.havenCancelLeave = havenCancelLeave;
+window.havenInlineCancel = havenInlineCancel;
 window.havenShowLeaveDetail = havenShowLeaveDetail;
 window.havenShowDayLeaves = havenShowDayLeaves;
 window.havenCloseForm = havenCloseForm;
 window.havenOpenForm = havenOpenForm;
-window.havenConfirmYes = havenConfirmYes;
-window.havenConfirmCancel = havenConfirmCancel;
 window.havenSingleApprove = havenSingleApprove;
 window.havenSingleReject = havenSingleReject;
+window.havenInlineApprove = havenInlineApprove;
+window.havenInlineReject = havenInlineReject;
+window.havenInlineDelete = havenInlineDelete;
 window.havenBulkApproveList = havenBulkApproveList;
 window.havenBulkRejectList = havenBulkRejectList;
 window.havenDoReject = havenDoReject;

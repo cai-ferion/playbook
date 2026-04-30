@@ -1396,6 +1396,20 @@ router.post("/leaves/:leave_id/cancel", async (req: Request, res: Response) => {
   }
 });
 
+// Admin delete leave (any status)
+router.delete("/leaves/:leave_id", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const { leave_id } = req.params;
+    await db.delete(ioLeaves).where(eq(ioLeaves.leave_id, leave_id));
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] leaves DELETE error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // io_audit_log
 // ============================================================

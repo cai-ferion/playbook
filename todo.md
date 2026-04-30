@@ -3552,3 +3552,10 @@
 - [x] Restyle the File Leave modal (modern look matching app design)
 - [x] Hide "Leave Type" field for agents (only visible to Team Leaders)
 - [x] Limit Leave Type dropdown options to "PTO" and "CTO" only
+
+## Haven — Inline Confirmations & Detail Modal Improvements
+- [x] Replace popup confirmation with inline expansion for filing leave
+- [x] Replace popup confirmation with inline expansion for cancelling leave
+- [x] Admin can delete Haven items regardless of status
+- [x] TL detail view: add Approve/Reject buttons with inline confirmation
+- [x] Remove "Close" button from all detail modals (X button suffices)
