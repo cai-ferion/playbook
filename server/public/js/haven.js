@@ -375,7 +375,7 @@ function havenShowLeaveDetail(leaveId) {
   const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
   const canCancel = (role === 'agent' || role === 'tl') && lv.status === 'Pending TL' && user && lv.ohr_id === user.ohr_id;
   const canTLApprove = role === 'tl' && lv.status === 'Pending TL' && user && lv.ohr_id !== user.ohr_id;
-  const canOMApprove = role === 'om' && lv.status === 'Pending OM';
+  const canOMApprove = role === 'om' && (lv.status === 'Pending OM' || lv.status === 'Pending TL') && user && lv.ohr_id !== user.ohr_id;
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
