@@ -562,15 +562,20 @@ function gtShowCompleteModal(type, id) {
         <p>Are you sure you want to mark this task as completed?</p>
         <p class="modal-detail" style="margin-top:4px">This action cannot be undone.</p>
         <div style="margin-top:16px;">
-          <label style="font-size:13px;font-weight:600;color:var(--fg-secondary);display:block;margin-bottom:6px;">Attachments (optional)</label>
-          <div id="gt-complete-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
-            <span style="font-size:12px;color:var(--fg-muted);">Click or drag files here (max 5 files, 10 MB each)</span>
-            <input type="file" id="gt-complete-file" style="display:none;" multiple accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.pptx,.ppt">
+          <a href="#" id="gt-complete-attach-toggle" style="font-size:12px;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;" onclick="event.preventDefault();document.getElementById('gt-complete-attach-area').style.display='block';this.style.display='none';">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            Add attachment (optional)
+          </a>
+          <div id="gt-complete-attach-area" style="display:none;margin-top:8px;">
+            <div id="gt-complete-drop-zone" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color 0.2s;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 6px;display:block;">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+              <span style="font-size:11px;color:var(--fg-muted);">Click or drag files here (max 5 files, 10 MB each)</span>
+              <input type="file" id="gt-complete-file" style="display:none;" multiple accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv,.txt,.pptx,.ppt">
+            </div>
+            <div id="gt-complete-file-list" style="margin-top:8px;"></div>
           </div>
-          <div id="gt-complete-file-list" style="margin-top:8px;"></div>
         </div>
       </div>
       <div class="modal-footer">

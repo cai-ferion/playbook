@@ -3506,3 +3506,6 @@
 - [x] Leave requests show as clickable tabs inside calendar date cells with basic details
 - [x] Clicking a tab opens detail panel with approve/reject actions for FLM/OM
 - [x] Fix File Leave button not working (onclick not firing)
+
+## Bug Fix — Tasks Received Mark as Complete
+- [x] Fix: Attachment should be optional when marking a task as complete (collapsed behind toggle link)
