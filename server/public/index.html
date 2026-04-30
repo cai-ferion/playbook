@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="css/corrective-actions.css?v=7">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <link rel="stylesheet" href="css/tardiness-restyle.css?v=100">
-  <link rel="stylesheet" href="css/haven.css?v=105">
+  <link rel="stylesheet" href="css/haven.css?v=106">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
@@ -1458,10 +1458,9 @@
       <!-- ===== View 8: Haven — Leave Management ===== -->
       <div class="view-container view-hidden" id="view-haven">
         <div class="module-page haven-page">
-          <!-- Header with actions -->
+          <!-- Haven Toolbar: month label + legend + actions -->
           <div class="haven-header">
             <div class="haven-header-left">
-              <h2 class="haven-title">Haven</h2>
               <span class="haven-current-month" id="haven-current-month"></span>
             </div>
             <div class="haven-header-right">
@@ -1489,13 +1488,13 @@
           <!-- Infinite Scroll Calendar -->
           <div class="haven-scroll-container">
             <div class="haven-weekday-header">
+              <div class="haven-weekday-cell">Sat</div>
+              <div class="haven-weekday-cell">Sun</div>
               <div class="haven-weekday-cell">Mon</div>
               <div class="haven-weekday-cell">Tue</div>
               <div class="haven-weekday-cell">Wed</div>
               <div class="haven-weekday-cell">Thu</div>
               <div class="haven-weekday-cell">Fri</div>
-              <div class="haven-weekday-cell">Sat</div>
-              <div class="haven-weekday-cell">Sun</div>
             </div>
             <div class="haven-weeks-scroll" id="haven-weeks-scroll"></div>
           </div>
@@ -2107,7 +2106,7 @@
   <script src="js/compass-omnibar.js?v=105" defer></script>
   <script src="js/sandbox.js?v=127" defer></script>
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
-  <script src="js/haven.js?v=204" defer></script>
+  <script src="js/haven.js?v=205" defer></script>
   <script src="js/helm.js?v=120" defer></script>
   <script src="js/group-task.js?v=107" defer></script>
   <script src="js/shift-extension.js?v=101" defer></script>

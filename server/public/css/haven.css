@@ -6,7 +6,7 @@
 .haven-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 56px); /* Full viewport minus top header */
+  height: calc(100vh - 56px - 48px); /* viewport - top-header - view-container padding */
   overflow: hidden;
 }
 

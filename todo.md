@@ -3517,9 +3517,19 @@
 - [x] Custom scrollbar styling for the calendar container
 
 ## Haven — Infinite Continuous Scrolling Calendar
-- [ ] Replace month-grid calendar with continuous vertical week stream
-- [ ] Inline month headers appear when a new month starts
-- [ ] Scroll down loads more future weeks seamlessly
-- [ ] Scroll up loads more past weeks seamlessly
-- [ ] Auto-scroll to current week on load
-- [ ] Remove prev/next month navigation buttons (scrolling replaces them)
+- [x] Replace month-grid calendar with continuous vertical week stream
+- [x] Inline month headers appear when a new month starts
+- [x] Scroll down loads more future weeks seamlessly
+- [x] Scroll up loads more past weeks seamlessly
+- [x] Auto-scroll to current week on load
+- [x] Remove prev/next month navigation buttons (scrolling replaces them)
+
+## Haven — Header Visibility & Saturday Week Start
+- [x] Fix haven-page height calc to account for view-container padding (was overflowing)
+- [x] Remove duplicate "Haven" title from haven-header (top-header already shows it)
+- [x] Change week start from Monday to Saturday (Sat-Sun-Mon-Tue-Wed-Thu-Fri)
+- [x] Update weekday header HTML to Sat-Fri order
+- [x] Rewrite havenGetMonday → havenGetSaturday (finds Saturday that starts the business week)
+- [x] Update havenBuildWeeksHtml to iterate from Saturday
+- [x] Fix weekend detection: i===0 (Sat) and i===1 (Sun) instead of i===5,6
+- [x] Bump cache versions: haven.css v106, haven.js v205

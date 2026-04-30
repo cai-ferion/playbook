@@ -13,8 +13,8 @@ const HAVEN = {
   _rejectIds: [],
   _rejectTier: 'tl',
   // Infinite scroll state
-  _startWeek: null, // Monday of the earliest rendered week
-  _endWeek: null,   // Monday of the latest rendered week
+  _startWeek: null, // Saturday of the earliest rendered week
+  _endWeek: null,   // Saturday of the latest rendered week
   _loading: false,
   _WEEKS_INITIAL: 12, // Render 12 weeks initially (6 before today, 6 after)
   _WEEKS_LOAD: 6,     // Load 6 more weeks on scroll
@@ -76,11 +76,12 @@ function havenGetMyAgentOhrs() {
 }
 
 // ─── Date Utilities ────────────────────────────────────────────────────────────
-function havenGetMonday(date) {
-  // Get Monday of the week containing `date`
+function havenGetSaturday(date) {
+  // Get Saturday that starts the week containing `date` (week = Sat-Fri)
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun, 1=Mon...
-  const diff = day === 0 ? -6 : 1 - day;
+  const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Offset to previous Saturday: Sat=0, Sun=-1, Mon=-2, Tue=-3, Wed=-4, Thu=-5, Fri=-6
+  const diff = day === 6 ? 0 : -(day + 1);
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -115,12 +116,12 @@ function havenRenderContinuous() {
   if (!scrollEl) return;
 
   const today = new Date(havenGetTodayPHT() + 'T00:00:00');
-  const todayMonday = havenGetMonday(today);
+  const todaySaturday = havenGetSaturday(today);
 
   // Start 6 weeks before today, end 6 weeks after
   const halfWeeks = Math.floor(HAVEN._WEEKS_INITIAL / 2);
-  HAVEN._startWeek = havenAddWeeks(todayMonday, -halfWeeks);
-  HAVEN._endWeek = havenAddWeeks(todayMonday, halfWeeks);
+  HAVEN._startWeek = havenAddWeeks(todaySaturday, -halfWeeks);
+  HAVEN._endWeek = havenAddWeeks(todaySaturday, halfWeeks);
 
   // Render weeks directly into the existing scroll container
   scrollEl.innerHTML = havenBuildWeeksHtml(HAVEN._startWeek, HAVEN._endWeek);
@@ -143,7 +144,7 @@ function havenRenderContinuous() {
   });
 }
 
-function havenBuildWeeksHtml(startMonday, endMonday) {
+function havenBuildWeeksHtml(startSaturday, endSaturday) {
   const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   const todayStr = havenGetTodayPHT();
@@ -159,14 +160,14 @@ function havenBuildWeeksHtml(startMonday, endMonday) {
   // OMs see all
 
   let html = '';
-  let currentMonday = new Date(startMonday);
+  let currentSaturday = new Date(startSaturday);
   let lastRenderedMonth = -1;
 
-  while (currentMonday < endMonday) {
+  while (currentSaturday < endSaturday) {
     // Check if this week starts a new month (or first day of month falls in this week)
     const weekDates = [];
     for (let i = 0; i < 7; i++) {
-      weekDates.push(havenAddDays(currentMonday, i));
+      weekDates.push(havenAddDays(currentSaturday, i));
     }
 
     // Check if any day in this week is the 1st of a month
@@ -181,14 +182,14 @@ function havenBuildWeeksHtml(startMonday, endMonday) {
       }
     }
 
-    // Render the week row
+    // Render the week row (Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6)
     html += '<div class="haven-week-row">';
     for (let i = 0; i < 7; i++) {
-      const cellDate = havenAddDays(currentMonday, i);
+      const cellDate = havenAddDays(currentSaturday, i);
       const dateStr = havenFormatDate(cellDate);
       const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr);
       const isToday = dateStr === todayStr;
-      const isWeekend = (i === 5 || i === 6); // Sat, Sun
+      const isWeekend = (i === 0 || i === 1); // Sat, Sun (first two columns)
 
       let cellClass = 'haven-cal-cell';
       if (isToday) cellClass += ' haven-cal-today';
@@ -234,7 +235,7 @@ function havenBuildWeeksHtml(startMonday, endMonday) {
     html += '</div>';
 
     // Move to next week
-    currentMonday = havenAddWeeks(currentMonday, 1);
+    currentSaturday = havenAddWeeks(currentSaturday, 1);
   }
 
   return html;
