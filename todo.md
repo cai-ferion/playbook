@@ -3509,3 +3509,9 @@
 
 ## Bug Fix — Tasks Received Mark as Complete
 - [x] Fix: Attachment should be optional when marking a task as complete (collapsed behind toggle link)
+
+## Haven — Calendar Scroll + Borders
+- [x] Make calendar vertically scrollable like Google Calendar (max-height with overflow-y:auto)
+- [x] Sticky day-of-week headers (stay visible while scrolling)
+- [x] Add stylish borders between each date cell (clear grid lines for visual distinction)
+- [x] Custom scrollbar styling for the calendar container

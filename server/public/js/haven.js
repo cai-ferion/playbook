@@ -110,7 +110,7 @@ function havenRenderMonth() {
   const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  let html = '<div class="haven-cal-grid">';
+  let html = '<div class="haven-cal-container"><div class="haven-cal-grid">';
   // Day headers
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   for (const d of dayNames) {
@@ -162,7 +162,7 @@ function havenRenderMonth() {
     html += '</div>';
   }
 
-  html += '</div>';
+  html += '</div></div>'; // close haven-cal-grid + haven-cal-container
   container.innerHTML = html;
 }
 
