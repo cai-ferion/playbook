@@ -428,6 +428,22 @@
         </div>
 
 
+        <!-- Blanks Status Banner -->
+        <div id="blanks-status-banner" class="blanks-banner" style="display:none;" onclick="toggleBlanksFromBanner()">
+          <div class="blanks-banner-content">
+            <div class="blanks-banner-icon">&#9888;</div>
+            <div class="blanks-banner-text">
+              <span id="blanks-banner-message"></span>
+            </div>
+            <div class="blanks-banner-progress">
+              <div class="blanks-progress-bar">
+                <div class="blanks-progress-fill" id="blanks-progress-fill"></div>
+              </div>
+              <span class="blanks-progress-label" id="blanks-progress-label"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- Old Bulk Selection Toolbar (hidden, replaced by floating command bar) -->
         <div class="bulk-toolbar" id="bulk-toolbar" style="display:none !important;">
           <div class="bulk-toolbar-left"><span id="bulk-count">0 selected</span></div>
@@ -2102,7 +2118,7 @@
   <script src="js/data.js?v=108"></script>
   <script src="js/app.js?v=127"></script>
   <script src="js/dashboard-anim.js?v=121b"></script>
-  <script src="js/input-portal.js?v=123"></script>
+  <script src="js/input-portal.js?v=124"></script>
   <script src="js/input-compact.js?v=123"></script>
   <script src="js/dash-omnibar.js?v=102g"></script>
   <script src="js/notifications.js?v=107"></script>

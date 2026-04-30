@@ -34,7 +34,9 @@ const OMNIBAR_SORT_FIELDS = [
 // Active view state
 const omnibarState = {
   // Each filter stored by key. Missing key = "All" (no restriction)
-  filters: {},
+  filters: {
+    blanks: { key: 'blanks', label: 'Blank Tags', type: 'toggle', values: [true] }
+  },
   // Sort: { key, direction, recordKey } or null
   sort: { key: 'date', direction: 'desc', recordKey: 'date' },
   // Which pill dropdown is open
@@ -418,7 +420,8 @@ window.inputClearAllFilters = function () {
   inputClosePill();
   var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
   omnibarState.filters = {
-    date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today }
+    date_range: { key: 'date_range', label: 'Date', type: 'date_range', startDate: today, endDate: today },
+    blanks: { key: 'blanks', label: 'Blank Tags', type: 'toggle', values: [true] }
   };
   omnibarState.sort = { key: 'date', direction: 'desc', recordKey: 'date' };
   inputRenderFilterBar();
@@ -552,6 +555,7 @@ async function omnibarApplyView() {
       _hideTableOverlay();
     }
     window.renderInputTableServerSide();
+    updateBlanksBanner();
   } catch (err) {
     if (useFullLoader) {
       hideProgressBar();
@@ -1412,3 +1416,87 @@ function setDefaultFilters() {
   window.omnibarCloseMenu = function() {};
   window.inputRenderFilterBar = inputRenderFilterBar;
 })();
+
+
+// ============================================================
+// BLANKS STATUS BANNER — shows blank count for today with auto-refresh
+// ============================================================
+
+let _blanksBannerInterval = null;
+
+/**
+ * Fetches today's total and blank counts from the server and updates the banner.
+ * Uses count_only=true for lightweight queries.
+ */
+async function updateBlanksBanner() {
+  const banner = document.getElementById('blanks-status-banner');
+  if (!banner) return;
+
+  const today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+
+  try {
+    // Fetch total count for today (excluding managers)
+    const totalResp = await fetch(`/api/io/attendance?count_only=true&log_date=${today}&exclude_managers=true`);
+    if (!totalResp.ok) return;
+    const totalData = await totalResp.json();
+    const totalCount = totalData.count || 0;
+
+    // Fetch blanks count for today (excluding managers)
+    const blanksResp = await fetch(`/api/io/attendance?count_only=true&log_date=${today}&exclude_managers=true&blanks_only=true`);
+    if (!blanksResp.ok) return;
+    const blanksData = await blanksResp.json();
+    const blanksCount = blanksData.count || 0;
+
+    const filledCount = totalCount - blanksCount;
+    const filledPct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 100;
+
+    const msgEl = document.getElementById('blanks-banner-message');
+    const fillEl = document.getElementById('blanks-progress-fill');
+    const labelEl = document.getElementById('blanks-progress-label');
+
+    if (blanksCount === 0) {
+      // All filled — success state
+      banner.className = 'blanks-banner banner-success';
+      banner.style.display = '';
+      if (msgEl) msgEl.innerHTML = `<strong>All attendance filled for today!</strong> ${filledCount} of ${totalCount} records tagged.`;
+      if (fillEl) { fillEl.style.width = '100%'; fillEl.style.backgroundColor = '#4CAF50'; }
+      if (labelEl) labelEl.textContent = '100%';
+    } else {
+      // Still have blanks — warning state
+      banner.className = 'blanks-banner banner-warning';
+      banner.style.display = '';
+      if (msgEl) msgEl.innerHTML = `<strong>${blanksCount} blank${blanksCount !== 1 ? 's' : ''} remaining</strong> for today \u2014 ${filledCount} of ${totalCount} filled. <span style="font-size:11px;opacity:0.7;">(Click to ${omnibarState.filters['blanks'] ? 'show all' : 'filter blanks'})</span>`;
+      if (fillEl) {
+        fillEl.style.width = filledPct + '%';
+        fillEl.style.backgroundColor = filledPct >= 80 ? '#FF9800' : '#F44336';
+      }
+      if (labelEl) labelEl.textContent = filledPct + '%';
+    }
+  } catch (e) {
+    // Silently fail — banner just won't show
+    console.warn('Blanks banner update failed:', e);
+  }
+}
+
+/**
+ * Click handler for the banner — toggles the blanks filter
+ */
+window.toggleBlanksFromBanner = function() {
+  inputToggleBlanks();
+  // Update the banner message hint text
+  setTimeout(updateBlanksBanner, 500);
+};
+
+/**
+ * Start auto-refresh for the blanks banner (every 60 seconds)
+ */
+function startBlanksBannerAutoRefresh() {
+  if (_blanksBannerInterval) clearInterval(_blanksBannerInterval);
+  _blanksBannerInterval = setInterval(updateBlanksBanner, 60000);
+}
+
+// Start auto-refresh when the script loads
+startBlanksBannerAutoRefresh();
+
+// Also expose for manual trigger
+window.updateBlanksBanner = updateBlanksBanner;

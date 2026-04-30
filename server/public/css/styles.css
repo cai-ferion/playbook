@@ -2139,6 +2139,65 @@ body {
   font-weight: 600;
 }
 
+/* ===== Blanks Status Banner ===== */
+.blanks-banner {
+  margin: 0 0 8px 0;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.blanks-banner:hover { opacity: 0.9; }
+.blanks-banner.banner-warning {
+  background: #FFF3E0;
+  border: 1px solid #FF9800;
+}
+.blanks-banner.banner-success {
+  background: #E8F5E9;
+  border: 1px solid #4CAF50;
+}
+.blanks-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.blanks-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.blanks-banner-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg, #1A1C1F);
+  line-height: 1.4;
+}
+.blanks-banner-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.blanks-progress-bar {
+  width: 120px;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.blanks-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease, background-color 0.3s ease;
+}
+.blanks-progress-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted, #5E6C84);
+  white-space: nowrap;
+}
+
 /* ===== Dashboard Filter Bar ===== */
 .dash-filter-bar {
   display: flex;

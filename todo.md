@@ -3469,3 +3469,12 @@
 
 ## Purge Modal — Open-Ended Date Range
 - [x] Add toggle/option to purge all attendance from start date onwards (no end date required)
+
+## Input Portal — Default Blanks View + Banner
+- [x] Default view on load: filter to current shift's blank attendance rows (tag is empty/null)
+- [x] Persistent banner showing blank count (e.g., "5 of 18 agents still have blank attendance") with progress bar
+- [x] Banner turns green/changes when all blanks are filled
+- [x] Auto-refresh blank count every 60 seconds
+- [x] Click-to-filter: clicking the banner filters table to show only blank rows
+- [x] Visible to all users who can see the Input Portal
+- [x] Exclude Managers from the blank count

@@ -44,7 +44,7 @@ const appState = {
   dashMultiSelects: {},
   alertFilters: { month: 'All', weekEnding: 'All' },
   alertCategory: 'upl_violation',
-  blanksFilterActive: false,
+  blanksFilterActive: true,
   // Track which date ranges have been loaded
   loadedRanges: [],
   allEmployeesLoaded: false,
