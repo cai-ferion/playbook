@@ -1,17 +1,23 @@
 /**
- * Haven — Unified Leave Management (Calendar View)
+ * Haven — Unified Leave Management (Infinite Continuous Scrolling Calendar)
  * Roles: Agent (file + view own), Team Lead (approve/reject for team), Manager/OM (final approve/reject)
  * Statuses: Pending TL → Pending OM → Approved | Rejected | Cancelled
- * All interactions happen via clickable tabs in the calendar cells.
+ * Calendar: Continuous vertical stream of weeks with inline month headers.
+ *           Scrolling down/up loads more weeks seamlessly.
  */
 
 const HAVEN = {
   leaves: [],
   employees: [],
-  currentMonth: new Date(),
   confirmCallback: null,
   _rejectIds: [],
   _rejectTier: 'tl',
+  // Infinite scroll state
+  _startWeek: null, // Monday of the earliest rendered week
+  _endWeek: null,   // Monday of the latest rendered week
+  _loading: false,
+  _WEEKS_INITIAL: 12, // Render 12 weeks initially (6 before today, 6 after)
+  _WEEKS_LOAD: 6,     // Load 6 more weeks on scroll
 };
 
 // ─── Initialization ────────────────────────────────────────────────────────────
@@ -21,7 +27,7 @@ async function initHaven() {
   try {
     await havenLoadEmployees();
     await havenLoadLeaves();
-    havenRenderMonth();
+    havenRenderContinuous();
   } catch (e) {
     console.error('[Haven] init error:', e);
   } finally {
@@ -69,35 +75,81 @@ function havenGetMyAgentOhrs() {
     .map(e => e.ohr_id);
 }
 
-// ─── Month Navigation ──────────────────────────────────────────────────────────
-function havenPrevMonth() {
-  HAVEN.currentMonth.setMonth(HAVEN.currentMonth.getMonth() - 1);
-  havenRenderMonth();
+// ─── Date Utilities ────────────────────────────────────────────────────────────
+function havenGetMonday(date) {
+  // Get Monday of the week containing `date`
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun, 1=Mon...
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
-function havenNextMonth() {
-  HAVEN.currentMonth.setMonth(HAVEN.currentMonth.getMonth() + 1);
-  havenRenderMonth();
+function havenAddDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
 }
 
-// ─── Calendar Rendering ────────────────────────────────────────────────────────
-function havenRenderMonth() {
-  const container = document.getElementById('haven-calendar');
-  if (!container) return;
+function havenAddWeeks(date, weeks) {
+  return havenAddDays(date, weeks * 7);
+}
 
-  const year = HAVEN.currentMonth.getFullYear();
-  const month = HAVEN.currentMonth.getMonth();
-  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+function havenFormatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
-  // Update label
-  const label = document.getElementById('haven-month-label');
-  if (label) label.textContent = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+function havenGetTodayPHT() {
+  // Use getTodayStr if available (PHT-aware), otherwise fallback
+  if (typeof getTodayStr === 'function') return getTodayStr();
+  return havenFormatDate(new Date());
+}
 
-  // Filter leaves for this month based on role
+// ─── Continuous Calendar Rendering ─────────────────────────────────────────────
+function havenRenderContinuous() {
+  const scrollEl = document.getElementById('haven-weeks-scroll');
+  if (!scrollEl) return;
+
+  const today = new Date(havenGetTodayPHT() + 'T00:00:00');
+  const todayMonday = havenGetMonday(today);
+
+  // Start 6 weeks before today, end 6 weeks after
+  const halfWeeks = Math.floor(HAVEN._WEEKS_INITIAL / 2);
+  HAVEN._startWeek = havenAddWeeks(todayMonday, -halfWeeks);
+  HAVEN._endWeek = havenAddWeeks(todayMonday, halfWeeks);
+
+  // Render weeks directly into the existing scroll container
+  scrollEl.innerHTML = havenBuildWeeksHtml(HAVEN._startWeek, HAVEN._endWeek);
+
+  // Attach scroll listener
+  scrollEl.addEventListener('scroll', havenOnScroll);
+
+  // Update month label in header
+  havenUpdateMonthLabel();
+
+  // Scroll to today's week
+  requestAnimationFrame(() => {
+    const todayCell = scrollEl.querySelector(`[data-date="${havenGetTodayPHT()}"]`);
+    if (todayCell) {
+      const weekRow = todayCell.closest('.haven-week-row');
+      if (weekRow) {
+        weekRow.scrollIntoView({ block: 'center', behavior: 'instant' });
+      }
+    }
+  });
+}
+
+function havenBuildWeeksHtml(startMonday, endMonday) {
   const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  let visibleLeaves = HAVEN.leaves.filter(l => l.start_date && l.start_date.startsWith(monthStr));
+  const todayStr = havenGetTodayPHT();
 
+  // Filter visible leaves based on role
+  let visibleLeaves = [...HAVEN.leaves];
   if (role === 'agent') {
     visibleLeaves = visibleLeaves.filter(l => user && l.ohr_id === user.ohr_id);
   } else if (role === 'tl') {
@@ -106,70 +158,175 @@ function havenRenderMonth() {
   }
   // OMs see all
 
-  // Build calendar grid
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let html = '';
+  let currentMonday = new Date(startMonday);
+  let lastRenderedMonth = -1;
 
-  let html = '<div class="haven-cal-container"><div class="haven-cal-grid">';
-  // Day headers
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  for (const d of dayNames) {
-    html += `<div class="haven-cal-header">${d}</div>`;
-  }
+  while (currentMonday < endMonday) {
+    // Check if this week starts a new month (or first day of month falls in this week)
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      weekDates.push(havenAddDays(currentMonday, i));
+    }
 
-  // Empty cells before first day
-  for (let i = 0; i < firstDay; i++) {
-    html += '<div class="haven-cal-cell haven-cal-empty"></div>';
-  }
-
-  // Day cells
-  const today = getTodayStr(); // YYYY-MM-DD in PHT
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr);
-    const isToday = dateStr === today;
-
-    html += `<div class="haven-cal-cell${isToday ? ' haven-cal-today' : ''}" data-date="${dateStr}">`;
-    html += `<div class="haven-cal-day-num">${day}</div>`;
-
-    if (dayLeaves.length > 0) {
-      html += '<div class="haven-cal-events">';
-      const maxShow = 4;
-      for (let i = 0; i < Math.min(dayLeaves.length, maxShow); i++) {
-        const lv = dayLeaves[i];
-        const statusClass = havenStatusClass(lv.status);
-        // Tab shows: name (or type for agent), leave type, status icon
-        const displayName = role === 'agent'
-          ? (lv.leave_type || 'Leave')
-          : truncateName(lv.full_name || 'Unknown', 12);
-        const typeTag = role !== 'agent' ? `<span class="haven-tab-type">${escapeHtml(lv.leave_type || '')}</span>` : '';
-        const statusIcon = havenStatusIcon(lv.status);
-        html += `<div class="haven-cal-tab ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')" title="${escapeHtml(lv.full_name || '')} — ${escapeHtml(lv.status || '')}">
-          <span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
+    // Check if any day in this week is the 1st of a month
+    for (const wd of weekDates) {
+      if (wd.getDate() === 1 && wd.getMonth() !== lastRenderedMonth) {
+        lastRenderedMonth = wd.getMonth();
+        const monthLabel = wd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        html += `<div class="haven-month-divider" data-month="${wd.getFullYear()}-${String(wd.getMonth()+1).padStart(2,'0')}">
+          <span class="haven-month-divider-label">${monthLabel}</span>
         </div>`;
+        break; // Only one divider per week
       }
-      if (dayLeaves.length > maxShow) {
-        html += `<div class="haven-cal-more" onclick="havenShowDayLeaves('${dateStr}')">+${dayLeaves.length - maxShow} more</div>`;
+    }
+
+    // Render the week row
+    html += '<div class="haven-week-row">';
+    for (let i = 0; i < 7; i++) {
+      const cellDate = havenAddDays(currentMonday, i);
+      const dateStr = havenFormatDate(cellDate);
+      const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr);
+      const isToday = dateStr === todayStr;
+      const isWeekend = (i === 5 || i === 6); // Sat, Sun
+
+      let cellClass = 'haven-cal-cell';
+      if (isToday) cellClass += ' haven-cal-today';
+      if (isWeekend) cellClass += ' haven-cal-weekend';
+
+      html += `<div class="${cellClass}" data-date="${dateStr}">`;
+      // Day number with month indicator for 1st of month
+      const dayNum = cellDate.getDate();
+      const dayLabel = dayNum === 1
+        ? `${cellDate.toLocaleDateString('en-US', { month: 'short' })} ${dayNum}`
+        : `${dayNum}`;
+      html += `<div class="haven-cal-day-num">${dayLabel}</div>`;
+
+      // Leave tabs
+      if (dayLeaves.length > 0) {
+        html += '<div class="haven-cal-events">';
+        const maxShow = 3;
+        for (let j = 0; j < Math.min(dayLeaves.length, maxShow); j++) {
+          const lv = dayLeaves[j];
+          const statusClass = havenStatusClass(lv.status);
+          const displayName = role === 'agent'
+            ? (lv.leave_type || 'Leave')
+            : truncateName(lv.full_name || 'Unknown', 12);
+          const typeTag = role !== 'agent' ? `<span class="haven-tab-type">${escapeHtml(lv.leave_type || '')}</span>` : '';
+          const statusIcon = havenStatusIcon(lv.status);
+          html += `<div class="haven-cal-tab ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')" title="${escapeHtml(lv.full_name || '')} — ${escapeHtml(lv.status || '')}">
+            <span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
+          </div>`;
+        }
+        if (dayLeaves.length > maxShow) {
+          html += `<div class="haven-cal-more" onclick="havenShowDayLeaves('${dateStr}')">+${dayLeaves.length - maxShow} more</div>`;
+        }
+        html += '</div>';
       }
+
+      // Add button for filing leave (agents + TLs, today or future)
+      if ((role === 'agent' || role === 'tl') && dateStr >= todayStr) {
+        html += `<div class="haven-cal-add" onclick="havenShowFileForm('${dateStr}')" title="File leave for this date">+</div>`;
+      }
+
       html += '</div>';
     }
-
-    // Click to file leave (agents + TLs only, future/today dates)
-    if ((role === 'agent' || role === 'tl') && dateStr >= today) {
-      html += `<div class="haven-cal-add" onclick="havenShowFileForm('${dateStr}')" title="File leave for this date">+</div>`;
-    }
-
     html += '</div>';
+
+    // Move to next week
+    currentMonday = havenAddWeeks(currentMonday, 1);
   }
 
-  html += '</div></div>'; // close haven-cal-grid + haven-cal-container
-  container.innerHTML = html;
+  return html;
 }
 
+// ─── Infinite Scroll Handler ────────────────────────────────────────────
+function havenOnScroll() {
+  // Update month label on every scroll
+  havenUpdateMonthLabel();
+
+  if (HAVEN._loading) return;
+  const scrollEl = document.getElementById('haven-weeks-scroll');
+  if (!scrollEl) return;
+
+  const threshold = 200; // px from edge to trigger load
+
+  // Scroll near bottom → load more future weeks
+  if (scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < threshold) {
+    HAVEN._loading = true;
+    const newEnd = havenAddWeeks(HAVEN._endWeek, HAVEN._WEEKS_LOAD);
+    const html = havenBuildWeeksHtml(HAVEN._endWeek, newEnd);
+    HAVEN._endWeek = newEnd;
+    scrollEl.insertAdjacentHTML('beforeend', html);
+    HAVEN._loading = false;
+  }
+
+  // Scroll near top → load more past weeks
+  if (scrollEl.scrollTop < threshold) {
+    HAVEN._loading = true;
+    const prevScrollHeight = scrollEl.scrollHeight;
+    const newStart = havenAddWeeks(HAVEN._startWeek, -HAVEN._WEEKS_LOAD);
+    const html = havenBuildWeeksHtml(newStart, HAVEN._startWeek);
+    HAVEN._startWeek = newStart;
+    scrollEl.insertAdjacentHTML('afterbegin', html);
+    // Maintain scroll position after prepending
+    const addedHeight = scrollEl.scrollHeight - prevScrollHeight;
+    scrollEl.scrollTop += addedHeight;
+    HAVEN._loading = false;
+  }
+}
+
+// ─── Helper: re-render after data changes ─────────────────────────────────────
+function havenRefreshCalendar() {
+  // Re-render the weeks between _startWeek and _endWeek
+  const scrollEl = document.getElementById('haven-weeks-scroll');
+  if (!scrollEl) return;
+  const prevScroll = scrollEl.scrollTop;
+  scrollEl.innerHTML = havenBuildWeeksHtml(HAVEN._startWeek, HAVEN._endWeek);
+  scrollEl.scrollTop = prevScroll;
+}
+
+// ─── Update month label in header based on scroll position ────────────────────
+function havenUpdateMonthLabel() {
+  const scrollEl = document.getElementById('haven-weeks-scroll');
+  const label = document.getElementById('haven-current-month');
+  if (!scrollEl || !label) return;
+
+  // Find the topmost visible month divider
+  const dividers = scrollEl.querySelectorAll('.haven-month-divider');
+  let currentMonth = '';
+  const scrollTop = scrollEl.scrollTop;
+  for (const div of dividers) {
+    if (div.offsetTop <= scrollTop + 60) {
+      currentMonth = div.querySelector('.haven-month-divider-label')?.textContent || '';
+    } else {
+      break;
+    }
+  }
+  // If no divider found above scroll, use the first one
+  if (!currentMonth && dividers.length > 0) {
+    currentMonth = dividers[0].querySelector('.haven-month-divider-label')?.textContent || '';
+  }
+  label.textContent = currentMonth;
+}
+
+// ─── Scroll to Today ─────────────────────────────────────────────────────────
+function havenScrollToToday() {
+  const scrollEl = document.getElementById('haven-weeks-scroll');
+  if (!scrollEl) return;
+  const todayCell = scrollEl.querySelector(`[data-date="${havenGetTodayPHT()}"]`);
+  if (todayCell) {
+    const weekRow = todayCell.closest('.haven-week-row');
+    if (weekRow) {
+      weekRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+}
+
+// ─── Status Helpers ───────────────────────────────────────────────────────────
 function truncateName(name, maxLen) {
   if (!name) return '';
   if (name.length <= maxLen) return name;
-  // Show first name only
   const first = name.split(' ')[0];
   return first.length <= maxLen ? first : first.substring(0, maxLen - 1) + '…';
 }
@@ -215,7 +372,6 @@ function havenShowLeaveDetail(leaveId) {
   const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
 
-  // Determine what actions are available
   const canCancel = (role === 'agent' || role === 'tl') && lv.status === 'Pending TL' && user && lv.ohr_id === user.ohr_id;
   const canTLApprove = role === 'tl' && lv.status === 'Pending TL' && user && lv.ohr_id !== user.ohr_id;
   const canOMApprove = role === 'om' && lv.status === 'Pending OM';
@@ -245,7 +401,6 @@ function havenShowLeaveDetail(leaveId) {
     </div>
   `;
 
-  // Build footer actions
   let footerHtml = '';
   if (canTLApprove) {
     footerHtml += `<button class="btn btn-success btn-sm" onclick="havenSingleApprove('${escapeHtml(lv.leave_id)}')">Approve</button>`;
@@ -293,7 +448,7 @@ function havenShowDayLeaves(dateStr) {
   }
   html += '</div>';
 
-  // Bulk actions for TL/OM if there are actionable leaves
+  // Bulk actions
   const tier = role === 'tl' ? 'tl' : 'om';
   const actionableStatus = role === 'tl' ? 'Pending TL' : 'Pending OM';
   const actionable = dayLeaves.filter(l => l.status === actionableStatus);
@@ -328,7 +483,6 @@ function havenShowFileForm(prefillDate) {
 
   formTitle.textContent = 'File Leave Request';
 
-  // TLs get Leave Type field (PTO/CTO), others use the standard form
   const leaveTypeField = (role === 'tl')
     ? `<div class="form-group">
         <label class="form-label">Leave Type <span class="required">*</span></label>
@@ -351,7 +505,7 @@ function havenShowFileForm(prefillDate) {
   formBody.innerHTML = `
     <div class="form-group">
       <label class="form-label">Date <span class="required">*</span></label>
-      <input type="date" class="form-input" id="haven-file-date" value="${prefillDate || getTodayStr()}">
+      <input type="date" class="form-input" id="haven-file-date" value="${prefillDate || havenGetTodayPHT()}">
     </div>
     ${leaveTypeField}
     <div class="form-group">
@@ -376,7 +530,6 @@ function havenSubmitLeave() {
   if (!dateVal) { showToast('Please select a date', 'error'); return; }
   if (!typeVal) { showToast('Please select a leave type', 'error'); return; }
 
-  // Show confirmation
   havenConfirm(`File a <b>${escapeHtml(typeVal)}</b> leave for <b>${dateVal}</b>?`, async () => {
     const user = currentUser;
     const leaveId = 'LV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -410,7 +563,7 @@ function havenSubmitLeave() {
         showToast('Leave filed successfully', 'success');
         havenCloseForm();
         await havenLoadLeaves();
-        havenRenderMonth();
+        havenRefreshCalendar();
       } else {
         showToast('Error: ' + (result.error || 'Unknown'), 'error');
       }
@@ -433,7 +586,7 @@ function havenCancelLeave(leaveId) {
         showToast('Leave cancelled', 'success');
         havenCloseForm();
         await havenLoadLeaves();
-        havenRenderMonth();
+        havenRefreshCalendar();
       } else {
         showToast('Error: ' + (result.error || 'Unknown'), 'error');
       }
@@ -526,7 +679,7 @@ async function havenDoBulkAction(leaveIds, action, tier, rejectionReason) {
       showToast(`${result.updated} leave(s) ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
       havenCloseForm();
       await havenLoadLeaves();
-      havenRenderMonth();
+      havenRefreshCalendar();
     } else {
       showToast('Error: ' + (result.error || 'Unknown'), 'error');
     }
@@ -571,8 +724,6 @@ function havenConfirmCancel() {
 
 // ─── Expose globally ───────────────────────────────────────────────────────────
 window.initHaven = initHaven;
-window.havenPrevMonth = havenPrevMonth;
-window.havenNextMonth = havenNextMonth;
 window.havenShowFileForm = havenShowFileForm;
 window.havenSubmitLeave = havenSubmitLeave;
 window.havenCancelLeave = havenCancelLeave;
@@ -587,3 +738,4 @@ window.havenSingleReject = havenSingleReject;
 window.havenBulkApproveList = havenBulkApproveList;
 window.havenBulkRejectList = havenBulkRejectList;
 window.havenDoReject = havenDoReject;
+window.havenScrollToToday = havenScrollToToday;

@@ -3515,3 +3515,11 @@
 - [x] Sticky day-of-week headers (stay visible while scrolling)
 - [x] Add stylish borders between each date cell (clear grid lines for visual distinction)
 - [x] Custom scrollbar styling for the calendar container
+
+## Haven — Infinite Continuous Scrolling Calendar
+- [ ] Replace month-grid calendar with continuous vertical week stream
+- [ ] Inline month headers appear when a new month starts
+- [ ] Scroll down loads more future weeks seamlessly
+- [ ] Scroll up loads more past weeks seamlessly
+- [ ] Auto-scroll to current week on load
+- [ ] Remove prev/next month navigation buttons (scrolling replaces them)

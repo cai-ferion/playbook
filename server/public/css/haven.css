@@ -1,121 +1,172 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   Haven — Unified Leave Management Calendar Styles
+   Haven — Infinite Continuous Scrolling Calendar
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* ─── Layout ────────────────────────────────────────────────────────────────── */
-.haven-wrapper {
+/* ─── Page Layout ──────────────────────────────────────────────────────────── */
+.haven-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 16px 20px;
-  max-width: 1400px;
+  height: calc(100vh - 56px); /* Full viewport minus top header */
+  overflow: hidden;
 }
 
 .haven-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-.haven-header h2 {
+.haven-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.haven-header-left h2,
+.haven-title {
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--fg);
-  margin: 0;
 }
 
-.haven-month-nav {
+.haven-current-month {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 0.3px;
+}
+
+.haven-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
 
-.haven-month-nav button {
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 10px;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--fg);
-  transition: background 0.15s;
+/* ─── Legend ────────────────────────────────────────────────────────────────── */
+.haven-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--fg-muted);
 }
 
-.haven-month-nav button:hover {
-  background: var(--bg-surface-hover);
+.haven-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-#haven-month-label {
-  font-size: 15px;
-  font-weight: 600;
-  min-width: 140px;
-  text-align: center;
-  color: var(--fg);
+.haven-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
-/* ─── Calendar Container (scrollable like Google Calendar) ─────────────────── */
-.haven-cal-container {
-  height: calc(100vh - 160px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+.haven-dot-pending { background: #f59e0b; }
+.haven-dot-pendingom { background: #3b82f6; }
+.haven-dot-approved { background: #16a34a; }
+.haven-dot-rejected { background: #dc2626; }
+.haven-dot-cancelled { background: #6b7280; }
+
+/* ─── Scroll Container (fills remaining space) ─────────────────────────────── */
+.haven-scroll-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
 }
 
-.haven-cal-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.haven-cal-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.haven-cal-container::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-
-.haven-cal-container::-webkit-scrollbar-thumb:hover {
-  background: var(--fg-muted);
-}
-
-/* ─── Calendar Grid ─────────────────────────────────────────────────────────── */
-.haven-cal-grid {
+/* ─── Sticky Weekday Header ────────────────────────────────────────────────── */
+.haven-weekday-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-collapse: collapse;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg-inset);
+  flex-shrink: 0;
 }
 
-.haven-cal-header {
-  background: var(--bg-inset);
-  padding: 10px 4px;
+.haven-weekday-cell {
+  padding: 10px 8px;
   text-align: center;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--fg-muted);
   letter-spacing: 0.6px;
-  border-bottom: 2px solid var(--border);
+  color: var(--fg-muted);
   border-right: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
-.haven-cal-header:nth-child(7n) {
+.haven-weekday-cell:last-child {
   border-right: none;
 }
 
+/* ─── Scrollable Weeks Area ────────────────────────────────────────────────── */
+.haven-weeks-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.haven-weeks-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.haven-weeks-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.haven-weeks-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.haven-weeks-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-muted);
+}
+
+/* ─── Month Divider (sticky within scroll) ─────────────────────────────────── */
+.haven-month-divider {
+  padding: 8px 16px;
+  background: var(--bg-inset);
+  border-bottom: 1px solid var(--border);
+  border-top: 2px solid var(--primary);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.haven-month-divider-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.3px;
+}
+
+/* ─── Week Row ─────────────────────────────────────────────────────────────── */
+.haven-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* ─── Day Cell ─────────────────────────────────────────────────────────────── */
 .haven-cal-cell {
-  background: var(--bg-surface);
-  min-height: 140px;
-  padding: 6px 8px;
   position: relative;
-  transition: background 0.15s;
+  padding: 6px 8px;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s ease;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
 }
 
 .haven-cal-cell:nth-child(7n) {
@@ -126,21 +177,30 @@
   background: var(--bg-surface-hover);
 }
 
-.haven-cal-empty {
-  background: var(--bg-inset);
-  opacity: 0.4;
-}
-
 .haven-cal-today {
-  background: rgba(59, 130, 246, 0.04) !important;
+  background: rgba(59, 130, 246, 0.05) !important;
   box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
+.haven-cal-today:hover {
+  background: rgba(59, 130, 246, 0.08) !important;
+}
+
+.haven-cal-weekend {
+  background: var(--bg-inset);
+}
+
+.haven-cal-weekend:hover {
+  background: var(--bg-surface-hover);
+}
+
+/* ─── Day Number ───────────────────────────────────────────────────────────── */
 .haven-cal-day-num {
   font-size: 12px;
   font-weight: 600;
   color: var(--fg-muted);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  user-select: none;
 }
 
 .haven-cal-today .haven-cal-day-num {
@@ -148,24 +208,30 @@
   font-weight: 700;
 }
 
-/* ─── Calendar Event Tabs ──────────────────────────────────────────────────── */
+/* ─── Events Container ─────────────────────────────────────────────────────── */
 .haven-cal-events {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
+/* ─── Event Tabs ───────────────────────────────────────────────────────────── */
 .haven-cal-tab {
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: 10px;
-  padding: 3px 5px;
+  padding: 3px 6px;
   border-radius: 4px;
+  font-size: 10px;
   cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
   white-space: nowrap;
   overflow: hidden;
-  transition: opacity 0.15s, transform 0.1s;
+  text-overflow: ellipsis;
+  border-left: 3px solid transparent;
   font-weight: 500;
 }
 
@@ -188,43 +254,44 @@
 }
 
 .haven-tab-icon {
-  font-size: 9px;
   flex-shrink: 0;
+  font-size: 9px;
   margin-left: 2px;
 }
 
-/* Status colors */
+/* Status colors for tabs */
 .haven-ev-pending {
   background: #fef3c7;
   color: #92400e;
-  border-left: 2px solid #f59e0b;
+  border-left-color: #f59e0b;
 }
 
 .haven-ev-pendingom {
   background: #dbeafe;
   color: #1e40af;
-  border-left: 2px solid #3b82f6;
+  border-left-color: #3b82f6;
 }
 
 .haven-ev-approved {
   background: #dcfce7;
   color: #166534;
-  border-left: 2px solid #16a34a;
+  border-left-color: #16a34a;
 }
 
 .haven-ev-rejected {
   background: #fee2e2;
   color: #991b1b;
-  border-left: 2px solid #dc2626;
+  border-left-color: #dc2626;
 }
 
 .haven-ev-cancelled {
   background: #f3f4f6;
   color: #6b7280;
-  border-left: 2px solid #9ca3af;
+  border-left-color: #9ca3af;
   text-decoration: line-through;
 }
 
+/* ─── +N More Button ───────────────────────────────────────────────────────── */
 .haven-cal-more {
   font-size: 10px;
   color: var(--fg-muted);
@@ -235,25 +302,27 @@
 
 .haven-cal-more:hover {
   color: var(--primary);
+  text-decoration: underline;
 }
 
-/* ─── Add Leave Button (+ on cell) ──────────────────────────────────────────── */
+/* ─── Add Leave Button (+) ─────────────────────────────────────────────────── */
 .haven-cal-add {
   position: absolute;
-  top: 3px;
-  right: 4px;
+  top: 4px;
+  right: 5px;
   width: 18px;
   height: 18px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
   font-size: 14px;
   font-weight: 700;
   color: var(--fg-muted);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  line-height: 1;
 }
 
 .haven-cal-cell:hover .haven-cal-add {
@@ -265,112 +334,7 @@
   color: #fff;
 }
 
-/* ─── Approval Queue ────────────────────────────────────────────────────────── */
-.haven-queue-section {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.haven-queue-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.haven-queue-header h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--fg);
-  margin: 0;
-}
-
-.haven-queue-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.haven-select-all-label {
-  font-size: 12px;
-  color: var(--fg-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.haven-queue-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.haven-queue-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  transition: border-color 0.15s;
-}
-
-.haven-queue-card:hover {
-  border-color: var(--primary);
-}
-
-.haven-queue-check {
-  display: flex;
-  align-items: center;
-}
-
-.haven-queue-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.haven-queue-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.haven-queue-meta {
-  font-size: 11px;
-  color: var(--fg-muted);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.haven-queue-tl {
-  font-size: 10px;
-  color: var(--fg-muted);
-  margin-top: 2px;
-  font-style: italic;
-}
-
-.haven-queue-item-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.haven-queue-empty {
-  text-align: center;
-  padding: 24px;
-  color: var(--fg-muted);
-  font-size: 13px;
-}
-
-/* ─── Form Overlay (File Leave / Detail / Reject) ───────────────────────────── */
+/* ─── Form Overlay (File Leave / Detail / Reject) ─────────────────────────── */
 .haven-form-overlay {
   position: fixed;
   inset: 0;
@@ -432,7 +396,7 @@
   gap: 8px;
 }
 
-/* ─── Detail Grid ───────────────────────────────────────────────────────────── */
+/* ─── Detail Grid ──────────────────────────────────────────────────────────── */
 .haven-detail-grid {
   display: flex;
   flex-direction: column;
@@ -449,7 +413,7 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--fg-muted);
-  min-width: 100px;
+  min-width: 110px;
   flex-shrink: 0;
 }
 
@@ -458,7 +422,7 @@
   color: var(--fg);
 }
 
-/* ─── Day List (popup for +N more) ──────────────────────────────────────────── */
+/* ─── Day List (popup for +N more) ─────────────────────────────────────────── */
 .haven-day-list {
   display: flex;
   flex-direction: column;
@@ -473,6 +437,7 @@
   border-radius: 6px;
   cursor: pointer;
   transition: opacity 0.15s;
+  border-left: 3px solid transparent;
 }
 
 .haven-day-item:hover {
@@ -480,9 +445,9 @@
 }
 
 .haven-day-item-name {
+  flex: 1;
   font-size: 13px;
   font-weight: 500;
-  flex: 1;
 }
 
 .haven-day-item-type {
@@ -496,7 +461,7 @@
   opacity: 0.7;
 }
 
-/* ─── Confirmation Dialog ───────────────────────────────────────────────────── */
+/* ─── Confirmation Dialog ──────────────────────────────────────────────────── */
 .haven-confirm-overlay {
   position: fixed;
   inset: 0;
@@ -507,7 +472,8 @@
   z-index: 9500;
 }
 
-.haven-confirm-dialog {
+.haven-confirm-dialog,
+.haven-confirm-box {
   background: var(--bg-surface);
   border-radius: 10px;
   padding: 24px;
@@ -524,13 +490,20 @@
   line-height: 1.5;
 }
 
+.haven-confirm-box p {
+  font-size: 14px;
+  color: var(--fg);
+  margin: 0 0 18px 0;
+  line-height: 1.5;
+}
+
 .haven-confirm-actions {
   display: flex;
   justify-content: center;
   gap: 10px;
 }
 
-/* ─── Form Inputs (reuse existing but ensure consistency) ───────────────────── */
+/* ─── Form Inputs ──────────────────────────────────────────────────────────── */
 .haven-form-body .form-group {
   margin-bottom: 14px;
 }
@@ -565,7 +538,7 @@
   color: #dc2626;
 }
 
-/* ─── Loading ───────────────────────────────────────────────────────────────── */
+/* ─── Loading ──────────────────────────────────────────────────────────────── */
 #haven-loading {
   display: flex;
   align-items: center;
@@ -573,98 +546,4 @@
   padding: 40px;
   color: var(--fg-muted);
   font-size: 13px;
-}
-
-/* ─── Header Layout ─────────────────────────────────────────────────────────── */
-.haven-header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.haven-header-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.haven-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--fg);
-  margin: 0;
-}
-
-/* ─── Legend ─────────────────────────────────────────────────────────────────── */
-.haven-legend {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.haven-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--fg-muted);
-}
-
-.haven-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.haven-dot-pending { background: #f59e0b; }
-.haven-dot-pendingom { background: #3b82f6; }
-.haven-dot-approved { background: #16a34a; }
-.haven-dot-rejected { background: #dc2626; }
-.haven-dot-cancelled { background: #6b7280; }
-
-/* ─── Queue Section ─────────────────────────────────────────────────────────── */
-.haven-queue {
-  margin-top: 16px;
-}
-
-.haven-queue-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  padding: 12px 14px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 8px 8px 0 0;
-}
-
-.haven-queue-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--fg);
-  margin: 0;
-}
-
-/* ─── Confirmation Box ──────────────────────────────────────────────────────── */
-.haven-confirm-box {
-  background: var(--bg-surface);
-  border-radius: 10px;
-  padding: 24px;
-  width: 90%;
-  max-width: 360px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.haven-confirm-box p {
-  font-size: 14px;
-  color: var(--fg);
-  margin: 0 0 18px 0;
-  line-height: 1.5;
-}
-
-/* ─── Haven Page ────────────────────────────────────────────────────────────── */
-.haven-page {
-  padding: 16px 20px;
 }
