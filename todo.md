@@ -3533,3 +3533,12 @@
 - [x] Update havenBuildWeeksHtml to iterate from Saturday
 - [x] Fix weekend detection: i===0 (Sat) and i===1 (Sun) instead of i===5,6
 - [x] Bump cache versions: haven.css v106, haven.js v205
+
+## Supervisor Alignment Update — May 2026 (from Google Sheet RAW tab)
+- [x] Read RAW sheet (362 employees, 25 unique supervisors after consolidation)
+- [x] Match 354/362 employees to DB (8 unmatched: 2 not in DB, 6 matched manually via special chars)
+- [x] Consolidate duplicate supervisor names: "Brianna Aspera" → "Aspera, Brianna Veloso", "Russel Ranario" → "Ranario, Russel Amarles"
+- [x] Only 1 actual supervisor change needed: Cruz, Joshua Samuel Dela Merced (740041926) moved from "Dela Cruz, Ma. Angela Lamberte" → "Santiago, Augustine Josefino Anonuevo"
+- [x] Updated io_employees via PATCH API
+- [x] Verified attendance rows from Apr 25 onwards already had correct snap_supervisor (no cascade needed)
+- [x] 2 employees not in DB (Jeffrey Berana, Suba Benjamin Joseph Alayon) — likely new hires not yet onboarded
