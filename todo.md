@@ -3542,3 +3542,8 @@
 - [x] Updated io_employees via PATCH API
 - [x] Verified attendance rows from Apr 25 onwards already had correct snap_supervisor (no cascade needed)
 - [x] 2 employees not in DB (Jeffrey Berana, Suba Benjamin Joseph Alayon) — likely new hires not yet onboarded
+
+## Haven — Visible to All Employees
+- [x] Updated RBAC defaults: nav.haven = true for Agent role and all non-Agent roles
+- [x] Bulk-updated 388 DB permission rows (nav.haven: false → true) via bulk-key-update endpoint
+- [x] Verified: Agent, SME, Manager, TL all now get nav.haven = true
