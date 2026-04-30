@@ -3500,3 +3500,9 @@
 - [x] Color-coded calendar: pending=yellow, FLM approved=blue, approved=green, rejected=red, cancelled=gray
 - [x] In-app notifications on OM final action (approve/reject) to agent + FLM
 - [x] Update nav structure to single Haven item (remove sub-pages)
+
+## Haven — Revisions (Calendar-Only, Tabs, Fix File Leave)
+- [x] Remove "Pending Final Approval" queue section — calendar only
+- [x] Leave requests show as clickable tabs inside calendar date cells with basic details
+- [x] Clicking a tab opens detail panel with approve/reject actions for FLM/OM
+- [x] Fix File Leave button not working (onclick not firing)

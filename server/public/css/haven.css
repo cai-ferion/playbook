@@ -110,27 +110,49 @@
   font-weight: 700;
 }
 
-/* ─── Calendar Events ───────────────────────────────────────────────────────── */
+/* ─── Calendar Event Tabs ──────────────────────────────────────────────────── */
 .haven-cal-events {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.haven-cal-event {
+.haven-cal-tab {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: 10px;
-  padding: 2px 4px;
-  border-radius: 3px;
+  padding: 3px 5px;
+  border-radius: 4px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, transform 0.1s;
   font-weight: 500;
 }
 
-.haven-cal-event:hover {
-  opacity: 0.8;
+.haven-cal-tab:hover {
+  opacity: 0.85;
+  transform: translateX(1px);
+}
+
+.haven-tab-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.haven-tab-type {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.haven-tab-icon {
+  font-size: 9px;
+  flex-shrink: 0;
+  margin-left: 2px;
 }
 
 /* Status colors */
