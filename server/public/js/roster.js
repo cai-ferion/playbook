@@ -1705,10 +1705,16 @@ window.rosterShowPurgeModal = function() {
                 <label style="font-size:11px;color:var(--fg-muted,#5E6C84);display:block;margin-bottom:4px;">From</label>
                 <input type="date" id="purge-from-date" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
               </div>
-              <div>
+              <div id="purge-to-date-wrapper">
                 <label style="font-size:11px;color:var(--fg-muted,#5E6C84);display:block;margin-bottom:4px;">To</label>
                 <input type="date" id="purge-to-date" value="${today}" class="form-input" style="width:100%;padding:8px 12px;">
               </div>
+            </div>
+            <div style="margin-top:8px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg-muted,#5E6C84);cursor:pointer;">
+                <input type="checkbox" id="purge-no-end-date" onchange="document.getElementById('purge-to-date-wrapper').style.opacity = this.checked ? '0.4' : '1'; document.getElementById('purge-to-date').disabled = this.checked;">
+                All dates from start date onwards (no end date)
+              </label>
             </div>
           </div>
           <button onclick="rosterPurgePreview()" class="btn btn-primary btn-sm" style="width:100%;">Preview Affected Records</button>
@@ -1725,11 +1731,13 @@ window.rosterShowPurgeModal = function() {
 window.rosterPurgePreview = async function() {
   const ohrId = document.getElementById('purge-employee-select').value;
   const fromDate = document.getElementById('purge-from-date').value;
-  const toDate = document.getElementById('purge-to-date').value;
+  const noEndDate = document.getElementById('purge-no-end-date')?.checked;
+  const toDate = noEndDate ? '' : document.getElementById('purge-to-date').value;
 
   if (!ohrId) { showToast('Please select an employee.', 'error'); return; }
-  if (!fromDate || !toDate) { showToast('Please select both From and To dates.', 'error'); return; }
-  if (fromDate > toDate) { showToast('From date must be before or equal to To date.', 'error'); return; }
+  if (!fromDate) { showToast('Please select a From date.', 'error'); return; }
+  if (!noEndDate && !toDate) { showToast('Please select a To date or check "All dates from start date onwards".', 'error'); return; }
+  if (!noEndDate && fromDate > toDate) { showToast('From date must be before or equal to To date.', 'error'); return; }
 
   const previewSection = document.getElementById('purge-preview-section');
   previewSection.style.display = 'block';
@@ -1738,7 +1746,8 @@ window.rosterPurgePreview = async function() {
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
     const actorOhr = user.ohr_id || '';
-    const resp = await fetch(`/api/io/attendance-purge-preview?ohr_id=${ohrId}&from_date=${fromDate}&to_date=${toDate}&actor_ohr=${actorOhr}`);
+    const toParam = toDate ? `&to_date=${toDate}` : '';
+    const resp = await fetch(`/api/io/attendance-purge-preview?ohr_id=${ohrId}&from_date=${fromDate}${toParam}&actor_ohr=${actorOhr}`);
     const data = await resp.json();
 
     if (!resp.ok) {
@@ -1786,7 +1795,7 @@ window.rosterPurgePreview = async function() {
         <div style="font-size:13px;color:var(--fg,#1A1C1F);line-height:1.6;">
           This will <strong>permanently delete ${data.total_rows} attendance record${data.total_rows !== 1 ? 's' : ''}</strong> for:<br>
           <strong>${escapeHtml(emp.full_name)}</strong> (${emp.ohr_id}) — ${escapeHtml(emp.actual_role || '')} · ${escapeHtml(emp.planning_group || '')}<br>
-          Date range: <strong>${data.date_range.from}</strong> → <strong>${data.date_range.to}</strong>
+          Date range: <strong>${data.date_range.from}</strong> → <strong>${data.date_range.to || 'onwards (all)'}</strong>
         </div>
       </div>
 
@@ -1828,7 +1837,8 @@ window.rosterPurgePreview = async function() {
 
 window.rosterExecutePurge = async function(ohrId, fromDate, toDate, expectedCount) {
   // Double-confirm
-  const confirmed = confirm(`FINAL CONFIRMATION\n\nYou are about to permanently delete ${expectedCount} attendance records for OHR ${ohrId} from ${fromDate} to ${toDate}.\n\nThis action CANNOT be undone.\n\nProceed?`);
+  const dateRangeLabel = toDate ? `from ${fromDate} to ${toDate}` : `from ${fromDate} onwards`;
+  const confirmed = confirm(`FINAL CONFIRMATION\n\nYou are about to permanently delete ${expectedCount} attendance records for OHR ${ohrId} ${dateRangeLabel}.\n\nThis action CANNOT be undone.\n\nProceed?`);
   if (!confirmed) return;
 
   const previewSection = document.getElementById('purge-preview-section');
@@ -1836,10 +1846,12 @@ window.rosterExecutePurge = async function(ohrId, fromDate, toDate, expectedCoun
 
   try {
     const user = JSON.parse(sessionStorage.getItem('playbook_user') || '{}');
+    const bodyPayload = { actor_ohr: user.ohr_id, ohr_id: ohrId, from_date: fromDate };
+    if (toDate) bodyPayload.to_date = toDate;
     const resp = await fetch('/api/io/attendance-purge', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actor_ohr: user.ohr_id, ohr_id: ohrId, from_date: fromDate, to_date: toDate }),
+      body: JSON.stringify(bodyPayload),
     });
     const data = await resp.json();
 
@@ -1852,8 +1864,8 @@ window.rosterExecutePurge = async function(ohrId, fromDate, toDate, expectedCoun
 
     previewSection.innerHTML = `
       <div style="padding:16px;background:var(--success-bg,rgba(34,197,94,.1));border:1px solid var(--success,#22C55E);border-radius:var(--radius,6px);color:var(--success,#22C55E);">
-        <strong>✓ Purge Complete</strong><br>
-        <span style="font-size:13px;">Successfully deleted <strong>${data.deleted}</strong> attendance record${data.deleted !== 1 ? 's' : ''} for OHR ${ohrId} from ${fromDate} to ${toDate}.</span>
+        <strong>\u2713 Purge Complete</strong><br>
+        <span style="font-size:13px;">Successfully deleted <strong>${data.deleted}</strong> attendance record${data.deleted !== 1 ? 's' : ''} for OHR ${ohrId} ${dateRangeLabel}.</span>
       </div>
       <button onclick="document.getElementById('purge-modal-overlay').remove()" class="btn btn-outline btn-sm" style="width:100%;margin-top:12px;">Close</button>
     `;

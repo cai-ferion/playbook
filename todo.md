@@ -3466,3 +3466,6 @@
 
 ## Bug Fix — Coaching Log Duplication
 - [x] Fix: Coaching logs are being duplicated (two different IDs, same content) — double submission issue (frontend guard + server-side 409 dedup)
+
+## Purge Modal — Open-Ended Date Range
+- [x] Add toggle/option to purge all attendance from start date onwards (no end date required)
