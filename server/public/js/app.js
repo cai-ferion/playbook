@@ -967,7 +967,7 @@ function applyNavPermissions(user) {
   // Nav groups
   vis('nav-group-anchor', 'nav.anchor');
   vis('nav-group-compass', 'nav.compass');
-  vis('nav-group-haven', 'nav.haven');
+  vis('nav-haven', 'nav.haven');
   vis('nav-group-sandbox', 'nav.sandbox');
   vis('nav-group-horizon', 'nav.horizon');
   vis('nav-admin', 'nav.admin');
@@ -1058,7 +1058,7 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
-  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven-input', 'haven-review', 'haven-final', 'helm-board', 'helm-dashboard', 'regimen', 'managers-nook', 'tardiness-validator'];
+  const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven', 'helm-board', 'helm-dashboard', 'regimen', 'managers-nook', 'tardiness-validator'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.classList.toggle('view-hidden', v !== view);
@@ -1085,11 +1085,7 @@ async function switchView(view) {
     const sandboxGroup = document.getElementById('nav-group-sandbox');
     if (sandboxGroup) sandboxGroup.classList.add('expanded');
   }
-  const havenViews = ['haven-input', 'haven-review', 'haven-final'];
-  if (havenViews.includes(view)) {
-    const havenGroup = document.getElementById('nav-group-haven');
-    if (havenGroup) havenGroup.classList.add('expanded');
-  }
+  // Haven is now a single view (no collapsible group)
   const helmViews = ['helm-board', 'helm-dashboard'];
   if (helmViews.includes(view)) {
     const helmGroup = document.getElementById('nav-group-helm');
@@ -1106,7 +1102,7 @@ async function switchView(view) {
     admin: 'Admin Tools', billing: 'Billing Compliance',
     'compass-input': 'Coaching Profile', 'compass-disputes': 'Disputes Area', 'compass-corrective': 'Corrective Actions',
     'sandbox-input': 'Input Portal', 'sandbox-review': 'Review Area', 'sandbox-analytics': 'Analytics',
-    'haven-input': 'Input Portal', 'haven-review': 'Review Area', 'haven-final': 'Final Review Area',
+    'haven': 'Haven',
     'helm-board': 'Task Board',
     'helm-dashboard': 'Task Dashboard',
     regimen: 'Regimen',
@@ -1149,7 +1145,7 @@ async function switchView(view) {
   if (view === 'compass-disputes') { if (typeof initCompassDisputes === 'function') initCompassDisputes(); }
   if (view === 'compass-corrective') { if (typeof initCorrectiveActions === 'function') initCorrectiveActions(); }
   if (sandboxViews.includes(view)) { if (typeof initSandbox === 'function') initSandbox(view); }
-  if (havenViews.includes(view)) { if (typeof initHaven === 'function') initHaven(view); }
+  if (view === 'haven') { if (typeof initHaven === 'function') initHaven(); }
   if (['helm-board', 'helm-dashboard'].includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
 

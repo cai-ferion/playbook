@@ -1,574 +1,614 @@
 /**
- * Haven — Leave Management (3 Sub-pages)
- * Sub-page 1: Input Portal — file leave requests & browse (My Requests only)
- * Sub-page 2: Review Area — TL approval queue
- * Sub-page 3: Final Review Area — OM approval queue & WFM export
+ * Haven — Unified Leave Management (Calendar View)
+ * Roles: Agent (file + view own), Team Lead (approve/reject for team), Manager/OM (final approve/reject)
+ * Statuses: Pending TL → Pending OM → Approved | Rejected | Cancelled
  */
 
 const HAVEN = {
   leaves: [],
-  filtered: [],
   employees: [],
-  currentSubpage: 'input',
-  page: 1,
-  pageSize: 25,
-  editingId: null,
-
-  STATUS_COLORS: {
-    'Pending TL': '#F59E0B',
-    'Pending OM': '#3B82F6',
-    'Approved': '#22C55E',
-    'Rejected': '#EF4444'
-  }
+  currentMonth: new Date(), // tracks displayed month
+  selectedLeaves: new Set(), // for bulk actions
+  confirmCallback: null,
+  _rejectIds: [],
+  _rejectTier: 'tl',
 };
 
-// ===== Data Fetching =====
-
-async function havenFetchLeaves() {
-  const loading = document.getElementById('haven-loading');
-  if (loading) loading.style.display = 'flex';
-
+// ─── Initialization ────────────────────────────────────────────────────────────
+async function initHaven() {
+  const el = document.getElementById('haven-loading');
+  if (el) el.style.display = '';
   try {
-    const url = `${IO_API_BASE}/leaves?limit=2000`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('Failed to fetch leaves');
-    HAVEN.leaves = await resp.json();
+    await havenLoadEmployees();
+    await havenLoadLeaves();
+    havenRenderMonth();
+    havenRenderQueue();
   } catch (e) {
-    console.error('Haven fetch error:', e);
-    HAVEN.leaves = [];
+    console.error('[Haven] init error:', e);
+  } finally {
+    if (el) el.style.display = 'none';
   }
-
-  if (loading) loading.style.display = 'none';
-
-  if (HAVEN.currentSubpage === 'input') havenApplyFilters();
-  else if (HAVEN.currentSubpage === 'review') havenRenderReviewArea();
-  else if (HAVEN.currentSubpage === 'final') havenRenderFinalReviewArea();
 }
 
-async function havenFetchEmployees() {
-  if (HAVEN.employees.length > 0) return;
+async function havenLoadEmployees() {
   try {
     const url = `${IO_API_BASE}/employees?employement_status=Active&order=full_name&limit=2000`;
-    const resp = await fetch(url);
-    if (resp.ok) HAVEN.employees = await resp.json();
+    const res = await fetch(url);
+    HAVEN.employees = await res.json();
   } catch (e) {
-    console.error('Failed to fetch employees for Haven:', e);
+    console.error('[Haven] loadEmployees error:', e);
+    HAVEN.employees = [];
   }
 }
 
-// ===== Input Portal: Filters (Status + Date Range only, My Requests) =====
-
-function havenApplyFilters() {
-  let data = [...HAVEN.leaves];
-
-  // My Requests only
-  if (typeof currentUser !== 'undefined' && currentUser) {
-    data = data.filter(l => l.ohr === currentUser.ohr_id);
+async function havenLoadLeaves() {
+  try {
+    const url = `${IO_API_BASE}/leaves?limit=5000`;
+    const res = await fetch(url);
+    HAVEN.leaves = await res.json();
+  } catch (e) {
+    console.error('[Haven] loadLeaves error:', e);
+    HAVEN.leaves = [];
   }
-
-  const statusFilter = document.getElementById('haven-filter-status')?.value || 'All';
-  const startDate = document.getElementById('haven-filter-start')?.value || '';
-  const endDate = document.getElementById('haven-filter-end')?.value || '';
-
-  if (statusFilter !== 'All') data = data.filter(l => l.status === statusFilter);
-  if (startDate) data = data.filter(l => l.requested_date && l.requested_date >= startDate);
-  if (endDate) data = data.filter(l => l.requested_date && l.requested_date <= endDate);
-
-  HAVEN.filtered = data;
-  HAVEN.page = 1;
-  havenRenderTable();
 }
 
-// ===== Input Portal: Table (ID, Requested Date, Reason, Status) =====
-
-function havenRenderTable() {
-  const thead = document.getElementById('haven-table-head');
-  const tbody = document.getElementById('haven-table-body');
-  if (!thead || !tbody) return;
-
-  thead.innerHTML = `<tr>
-    <th>ID</th><th>Requested Date</th><th>Reason</th><th>Status</th>
-  </tr>`;
-
-  const start = (HAVEN.page - 1) * HAVEN.pageSize;
-  const pageData = HAVEN.filtered.slice(start, start + HAVEN.pageSize);
-
-  if (pageData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4"><div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No leave requests found</div><div class="empty-subtitle">Try adjusting the filters or date range</div></div></td></tr>';
-    havenRenderPagination();
-    return;
-  }
-
-  tbody.innerHTML = pageData.map(lv => {
-    const statusColor = HAVEN.STATUS_COLORS[lv.status] || 'var(--text-secondary)';
-    const reqDate = lv.requested_date ? new Date(lv.requested_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-
-    return `<tr class="module-row" onclick="havenOpenDetail('${escapeAttr(lv.leave_id)}')">
-      <td><span class="module-id">${escapeHtml(lv.leave_id || '')}</span></td>
-      <td>${reqDate}</td>
-      <td class="module-title-cell">${escapeHtml(lv.reason || '—')}</td>
-      <td><span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(lv.status || '')}</span></td>
-    </tr>`;
-  }).join('');
-
-  havenRenderPagination();
-}
-
-function havenRenderPagination() {
-  const el = document.getElementById('haven-pagination');
-  if (!el) return;
-  const total = HAVEN.filtered.length;
-  const totalPages = Math.ceil(total / HAVEN.pageSize) || 1;
-  const start = (HAVEN.page - 1) * HAVEN.pageSize + 1;
-  const end = Math.min(HAVEN.page * HAVEN.pageSize, total);
-
-  el.innerHTML = `
-    <span class="module-page-info">${total > 0 ? `${start}-${end} of ${total}` : '0 records'}</span>
-    <button class="btn btn-ghost btn-xs" ${HAVEN.page <= 1 ? 'disabled' : ''} onclick="HAVEN.page--;havenRenderTable();">&laquo; Prev</button>
-    <span class="module-page-num">Page ${HAVEN.page} of ${totalPages}</span>
-    <button class="btn btn-ghost btn-xs" ${HAVEN.page >= totalPages ? 'disabled' : ''} onclick="HAVEN.page++;havenRenderTable();">Next &raquo;</button>
-  `;
-}
-
-// ===== Review Area (TL Approval Queue) =====
-
-function havenRenderReviewArea() {
-  const container = document.getElementById('haven-review-content');
-  if (!container) return;
-
+// ─── Role Helpers ──────────────────────────────────────────────────────────────
+function havenGetRole() {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const role = user ? user.actual_role : '';
-  const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
-
-  let pendingTL = HAVEN.leaves.filter(l => l.status === 'Pending TL');
-  if (role === 'Team Lead' && !isAdmin) {
-    const myAgents = HAVEN.employees.filter(e => e.supervisor_name === user.full_name).map(e => e.ohr_id);
-    pendingTL = pendingTL.filter(l => myAgents.includes(l.ohr));
-  }
-
-  let html = `
-    <div class="review-area-header">
-      <h3 class="review-area-title">Team Lead Review Queue</h3>
-      <span class="review-area-count">${pendingTL.length} pending</span>
-    </div>`;
-
-  if (pendingTL.length === 0) {
-    html += '<div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No leave requests pending TL approval</div></div>';
-  } else {
-    html += '<div class="review-cards-grid">';
-    pendingTL.forEach(lv => {
-      const reqDate = lv.requested_date ? new Date(lv.requested_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '—';
-      html += `
-        <div class="review-card">
-          <div class="review-card-header">
-            <span class="review-card-id">${escapeHtml(lv.leave_id || '')}</span>
-          </div>
-          <div class="review-card-body">
-            <div class="review-card-name">${escapeHtml(lv.full_name || '—')}</div>
-            <div class="review-card-date" style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${reqDate}</div>
-            <div class="review-card-reason" style="margin-top:4px;">${escapeHtml((lv.reason || '').substring(0, 100))}${(lv.reason || '').length > 100 ? '...' : ''}</div>
-          </div>
-          <div class="review-card-actions">
-            <button class="btn btn-success btn-xs" onclick="havenQuickApprove('${escapeAttr(lv.leave_id)}','tl')">Approve</button>
-            <button class="btn btn-danger btn-xs" onclick="havenQuickReject('${escapeAttr(lv.leave_id)}','tl')">Reject</button>
-          </div>
-        </div>`;
-    });
-    html += '</div>';
-  }
-
-  container.innerHTML = html;
+  if (!user) return 'agent';
+  const isAdmin = (window.ADMIN_OHRS || []).includes(user.ohr_id);
+  if (isAdmin || user.actual_role === 'Manager') return 'om';
+  if (user.actual_role === 'Team Lead') return 'tl';
+  return 'agent';
 }
 
-// ===== Final Review Area (OM Approval Queue & Export) =====
+function havenGetMyAgentOhrs() {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return [];
+  return HAVEN.employees
+    .filter(e => e.supervisor_name === user.full_name)
+    .map(e => e.ohr_id);
+}
 
-function havenRenderFinalReviewArea() {
-  const container = document.getElementById('haven-final-content');
+// ─── Month Navigation ──────────────────────────────────────────────────────────
+function havenPrevMonth() {
+  HAVEN.currentMonth.setMonth(HAVEN.currentMonth.getMonth() - 1);
+  havenRenderMonth();
+}
+
+function havenNextMonth() {
+  HAVEN.currentMonth.setMonth(HAVEN.currentMonth.getMonth() + 1);
+  havenRenderMonth();
+}
+
+// ─── Calendar Rendering ────────────────────────────────────────────────────────
+function havenRenderMonth() {
+  const container = document.getElementById('haven-calendar');
   if (!container) return;
 
-  const pendingOM = HAVEN.leaves.filter(l => l.status === 'Pending OM');
-  const approved = HAVEN.leaves.filter(l => l.status === 'Approved');
+  const year = HAVEN.currentMonth.getFullYear();
+  const month = HAVEN.currentMonth.getMonth();
+  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-  let html = `
-    <div class="review-area-header">
-      <h3 class="review-area-title">Operations Manager Final Review</h3>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span class="review-area-count">${pendingOM.length} pending</span>
-        <button class="btn btn-outline btn-sm" onclick="havenExportWFM()" title="Export approved leaves for WFM">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export WFM
-        </button>
-      </div>
-    </div>
+  // Update label
+  const label = document.getElementById('haven-month-label');
+  if (label) label.textContent = new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    <div class="review-section">
-      <h4 class="review-section-title">Pending OM Approval (${pendingOM.length})</h4>`;
+  // Filter leaves for this month based on role
+  const role = havenGetRole();
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  let visibleLeaves = HAVEN.leaves.filter(l => l.start_date && l.start_date.startsWith(monthStr));
 
-  if (pendingOM.length === 0) {
-    html += '<div class="mascot-empty-state"><div class="sprite-mascot" role="img" aria-label="No data"></div><div class="empty-title">No leave requests pending OM approval</div></div>';
-  } else {
-    html += '<div class="review-cards-grid">';
-    pendingOM.forEach(lv => {
-      const reqDate = lv.requested_date ? new Date(lv.requested_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '—';
-      html += `
-        <div class="review-card">
-          <div class="review-card-header">
-            <span class="review-card-id">${escapeHtml(lv.leave_id || '')}</span>
-          </div>
-          <div class="review-card-body">
-            <div class="review-card-name">${escapeHtml(lv.full_name || '—')}</div>
-            <div class="review-card-date" style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${reqDate}</div>
-            <div class="review-card-reason" style="margin-top:4px;">${escapeHtml((lv.reason || '').substring(0, 100))}${(lv.reason || '').length > 100 ? '...' : ''}</div>
-            <div class="review-card-tl" style="font-size:11px;color:var(--text-secondary);margin-top:4px;">TL: ${escapeHtml(lv.tl_reviewer || '—')}</div>
-          </div>
-          <div class="review-card-actions">
-            <button class="btn btn-success btn-xs" onclick="havenQuickApprove('${escapeAttr(lv.leave_id)}','om')">Approve</button>
-            <button class="btn btn-danger btn-xs" onclick="havenQuickReject('${escapeAttr(lv.leave_id)}','om')">Reject</button>
-          </div>
-        </div>`;
-    });
-    html += '</div>';
+  if (role === 'agent') {
+    visibleLeaves = visibleLeaves.filter(l => user && l.ohr_id === user.ohr_id);
+  } else if (role === 'tl') {
+    const myAgents = havenGetMyAgentOhrs();
+    visibleLeaves = visibleLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
+  }
+  // OMs see all
+
+  // Build calendar grid
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let html = '<div class="haven-cal-grid">';
+  // Day headers
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  for (const d of dayNames) {
+    html += `<div class="haven-cal-header">${d}</div>`;
   }
 
-  html += `</div>
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="haven-cal-cell haven-cal-empty"></div>';
+  }
 
-    <div class="review-section" style="margin-top:24px;">
-      <h4 class="review-section-title">Recently Approved (${approved.length})</h4>`;
+  // Day cells
+  const today = getTodayStr(); // YYYY-MM-DD in PHT
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr);
+    const isToday = dateStr === today;
 
-  if (approved.length === 0) {
-    html += '<div class="review-area-empty">No approved leaves yet.</div>';
-  } else {
-    html += `<div class="analytics-table-wrapper">
-      <table class="data-table">
-        <thead><tr><th>ID</th><th>Employee</th><th>Date</th><th>TL</th><th>OM</th><th>Approved On</th></tr></thead>
-        <tbody>`;
-    approved.slice(0, 50).forEach(lv => {
-      const reqDate = lv.requested_date ? new Date(lv.requested_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
-      const omDate = lv.om_review_date ? new Date(lv.om_review_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
-      html += `<tr class="module-row" onclick="havenOpenDetail('${escapeAttr(lv.leave_id)}')">
-        <td>${escapeHtml(lv.leave_id || '')}</td>
-        <td>${escapeHtml(lv.full_name || '—')}</td>
-        <td>${reqDate}</td>
-        <td>${escapeHtml(lv.tl_reviewer || '—')}</td>
-        <td>${escapeHtml(lv.om_reviewer || '—')}</td>
-        <td>${omDate}</td>
-      </tr>`;
-    });
-    html += '</tbody></table></div>';
+    html += `<div class="haven-cal-cell${isToday ? ' haven-cal-today' : ''}" data-date="${dateStr}">`;
+    html += `<div class="haven-cal-day-num">${day}</div>`;
+
+    if (dayLeaves.length > 0) {
+      html += '<div class="haven-cal-events">';
+      const maxShow = 3;
+      for (let i = 0; i < Math.min(dayLeaves.length, maxShow); i++) {
+        const lv = dayLeaves[i];
+        const statusClass = havenStatusClass(lv.status);
+        const displayName = role === 'agent' ? (lv.leave_type || 'Leave') : (lv.full_name || 'Unknown');
+        html += `<div class="haven-cal-event ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')" title="${escapeHtml(lv.full_name || '')} — ${escapeHtml(lv.status || '')}">${escapeHtml(displayName)}</div>`;
+      }
+      if (dayLeaves.length > maxShow) {
+        html += `<div class="haven-cal-more" onclick="havenShowDayLeaves('${dateStr}')">+${dayLeaves.length - maxShow} more</div>`;
+      }
+      html += '</div>';
+    }
+
+    // Click to file leave (agents + TLs only, future/today dates)
+    if ((role === 'agent' || role === 'tl') && dateStr >= today) {
+      html += `<div class="haven-cal-add" onclick="havenShowFileForm('${dateStr}')" title="File leave for this date">+</div>`;
+    }
+
+    html += '</div>';
   }
 
   html += '</div>';
   container.innerHTML = html;
 }
 
-// ===== Quick Approve/Reject from Review Cards =====
+function havenStatusClass(status) {
+  switch (status) {
+    case 'Pending TL': return 'haven-ev-pending';
+    case 'Pending OM': return 'haven-ev-pendingom';
+    case 'Approved': return 'haven-ev-approved';
+    case 'Rejected': return 'haven-ev-rejected';
+    case 'Cancelled': return 'haven-ev-cancelled';
+    default: return 'haven-ev-pending';
+  }
+}
 
-async function havenQuickApprove(leaveId, tier) {
+// ─── Leave Detail Popup ────────────────────────────────────────────────────────
+function havenShowLeaveDetail(leaveId) {
   const lv = HAVEN.leaves.find(l => l.leave_id === leaveId);
   if (!lv) return;
 
+  const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  const canCancel = (role === 'agent' || role === 'tl') && lv.status === 'Pending TL' && user && lv.ohr_id === user.ohr_id;
 
-  if (tier === 'tl') {
-    const valid = await havenCheckAbsences(lv.ohr);
-    if (!valid) {
-      showToast('Cannot approve: Employee has UPL or NCNS tags in the previous month', 'error');
-      return;
-    }
-  }
-
-  const updates = { updated_at: new Date().toISOString() };
-  if (tier === 'tl') {
-    updates.status = 'Pending OM';
-    updates.tl_reviewer = user ? user.full_name : '';
-    updates.tl_review_date = new Date().toISOString();
-  } else {
-    updates.status = 'Approved';
-    updates.om_reviewer = user ? user.full_name : '';
-    updates.om_review_date = new Date().toISOString();
-  }
-
-  try {
-    const url = `${IO_API_BASE}/leaves/${encodeURIComponent(leaveId)}`;
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-    if (!resp.ok) throw new Error('Failed to approve');
-
-    showToast(`Leave approved (${tier.toUpperCase()})`, 'success');
-    await havenFetchLeaves();
-  } catch (e) {
-    showToast('Failed: ' + e.message, 'error');
-  }
-}
-
-async function havenQuickReject(leaveId, tier) {
-  const reason = prompt('Enter rejection reason:');
-  if (!reason) return;
-
-  const lv = HAVEN.leaves.find(l => l.leave_id === leaveId);
-  if (!lv) return;
-
-  const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const updates = {
-    status: 'Rejected',
-    rejection_reason: reason,
-    updated_at: new Date().toISOString()
-  };
-
-  if (tier === 'tl') {
-    updates.tl_reviewer = user ? user.full_name : '';
-    updates.tl_review_date = new Date().toISOString();
-  } else {
-    updates.om_reviewer = user ? user.full_name : '';
-    updates.om_review_date = new Date().toISOString();
-  }
-
-  try {
-    const url = `${IO_API_BASE}/leaves/${encodeURIComponent(leaveId)}`;
-    const resp = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-    if (!resp.ok) throw new Error('Failed to reject');
-
-    showToast('Leave rejected', 'success');
-    await havenFetchLeaves();
-  } catch (e) {
-    showToast('Failed: ' + e.message, 'error');
-  }
-}
-
-// ===== Detail View =====
-
-function havenOpenDetail(leaveId) {
-  const lv = HAVEN.leaves.find(l => l.leave_id === leaveId);
-  if (!lv) return;
-  HAVEN.editingId = leaveId;
-
-  const formTitle = document.getElementById('haven-form-title');
   const formBody = document.getElementById('haven-form-body');
-  const formFooter = document.getElementById('haven-form-footer');
-  const overlay = document.getElementById('haven-form-overlay');
-
-  formTitle.textContent = `Leave Request — ${lv.leave_id}`;
-  const statusColor = HAVEN.STATUS_COLORS[lv.status] || 'var(--text-secondary)';
-
-  let html = `
-    <div class="detail-section">
-      <div class="detail-row">
-        <span class="detail-label">Status</span>
-        <span class="module-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(lv.status || '')}</span>
-      </div>
-    </div>
-
-    <div class="detail-section">
-      <h4 class="detail-section-title">Request Details</h4>
-      <div class="detail-row"><span class="detail-label">Employee</span><span class="detail-value">${escapeHtml(lv.full_name || '—')} (${escapeHtml(lv.ohr || '')})</span></div>
-      <div class="detail-row"><span class="detail-label">Planning Group</span><span class="detail-value">${escapeHtml(lv.planning_group || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Supervisor</span><span class="detail-value">${escapeHtml(lv.sup_name || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Requested Date</span><span class="detail-value">${lv.requested_date ? new Date(lv.requested_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '—'}</span></div>
-      <div class="detail-row"><span class="detail-label">Reason</span><span class="detail-value detail-multiline">${escapeHtml(lv.reason || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">Filed On</span><span class="detail-value">${lv.created_at ? new Date(lv.created_at).toLocaleString() : '—'}</span></div>
-    </div>
-
-    <div class="detail-section">
-      <h4 class="detail-section-title">Approval History</h4>
-      <div class="detail-row"><span class="detail-label">TL Reviewer</span><span class="detail-value">${escapeHtml(lv.tl_reviewer || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">TL Review Date</span><span class="detail-value">${lv.tl_review_date ? new Date(lv.tl_review_date).toLocaleString() : '—'}</span></div>
-      <div class="detail-row"><span class="detail-label">OM Reviewer</span><span class="detail-value">${escapeHtml(lv.om_reviewer || '—')}</span></div>
-      <div class="detail-row"><span class="detail-label">OM Review Date</span><span class="detail-value">${lv.om_review_date ? new Date(lv.om_review_date).toLocaleString() : '—'}</span></div>
-      ${lv.rejection_reason ? `<div class="detail-row"><span class="detail-label">Rejection Reason</span><span class="detail-value detail-multiline" style="color:#EF4444;">${escapeHtml(lv.rejection_reason)}</span></div>` : ''}
-    </div>`;
-
-  formBody.innerHTML = html;
-
-  // Footer: no Close button (X exists at top right)
-  let footerHtml = '';
-
-  if (typeof currentUser !== 'undefined' && currentUser) {
-    const role = currentUser.actual_role;
-    const isAdmin = (window.ADMIN_OHRS || []).includes(currentUser.ohr_id);
-
-    if ((role === 'Team Lead' || isAdmin) && lv.status === 'Pending TL') {
-      const myAgents = HAVEN.employees.filter(e => e.supervisor_name === currentUser.full_name).map(e => e.ohr_id);
-      if (myAgents.includes(lv.ohr) || role === 'Manager' || isAdmin) {
-        footerHtml += '<button class="btn btn-success btn-sm" onclick="havenQuickApprove(\'' + escapeAttr(lv.leave_id) + '\',\'tl\');havenCloseForm();">Approve (TL)</button>';
-        footerHtml += ' <button class="btn btn-danger btn-sm" onclick="havenQuickReject(\'' + escapeAttr(lv.leave_id) + '\',\'tl\');havenCloseForm();">Reject (TL)</button>';
-      }
-    }
-
-    if ((role === 'Manager' || isAdmin) && lv.status === 'Pending OM') { // Only admin/manager can approve OM-level
-      footerHtml += '<button class="btn btn-success btn-sm" onclick="havenQuickApprove(\'' + escapeAttr(lv.leave_id) + '\',\'om\');havenCloseForm();">Approve (OM)</button>';
-      footerHtml += ' <button class="btn btn-danger btn-sm" onclick="havenQuickReject(\'' + escapeAttr(lv.leave_id) + '\',\'om\');havenCloseForm();">Reject (OM)</button>';
-    }
-  }
-
-  formFooter.innerHTML = footerHtml;
-  formFooter.style.display = footerHtml ? '' : 'none';
-  overlay.style.display = 'flex';
-}
-
-// ===== UPL/NCNS Validation =====
-
-async function havenCheckAbsences(ohr) {
-  try {
-    const now = new Date();
-    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-    const startStr = prevMonth.toISOString().slice(0, 10);
-    const endStr = prevMonthEnd.toISOString().slice(0, 10);
-
-    const url = `${IO_API_BASE}/attendance?ohr_id=${ohr}&date_gte=${startStr}&date_lte=${endStr}&tag=UPL,NCNS&limit=1&select=tag`;
-    const resp = await fetch(url);
-    if (!resp.ok) return true;
-    const data = await resp.json();
-    return data.length === 0;
-  } catch (e) {
-    console.error('Failed to check absences:', e);
-    return true;
-  }
-}
-
-// ===== New Leave Form =====
-
-async function havenShowNewForm() {
-  await havenFetchEmployees();
-  HAVEN.editingId = null;
-
   const formTitle = document.getElementById('haven-form-title');
-  const formBody = document.getElementById('haven-form-body');
   const formFooter = document.getElementById('haven-form-footer');
-  const overlay = document.getElementById('haven-form-overlay');
+  if (!formBody || !formTitle || !formFooter) return;
 
-  // Generate unique leave ID as form title
-  const leaveId = 'LV-' + Date.now().toString(36).toUpperCase();
-  HAVEN._pendingLeaveId = leaveId;
-  formTitle.textContent = leaveId;
+  formTitle.textContent = 'Leave Details';
+
+  const statusBadge = `<span class="module-status-badge" style="background:${havenStatusColor(lv.status)}20;color:${havenStatusColor(lv.status)};border:1px solid ${havenStatusColor(lv.status)}40;">${escapeHtml(lv.status || '')}</span>`;
 
   formBody.innerHTML = `
-    <div class="form-section">
-      <div class="form-field">
-        <label class="form-label">Requested Date <span class="required">*</span></label>
-        <input type="date" class="form-input" id="haven-new-date">
-      </div>
-      <div class="form-field">
-        <label class="form-label">Reason <span class="required">*</span></label>
-        <textarea class="form-textarea" id="haven-new-reason" rows="3" placeholder="Reason for leave request..."></textarea>
-      </div>
+    <div class="haven-detail-grid">
+      <div class="haven-detail-row"><span class="haven-detail-label">Status</span><span>${statusBadge}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Employee</span><span>${escapeHtml(lv.full_name || '—')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Date</span><span>${escapeHtml(lv.start_date || '—')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Leave Type</span><span>${escapeHtml(lv.leave_type || '—')}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Reason</span><span>${escapeHtml(lv.reason || '—')}</span></div>
+      ${lv.tl_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">TL Reviewer</span><span>${escapeHtml(lv.tl_reviewer)}</span></div>` : ''}
+      ${lv.om_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">OM Reviewer</span><span>${escapeHtml(lv.om_reviewer)}</span></div>` : ''}
+      ${lv.rejection_reason ? `<div class="haven-detail-row"><span class="haven-detail-label">Rejection Reason</span><span>${escapeHtml(lv.rejection_reason)}</span></div>` : ''}
+      <div class="haven-detail-row"><span class="haven-detail-label">Filed</span><span>${lv.created_at ? new Date(lv.created_at).toLocaleString() : '—'}</span></div>
+    </div>
+  `;
+
+  formFooter.innerHTML = canCancel
+    ? `<button class="btn btn-danger btn-sm" onclick="havenCancelLeave('${escapeHtml(lv.leave_id)}')">Cancel Leave</button>
+       <button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Close</button>`
+    : `<button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Close</button>`;
+
+  document.getElementById('haven-form-overlay').style.display = '';
+}
+
+function havenStatusColor(status) {
+  switch (status) {
+    case 'Pending TL': return '#e6a817';
+    case 'Pending OM': return '#3b82f6';
+    case 'Approved': return '#16a34a';
+    case 'Rejected': return '#dc2626';
+    case 'Cancelled': return '#6b7280';
+    default: return '#9ca3af';
+  }
+}
+
+// ─── Show Day Leaves (when +N more is clicked) ─────────────────────────────────
+function havenShowDayLeaves(dateStr) {
+  const role = havenGetRole();
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  let dayLeaves = HAVEN.leaves.filter(l => l.start_date === dateStr);
+
+  if (role === 'agent') {
+    dayLeaves = dayLeaves.filter(l => user && l.ohr_id === user.ohr_id);
+  } else if (role === 'tl') {
+    const myAgents = havenGetMyAgentOhrs();
+    dayLeaves = dayLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
+  }
+
+  const formBody = document.getElementById('haven-form-body');
+  const formTitle = document.getElementById('haven-form-title');
+  const formFooter = document.getElementById('haven-form-footer');
+  if (!formBody) return;
+
+  formTitle.textContent = `Leaves on ${new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+
+  let html = '<div class="haven-day-list">';
+  for (const lv of dayLeaves) {
+    const statusClass = havenStatusClass(lv.status);
+    html += `<div class="haven-day-item ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')">
+      <span class="haven-day-item-name">${escapeHtml(lv.full_name || '—')}</span>
+      <span class="haven-day-item-type">${escapeHtml(lv.leave_type || '—')}</span>
+      <span class="haven-day-item-status">${escapeHtml(lv.status || '')}</span>
+    </div>`;
+  }
+  html += '</div>';
+
+  formBody.innerHTML = html;
+  formFooter.innerHTML = `<button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Close</button>`;
+  document.getElementById('haven-form-overlay').style.display = '';
+}
+
+// ─── File Leave Form ───────────────────────────────────────────────────────────
+function havenShowFileForm(prefillDate) {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return;
+
+  const role = havenGetRole();
+  const formBody = document.getElementById('haven-form-body');
+  const formTitle = document.getElementById('haven-form-title');
+  const formFooter = document.getElementById('haven-form-footer');
+  if (!formBody) return;
+
+  formTitle.textContent = 'File Leave Request';
+
+  // TLs get Leave Type field (PTO/CTO), others use the standard form
+  const leaveTypeField = (role === 'tl')
+    ? `<div class="form-group">
+        <label class="form-label">Leave Type <span class="required">*</span></label>
+        <select class="form-select" id="haven-file-type">
+          <option value="">Select type...</option>
+          <option value="PTO">PTO</option>
+          <option value="CTO">CTO</option>
+        </select>
+      </div>`
+    : `<div class="form-group">
+        <label class="form-label">Leave Type <span class="required">*</span></label>
+        <select class="form-select" id="haven-file-type">
+          <option value="">Select type...</option>
+          <option value="PL">Planned Leave (PL)</option>
+          <option value="CO">Comp Off (CO)</option>
+          <option value="PH">Public Holiday (PH)</option>
+        </select>
+      </div>`;
+
+  formBody.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Date <span class="required">*</span></label>
+      <input type="date" class="form-input" id="haven-file-date" value="${prefillDate || ''}">
+    </div>
+    ${leaveTypeField}
+    <div class="form-group">
+      <label class="form-label">Reason</label>
+      <textarea class="form-input" id="haven-file-reason" rows="3" placeholder="Optional reason..."></textarea>
     </div>
   `;
 
   formFooter.innerHTML = `
     <button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Cancel</button>
-    <button class="btn btn-primary btn-sm" onclick="havenSubmitNew()">Submit Leave Request</button>
+    <button class="btn btn-primary btn-sm" onclick="havenSubmitLeave()">Submit</button>
   `;
-  formFooter.style.display = '';
 
-  overlay.style.display = 'flex';
+  document.getElementById('haven-form-overlay').style.display = '';
 }
 
-async function havenSubmitNew() {
-  const user = typeof currentUser !== 'undefined' ? currentUser : null;
-  const empOhr = user ? user.ohr_id : '';
-  const rosterEmp = HAVEN.employees.find(e => e.ohr_id === empOhr);
-  const emp = rosterEmp || (user ? { full_name: user.full_name, ohr_id: user.ohr_id, planning_group: user.planning_group, supervisor_name: user.supervisor_name, meta_email: user.meta_email } : null);
+function havenSubmitLeave() {
+  const dateVal = document.getElementById('haven-file-date')?.value;
+  const typeVal = document.getElementById('haven-file-type')?.value;
+  const reasonVal = document.getElementById('haven-file-reason')?.value || '';
 
-  const date = document.getElementById('haven-new-date')?.value;
-  if (!date) { showToast('Please select a date', 'error'); return; }
+  if (!dateVal) { showToast('Please select a date', 'error'); return; }
+  if (!typeVal) { showToast('Please select a leave type', 'error'); return; }
 
-  const reason = document.getElementById('haven-new-reason')?.value?.trim();
-  if (!reason) { showToast('Please enter a reason', 'error'); return; }
+  // Show confirmation
+  havenConfirm(`File a <b>${escapeHtml(typeVal)}</b> leave for <b>${dateVal}</b>?`, async () => {
+    const user = currentUser;
+    const leaveId = 'LV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const now = new Date().toISOString();
 
-  const leaveId = HAVEN._pendingLeaveId || ('LV-' + Date.now().toString(36).toUpperCase());
+    const payload = {
+      leave_id: leaveId,
+      leave_type: typeVal,
+      status: 'Pending TL',
+      ohr_id: user.ohr_id,
+      full_name: user.full_name,
+      meta_email: user.meta_email || '',
+      supervisor: user.supervisor_name || '',
+      supervisor_email: user.supervisor_email || '',
+      planning_group: user.planning_group || '',
+      start_date: dateVal,
+      end_date: dateVal,
+      reason: reasonVal,
+      created_at: now,
+      updated_at: now,
+    };
 
-  const record = {
-    leave_id: leaveId,
-    full_name: emp ? emp.full_name : '',
-    ohr: empOhr,
-    meta_email: emp ? emp.meta_email : '',
-    planning_group: emp ? emp.planning_group : '',
-    sup_name: emp ? emp.supervisor_name : '',
-    requested_date: date,
-    reason: reason,
-    status: 'Pending TL'
-  };
-
-  try {
-    const url = `${IO_API_BASE}/leaves`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(record)
-    });
-    if (!resp.ok) throw new Error('Failed to file leave');
-
-    showToast('Leave request filed successfully', 'success');
-    havenCloseForm();
-    await havenFetchLeaves();
-  } catch (e) {
-    console.error('Failed to file leave:', e);
-    showToast('Failed to file: ' + e.message, 'error');
-  }
+    try {
+      const res = await fetch(`${IO_API_BASE}/leaves`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        showToast('Leave filed successfully', 'success');
+        havenCloseForm();
+        await havenLoadLeaves();
+        havenRenderMonth();
+        havenRenderQueue();
+      } else {
+        showToast('Error: ' + (result.error || 'Unknown'), 'error');
+      }
+    } catch (e) {
+      showToast('Network error', 'error');
+    }
+  });
 }
 
-function havenCloseForm() {
-  const overlay = document.getElementById('haven-form-overlay');
-  if (overlay) overlay.style.display = 'none';
-  HAVEN.editingId = null;
+// ─── Cancel Leave ──────────────────────────────────────────────────────────────
+function havenCancelLeave(leaveId) {
+  havenConfirm('Are you sure you want to <b>cancel</b> this leave request?', async () => {
+    try {
+      const res = await fetch(`${IO_API_BASE}/leaves/${leaveId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await res.json();
+      if (result.ok) {
+        showToast('Leave cancelled', 'success');
+        havenCloseForm();
+        await havenLoadLeaves();
+        havenRenderMonth();
+        havenRenderQueue();
+      } else {
+        showToast('Error: ' + (result.error || 'Unknown'), 'error');
+      }
+    } catch (e) {
+      showToast('Network error', 'error');
+    }
+  });
 }
 
-// ===== WFM Export =====
+// ─── Approval Queue (FLM / OM) ────────────────────────────────────────────────
+function havenRenderQueue() {
+  const role = havenGetRole();
+  const queueEl = document.getElementById('haven-queue');
+  const queueBody = document.getElementById('haven-queue-body');
+  const queueTitle = document.getElementById('haven-queue-title');
+  const queueActions = document.getElementById('haven-queue-actions');
+  if (!queueEl || !queueBody) return;
 
-function havenExportWFM() {
-  const approved = HAVEN.leaves.filter(l => l.status === 'Approved');
-  if (approved.length === 0) {
-    showToast('No approved leaves to export', 'error');
+  if (role === 'agent') {
+    queueEl.style.display = 'none';
     return;
   }
 
-  const headers = ['Leave ID', 'Full Name', 'OHR', 'Meta Email', 'Planning Group', 'Supervisor', 'Requested Date', 'Reason', 'TL Reviewer', 'TL Review Date', 'OM Reviewer', 'OM Review Date'];
-  const rows = approved.map(l => [
-    l.leave_id || '',
-    l.full_name || '',
-    l.ohr || '',
-    l.meta_email || '',
-    l.planning_group || '',
-    l.sup_name || '',
-    l.requested_date || '',
-    (l.reason || '').replace(/,/g, ';'),
-    l.tl_reviewer || '',
-    l.tl_review_date ? new Date(l.tl_review_date).toLocaleDateString() : '',
-    l.om_reviewer || '',
-    l.om_review_date ? new Date(l.om_review_date).toLocaleDateString() : ''
-  ]);
+  queueEl.style.display = '';
+  HAVEN.selectedLeaves.clear();
 
-  let csv = headers.join(',') + '\n';
-  rows.forEach(r => { csv += r.join(',') + '\n'; });
+  let pendingLeaves = [];
+  if (role === 'tl') {
+    queueTitle.textContent = 'Pending Your Approval';
+    const myAgents = havenGetMyAgentOhrs();
+    pendingLeaves = HAVEN.leaves.filter(l => l.status === 'Pending TL' && myAgents.includes(l.ohr_id));
+  } else {
+    // OM sees FLM-approved
+    queueTitle.textContent = 'Pending Final Approval';
+    pendingLeaves = HAVEN.leaves.filter(l => l.status === 'Pending OM');
+  }
 
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `WFM_Leave_Export_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  // Sort by date
+  pendingLeaves.sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
 
-  showToast(`Exported ${approved.length} approved leave records`, 'success');
+  if (pendingLeaves.length === 0) {
+    queueBody.innerHTML = '<div class="haven-queue-empty">No pending requests</div>';
+    queueActions.innerHTML = '';
+    return;
+  }
+
+  // Bulk action buttons
+  queueActions.innerHTML = `
+    <button class="btn btn-sm btn-success" id="haven-bulk-approve" onclick="havenBulkApprove()" disabled>Approve Selected</button>
+    <button class="btn btn-sm btn-danger" id="haven-bulk-reject" onclick="havenBulkReject()" disabled>Reject Selected</button>
+    <label class="haven-select-all-label"><input type="checkbox" id="haven-select-all" onchange="havenToggleSelectAll(this.checked)"> Select All</label>
+  `;
+
+  let html = '<div class="haven-queue-list">';
+  for (const lv of pendingLeaves) {
+    const dateDisplay = lv.start_date ? new Date(lv.start_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '—';
+    html += `<div class="haven-queue-card" data-leave-id="${escapeHtml(lv.leave_id)}">
+      <label class="haven-queue-check"><input type="checkbox" class="haven-queue-cb" value="${escapeHtml(lv.leave_id)}" onchange="havenUpdateBulkButtons()"></label>
+      <div class="haven-queue-info">
+        <div class="haven-queue-name">${escapeHtml(lv.full_name || '—')}</div>
+        <div class="haven-queue-meta">${dateDisplay} · ${escapeHtml(lv.leave_type || '—')}${lv.reason ? ' · ' + escapeHtml(lv.reason.substring(0, 60)) : ''}</div>
+        ${role === 'om' && lv.tl_reviewer ? `<div class="haven-queue-tl">Approved by TL: ${escapeHtml(lv.tl_reviewer)}</div>` : ''}
+      </div>
+      <div class="haven-queue-item-actions">
+        <button class="btn btn-xs btn-success" onclick="havenSingleApprove('${escapeHtml(lv.leave_id)}')">Approve</button>
+        <button class="btn btn-xs btn-danger" onclick="havenSingleReject('${escapeHtml(lv.leave_id)}')">Reject</button>
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  queueBody.innerHTML = html;
 }
 
-// ===== Init =====
-
-async function initHaven(view) {
-  await havenFetchEmployees();
-  await havenFetchLeaves();
-  const subMap = { 'haven-input': 'input', 'haven-review': 'review', 'haven-final': 'final' };
-  const sub = subMap[view] || 'input';
-  HAVEN.currentSubpage = sub;
-  if (sub === 'input') havenApplyFilters();
-  else if (sub === 'review') havenRenderReviewArea();
-  else if (sub === 'final') havenRenderFinalReviewArea();
+function havenToggleSelectAll(checked) {
+  document.querySelectorAll('.haven-queue-cb').forEach(cb => { cb.checked = checked; });
+  havenUpdateBulkButtons();
 }
+
+function havenUpdateBulkButtons() {
+  const checked = document.querySelectorAll('.haven-queue-cb:checked');
+  const approveBtn = document.getElementById('haven-bulk-approve');
+  const rejectBtn = document.getElementById('haven-bulk-reject');
+  if (approveBtn) approveBtn.disabled = checked.length === 0;
+  if (rejectBtn) rejectBtn.disabled = checked.length === 0;
+}
+
+function havenGetSelectedIds() {
+  return Array.from(document.querySelectorAll('.haven-queue-cb:checked')).map(cb => cb.value);
+}
+
+// ─── Single Approve/Reject ─────────────────────────────────────────────────────
+function havenSingleApprove(leaveId) {
+  const role = havenGetRole();
+  const tier = role === 'tl' ? 'tl' : 'om';
+  havenConfirm('Approve this leave request?', async () => {
+    await havenDoBulkAction([leaveId], 'approve', tier, '');
+  });
+}
+
+function havenSingleReject(leaveId) {
+  havenShowRejectForm([leaveId]);
+}
+
+// ─── Bulk Approve/Reject ───────────────────────────────────────────────────────
+function havenBulkApprove() {
+  const ids = havenGetSelectedIds();
+  if (ids.length === 0) return;
+  const role = havenGetRole();
+  const tier = role === 'tl' ? 'tl' : 'om';
+  havenConfirm(`Approve <b>${ids.length}</b> leave request(s)?`, async () => {
+    await havenDoBulkAction(ids, 'approve', tier, '');
+  });
+}
+
+function havenBulkReject() {
+  const ids = havenGetSelectedIds();
+  if (ids.length === 0) return;
+  havenShowRejectForm(ids);
+}
+
+// ─── Reject Form (inline remarks) ─────────────────────────────────────────────
+function havenShowRejectForm(leaveIds) {
+  const role = havenGetRole();
+  const tier = role === 'tl' ? 'tl' : 'om';
+
+  const formBody = document.getElementById('haven-form-body');
+  const formTitle = document.getElementById('haven-form-title');
+  const formFooter = document.getElementById('haven-form-footer');
+  if (!formBody) return;
+
+  formTitle.textContent = `Reject ${leaveIds.length} Leave Request(s)`;
+  formBody.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Remarks (optional)</label>
+      <textarea class="form-input" id="haven-reject-remarks" rows="3" placeholder="Reason for rejection..."></textarea>
+    </div>
+  `;
+  formFooter.innerHTML = `
+    <button class="btn btn-outline btn-sm" onclick="havenCloseForm()">Cancel</button>
+    <button class="btn btn-danger btn-sm" onclick="havenDoReject()">Reject</button>
+  `;
+
+  HAVEN._rejectIds = leaveIds;
+  HAVEN._rejectTier = tier;
+  document.getElementById('haven-form-overlay').style.display = '';
+}
+
+async function havenDoReject() {
+  const remarks = document.getElementById('haven-reject-remarks')?.value || '';
+  const ids = HAVEN._rejectIds || [];
+  const tier = HAVEN._rejectTier || 'tl';
+  havenCloseForm();
+  await havenDoBulkAction(ids, 'reject', tier, remarks);
+}
+
+// ─── Bulk Action API Call ──────────────────────────────────────────────────────
+async function havenDoBulkAction(leaveIds, action, tier, rejectionReason) {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  try {
+    const res = await fetch(`${IO_API_BASE}/leaves/bulk-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        leave_ids: leaveIds,
+        action,
+        tier,
+        reviewer_name: user ? user.full_name : '',
+        rejection_reason: rejectionReason,
+      }),
+    });
+    const result = await res.json();
+    if (result.ok) {
+      showToast(`${result.updated} leave(s) ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
+      await havenLoadLeaves();
+      havenRenderMonth();
+      havenRenderQueue();
+    } else {
+      showToast('Error: ' + (result.error || 'Unknown'), 'error');
+    }
+  } catch (e) {
+    showToast('Network error', 'error');
+  }
+}
+
+// ─── Confirmation Dialog ───────────────────────────────────────────────────────
+function havenConfirm(message, callback) {
+  const overlay = document.getElementById('haven-confirm-overlay');
+  const msg = document.getElementById('haven-confirm-msg');
+  if (!overlay || !msg) { callback(); return; }
+  msg.innerHTML = message;
+  HAVEN.confirmCallback = callback;
+  overlay.style.display = '';
+}
+
+function havenConfirmYes() {
+  document.getElementById('haven-confirm-overlay').style.display = 'none';
+  if (HAVEN.confirmCallback) {
+    HAVEN.confirmCallback();
+    HAVEN.confirmCallback = null;
+  }
+}
+
+function havenConfirmCancel() {
+  document.getElementById('haven-confirm-overlay').style.display = 'none';
+  HAVEN.confirmCallback = null;
+}
+
+// ─── Form Close ────────────────────────────────────────────────────────────────
+function havenCloseForm() {
+  const overlay = document.getElementById('haven-form-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+// ─── Expose globally ───────────────────────────────────────────────────────────
+window.initHaven = initHaven;
+window.havenPrevMonth = havenPrevMonth;
+window.havenNextMonth = havenNextMonth;
+window.havenShowFileForm = havenShowFileForm;
+window.havenSubmitLeave = havenSubmitLeave;
+window.havenCancelLeave = havenCancelLeave;
+window.havenShowLeaveDetail = havenShowLeaveDetail;
+window.havenShowDayLeaves = havenShowDayLeaves;
+window.havenCloseForm = havenCloseForm;
+window.havenConfirmYes = havenConfirmYes;
+window.havenConfirmCancel = havenConfirmCancel;
+window.havenSingleApprove = havenSingleApprove;
+window.havenSingleReject = havenSingleReject;
+window.havenBulkApprove = havenBulkApprove;
+window.havenBulkReject = havenBulkReject;
+window.havenToggleSelectAll = havenToggleSelectAll;
+window.havenUpdateBulkButtons = havenUpdateBulkButtons;
+window.havenDoReject = havenDoReject;
+window.havenRenderQueue = havenRenderQueue;

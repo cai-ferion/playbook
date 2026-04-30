@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/corrective-actions.css?v=7">
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <link rel="stylesheet" href="css/tardiness-restyle.css?v=100">
+  <link rel="stylesheet" href="css/haven.css?v=100">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
@@ -286,28 +287,11 @@
           </div>
         </div>
 
-        <!-- Haven Section (Collapsible) -->
-        <div class="nav-group" id="nav-group-haven">
-          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('haven')" id="nav-haven">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            Haven
-            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="nav-group-items" id="nav-group-items-haven">
-            <button class="nav-item" data-view="haven-input" onclick="switchView('haven-input')" id="nav-haven-input">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Input Portal
-            </button>
-            <button class="nav-item" data-view="haven-review" onclick="switchView('haven-review')" id="nav-haven-review">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              Review Area
-            </button>
-            <button class="nav-item" data-view="haven-final" onclick="switchView('haven-final')" id="nav-haven-final">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Final Review Area
-            </button>
-          </div>
-        </div>
+        <!-- Haven (Single Page) -->
+        <button class="nav-item" data-view="haven" onclick="switchView('haven')" id="nav-haven">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Haven
+        </button>
 
         <!-- Helm Section (Collapsible) -->
         <div class="nav-group" id="nav-group-helm">
@@ -1471,50 +1455,57 @@
 
 
 
-      <!-- ===== View 8a: Haven — Input Portal ===== -->
-      <div class="view-container view-hidden" id="view-haven-input">
-        <div class="module-page">
-          <!-- Sub-page: Input Portal -->
-          <div id="haven-sub-input">
-            <div class="module-header-right" style="margin-bottom:12px;">
-              <button class="btn btn-primary btn-sm" id="haven-new-btn" onclick="havenShowNewForm()">
+      <!-- ===== View 8: Haven — Leave Management ===== -->
+      <div class="view-container view-hidden" id="view-haven">
+        <div class="module-page haven-page">
+          <!-- Header with actions -->
+          <div class="haven-header">
+            <div class="haven-header-left">
+              <h2 class="haven-title">Haven</h2>
+              <div class="haven-month-nav">
+                <button class="btn btn-ghost btn-xs" id="haven-prev-month" onclick="havenPrevMonth()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <span class="haven-month-label" id="haven-month-label"></span>
+                <button class="btn btn-ghost btn-xs" id="haven-next-month" onclick="havenNextMonth()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="haven-header-right">
+              <div class="haven-legend">
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-pending"></span>Pending TL</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-pendingom"></span>Pending OM</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-approved"></span>Approved</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-rejected"></span>Rejected</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-cancelled"></span>Cancelled</span>
+              </div>
+              <button class="btn btn-primary btn-sm" id="haven-file-btn" onclick="havenShowFileForm()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 File Leave
               </button>
             </div>
-            <div class="module-filters" id="haven-filters">
-              <div class="filter-group">
-                <label class="filter-label">Status:</label>
-                <select class="form-select form-select-sm" id="haven-filter-status" onchange="havenApplyFilters()">
-                  <option value="All">All Statuses</option>
-                  <option value="Pending TL">Pending TL</option>
-                  <option value="Pending OM">Pending OM</option>
-                  <option value="Approved">Approved</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <label class="filter-label">Date Range:</label>
-                <input type="date" class="form-input form-input-sm" id="haven-filter-start" onchange="havenApplyFilters()">
-                <span style="color:var(--fg-muted);">to</span>
-                <input type="date" class="form-input form-input-sm" id="haven-filter-end" onchange="havenApplyFilters()">
-              </div>
-            </div>
-            <div class="loading-overlay" id="haven-loading" style="display:none;">
-              <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
-              <div class="loading-text">Loading Leave Requests...</div>
-            </div>
-            <div class="module-stats" id="haven-stats"></div>
-            <div class="module-table-wrapper">
-              <table class="data-table module-table" id="haven-table">
-                <thead id="haven-table-head"></thead>
-                <tbody id="haven-table-body"></tbody>
-              </table>
-            </div>
-            <div class="module-pagination" id="haven-pagination"></div>
           </div>
 
-          <!-- New/Edit Form -->
+          <!-- Loading -->
+          <div class="loading-overlay" id="haven-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Haven...</div>
+          </div>
+
+          <!-- Calendar Grid -->
+          <div class="haven-calendar" id="haven-calendar"></div>
+
+          <!-- Approval Queue (FLM/OM only) -->
+          <div class="haven-queue" id="haven-queue" style="display:none;">
+            <div class="haven-queue-header">
+              <h3 class="haven-queue-title" id="haven-queue-title">Approval Queue</h3>
+              <div class="haven-queue-actions" id="haven-queue-actions"></div>
+            </div>
+            <div class="haven-queue-body" id="haven-queue-body"></div>
+          </div>
+
+          <!-- Form Overlay -->
           <div class="module-form-overlay" id="haven-form-overlay" style="display:none;">
             <div class="module-form-panel">
               <div class="module-form-header">
@@ -1527,20 +1518,17 @@
               <div class="module-form-footer" id="haven-form-footer"></div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- ===== View 8b: Haven — Review Area ===== -->
-      <div class="view-container view-hidden" id="view-haven-review">
-        <div class="module-page">
-          <div id="haven-review-content"></div>
-        </div>
-      </div>
-
-      <!-- ===== View 8c: Haven — Final Review Area ===== -->
-      <div class="view-container view-hidden" id="view-haven-final">
-        <div class="module-page">
-          <div id="haven-final-content"></div>
+          <!-- Confirmation Dialog -->
+          <div class="haven-confirm-overlay" id="haven-confirm-overlay" style="display:none;">
+            <div class="haven-confirm-box">
+              <p id="haven-confirm-msg"></p>
+              <div class="haven-confirm-actions">
+                <button class="btn btn-outline btn-sm" onclick="havenConfirmCancel()">No</button>
+                <button class="btn btn-primary btn-sm" id="haven-confirm-yes" onclick="havenConfirmYes()">Yes</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2102,7 +2090,7 @@
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
   <script src="js/data.js?v=108"></script>
-  <script src="js/app.js?v=129"></script>
+  <script src="js/app.js?v=130"></script>
   <script src="js/dashboard-anim.js?v=121b"></script>
   <script src="js/input-portal.js?v=125"></script>
   <script src="js/input-compact.js?v=123"></script>
@@ -2123,7 +2111,7 @@
   <script src="js/compass-omnibar.js?v=105" defer></script>
   <script src="js/sandbox.js?v=127" defer></script>
   <script src="js/sandbox-omnibar.js?v=100" defer></script>
-  <script src="js/haven.js?v=105" defer></script>
+  <script src="js/haven.js?v=200" defer></script>
   <script src="js/helm.js?v=120" defer></script>
   <script src="js/group-task.js?v=106" defer></script>
   <script src="js/shift-extension.js?v=101" defer></script>

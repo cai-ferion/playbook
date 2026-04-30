@@ -3486,3 +3486,17 @@
 
 ## Helm — Task Dashboard Nav Visibility on Login
 - [x] Show Task Dashboard nav button immediately on login for TL/Manager/Admin (not just after clicking Task Board)
+
+## Haven — Unified Leave Management System (Calendar Rebuild)
+- [x] Consolidate 3 Haven sub-pages (Input Portal, Review Area, Final Review Area) into single "Haven" page
+- [x] Add missing DB columns: tl_reviewer, tl_review_date, om_reviewer, om_review_date, rejection_reason, cancelled_at
+- [x] Calendar view as primary interface (scrollable vertically, defaults to current month)
+- [x] Role-based rendering: Agents see own leaves, FLMs see team, OMs see FLM-approved
+- [x] File Leave form with "Leave Type" field (PTO/CTO) for TLs only
+- [x] Confirmation dialog on file leave and cancel leave
+- [x] Cancelled status — agents can cancel their own pending requests
+- [x] Bulk approve/reject for FLMs and OMs
+- [x] Inline optional "Remarks" expansion on rejection (replace prompt())
+- [x] Color-coded calendar: pending=yellow, FLM approved=blue, approved=green, rejected=red, cancelled=gray
+- [x] In-app notifications on OM final action (approve/reject) to agent + FLM
+- [x] Update nav structure to single Haven item (remove sub-pages)

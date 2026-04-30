@@ -1223,15 +1223,23 @@ router.get("/leaves", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    const { leave_id, limit } = req.query;
+    const { leave_id, status, ohr_id, supervisor, month, limit } = req.query;
 
     if (leave_id) {
       const rows = await db.select().from(ioLeaves).where(eq(ioLeaves.leave_id, String(leave_id)));
       return res.json(rows);
     }
 
+    const conditions: any[] = [];
+    if (status) conditions.push(eq(ioLeaves.status, String(status)));
+    if (ohr_id) conditions.push(eq(ioLeaves.ohr_id, String(ohr_id)));
+    if (supervisor) conditions.push(eq(ioLeaves.supervisor, String(supervisor)));
+    // month filter: YYYY-MM format, matches start_date
+    if (month) conditions.push(sql`${ioLeaves.start_date} LIKE ${String(month) + '%'}`);
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
     const lim = limit ? Number(limit) : 2000;
-    const rows = await db.select().from(ioLeaves).orderBy(desc(sql`created_at`)).limit(lim);
+    const rows = await db.select().from(ioLeaves).where(where).orderBy(desc(sql`created_at`)).limit(lim);
     res.json(rows);
   } catch (err: any) {
     console.error("[IO API] leaves GET error:", err);
@@ -1261,6 +1269,129 @@ router.patch("/leaves/:leave_id", async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leaves PATCH error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Bulk approve/reject leaves
+router.post("/leaves/bulk-action", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { leave_ids, action, tier, reviewer_name, rejection_reason } = req.body;
+    if (!leave_ids || !Array.isArray(leave_ids) || leave_ids.length === 0) {
+      return res.status(400).json({ error: "leave_ids array required" });
+    }
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: "action must be 'approve' or 'reject'" });
+    }
+    if (!tier || !['tl', 'om'].includes(tier)) {
+      return res.status(400).json({ error: "tier must be 'tl' or 'om'" });
+    }
+
+    const now = new Date().toISOString();
+    let updated = 0;
+
+    for (const lid of leave_ids) {
+      const updates: any = { updated_at: now };
+      if (action === 'approve') {
+        if (tier === 'tl') {
+          updates.status = 'Pending OM';
+          updates.tl_reviewer = reviewer_name || '';
+          updates.tl_review_date = now;
+        } else {
+          updates.status = 'Approved';
+          updates.om_reviewer = reviewer_name || '';
+          updates.om_review_date = now;
+        }
+      } else {
+        updates.status = 'Rejected';
+        updates.rejection_reason = rejection_reason || '';
+        if (tier === 'tl') {
+          updates.tl_reviewer = reviewer_name || '';
+          updates.tl_review_date = now;
+        } else {
+          updates.om_reviewer = reviewer_name || '';
+          updates.om_review_date = now;
+        }
+      }
+
+      await db.update(ioLeaves).set(updates).where(eq(ioLeaves.leave_id, String(lid)));
+      updated++;
+    }
+
+    // Send notifications for OM actions
+    if (tier === 'om') {
+      const rows = await db.select().from(ioLeaves).where(
+        sql`${ioLeaves.leave_id} IN (${sql.join(leave_ids.map((id: string) => sql`${id}`), sql`, `)})`
+      );
+      for (const lv of rows) {
+        // Notify the agent
+        await db.insert(ioNotifications).values({
+          type: 'haven',
+          title: action === 'approve' ? 'Leave Approved' : 'Leave Rejected',
+          message: action === 'approve'
+            ? `Your leave on ${lv.start_date} has been approved by ${reviewer_name}.`
+            : `Your leave on ${lv.start_date} has been rejected by ${reviewer_name}.${rejection_reason ? ' Reason: ' + rejection_reason : ''}`,
+          actor_ohr: '',
+          actor_name: reviewer_name || '',
+          target_ohr: lv.ohr_id || '',
+          target_role: 'agent',
+          metadata: JSON.stringify({ leave_id: lv.leave_id }),
+          is_read: false,
+          created_at: now,
+        });
+        // Notify the FLM (supervisor)
+        if (lv.supervisor) {
+          await db.insert(ioNotifications).values({
+            type: 'haven',
+            title: action === 'approve' ? 'Leave Approved (OM)' : 'Leave Rejected (OM)',
+            message: `${lv.full_name}'s leave on ${lv.start_date} was ${action === 'approve' ? 'approved' : 'rejected'} by ${reviewer_name}.`,
+            actor_ohr: '',
+            actor_name: reviewer_name || '',
+            target_ohr: '',
+            target_role: 'supervisor:' + lv.supervisor,
+            metadata: JSON.stringify({ leave_id: lv.leave_id, employee_ohr: lv.ohr_id }),
+            is_read: false,
+            created_at: now,
+          });
+        }
+      }
+    }
+
+    res.json({ ok: true, updated });
+  } catch (err: any) {
+    console.error("[IO API] leaves bulk-action error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Cancel a leave (agent self-cancel)
+router.post("/leaves/:leave_id/cancel", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+
+    const { leave_id } = req.params;
+    const rows = await db.select().from(ioLeaves).where(eq(ioLeaves.leave_id, leave_id));
+    if (rows.length === 0) return res.status(404).json({ error: "Leave not found" });
+
+    const lv = rows[0];
+    if (lv.status !== 'Pending TL') {
+      return res.status(400).json({ error: "Can only cancel leaves with Pending TL status" });
+    }
+
+    const now = new Date().toISOString();
+    await db.update(ioLeaves).set({
+      status: 'Cancelled',
+      cancelled_at: now,
+      updated_at: now,
+    }).where(eq(ioLeaves.leave_id, leave_id));
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] leaves cancel error:", err);
     res.status(500).json({ error: err.message });
   }
 });

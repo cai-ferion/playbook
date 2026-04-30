@@ -336,6 +336,12 @@ export const ioLeaves = mysqlTable("io_leaves", {
   remarks: text("remarks"),
   approver_comments: text("approver_comments"),
   attachments: text("attachments"),
+  tl_reviewer: varchar("tl_reviewer", { length: 255 }),
+  tl_review_date: varchar("tl_review_date", { length: 64 }),
+  om_reviewer: varchar("om_reviewer", { length: 255 }),
+  om_review_date: varchar("om_review_date", { length: 64 }),
+  rejection_reason: text("rejection_reason"),
+  cancelled_at: varchar("cancelled_at", { length: 64 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
 });

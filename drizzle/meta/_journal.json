@@ -218,6 +218,13 @@
       "when": 1777503278938,
       "tag": "0030_perfect_lord_tyger",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1777575841677,
+      "tag": "0031_worried_krista_starr",
+      "breakpoints": true
     }
   ]
 }
