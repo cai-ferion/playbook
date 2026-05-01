@@ -3627,3 +3627,9 @@
 - [x] Frontend: Hide FLM Approved row in leave detail modal for TL leaves
 - [x] Frontend: No shrinkage forecast card for TL leaves at OM approval
 - [x] Test end-to-end: file TL leave, verify it goes straight to Pending OM
+
+## Haven — Clean Slate + Launch Email
+- [x] Purge all leave requests from io_leaves table (37 deleted)
+- [x] Purge all Haven-type notifications from io_notifications table (163 deleted)
+- [x] Draft comprehensive Haven launch email with leave process instructions
+- [x] Include filing window: May 1-7, closes May 7 11:59 PM MNL
