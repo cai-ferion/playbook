@@ -3566,3 +3566,8 @@
 - [x] Tier determined by leave status (Pending TL → tier=tl, Pending OM → tier=om), not user role
 - [x] Fixed bulk approve/reject and day-view bulk actions to use status-based tier
 - [x] Reset 2 incorrectly processed leave records back to Pending TL
+
+## Haven — Detail Modal & Notification Fixes
+- [x] Remove "TL Reviewer" field from leave detail modal (Supervisor already shows FLM)
+- [x] Rename "OM Reviewer" to "Operations Manager" in detail modal
+- [x] Fix FLM approval/rejection notifications: only notify the agent and their FLM, not all employees

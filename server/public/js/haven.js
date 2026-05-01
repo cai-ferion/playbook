@@ -391,8 +391,8 @@ function havenShowLeaveDetail(leaveId) {
       <div class="haven-detail-row"><span class="haven-detail-label">Leave Type</span><span>${escapeHtml(lv.leave_type || '\u2014')}</span></div>
       <div class="haven-detail-row"><span class="haven-detail-label">Reason</span><span>${escapeHtml(lv.reason || '\u2014')}</span></div>
       <div class="haven-detail-row"><span class="haven-detail-label">Supervisor</span><span>${escapeHtml(lv.supervisor || '\u2014')}</span></div>
-      ${lv.tl_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">TL Reviewer</span><span>${escapeHtml(lv.tl_reviewer)}</span></div>` : ''}
-      ${lv.om_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">OM Reviewer</span><span>${escapeHtml(lv.om_reviewer)}</span></div>` : ''}
+      
+      ${lv.om_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">Operations Manager</span><span>${escapeHtml(lv.om_reviewer)}</span></div>` : ''}
       ${lv.rejection_reason ? `<div class="haven-detail-row"><span class="haven-detail-label">Rejection Reason</span><span style="color:#dc2626;">${escapeHtml(lv.rejection_reason)}</span></div>` : ''}
       <div class="haven-detail-row"><span class="haven-detail-label">Filed</span><span>${lv.created_at ? new Date(lv.created_at).toLocaleString() : '\u2014'}</span></div>
     </div>

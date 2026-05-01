@@ -1321,12 +1321,56 @@ router.post("/leaves/bulk-action", async (req: Request, res: Response) => {
       updated++;
     }
 
-    // Send notifications for OM actions
-    if (tier === 'om') {
-      const rows = await db.select().from(ioLeaves).where(
-        sql`${ioLeaves.leave_id} IN (${sql.join(leave_ids.map((id: string) => sql`${id}`), sql`, `)})`
-      );
-      for (const lv of rows) {
+    // Send targeted notifications for leave actions
+    const rows = await db.select().from(ioLeaves).where(
+      sql`${ioLeaves.leave_id} IN (${sql.join(leave_ids.map((id: string) => sql`${id}`), sql`, `)})`
+    );
+    for (const lv of rows) {
+      // Look up supervisor OHR from io_employees by supervisor name
+      let supervisorOhr = '';
+      if (lv.supervisor) {
+        const supRows = await db.select({ ohr_id: ioEmployees.ohr_id })
+          .from(ioEmployees)
+          .where(eq(ioEmployees.full_name, lv.supervisor))
+          .limit(1);
+        if (supRows.length > 0) supervisorOhr = supRows[0].ohr_id;
+      }
+
+      if (tier === 'tl') {
+        // FLM approval/rejection: notify agent + FLM only
+        const statusLabel = action === 'approve' ? 'forwarded to OM for final approval' : 'rejected';
+        // Notify the agent
+        await db.insert(ioNotifications).values({
+          type: 'haven',
+          title: action === 'approve' ? 'Leave Forwarded to OM' : 'Leave Rejected',
+          message: action === 'approve'
+            ? `Your leave on ${lv.start_date} has been approved by your supervisor and forwarded to the Operations Manager.`
+            : `Your leave on ${lv.start_date} has been rejected by ${reviewer_name}.${rejection_reason ? ' Reason: ' + rejection_reason : ''}`,
+          actor_ohr: supervisorOhr,
+          actor_name: reviewer_name || '',
+          target_ohr: lv.ohr_id || '',
+          target_role: 'agent',
+          metadata: JSON.stringify({ leave_id: lv.leave_id }),
+          is_read: false,
+          created_at: now,
+        });
+        // Notify the FLM (supervisor) — confirmation of their own action
+        if (supervisorOhr && supervisorOhr !== lv.ohr_id) {
+          await db.insert(ioNotifications).values({
+            type: 'haven',
+            title: action === 'approve' ? 'Leave Forwarded to OM' : 'Leave Rejected (FLM)',
+            message: `${lv.full_name}'s leave on ${lv.start_date} has been ${statusLabel}.`,
+            actor_ohr: supervisorOhr,
+            actor_name: reviewer_name || '',
+            target_ohr: supervisorOhr,
+            target_role: 'supervisor',
+            metadata: JSON.stringify({ leave_id: lv.leave_id, employee_ohr: lv.ohr_id }),
+            is_read: false,
+            created_at: now,
+          });
+        }
+      } else {
+        // OM approval/rejection: notify agent + FLM only
         // Notify the agent
         await db.insert(ioNotifications).values({
           type: 'haven',
@@ -1342,16 +1386,16 @@ router.post("/leaves/bulk-action", async (req: Request, res: Response) => {
           is_read: false,
           created_at: now,
         });
-        // Notify the FLM (supervisor)
-        if (lv.supervisor) {
+        // Notify the FLM (supervisor) using their OHR
+        if (supervisorOhr) {
           await db.insert(ioNotifications).values({
             type: 'haven',
             title: action === 'approve' ? 'Leave Approved (OM)' : 'Leave Rejected (OM)',
             message: `${lv.full_name}'s leave on ${lv.start_date} was ${action === 'approve' ? 'approved' : 'rejected'} by ${reviewer_name}.`,
             actor_ohr: '',
             actor_name: reviewer_name || '',
-            target_ohr: '',
-            target_role: 'supervisor:' + lv.supervisor,
+            target_ohr: supervisorOhr,
+            target_role: 'supervisor',
             metadata: JSON.stringify({ leave_id: lv.leave_id, employee_ohr: lv.ohr_id }),
             is_read: false,
             created_at: now,
