@@ -3600,3 +3600,6 @@
 ## Haven — Shrinkage Card Fixes (Round 2)
 - [x] Shrinkage forecast card should only show for OM/Admin tier approvals, not TL-tier
 - [x] Headcount in shrinkage forecast should only count Active employees (employement_status = 'Active')
+
+## Haven — My Team Indicator for Managers
+- [x] Add visual indicator on Pending OM leaves that belong to the manager's team (not for admin)

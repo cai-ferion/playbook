@@ -223,6 +223,10 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
       if (dayLeaves.length > 0) {
         html += '<div class="haven-cal-events">';
         const maxShow = 3;
+        // Pre-compute "my team" OHRs for managers (not admin) to show indicator
+        const _isOMRole = role === 'om';
+        const _isAdminUser = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
+        const _myTeamForIndicator = (_isOMRole && !_isAdminUser) ? havenGetMyTeamOhrs() : [];
         for (let j = 0; j < Math.min(dayLeaves.length, maxShow); j++) {
           const lv = dayLeaves[j];
           const statusClass = havenStatusClass(lv.status);
@@ -231,8 +235,9 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
             : truncateName(lv.full_name || 'Unknown', 12);
           const typeTag = role !== 'agent' ? `<span class="haven-tab-type">${escapeHtml(lv.leave_type || '')}</span>` : '';
           const statusIcon = havenStatusIcon(lv.status);
+          const myTeamBadge = (lv.status === 'Pending OM' && _myTeamForIndicator.length > 0 && _myTeamForIndicator.includes(lv.ohr_id)) ? '<span class="haven-my-team-dot" title="My Team">&#9679;</span>' : '';
           html += `<div class="haven-cal-tab ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')" title="${escapeHtml(lv.full_name || '')} — ${escapeHtml(lv.status || '')}">
-            <span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
+            ${myTeamBadge}<span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
           </div>`;
         }
         if (dayLeaves.length > maxShow) {
@@ -406,9 +411,14 @@ function havenShowLeaveDetail(leaveId) {
   if (!formBody || !formTitle || !formFooter) return;
   formTitle.textContent = 'Leave Details';
   const statusBadge = `<span class="module-status-badge" style="background:${havenStatusColor(lv.status)}20;color:${havenStatusColor(lv.status)};border:1px solid ${havenStatusColor(lv.status)}40;">${escapeHtml(lv.status || '')}</span>`;
+  // "My Team" badge for managers (not admin) on Pending OM leaves
+  const _isManagerNotAdmin = role === 'om' && !isAdmin;
+  const _detailMyTeam = _isManagerNotAdmin ? havenGetMyTeamOhrs() : [];
+  const myTeamDetailBadge = (lv.status === 'Pending OM' && _detailMyTeam.length > 0 && _detailMyTeam.includes(lv.ohr_id))
+    ? ' <span class="haven-my-team-badge">My Team</span>' : '';
   formBody.innerHTML = `
     <div class="haven-detail-grid">
-      <div class="haven-detail-row"><span class="haven-detail-label">Status</span><span>${statusBadge}</span></div>
+      <div class="haven-detail-row"><span class="haven-detail-label">Status</span><span>${statusBadge}${myTeamDetailBadge}</span></div>
       <div class="haven-detail-row"><span class="haven-detail-label">Employee</span><span>${escapeHtml(lv.full_name || '\u2014')}</span></div>
       <div class="haven-detail-row"><span class="haven-detail-label">OHR</span><span>${escapeHtml(lv.ohr_id || '\u2014')}</span></div>
       <div class="haven-detail-row"><span class="haven-detail-label">Date</span><span>${escapeHtml(lv.start_date || '\u2014')}</span></div>
@@ -454,13 +464,18 @@ function havenShowDayLeaves(dateStr) {
   const formFooter = document.getElementById('haven-form-footer');
   if (!formBody) return;
   formTitle.textContent = `Leaves on ${new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+  const _isOMForDay = role === 'om';
+  const _isAdminForDay = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
+  const _myTeamForDay = (_isOMForDay && !_isAdminForDay) ? havenGetMyTeamOhrs() : [];
   let html = '<div class="haven-day-list">';
   for (const lv of dayLeaves) {
     const statusClass = havenStatusClass(lv.status);
+    const isMyTeam = lv.status === 'Pending OM' && _myTeamForDay.length > 0 && _myTeamForDay.includes(lv.ohr_id);
+    const myTeamTag = isMyTeam ? '<span class="haven-my-team-badge">My Team</span>' : '';
     html += `<div class="haven-day-item ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')">
       <span class="haven-day-item-name">${escapeHtml(lv.full_name || '\u2014')}</span>
       <span class="haven-day-item-type">${escapeHtml(lv.leave_type || '')}</span>
-      <span class="haven-day-item-status">${escapeHtml(lv.status || '')}</span>
+      <span class="haven-day-item-status">${escapeHtml(lv.status || '')}${myTeamTag}</span>
     </div>`;
   }
   html += '</div>';
