@@ -1116,10 +1116,10 @@ function _caWizStep2(formBody, formFooter, progressHtml) {
   formBody.innerHTML = progressHtml +
     '<div class="form-section">' +
       '<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">' +
-        '<div class="form-field"><label class="form-label">Start Date</label>' +
-          '<input type="date" class="form-input" id="ca-wiz-start" value="' + escapeAttr(CA_NTE_WIZARD.dateRange.start) + '" onchange="_caWizDateChange()"></div>' +
-        '<div class="form-field"><label class="form-label">End Date</label>' +
-          '<input type="date" class="form-input" id="ca-wiz-end" value="' + escapeAttr(CA_NTE_WIZARD.dateRange.end) + '" onchange="_caWizDateChange()"></div>' +
+        '<div class="form-field"><label class="form-label">Start Date & Time</label>' +
+          '<input type="datetime-local" class="form-input" id="ca-wiz-start" value="' + escapeAttr(CA_NTE_WIZARD.dateRange.start) + '" onchange="_caWizDateChange()"></div>' +
+        '<div class="form-field"><label class="form-label">End Date & Time</label>' +
+          '<input type="datetime-local" class="form-input" id="ca-wiz-end" value="' + escapeAttr(CA_NTE_WIZARD.dateRange.end) + '" onchange="_caWizDateChange()"></div>' +
       '</div>' +
       '<button class="btn btn-outline btn-xs" style="margin-top:8px;" onclick="_caWizRefreshAttendance()">↻ Refresh Attendance</button>' +
     '</div>' +
@@ -1489,8 +1489,8 @@ function caOpenCapModal_REMOVED() {
     </div>
     <div class="ca-form-row">
       <div class="ca-form-group">
-        <label>CAP Start Date</label>
-        <input type="date" id="ca-cap-start-date" value="${new Date().toISOString().slice(0,10)}">
+        <label>CAP Start Date & Time</label>
+        <input type="datetime-local" id="ca-cap-start-date" value="">
       </div>
       <div class="ca-form-group" id="ca-cap-suspension-group" style="display:none;">
         <label>Suspension Days</label>
@@ -1856,8 +1856,8 @@ function _caCap1Step2(formBody, formFooter, progressHtml) {
     '<div style="font-size:12px; color:var(--fg); line-height:1.5;">' + escapeHtml(nteNarrative || 'No narrative available') + '</div>' +
     '</div>' +
     '<div class="ca-form-group">' +
-    '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Explanation Letter Date</label>' +
-    '<input type="date" id="cap1-explanation-date" value="' + (CA_CAP1_WIZARD.explanationDate || '') + '" ' +
+    '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Explanation Letter Date & Time</label>' +
+    '<input type="datetime-local" id="cap1-explanation-date" value="' + (CA_CAP1_WIZARD.explanationDate || '') + '" ' +
     'style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; background:var(--bg); color:var(--fg);">' +
     '</div>' +
     '<div class="ca-form-group" style="margin-top:12px;">' +
@@ -2374,8 +2374,8 @@ function _capNStep2(capKey, formBody, formFooter, progressHtml) {
     '<div style="font-size:12px; color:var(--fg); line-height:1.5;">' + escapeHtml(nteNarrative || 'No narrative available') + '</div>' +
     '</div>' +
     '<div class="ca-form-group">' +
-    '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Explanation Letter Date</label>' +
-    '<input type="date" id="' + capKey + '-explanation-date" value="' + (wiz.explanationDate || '') + '" ' +
+    '<label style="font-weight:600; font-size:12px; margin-bottom:6px; display:block;">Explanation Letter Date & Time</label>' +
+    '<input type="datetime-local" id="' + capKey + '-explanation-date" value="' + (wiz.explanationDate || '') + '" ' +
     'style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius); font-size:13px; background:var(--bg); color:var(--fg);">' +
     '</div>' +
     '<div class="ca-form-group" style="margin-top:12px;">' +
@@ -2898,14 +2898,14 @@ function _caManualLogRender() {
     var activeDays = CA_CAP_ACTIVE_DAYS[CA_MANUAL_LOG.caType] || 60;
     capFieldsHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">' +
       '<div class="ca-form-group" style="margin-bottom:0;">' +
-        '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CAP Start Date</label>' +
-        '<input type="date" id="ca-ml-cap-start" value="' + (CA_MANUAL_LOG.capStartDate || CA_MANUAL_LOG.servedDate || '') + '" ' +
+        '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CAP Start Date & Time</label>' +
+        '<input type="datetime-local" id="ca-ml-cap-start" value="' + (CA_MANUAL_LOG.capStartDate || CA_MANUAL_LOG.servedDate || '') + '" ' +
           'onchange="CA_MANUAL_LOG.capStartDate=this.value;_caManualLogAutoExpiry();" ' +
           'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
       '</div>' +
       '<div class="ca-form-group" style="margin-bottom:0;">' +
-        '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CAP Expiry Date <span style="color:var(--fg-muted);font-weight:400;">(' + activeDays + ' days)</span></label>' +
-        '<input type="date" id="ca-ml-cap-expiry" value="' + (CA_MANUAL_LOG.capExpiryDate || '') + '" ' +
+        '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">CAP Expiry Date & Time <span style="color:var(--fg-muted);font-weight:400;">(' + activeDays + ' days)</span></label>' +
+        '<input type="datetime-local" id="ca-ml-cap-expiry" value="' + (CA_MANUAL_LOG.capExpiryDate || '') + '" ' +
           'onchange="CA_MANUAL_LOG.capExpiryDate=this.value;" ' +
           'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
       '</div>' +
@@ -2926,14 +2926,14 @@ function _caManualLogRender() {
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
           '<div class="ca-form-group">' +
-            '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Date of Incident *</label>' +
-            '<input type="date" id="ca-ml-incident-date" value="' + (CA_MANUAL_LOG.dateOfIncident || '') + '" ' +
+            '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Date & Time of Incident *</label>' +
+            '<input type="datetime-local" id="ca-ml-incident-date" value="' + (CA_MANUAL_LOG.dateOfIncident || '') + '" ' +
               'onchange="CA_MANUAL_LOG.dateOfIncident=this.value;" ' +
               'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
           '</div>' +
           '<div class="ca-form-group">' +
-            '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Served Date</label>' +
-            '<input type="date" id="ca-ml-served-date" value="' + (CA_MANUAL_LOG.servedDate || '') + '" ' +
+            '<label style="font-size:11px;font-weight:600;color:var(--fg-muted);margin-bottom:4px;display:block;">Served Date & Time</label>' +
+            '<input type="datetime-local" id="ca-ml-served-date" value="' + (CA_MANUAL_LOG.servedDate || '') + '" ' +
               'onchange="CA_MANUAL_LOG.servedDate=this.value;" ' +
               'style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;">' +
           '</div>' +

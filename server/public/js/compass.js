@@ -2187,11 +2187,11 @@ async function compassShowNewFormInline(preselectedType) {
       </div>
     </div>
 
-    <!-- Coaching Date (default: today) -->
+    <!-- Coaching Date + Time -->
     <div class="form-section" id="compass-date-section">
       <div class="form-field">
-        <label class="form-label">Coaching Date <span class="required">*</span></label>
-        <input type="date" class="form-input" id="compass-new-date" value="${new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}">
+        <label class="form-label">Coaching Date & Time <span class="required">*</span></label>
+        <input type="datetime-local" class="form-input" id="compass-new-date" value="">
       </div>
     </div>
 
@@ -2702,9 +2702,10 @@ async function compassSubmitNew() {
   const type = document.getElementById('compass-new-type')?.value;
   if (!type) { showToast('Please select a coaching type', 'error'); return; }
 
-  // Use the date field value (defaults to today in Asia/Manila)
+  // Use the datetime-local field value (includes hour + minute)
   const dateFieldVal = document.getElementById('compass-new-date')?.value;
-  const date = dateFieldVal ? new Date(dateFieldVal + 'T00:00:00+08:00').toISOString() : new Date().toISOString();
+  if (!dateFieldVal) { showToast('Please select a coaching date and time', 'error'); return; }
+  const date = new Date(dateFieldVal + '+08:00').toISOString();
 
   let coacheeOhr, coacheeList = [], sessionGoal = '';
 
@@ -5265,8 +5266,8 @@ async function compassOpenNteForm(params) {
             <input type="text" class="form-input" id="nte-cap-level" value="${escapeAttr(params.cap_level)}" readonly style="background:var(--bg-inset); color:var(--fg-muted);">
           </div>
           <div class="form-field">
-            <label class="form-label">Date of Incident <span class="required">*</span></label>
-            <input type="date" class="form-input" id="nte-date-of-incident" value="${new Date().toISOString().split('T')[0]}">
+            <label class="form-label">Date & Time of Incident <span class="required">*</span></label>
+            <input type="datetime-local" class="form-input" id="nte-date-of-incident" value="">
           </div>
         </div>
       </div>
@@ -5327,7 +5328,8 @@ async function compassSubmitNte() {
   const employeeName = document.getElementById('nte-employee-name')?.value;
   const ohrId = document.getElementById('nte-ohr-id')?.value;
   const capLevel = document.getElementById('nte-cap-level')?.value;
-  const dateOfIncident = document.getElementById('nte-date-of-incident')?.value;
+  const dateOfIncidentRaw = document.getElementById('nte-date-of-incident')?.value;
+  const dateOfIncident = dateOfIncidentRaw ? new Date(dateOfIncidentRaw + '+08:00').toISOString() : '';
   const incidentDesc = document.getElementById('nte-incident-desc')?.innerHTML?.trim() || '';
   const policyViolated = document.getElementById('nte-policy-violated')?.innerHTML?.trim() || '';
   const expectedBehavior = '';
@@ -5336,7 +5338,7 @@ async function compassSubmitNte() {
   const issuedByOhr = document.getElementById('nte-issued-by-ohr')?.value || '';
 
   // Validation
-  if (!dateOfIncident) { showToast('Please enter the date of incident', 'error'); return; }
+  if (!dateOfIncidentRaw) { showToast('Please enter the date and time of incident', 'error'); return; }
   if (!incidentDesc || incidentDesc === '<br>') { showToast('Please describe the incident', 'error'); return; }
   if (!policyViolated || policyViolated === '<br>') { showToast('Please specify the policy violated', 'error'); return; }
 
@@ -6103,12 +6105,12 @@ function _nteWizardStep2(formBody, formFooter, progressHtml) {
     <div class="form-section">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
         <div class="form-field">
-          <label class="form-label">Start Date</label>
-          <input type="date" class="form-input" id="nte-wiz-start" value="${escapeAttr(NTE_WIZARD.dateRange.start)}" onchange="_nteWizDateChange()">
+          <label class="form-label">Start Date & Time</label>
+          <input type="datetime-local" class="form-input" id="nte-wiz-start" value="${escapeAttr(NTE_WIZARD.dateRange.start)}" onchange="_nteWizDateChange()">
         </div>
         <div class="form-field">
-          <label class="form-label">End Date</label>
-          <input type="date" class="form-input" id="nte-wiz-end" value="${escapeAttr(NTE_WIZARD.dateRange.end)}" onchange="_nteWizDateChange()">
+          <label class="form-label">End Date & Time</label>
+          <input type="datetime-local" class="form-input" id="nte-wiz-end" value="${escapeAttr(NTE_WIZARD.dateRange.end)}" onchange="_nteWizDateChange()">
         </div>
       </div>
       <button class="btn btn-outline btn-xs" style="margin-top:8px;" onclick="_nteWizRefreshAttendance()">↻ Refresh Attendance</button>

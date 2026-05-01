@@ -3686,3 +3686,11 @@
 - [x] Add MULTIPLE to Mid-Shift in SHIFT_PLANNING_GROUPS + mirror all PGs across both shifts
 - [x] Verify dashboard shift breakdown: GY=177 sched, Mid=125 sched, Total=302 (was 187)
 - [ ] Deploy to production (user action)
+
+## Fix: Compass Date Picker → Datetime Picker (Hour + Minute)
+- [x] Audit all Compass modules for date-only pickers (compass.js, compass-ca-cases.js, corrective-actions.js)
+- [x] Add time (hour:minute) picker to all date fields in Compass forms (11 fields total)
+- [x] Default time to blank (require manual selection)
+- [x] Update duplicate detection to use full timestamp (exact ISO string match)
+- [x] Verify: different times on same date will produce different ISO strings, passing dedup
+- [x] Cache-bust: compass.js v126, corrective-actions.js v14

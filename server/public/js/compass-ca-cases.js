@@ -441,8 +441,8 @@ async function caShowNewForm() {
     '<div><label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px;">Specific Violation *</label>' +
       '<select id="ca-form-violation" class="form-select" style="width:100%;"><option value="">Select violation...</option></select></div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
-      '<div><label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px;">Incident Date *</label>' +
-        '<input type="date" id="ca-form-incident-date" class="form-input" value="' + new Date().toISOString().split('T')[0] + '" style="width:100%;"></div>' +
+      '<div><label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px;">Incident Date & Time *</label>' +
+        '<input type="datetime-local" id="ca-form-incident-date" class="form-input" value="" style="width:100%;"></div>' +
       '<div><label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:4px;">Recommended CAP Level</label>' +
         '<select id="ca-form-cap-level" class="form-select" style="width:100%;"><option value="">Select...</option><option value="cap_0">CAP 0</option><option value="cap_1">CAP 1 (60 days)</option><option value="cap_2">CAP 2 (90 days)</option><option value="cap_3">CAP 3 (180 days)</option></select></div>' +
     '</div>' +
@@ -552,12 +552,13 @@ async function caSubmitNewForm() {
   var empOhr = document.getElementById('ca-form-employee').value;
   var catKey = document.getElementById('ca-form-category').value;
   var violJson = document.getElementById('ca-form-violation').value;
-  var incidentDate = document.getElementById('ca-form-incident-date').value;
+  var incidentDateRaw = document.getElementById('ca-form-incident-date').value;
+  var incidentDate = incidentDateRaw ? new Date(incidentDateRaw + '+08:00').toISOString() : '';
   var details = document.getElementById('ca-form-details').value;
   var capLevel = document.getElementById('ca-form-cap-level').value;
 
-  if (!empOhr || !catKey || !details) {
-    showToast('Please fill in all required fields', 'error');
+  if (!empOhr || !catKey || !details || !incidentDateRaw) {
+    showToast('Please fill in all required fields (including date & time)', 'error');
     return;
   }
 

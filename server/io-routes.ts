@@ -769,8 +769,9 @@ router.post("/coaching", async (req: Request, res: Response) => {
 
     const values = { ...body, coaching_id };
 
-    // Server-side dedup: reject if an identical log was created in the last 30 seconds
-    // (same coach, coachee, type, and date — prevents double-click duplicates)
+    // Server-side dedup: reject if an identical log exists with the EXACT same timestamp
+    // (same coach, coachee, type, and full datetime — prevents double-click duplicates
+    //  while allowing multiple logs on the same date at different times)
     if (body.coach_ohr && body.coachee_ohr && body.coaching_type && body.coaching_date) {
       const recentDupes = await db.select({ id: ioCoaching.id, coaching_id: ioCoaching.coaching_id })
         .from(ioCoaching)
