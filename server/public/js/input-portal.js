@@ -556,7 +556,6 @@ async function omnibarApplyView() {
       _hideTableOverlay();
     }
     window.renderInputTableServerSide();
-    updateBlanksBanner();
   } catch (err) {
     if (useFullLoader) {
       hideProgressBar();
