@@ -155,15 +155,6 @@ function inputRenderFilterBar() {
   var curCount = serverPagState.total || 0;
   html += '<span class="filter-bar-meta" id="input-filter-count">Filtered Records: ' + formatNumber(curCount) + '</span>';
 
-  // Inline blanks status indicator (very end of filter bar)
-  html += '<div class="blanks-inline-status" id="blanks-status-banner" onclick="toggleBlanksFromBanner()" style="display:none;">' 
-    + '<span class="blanks-inline-icon" id="blanks-inline-icon">&#9888;</span>'
-    + '<span class="blanks-inline-msg" id="blanks-banner-message"></span>'
-    + '<div class="blanks-inline-progress">'
-    + '<div class="blanks-inline-progress-bar"><div class="blanks-inline-progress-fill" id="blanks-progress-fill"></div></div>'
-    + '<span class="blanks-inline-progress-label" id="blanks-progress-label"></span>'
-    + '</div>'
-    + '</div>';
 
   container.innerHTML = html;
 }
@@ -1428,90 +1419,3 @@ function setDefaultFilters() {
   window.inputRenderFilterBar = inputRenderFilterBar;
 })();
 
-
-// ============================================================
-// BLANKS STATUS BANNER — shows blank count for today with auto-refresh
-// ============================================================
-
-let _blanksBannerInterval = null;
-
-/**
- * Fetches today's total and blank counts from the server and updates the banner.
- * Uses count_only=true for lightweight queries.
- */
-async function updateBlanksBanner() {
-  const banner = document.getElementById('blanks-status-banner');
-  if (!banner) return;
-
-  const today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
-
-  try {
-    // Fetch total count for today (excluding managers)
-    const totalResp = await fetch(`/api/io/attendance?count_only=true&log_date=${today}&exclude_managers=true`);
-    if (!totalResp.ok) return;
-    const totalData = await totalResp.json();
-    const totalCount = totalData.count || 0;
-
-    // Fetch blanks count for today (excluding managers)
-    const blanksResp = await fetch(`/api/io/attendance?count_only=true&log_date=${today}&exclude_managers=true&blanks_only=true`);
-    if (!blanksResp.ok) return;
-    const blanksData = await blanksResp.json();
-    const blanksCount = blanksData.count || 0;
-
-    const filledCount = totalCount - blanksCount;
-    const filledPct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 100;
-
-    const msgEl = document.getElementById('blanks-banner-message');
-    const fillEl = document.getElementById('blanks-progress-fill');
-    const labelEl = document.getElementById('blanks-progress-label');
-
-    const iconEl = document.getElementById('blanks-inline-icon');
-
-    if (blanksCount === 0) {
-      // All filled — success state
-      banner.className = 'blanks-inline-status blanks-inline-success';
-      banner.style.display = '';
-      if (iconEl) iconEl.innerHTML = '&#10003;';
-      if (msgEl) msgEl.innerHTML = `<strong>All filled!</strong> ${filledCount}/${totalCount} tagged`;
-      if (fillEl) { fillEl.style.width = '100%'; fillEl.style.backgroundColor = '#4CAF50'; }
-      if (labelEl) labelEl.textContent = '100%';
-    } else {
-      // Still have blanks — warning state
-      banner.className = 'blanks-inline-status blanks-inline-warning';
-      banner.style.display = '';
-      if (iconEl) iconEl.innerHTML = '&#9888;';
-      if (msgEl) msgEl.innerHTML = `<strong>${blanksCount}</strong> blank${blanksCount !== 1 ? 's' : ''} \u2014 ${filledCount}/${totalCount} filled`;
-      if (fillEl) {
-        fillEl.style.width = filledPct + '%';
-        fillEl.style.backgroundColor = filledPct >= 80 ? '#FF9800' : '#F44336';
-      }
-      if (labelEl) labelEl.textContent = filledPct + '%';
-    }
-  } catch (e) {
-    // Silently fail — banner just won't show
-    console.warn('Blanks banner update failed:', e);
-  }
-}
-
-/**
- * Click handler for the banner — toggles the blanks filter
- */
-window.toggleBlanksFromBanner = function() {
-  inputToggleBlanks();
-  // Update the banner message hint text
-  setTimeout(updateBlanksBanner, 500);
-};
-
-/**
- * Start auto-refresh for the blanks banner (every 60 seconds)
- */
-function startBlanksBannerAutoRefresh() {
-  if (_blanksBannerInterval) clearInterval(_blanksBannerInterval);
-  _blanksBannerInterval = setInterval(updateBlanksBanner, 60000);
-}
-
-// Start auto-refresh when the script loads
-startBlanksBannerAutoRefresh();
-
-// Also expose for manual trigger
-window.updateBlanksBanner = updateBlanksBanner;

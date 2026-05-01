@@ -3666,4 +3666,23 @@
 - [x] Mount auth middleware on all /api/io/* routes (single app.use in index.ts)
 - [x] Verify all endpoints return 401 without session, /api/health unaffected
 - [x] TypeScript compilation passes (tsc --noEmit exit 0)
-- [ ] Push to GitHub
+- [ ] Push to GitHub (blocked — gh token expired, user needs to re-auth)
+
+## Issue Investigation — Blanks Progress Bar + Dashboard Data Accuracy
+- [ ] Identify and remove blanks/filled progress bar and all related code
+- [ ] Deep dive analysis on Anchor Dashboard shift breakdown data accuracy
+- [ ] Cross-validate dashboard numbers against raw database queries
+- [ ] Deliver analysis report with findings, risks, and next steps
+
+## Fix: Blanks Banner Removal + Shift Normalization
+- [x] Remove blanks progress banner HTML, JS, CSS, and auto-refresh interval
+- [x] Normalize io_employees shift_time: Afternoon Shift → Mid-Shift (127 rows)
+- [x] Normalize io_employees shift_time: NH-Training → GY Shift (21 rows)
+- [x] Normalize io_employees shift_time: 15:00 - 00:00 → Mid-Shift (1 row)
+- [x] Normalize io_employees shift_time: Flexi/Flexible → Mid-Shift (7 rows)
+- [x] Normalize io_employees shift_time: 13:30 - 22:30 → Mid-Shift (4 rows)
+- [x] Normalize io_employees shift_time: 22:30 - 07:30 → GY Shift (2 rows)
+- [x] Normalize io_attendance snap_shift_time: Afternoon Shift (3937), NH-Training (651), 15:00-00:00 (31)
+- [x] Add MULTIPLE to Mid-Shift in SHIFT_PLANNING_GROUPS + mirror all PGs across both shifts
+- [x] Verify dashboard shift breakdown: GY=177 sched, Mid=125 sched, Total=302 (was 187)
+- [ ] Deploy to production (user action)

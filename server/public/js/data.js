@@ -159,7 +159,7 @@ function calculateKPIs(records) {
 // Fixed planning groups per shift
 const SHIFT_PLANNING_GROUPS = {
   'GY Shift': ['S-ABF', 'CS-ABF', 'CSO_CTR', 'FAD_CTR', 'RECALL_MEASUREMENT_CTR', 'SME_CTR', 'QPE_CTR'],
-  'Mid-Shift': ['S-ABF', 'CS-ABF', 'RECALL_MEASUREMENT_CTR', 'SME_CTR', 'QPE_CTR'],
+  'Mid-Shift': ['S-ABF', 'CS-ABF', 'CSO_CTR', 'FAD_CTR', 'RECALL_MEASUREMENT_CTR', 'SME_CTR', 'QPE_CTR', 'MULTIPLE'],
 };
 
 function getShiftBreakdown(records) {
