@@ -235,7 +235,7 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
             : truncateName(lv.full_name || 'Unknown', 12);
           const typeTag = role !== 'agent' ? `<span class="haven-tab-type">${escapeHtml(lv.leave_type || '')}</span>` : '';
           const statusIcon = havenStatusIcon(lv.status);
-          const myTeamBadge = (lv.status === 'Pending OM' && _myTeamForIndicator.length > 0 && _myTeamForIndicator.includes(lv.ohr_id)) ? '<span class="haven-my-team-dot" title="My Team">&#9679;</span>' : '';
+          const myTeamBadge = (lv.status === 'Pending OM' && _myTeamForIndicator.length > 0 && _myTeamForIndicator.includes(lv.ohr_id)) ? '<span class="haven-my-team-dot" title="My Team">MY</span>' : '';
           html += `<div class="haven-cal-tab ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')" title="${escapeHtml(lv.full_name || '')} — ${escapeHtml(lv.status || '')}">
             ${myTeamBadge}<span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
           </div>`;
@@ -692,6 +692,12 @@ async function havenFetchShrinkage(ohrId, startDate, currentLeaveId) {
     const data = await resp.json();
     if (data.error && data.headcount === undefined) {
       console.warn('Shrinkage forecast unavailable:', data.error);
+      return;
+    }
+    // Trainers are excluded from shrinkage forecast — hide the card
+    if (data.skip) {
+      const skipCard = document.querySelector('.haven-shrinkage-card');
+      if (skipCard) skipCard.style.display = 'none';
       return;
     }
     const card = document.querySelector('.haven-shrinkage-card');

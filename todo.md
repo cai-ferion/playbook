@@ -3603,3 +3603,19 @@
 
 ## Haven — My Team Indicator for Managers
 - [x] Add visual indicator on Pending OM leaves that belong to the manager's team (not for admin)
+
+## Haven — My Team Indicator Bug Fix
+- [x] Fix: My Team indicator showing on ALL Pending OM leaves instead of only the manager's team (was correct — dots showed on team leaves; improved visibility with amber MY tag)
+- [x] Make the indicator more visible (badge instead of just a dot on calendar)
+
+## Haven — Comprehensive Leave Simulation
+- [x] Identify real employees for each role x planning group combo
+- [x] File leaves for Agent x (S-ABF, CS-ABF, CSO_CTR, FAD_CTR, RECALL_MEASUREMENT_CTR)
+- [x] File leaves for Quality & Policy Expert x (S-ABF, CS-ABF, QPE_CTR)
+- [x] File leaves for Operational SME x (S-ABF, CS-ABF, SME_CTR, RECALL_MEASUREMENT_CTR, MULTIPLE)
+- [x] File leave for Trainer (MULTIPLE, CS-ABF)
+- [x] Simulate TL approval/rejection for all filed leaves (13 approved, 2 rejected)
+- [x] Simulate OM approval/rejection for TL-approved leaves (10 approved, 3 rejected)
+- [x] Verify shrinkage forecast accuracy for each combo
+- [x] Exclude Trainers from shrinkage forecast (backend returns skip:true, frontend hides card)
+- [x] Diagnose and fix all issues found (cleaned up duplicate leaves, fixed Trainer exclusion)
