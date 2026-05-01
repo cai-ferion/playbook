@@ -1550,7 +1550,7 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
       week_start: weekStartStr,
       week_end: weekEndStr,
       threshold: 5,
-      leaves_detail: leaveRows.map(l => ({ ohr_id: l.ohr_id, full_name: l.full_name, start_date: l.start_date, status: l.status })),
+      leaves_detail: leaveRows.map(l => ({ leave_id: l.leave_id, ohr_id: l.ohr_id, full_name: l.full_name, start_date: l.start_date, status: l.status })),
     });
   } catch (err: any) {
     console.error("[IO API] shrinkage-forecast error:", err);

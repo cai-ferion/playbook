@@ -3591,3 +3591,8 @@
 - [x] Display: headcount, leave count (incl. this), PL%, other leave dates that week
 - [x] Color-code: green ≤5%, red >5%
 - [x] Uses CURRENT role/planning_group from io_employees at time of query
+
+## Haven — Shrinkage Card Fixes & Manager-Scoped Approval
+- [x] Exclude current leave being reviewed from "Other leaves this week" list
+- [x] Rename week label from "wk ending YYYY-MM-DD" to "WE MM-DD-YY" format
+- [x] Manager-scoped OM approval: Rosales, Ranario, Nieva can only approve leaves for employees under them and their TLs

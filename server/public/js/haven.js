@@ -74,6 +74,22 @@ function havenGetMyAgentOhrs() {
     .filter(e => e.supervisor_name === user.full_name)
     .map(e => e.ohr_id);
 }
+// Get all OHRs under a manager (direct reports + agents under their TLs)
+function havenGetMyTeamOhrs() {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return [];
+  // Direct reports to this manager
+  const directReports = HAVEN.employees.filter(e => e.supervisor_name === user.full_name);
+  const directOhrs = directReports.map(e => e.ohr_id);
+  // Find TLs among direct reports, then get their agents
+  const myTLs = directReports.filter(e => e.actual_role === 'Team Lead');
+  let tlAgentOhrs = [];
+  for (const tl of myTLs) {
+    const agents = HAVEN.employees.filter(e => e.supervisor_name === tl.full_name);
+    tlAgentOhrs = tlAgentOhrs.concat(agents.map(e => e.ohr_id));
+  }
+  return [...new Set([...directOhrs, ...tlAgentOhrs])];
+}
 
 // ─── Date Utilities ────────────────────────────────────────────────────────────
 function havenGetSaturday(date) {
@@ -156,8 +172,14 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
   } else if (role === 'tl') {
     const myAgents = havenGetMyAgentOhrs();
     visibleLeaves = visibleLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
+  } else if (role === 'om') {
+    // Admin sees all; Managers see only their team (direct reports + TL agents)
+    const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
+    if (!isAdmin) {
+      const myTeam = havenGetMyTeamOhrs();
+      visibleLeaves = visibleLeaves.filter(l => l.ohr_id === user.ohr_id || myTeam.includes(l.ohr_id));
+    }
   }
-  // OMs see all
 
   let html = '';
   let currentSaturday = new Date(startSaturday);
@@ -380,8 +402,10 @@ function havenShowLeaveDetail(leaveId) {
   const canTLApprove = lv.status === 'Pending TL' && user && lv.ohr_id !== user.ohr_id && (
     (role === 'tl') || (role === 'om' && isMyAgent)
   );
-  // Admin/OM can OM approve any Pending OM request
-  const canOMApprove = role === 'om' && lv.status === 'Pending OM' && user && lv.ohr_id !== user.ohr_id;
+  // Admin can OM approve any Pending OM; Managers scoped to their team (direct reports + TL agents)
+  const canOMApprove = role === 'om' && lv.status === 'Pending OM' && user && lv.ohr_id !== user.ohr_id && (
+    (window.ADMIN_OHRS || []).includes(user.ohr_id) || havenGetMyTeamOhrs().includes(lv.ohr_id)
+  );
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
@@ -429,6 +453,12 @@ function havenShowDayLeaves(dateStr) {
   } else if (role === 'tl') {
     const myAgents = havenGetMyAgentOhrs();
     dayLeaves = dayLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
+  } else if (role === 'om') {
+    const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
+    if (!isAdmin) {
+      const myTeam = havenGetMyTeamOhrs();
+      dayLeaves = dayLeaves.filter(l => l.ohr_id === user.ohr_id || myTeam.includes(l.ohr_id));
+    }
   }
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
@@ -449,13 +479,17 @@ function havenShowDayLeaves(dateStr) {
   let bulkHtml = '';
   if (role === 'tl' || role === 'om') {
     const bulkMyAgents = havenGetMyAgentOhrs();
-    // TL: Pending TL for their agents; OM/Admin: own agents' Pending TL + any Pending OM
+    // TL: Pending TL for their agents; OM/Admin: own agents' Pending TL + scoped Pending OM
     const pendingTL = dayLeaves.filter(l => l.status === 'Pending TL');
     const pendingOM = dayLeaves.filter(l => l.status === 'Pending OM');
     let actionable;
     if (role === 'om') {
+      const isAdmin = (window.ADMIN_OHRS || []).includes((typeof currentUser !== 'undefined' ? currentUser : {}).ohr_id);
       const myPendingTL = pendingTL.filter(l => bulkMyAgents.includes(l.ohr_id));
-      actionable = [...myPendingTL, ...pendingOM];
+      // Admin: all Pending OM; Managers: only their team's Pending OM
+      const myTeamOhrs = isAdmin ? null : havenGetMyTeamOhrs();
+      const myPendingOM = isAdmin ? pendingOM : pendingOM.filter(l => myTeamOhrs.includes(l.ohr_id));
+      actionable = [...myPendingTL, ...myPendingOM];
     } else {
       actionable = pendingTL;
     }
@@ -687,7 +721,7 @@ async function havenFetchShrinkage(ohrId, startDate, currentLeaveId) {
         </div>
         <div class="haven-shrinkage-stat">
           <span class="haven-shrinkage-stat-value">${leaveCount}</span>
-          <span class="haven-shrinkage-stat-label">Leaves (wk ending ${escapeHtml(data.week_end)})</span>
+          <span class="haven-shrinkage-stat-label">Leaves (WE ${(() => { const p = data.week_end.split('-'); return p[1] + '-' + p[2] + '-' + p[0].slice(2); })()})</span>
         </div>
         <div class="haven-shrinkage-stat">
           <span class="haven-shrinkage-stat-value haven-shrinkage-pct ${colorClass}">${plPct.toFixed(1)}%</span>
