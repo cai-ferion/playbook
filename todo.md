@@ -3571,3 +3571,7 @@
 - [x] Remove "TL Reviewer" field from leave detail modal (Supervisor already shows FLM)
 - [x] Rename "OM Reviewer" to "Operations Manager" in detail modal
 - [x] Fix FLM approval/rejection notifications: only notify the agent and their FLM, not all employees
+
+## Haven — Notification Cleanup & Filing Notification
+- [x] Bulk-delete all stale haven-type notifications from DB
+- [x] Add notification to FLM when agent files a new leave request

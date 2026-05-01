@@ -1251,8 +1251,35 @@ router.post("/leaves", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
-
     await db.insert(ioLeaves).values(req.body);
+
+    // Notify the FLM (supervisor) about the new leave request
+    const leaveData = req.body;
+    if (leaveData.supervisor) {
+      let supervisorOhr = '';
+      const supRows = await db.select({ ohr_id: ioEmployees.ohr_id })
+        .from(ioEmployees)
+        .where(eq(ioEmployees.full_name, leaveData.supervisor))
+        .limit(1);
+      if (supRows.length > 0) supervisorOhr = supRows[0].ohr_id;
+
+      if (supervisorOhr) {
+        const now = new Date().toISOString();
+        await db.insert(ioNotifications).values({
+          type: 'haven',
+          title: 'New Leave Request',
+          message: `${leaveData.full_name || 'An agent'} filed a ${leaveData.leave_type || 'PTO'} leave for ${leaveData.start_date}. Pending your approval.`,
+          actor_ohr: leaveData.ohr_id || '',
+          actor_name: leaveData.full_name || '',
+          target_ohr: supervisorOhr,
+          target_role: 'supervisor',
+          metadata: JSON.stringify({ leave_id: leaveData.leave_id, employee_ohr: leaveData.ohr_id }),
+          is_read: false,
+          created_at: now,
+        });
+      }
+    }
+
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leaves POST error:", err);
