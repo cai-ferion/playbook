@@ -172,14 +172,8 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
   } else if (role === 'tl') {
     const myAgents = havenGetMyAgentOhrs();
     visibleLeaves = visibleLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
-  } else if (role === 'om') {
-    // Admin sees all; Managers see only their team (direct reports + TL agents)
-    const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
-    if (!isAdmin) {
-      const myTeam = havenGetMyTeamOhrs();
-      visibleLeaves = visibleLeaves.filter(l => l.ohr_id === user.ohr_id || myTeam.includes(l.ohr_id));
-    }
   }
+  // OMs/Managers see all leaves
 
   let html = '';
   let currentSaturday = new Date(startSaturday);
@@ -453,13 +447,8 @@ function havenShowDayLeaves(dateStr) {
   } else if (role === 'tl') {
     const myAgents = havenGetMyAgentOhrs();
     dayLeaves = dayLeaves.filter(l => user && (l.ohr_id === user.ohr_id || myAgents.includes(l.ohr_id)));
-  } else if (role === 'om') {
-    const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
-    if (!isAdmin) {
-      const myTeam = havenGetMyTeamOhrs();
-      dayLeaves = dayLeaves.filter(l => l.ohr_id === user.ohr_id || myTeam.includes(l.ohr_id));
-    }
   }
+  // OMs/Managers see all leaves
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
