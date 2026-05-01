@@ -401,8 +401,8 @@ function havenShowLeaveDetail(leaveId) {
   // Footer: action buttons only (no Close — X suffices)
   let footerHtml = '';
   if (canTLApprove || canOMApprove) {
-    footerHtml += `<button class="haven-form-btn haven-form-btn-approve" onclick="havenInlineApprove('${escapeHtml(lv.leave_id)}')">Approve</button>`;
-    footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineReject('${escapeHtml(lv.leave_id)}')">Reject</button>`;
+    footerHtml += `<button class="haven-form-btn haven-form-btn-approve" onclick="havenInlineApprove('${escapeHtml(lv.leave_id)}','${escapeHtml(lv.status)}')">Approve</button>`;
+    footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineReject('${escapeHtml(lv.leave_id)}','${escapeHtml(lv.status)}')">Reject</button>`;
   }
   if (canCancel) {
     footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineCancel('${escapeHtml(lv.leave_id)}')">Cancel Leave</button>`;
@@ -439,20 +439,26 @@ function havenShowDayLeaves(dateStr) {
     </div>`;
   }
   html += '</div>';
-  // Bulk actions
-  const tier = role === 'tl' ? 'tl' : 'om';
-  const actionableStatus = role === 'tl' ? 'Pending TL' : 'Pending OM';
-  const actionable = dayLeaves.filter(l => l.status === actionableStatus);
+  // Bulk actions — group by status so tier is always correct
   let bulkHtml = '';
-  if ((role === 'tl' || role === 'om') && actionable.length > 0) {
-    const ids = actionable.map(l => l.leave_id);
-    bulkHtml = `
-      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">
-        <span style="font-size:12px;color:var(--fg-muted);">${actionable.length} pending:</span>
-        <button class="btn btn-success btn-xs" onclick="havenBulkApproveList(${JSON.stringify(ids).replace(/"/g, '&quot;')})">Approve All</button>
-        <button class="btn btn-danger btn-xs" onclick="havenBulkRejectList(${JSON.stringify(ids).replace(/"/g, '&quot;')})">Reject All</button>
-      </div>
-    `;
+  if (role === 'tl' || role === 'om') {
+    // OM can act on both Pending TL and Pending OM; TL only on Pending TL
+    const pendingTL = dayLeaves.filter(l => l.status === 'Pending TL');
+    const pendingOM = dayLeaves.filter(l => l.status === 'Pending OM');
+    const actionable = role === 'om' ? [...pendingTL, ...pendingOM] : pendingTL;
+    if (actionable.length > 0) {
+      // For mixed statuses, we group by status for correct tier handling
+      const allSameStatus = actionable.every(l => l.status === actionable[0].status);
+      const ids = actionable.map(l => l.leave_id);
+      const bulkStatus = actionable[0].status; // for tier determination
+      bulkHtml = `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;">
+          <span style="font-size:12px;color:var(--fg-muted);">${actionable.length} pending:</span>
+          <button class="btn btn-success btn-xs" onclick="havenBulkApproveList(${JSON.stringify(ids).replace(/"/g, '&quot;')},'${bulkStatus}')">Approve All</button>
+          <button class="btn btn-danger btn-xs" onclick="havenBulkRejectList(${JSON.stringify(ids).replace(/"/g, '&quot;')},'${bulkStatus}')">Reject All</button>
+        </div>
+      `;
+    }
   }
   formBody.innerHTML = html + bulkHtml;
   formFooter.innerHTML = ''; // No Close button — X suffices
@@ -598,14 +604,14 @@ function havenInlineCancel(leaveId) {
   };
 }
 // ─── Inline Approve ────────────────────────────────────────────────────────────
-function havenSingleApprove(leaveId) {
-  havenInlineApprove(leaveId);
+function havenSingleApprove(leaveId, leaveStatus) {
+  havenInlineApprove(leaveId, leaveStatus);
 }
-function havenInlineApprove(leaveId) {
+function havenInlineApprove(leaveId, leaveStatus) {
   const zone = document.getElementById('haven-inline-action-zone');
   if (!zone) return;
-  const role = havenGetRole();
-  const tier = role === 'tl' ? 'tl' : 'om';
+  // Tier is determined by the leave's current status, not the user's role
+  const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
   zone.innerHTML = `
     <div class="haven-inline-confirm haven-inline-confirm-success">
       <p class="haven-inline-confirm-msg">Approve this leave request?</p>
@@ -621,14 +627,14 @@ function havenInlineApprove(leaveId) {
   };
 }
 // ─── Inline Reject ─────────────────────────────────────────────────────────────
-function havenSingleReject(leaveId) {
-  havenInlineReject(leaveId);
+function havenSingleReject(leaveId, leaveStatus) {
+  havenInlineReject(leaveId, leaveStatus);
 }
-function havenInlineReject(leaveId) {
+function havenInlineReject(leaveId, leaveStatus) {
   const zone = document.getElementById('haven-inline-action-zone');
   if (!zone) return;
-  const role = havenGetRole();
-  const tier = role === 'tl' ? 'tl' : 'om';
+  // Tier is determined by the leave's current status, not the user's role
+  const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
   zone.innerHTML = `
     <div class="haven-inline-confirm haven-inline-confirm-danger">
       <p class="haven-inline-confirm-msg">Reject this leave request?</p>
@@ -680,10 +686,10 @@ function havenInlineDelete(leaveId) {
   };
 }
 // ─── Bulk Approve/Reject from Day View ─────────────────────────────────────────
-function havenBulkApproveList(ids) {
+function havenBulkApproveList(ids, leaveStatus) {
   if (!ids || ids.length === 0) return;
-  const role = havenGetRole();
-  const tier = role === 'tl' ? 'tl' : 'om';
+  // Tier determined by leave status, not user role
+  const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
   // Inline confirm in the day-view form body
   const formBody = document.getElementById('haven-form-body');
   if (!formBody) return;
@@ -707,10 +713,10 @@ function havenBulkApproveList(ids) {
     await havenDoBulkAction(ids, 'approve', tier, '');
   };
 }
-function havenBulkRejectList(ids) {
+function havenBulkRejectList(ids, leaveStatus) {
   if (!ids || ids.length === 0) return;
-  const role = havenGetRole();
-  const tier = role === 'tl' ? 'tl' : 'om';
+  // Tier determined by leave status, not user role
+  const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
   const formBody = document.getElementById('haven-form-body');
   if (!formBody) return;
   let zone = document.getElementById('haven-bulk-confirm-zone');
@@ -739,12 +745,12 @@ function havenBulkRejectList(ids) {
   };
 }
 // ─── Reject Form (legacy, kept for bulk compatibility) ─────────────────────────
-function havenShowRejectForm(leaveIds) {
+function havenShowRejectForm(leaveIds, leaveStatus) {
   if (leaveIds.length === 1) {
-    havenInlineReject(leaveIds[0]);
+    havenInlineReject(leaveIds[0], leaveStatus);
     return;
   }
-  havenBulkRejectList(leaveIds);
+  havenBulkRejectList(leaveIds, leaveStatus);
 }
 async function havenDoReject() {
   const remarks = document.getElementById('haven-reject-remarks')?.value || '';

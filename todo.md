@@ -3559,3 +3559,10 @@
 - [x] Admin can delete Haven items regardless of status
 - [x] TL detail view: add Approve/Reject buttons with inline confirmation
 - [x] Remove "Close" button from all detail modals (X button suffices)
+
+## Haven — Approval Flow & Reviewer Display Fix
+- [x] OM approving "Pending TL" leave should change status to "Pending OM" (not "Approved")
+- [x] Only show TL Reviewer after TL has acted; only show OM Reviewer after OM has acted
+- [x] Tier determined by leave status (Pending TL → tier=tl, Pending OM → tier=om), not user role
+- [x] Fixed bulk approve/reject and day-view bulk actions to use status-based tier
+- [x] Reset 2 incorrectly processed leave records back to Pending TL
