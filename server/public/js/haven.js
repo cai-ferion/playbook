@@ -550,8 +550,8 @@ function havenShowFileForm(prefillDate) {
     </div>
     ${leaveTypeField}
     <div class="haven-form-field">
-      <label class="haven-form-label">Reason</label>
-      <textarea class="haven-form-input haven-form-textarea" id="haven-file-reason" rows="3" placeholder="Brief reason (optional)"></textarea>
+      <label class="haven-form-label">Reason <span class="haven-form-req">*</span></label>
+      <textarea class="haven-form-input haven-form-textarea" id="haven-file-reason" rows="3" placeholder="Reason for leave (required)"></textarea>
     </div>
     <div id="haven-file-confirm-zone"></div>
   `;
@@ -565,9 +565,10 @@ function havenSubmitLeave() {
   const dateVal = document.getElementById('haven-file-date')?.value;
   const typeEl = document.getElementById('haven-file-type');
   const typeVal = typeEl ? typeEl.value : 'PTO';
-  const reasonVal = document.getElementById('haven-file-reason')?.value || '';
+  const reasonVal = (document.getElementById('haven-file-reason')?.value || '').trim();
   if (!dateVal) { showToast('Please select a date', 'error'); return; }
   if (typeEl && !typeVal) { showToast('Please select a leave type', 'error'); return; }
+  if (!reasonVal) { showToast('Please provide a reason for your leave', 'error'); return; }
   // Inline confirmation
   const zone = document.getElementById('haven-file-confirm-zone');
   if (!zone) return;

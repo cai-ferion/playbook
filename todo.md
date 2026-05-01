@@ -3633,3 +3633,7 @@
 - [x] Purge all Haven-type notifications from io_notifications table (163 deleted)
 - [x] Draft comprehensive Haven launch email with leave process instructions
 - [x] Include filing window: May 1-7, closes May 7 11:59 PM MNL
+
+## Haven — Reason Field Required
+- [x] Make Reason field required in leave filing form (frontend validation)
+- [x] Update email drafts to reflect Reason as required
