@@ -394,7 +394,12 @@ function havenShowLeaveDetail(leaveId) {
   const role = havenGetRole();
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
-  const canCancel = (role === 'agent' || role === 'tl') && lv.status === 'Pending TL' && user && lv.ohr_id === user.ohr_id;
+  const _cancelFilerEmp = HAVEN.employees.find(e => e.ohr_id === lv.ohr_id);
+  const _cancelFilerIsTL = _cancelFilerEmp && _cancelFilerEmp.actual_role === 'Team Lead';
+  const canCancel = user && lv.ohr_id === user.ohr_id && (
+    (lv.status === 'Pending TL') ||
+    (lv.status === 'Pending OM' && _cancelFilerIsTL)
+  );
   const myAgentOhrs = havenGetMyAgentOhrs();
   const isMyAgent = myAgentOhrs.includes(lv.ohr_id);
   // TL can FLM approve their agents; Admin/OM can FLM approve only their own agents
@@ -662,8 +667,10 @@ function havenInlineApprove(leaveId, leaveStatus, ohrId, startDate) {
   const zone = document.getElementById('haven-inline-action-zone');
   if (!zone) return;
   const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
-  // Shrinkage forecast only shown for OM-tier approvals
-  const showShrinkage = tier === 'om';
+  // Shrinkage forecast only shown for OM-tier approvals, and NOT for Team Lead or Trainer leaves
+  const _shrinkFilerEmp = HAVEN.employees.find(e => e.ohr_id === ohrId);
+  const _shrinkFilerRole = _shrinkFilerEmp ? _shrinkFilerEmp.actual_role : '';
+  const showShrinkage = tier === 'om' && _shrinkFilerRole !== 'Team Lead' && _shrinkFilerRole !== 'Trainer';
   zone.innerHTML = `
     <div class="haven-inline-confirm haven-inline-confirm-success">
       <p class="haven-inline-confirm-msg">Approve this leave request?</p>

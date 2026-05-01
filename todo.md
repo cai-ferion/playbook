@@ -3619,3 +3619,11 @@
 - [x] Verify shrinkage forecast accuracy for each combo
 - [x] Exclude Trainers from shrinkage forecast (backend returns skip:true, frontend hides card)
 - [x] Diagnose and fix all issues found (cleaned up duplicate leaves, fixed Trainer exclusion)
+
+## Haven — Team Lead Leave Flow (Skip TL Tier)
+- [x] Backend: TL leaves filed with status 'Pending OM' instead of 'Pending TL' (skip FLM approval)
+- [x] Backend: Notify the OM (manager) directly instead of the TL's supervisor (TL's supervisor IS the manager)
+- [x] Backend: Exclude Team Lead role from shrinkage forecast (like Trainer)
+- [x] Frontend: Hide FLM Approved row in leave detail modal for TL leaves
+- [x] Frontend: No shrinkage forecast card for TL leaves at OM approval
+- [x] Test end-to-end: file TL leave, verify it goes straight to Pending OM
