@@ -18,6 +18,7 @@ import { registerRoleChangeRoutes } from "../io-role-change-routes.js";
 import { registerManagersNookRoutes } from "../managers-nook-routes.js";
 import { registerGroupTaskRoutes } from "../group-task-routes.js";
 import { registerShiftExtensionRoutes } from "../shift-extension-routes.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import performanceRouter from "../io-performance-routes.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
@@ -75,7 +76,8 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // IO Operations API routes
+  // IO Operations API routes — all protected by session auth
+  app.use('/api/io', requireAuth);
   registerIORoutes(app);
   registerIOBackupRoutes(app);
   registerTardinessRoutes(app);

@@ -3642,3 +3642,28 @@
 - [x] File Leave button only visible from 1st to 7th 11:59 PM MNL of every month
 - [x] Leave date picker restricted to next month onwards (dynamic — May→June, June→July, etc.)
 - [x] Backend validation to enforce both restrictions
+
+## Blueprint Phase 1 — Database Indexes + Auth Middleware
+- [x] Apply index: io_attendance (date)
+- [x] Apply index: io_attendance (ohr_id, date)
+- [x] Apply index: io_attendance (status, date)
+- [x] Apply index: io_employees (ohr_id)
+- [x] Apply index: io_employees (supervisor_name)
+- [x] Apply index: io_employees (planning_group, actual_role) — composite failed (TiDB compat), individual cols indexed
+- [x] Apply index: io_employees (employement_status)
+- [x] Apply index: io_leaves (status)
+- [x] Apply index: io_leaves (ohr_id, start_date)
+- [x] Apply index: io_leaves (start_date, status)
+- [x] Apply index: io_coaching (ohr_id)
+- [x] Apply index: io_coaching (coaching_date)
+- [x] Apply index: io_notifications (target_ohr, is_read)
+- [x] Apply index: io_notifications (created_at)
+- [x] Apply index: io_shift_extensions (date)
+- [x] Apply index: io_shift_extensions (status)
+- [x] Apply index: io_billing_logs (log_date)
+- [x] Apply index: io_productivity_hours (ohr, date)
+- [x] Create requireAuth middleware for Express routes
+- [x] Mount auth middleware on all /api/io/* routes (single app.use in index.ts)
+- [x] Verify all endpoints return 401 without session, /api/health unaffected
+- [x] TypeScript compilation passes (tsc --noEmit exit 0)
+- [ ] Push to GitHub
