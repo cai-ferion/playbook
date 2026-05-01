@@ -1249,6 +1249,21 @@ router.get("/leaves", async (req: Request, res: Response) => {
 
 router.post("/leaves", async (req: Request, res: Response) => {
   try {
+    // Filing window check: 1st-7th of month, PHT
+    const nowMNL = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const dayOfMonth = nowMNL.getDate();
+    if (dayOfMonth < 1 || dayOfMonth > 7) {
+      return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
+    }
+    // Date restriction: next month onwards (filing in May = June+, filing in June = July+, etc.)
+    const leaveDate = req.body.start_date;
+    if (leaveDate) {
+      const nextMonth = new Date(nowMNL.getFullYear(), nowMNL.getMonth() + 1, 1);
+      const minDate = nextMonth.toISOString().slice(0, 10);
+      if (leaveDate < minDate) {
+        return res.status(400).json({ error: "Leave dates must be next month onwards." });
+      }
+    }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
     await db.insert(ioLeaves).values(req.body);

@@ -3637,3 +3637,8 @@
 ## Haven — Reason Field Required
 - [x] Make Reason field required in leave filing form (frontend validation)
 - [x] Update email drafts to reflect Reason as required
+
+## Haven — Filing Window + Date Restriction
+- [x] File Leave button only visible from 1st to 7th 11:59 PM MNL of every month
+- [x] Leave date picker restricted to next month onwards (dynamic — May→June, June→July, etc.)
+- [x] Backend validation to enforce both restrictions

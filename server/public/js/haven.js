@@ -125,6 +125,22 @@ function havenGetTodayPHT() {
   if (typeof getTodayStr === 'function') return getTodayStr();
   return havenFormatDate(new Date());
 }
+// ─── Filing Window Check ───────────────────────────────────────────────────────
+function havenIsFilingWindowOpen() {
+  // Filing window: 1st to 7th 23:59:59 PHT of every month
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const day = now.getDate();
+  if (day >= 1 && day <= 7) return true;
+  // On the 7th, it's open until 11:59 PM — since day<=7 covers this, we're good
+  return false;
+}
+function havenGetMinLeaveDate() {
+  // Minimum leave date: 1st of NEXT month (filing in May = June+, filing in June = July+, etc.)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return havenFormatDate(nextMonth);
+}
+
 
 // ─── Continuous Calendar Rendering ─────────────────────────────────────────────
 function havenRenderContinuous() {
@@ -149,6 +165,15 @@ function havenRenderContinuous() {
   havenUpdateMonthLabel();
 
   // Scroll to today's week
+  // Show/hide File Leave button based on filing window
+  const fileBtn = document.getElementById('haven-file-btn');
+  if (fileBtn) {
+    if (havenIsFilingWindowOpen()) {
+      fileBtn.style.display = '';
+    } else {
+      fileBtn.style.display = 'none';
+    }
+  }
   requestAnimationFrame(() => {
     const todayCell = scrollEl.querySelector(`[data-date="${havenGetTodayPHT()}"]`);
     if (todayCell) {
@@ -546,7 +571,7 @@ function havenShowFileForm(prefillDate) {
   formBody.innerHTML = `
     <div class="haven-form-field">
       <label class="haven-form-label">Date <span class="haven-form-req">*</span></label>
-      <input type="date" class="haven-form-input" id="haven-file-date" value="${prefillDate || havenGetTodayPHT()}">
+      <input type="date" class="haven-form-input" id="haven-file-date" value="${prefillDate || havenGetTodayPHT()}" min="${havenGetMinLeaveDate()}">
     </div>
     ${leaveTypeField}
     <div class="haven-form-field">
@@ -567,6 +592,8 @@ function havenSubmitLeave() {
   const typeVal = typeEl ? typeEl.value : 'PTO';
   const reasonVal = (document.getElementById('haven-file-reason')?.value || '').trim();
   if (!dateVal) { showToast('Please select a date', 'error'); return; }
+  if (dateVal < havenGetMinLeaveDate()) { showToast('Leave dates must be next month onwards', 'error'); return; }
+  if (!havenIsFilingWindowOpen()) { showToast('Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month.', 'error'); return; }
   if (typeEl && !typeVal) { showToast('Please select a leave type', 'error'); return; }
   if (!reasonVal) { showToast('Please provide a reason for your leave', 'error'); return; }
   // Inline confirmation
