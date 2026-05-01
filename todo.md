@@ -3582,3 +3582,12 @@
 - [x] Admin can FLM approve/reject only for their own agents
 - [x] Admin can OM approve/reject any Pending OM request
 - [x] Add FLM Approved date-timestamp below Filed in detail modal
+
+## Haven — Shrinkage Forecast on Approval
+- [x] Backend endpoint: compute PL% for a given employee's planning group + role combo for the Sat-Fri week
+- [x] Count headcount from io_employees matching current role + planning_group
+- [x] Count approved leaves (status=Approved + the Pending OM being reviewed) for same combo in that week
+- [x] Frontend: fetch shrinkage data in inline approval confirmation panel
+- [x] Display: headcount, leave count (incl. this), PL%, other leave dates that week
+- [x] Color-code: green ≤5%, red >5%
+- [x] Uses CURRENT role/planning_group from io_employees at time of query

@@ -407,7 +407,7 @@ function havenShowLeaveDetail(leaveId) {
   // Footer: action buttons only (no Close — X suffices)
   let footerHtml = '';
   if (canTLApprove || canOMApprove) {
-    footerHtml += `<button class="haven-form-btn haven-form-btn-approve" onclick="havenInlineApprove('${escapeHtml(lv.leave_id)}','${escapeHtml(lv.status)}')">Approve</button>`;
+    footerHtml += `<button class="haven-form-btn haven-form-btn-approve" onclick="havenInlineApprove('${escapeHtml(lv.leave_id)}','${escapeHtml(lv.status)}','${escapeHtml(lv.ohr_id)}','${escapeHtml(lv.start_date)}')">Approve</button>`;
     footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineReject('${escapeHtml(lv.leave_id)}','${escapeHtml(lv.status)}')">Reject</button>`;
   }
   if (canCancel) {
@@ -620,14 +620,17 @@ function havenInlineCancel(leaveId) {
 function havenSingleApprove(leaveId, leaveStatus) {
   havenInlineApprove(leaveId, leaveStatus);
 }
-function havenInlineApprove(leaveId, leaveStatus) {
+function havenInlineApprove(leaveId, leaveStatus, ohrId, startDate) {
   const zone = document.getElementById('haven-inline-action-zone');
   if (!zone) return;
-  // Tier is determined by the leave's current status, not the user's role
   const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
+  // Show loading state while fetching shrinkage forecast
   zone.innerHTML = `
     <div class="haven-inline-confirm haven-inline-confirm-success">
       <p class="haven-inline-confirm-msg">Approve this leave request?</p>
+      <div class="haven-shrinkage-card haven-shrinkage-loading">
+        <span class="haven-shrinkage-loading-text">Loading shrinkage forecast...</span>
+      </div>
       <div class="haven-inline-confirm-actions">
         <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">No</button>
         <button class="haven-form-btn haven-form-btn-approve" id="haven-approve-yes">Yes, Approve</button>
@@ -638,6 +641,66 @@ function havenInlineApprove(leaveId, leaveStatus) {
   document.getElementById('haven-approve-yes').onclick = async () => {
     await havenDoBulkAction([leaveId], 'approve', tier, '');
   };
+  // Fetch shrinkage forecast
+  havenFetchShrinkage(ohrId, startDate, leaveId);
+}
+
+async function havenFetchShrinkage(ohrId, startDate, currentLeaveId) {
+  try {
+    const resp = await fetch('/api/io/leaves/shrinkage-forecast?ohr_id=' + encodeURIComponent(ohrId) + '&start_date=' + encodeURIComponent(startDate));
+    const data = await resp.json();
+    if (data.error && data.headcount === undefined) {
+      console.warn('Shrinkage forecast unavailable:', data.error);
+      return;
+    }
+    const card = document.querySelector('.haven-shrinkage-card');
+    if (!card) return;
+    card.classList.remove('haven-shrinkage-loading');
+    // Include the current leave in the count if not already counted (it's Pending OM, which IS counted)
+    const leaveCount = data.leave_count;
+    const headcount = data.headcount;
+    const plPct = data.pl_pct;
+    const threshold = data.threshold;
+    const isOver = plPct > threshold;
+    const colorClass = isOver ? 'haven-shrinkage-over' : 'haven-shrinkage-ok';
+    // Build leaves detail list (other leaves that week)
+    let detailHtml = '';
+    if (data.leaves_detail && data.leaves_detail.length > 0) {
+      const otherLeaves = data.leaves_detail.filter(l => l.leave_id !== currentLeaveId);
+      if (otherLeaves.length > 0) {
+        detailHtml = '<div class="haven-shrinkage-detail"><span class="haven-shrinkage-detail-title">Other leaves this week:</span>';
+        otherLeaves.forEach(l => {
+          detailHtml += '<span class="haven-shrinkage-detail-item">' + escapeHtml(l.full_name) + ' — ' + escapeHtml(l.start_date) + ' (' + escapeHtml(l.status) + ')</span>';
+        });
+        detailHtml += '</div>';
+      }
+    }
+    card.innerHTML = `
+      <div class="haven-shrinkage-header ${colorClass}">
+        <span class="haven-shrinkage-title">${escapeHtml(data.planning_group)} · ${escapeHtml(data.actual_role)}s</span>
+        <span class="haven-shrinkage-badge ${colorClass}">${plPct.toFixed(1)}%</span>
+      </div>
+      <div class="haven-shrinkage-stats">
+        <div class="haven-shrinkage-stat">
+          <span class="haven-shrinkage-stat-value">${headcount}</span>
+          <span class="haven-shrinkage-stat-label">Headcount</span>
+        </div>
+        <div class="haven-shrinkage-stat">
+          <span class="haven-shrinkage-stat-value">${leaveCount}</span>
+          <span class="haven-shrinkage-stat-label">Leaves (wk ending ${escapeHtml(data.week_end)})</span>
+        </div>
+        <div class="haven-shrinkage-stat">
+          <span class="haven-shrinkage-stat-value haven-shrinkage-pct ${colorClass}">${plPct.toFixed(1)}%</span>
+          <span class="haven-shrinkage-stat-label">PL% ${isOver ? '⚠️ Over threshold' : '✓ Within threshold'}</span>
+        </div>
+      </div>
+      ${detailHtml}
+    `;
+  } catch (err) {
+    console.error('Shrinkage forecast fetch error:', err);
+    const card = document.querySelector('.haven-shrinkage-card');
+    if (card) card.innerHTML = '<span style="color:#6b7280;font-size:12px;">Forecast unavailable</span>';
+  }
 }
 // ─── Inline Reject ─────────────────────────────────────────────────────────────
 function havenSingleReject(leaveId, leaveStatus) {

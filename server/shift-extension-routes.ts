@@ -17,6 +17,7 @@ export function registerShiftExtensionRoutes(app: Express) {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 500, 2000);
       const db = await getDb();
+      if (!db) return res.status(503).json({ error: "Database unavailable" });
       const rows = await db
         .select()
         .from(ioShiftExtensions)
@@ -43,6 +44,7 @@ export function registerShiftExtensionRoutes(app: Express) {
       }
 
       const db = await getDb();
+      if (!db) return res.status(503).json({ error: "Database unavailable" });
       const reqId = "SE-" + Date.now().toString(36).toUpperCase();
       const now = new Date().toISOString();
 
@@ -77,6 +79,7 @@ export function registerShiftExtensionRoutes(app: Express) {
       if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
       const db = await getDb();
+      if (!db) return res.status(503).json({ error: "Database unavailable" });
       const rows = await db
         .select()
         .from(ioShiftExtensions)
@@ -103,6 +106,7 @@ export function registerShiftExtensionRoutes(app: Express) {
       }
 
       const db = await getDb();
+      if (!db) return res.status(503).json({ error: "Database unavailable" });
       const now = new Date().toISOString();
       const newOverall = action === "Approved" ? "Pending OM" : "Rejected";
 
@@ -137,6 +141,7 @@ export function registerShiftExtensionRoutes(app: Express) {
       }
 
       const db = await getDb();
+      if (!db) return res.status(503).json({ error: "Database unavailable" });
       const now = new Date().toISOString();
 
       await db
@@ -172,7 +177,7 @@ export function registerShiftExtensionRoutes(app: Express) {
             title: "Shift Extension Approved",
             message: `Your shift extension request for ${shiftDateReadable} (${ext.extension_minutes} min) has been approved.`,
             target_ohr: ext.agent_ohr || "",
-            is_read: 0,
+            is_read: false,
             created_at: now,
             metadata: JSON.stringify({
               request_id: ext.request_id,
@@ -186,7 +191,7 @@ export function registerShiftExtensionRoutes(app: Express) {
             title: "Shift Extension Approved",
             message: `Shift extension for ${ext.agent_name} on ${shiftDateReadable} (${ext.extension_minutes} min) has been approved by OM.`,
             target_ohr: ext.supervisor_ohr || "",
-            is_read: 0,
+            is_read: false,
             created_at: now,
             metadata: JSON.stringify({
               request_id: ext.request_id,

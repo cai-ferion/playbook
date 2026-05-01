@@ -1481,6 +1481,83 @@ router.delete("/leaves/:leave_id", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/io/leaves/shrinkage-forecast - compute PL% for a leave's planning group + role combo
+router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const { ohr_id, start_date } = req.query;
+    if (!ohr_id || !start_date) return res.status(400).json({ error: "ohr_id and start_date required" });
+
+    // 1. Get the employee's CURRENT role and planning_group
+    const empRows = await db.select({
+      actual_role: ioEmployees.actual_role,
+      planning_group: ioEmployees.planning_group,
+    }).from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id as string)).limit(1);
+    if (empRows.length === 0) return res.status(404).json({ error: "Employee not found" });
+    const { actual_role, planning_group } = empRows[0];
+    if (!actual_role || !planning_group) return res.json({ error: "Employee missing role or planning_group", headcount: 0, leaves: 0, pl_pct: 0 });
+
+    // 2. Count all employees with same role + planning_group combo (headcount)
+    const hcRows = await db.select({ cnt: count() })
+      .from(ioEmployees)
+      .where(and(
+        eq(ioEmployees.actual_role, actual_role),
+        eq(ioEmployees.planning_group, planning_group)
+      ));
+    const headcount = hcRows[0]?.cnt || 0;
+
+    // 3. Compute the Sat-Fri week containing start_date
+    const d = new Date(start_date as string + 'T00:00:00Z');
+    const dayOfWeek = d.getUTCDay(); // 0=Sun, 6=Sat
+    // Saturday = start of week. Days since Saturday: Sun=1, Mon=2, ..., Fri=6, Sat=0
+    const daysSinceSat = dayOfWeek === 6 ? 0 : dayOfWeek + 1;
+    const weekStart = new Date(d);
+    weekStart.setUTCDate(d.getUTCDate() - daysSinceSat);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+    const weekStartStr = weekStart.toISOString().slice(0, 10);
+    const weekEndStr = weekEnd.toISOString().slice(0, 10);
+
+    // 4. Count approved leaves (status='Approved' or 'Pending OM') for same combo in that week
+    //    Join with io_employees to get CURRENT role+planning_group for each leave's employee
+    const leaveRows = await db.select({
+      leave_id: ioLeaves.leave_id,
+      ohr_id: ioLeaves.ohr_id,
+      full_name: ioLeaves.full_name,
+      start_date: ioLeaves.start_date,
+      status: ioLeaves.status,
+    }).from(ioLeaves)
+      .innerJoin(ioEmployees, eq(ioLeaves.ohr_id, ioEmployees.ohr_id))
+      .where(and(
+        or(eq(ioLeaves.status, 'Approved'), eq(ioLeaves.status, 'Pending OM')),
+        gte(ioLeaves.start_date, weekStartStr),
+        lte(ioLeaves.start_date, weekEndStr),
+        eq(ioEmployees.actual_role, actual_role),
+        eq(ioEmployees.planning_group, planning_group)
+      ));
+
+    const leaveCount = leaveRows.length;
+    const plPct = headcount > 0 ? ((leaveCount / headcount) * 100) : 0;
+
+    // 5. Return the forecast data
+    res.json({
+      planning_group,
+      actual_role,
+      headcount,
+      leave_count: leaveCount,
+      pl_pct: Math.round(plPct * 100) / 100,
+      week_start: weekStartStr,
+      week_end: weekEndStr,
+      threshold: 5,
+      leaves_detail: leaveRows.map(l => ({ ohr_id: l.ohr_id, full_name: l.full_name, start_date: l.start_date, status: l.status })),
+    });
+  } catch (err: any) {
+    console.error("[IO API] shrinkage-forecast error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // io_audit_log
 // ============================================================

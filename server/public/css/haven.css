@@ -698,3 +698,101 @@
   background: #dc2626;
   color: #fff;
 }
+
+/* ─── Shrinkage Forecast Card ─────────────────────────────────────────────── */
+.haven-shrinkage-card {
+  margin: 12px 0 8px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+.haven-shrinkage-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+}
+.haven-shrinkage-loading-text {
+  color: #94a3b8;
+  font-size: 12px;
+  font-style: italic;
+}
+.haven-shrinkage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.haven-shrinkage-title {
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+}
+.haven-shrinkage-badge {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.haven-shrinkage-badge.haven-shrinkage-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+.haven-shrinkage-badge.haven-shrinkage-over {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.haven-shrinkage-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.haven-shrinkage-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+.haven-shrinkage-stat-value {
+  font-weight: 700;
+  font-size: 18px;
+  color: #1e293b;
+}
+.haven-shrinkage-stat-value.haven-shrinkage-ok {
+  color: #166534;
+}
+.haven-shrinkage-stat-value.haven-shrinkage-over {
+  color: #dc2626;
+}
+.haven-shrinkage-stat-label {
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  margin-top: 2px;
+}
+.haven-shrinkage-pct {
+  font-size: 20px;
+}
+.haven-shrinkage-detail {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.haven-shrinkage-detail-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 2px;
+}
+.haven-shrinkage-detail-item {
+  font-size: 11px;
+  color: #64748b;
+  padding-left: 8px;
+}
