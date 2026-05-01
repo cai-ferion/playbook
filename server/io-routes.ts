@@ -1498,12 +1498,13 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
     const { actual_role, planning_group } = empRows[0];
     if (!actual_role || !planning_group) return res.json({ error: "Employee missing role or planning_group", headcount: 0, leaves: 0, pl_pct: 0 });
 
-    // 2. Count all employees with same role + planning_group combo (headcount)
+    // 2. Count all Active employees with same role + planning_group combo (headcount)
     const hcRows = await db.select({ cnt: count() })
       .from(ioEmployees)
       .where(and(
         eq(ioEmployees.actual_role, actual_role),
-        eq(ioEmployees.planning_group, planning_group)
+        eq(ioEmployees.planning_group, planning_group),
+        eq(ioEmployees.employement_status, 'Active')
       ));
     const headcount = hcRows[0]?.cnt || 0;
 

@@ -3596,3 +3596,7 @@
 - [x] Exclude current leave being reviewed from "Other leaves this week" list
 - [x] Rename week label from "wk ending YYYY-MM-DD" to "WE MM-DD-YY" format
 - [x] Manager-scoped OM approval: Rosales, Ranario, Nieva can only approve leaves for employees under them and their TLs
+
+## Haven — Shrinkage Card Fixes (Round 2)
+- [x] Shrinkage forecast card should only show for OM/Admin tier approvals, not TL-tier
+- [x] Headcount in shrinkage forecast should only count Active employees (employement_status = 'Active')

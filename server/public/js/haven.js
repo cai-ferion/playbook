@@ -647,13 +647,14 @@ function havenInlineApprove(leaveId, leaveStatus, ohrId, startDate) {
   const zone = document.getElementById('haven-inline-action-zone');
   if (!zone) return;
   const tier = leaveStatus === 'Pending OM' ? 'om' : 'tl';
-  // Show loading state while fetching shrinkage forecast
+  // Shrinkage forecast only shown for OM-tier approvals
+  const showShrinkage = tier === 'om';
   zone.innerHTML = `
     <div class="haven-inline-confirm haven-inline-confirm-success">
       <p class="haven-inline-confirm-msg">Approve this leave request?</p>
-      <div class="haven-shrinkage-card haven-shrinkage-loading">
+      ${showShrinkage ? `<div class="haven-shrinkage-card haven-shrinkage-loading">
         <span class="haven-shrinkage-loading-text">Loading shrinkage forecast...</span>
-      </div>
+      </div>` : ''}
       <div class="haven-inline-confirm-actions">
         <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">No</button>
         <button class="haven-form-btn haven-form-btn-approve" id="haven-approve-yes">Yes, Approve</button>
@@ -664,8 +665,10 @@ function havenInlineApprove(leaveId, leaveStatus, ohrId, startDate) {
   document.getElementById('haven-approve-yes').onclick = async () => {
     await havenDoBulkAction([leaveId], 'approve', tier, '');
   };
-  // Fetch shrinkage forecast
-  havenFetchShrinkage(ohrId, startDate, leaveId);
+  // Fetch shrinkage forecast only for OM-tier
+  if (showShrinkage) {
+    havenFetchShrinkage(ohrId, startDate, leaveId);
+  }
 }
 
 async function havenFetchShrinkage(ohrId, startDate, currentLeaveId) {
