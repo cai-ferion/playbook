@@ -374,8 +374,14 @@ function havenShowLeaveDetail(leaveId) {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   const isAdmin = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
   const canCancel = (role === 'agent' || role === 'tl') && lv.status === 'Pending TL' && user && lv.ohr_id === user.ohr_id;
-  const canTLApprove = role === 'tl' && lv.status === 'Pending TL' && user && lv.ohr_id !== user.ohr_id;
-  const canOMApprove = role === 'om' && (lv.status === 'Pending OM' || lv.status === 'Pending TL') && user && lv.ohr_id !== user.ohr_id;
+  const myAgentOhrs = havenGetMyAgentOhrs();
+  const isMyAgent = myAgentOhrs.includes(lv.ohr_id);
+  // TL can FLM approve their agents; Admin/OM can FLM approve only their own agents
+  const canTLApprove = lv.status === 'Pending TL' && user && lv.ohr_id !== user.ohr_id && (
+    (role === 'tl') || (role === 'om' && isMyAgent)
+  );
+  // Admin/OM can OM approve any Pending OM request
+  const canOMApprove = role === 'om' && lv.status === 'Pending OM' && user && lv.ohr_id !== user.ohr_id;
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
   const formFooter = document.getElementById('haven-form-footer');
@@ -392,9 +398,9 @@ function havenShowLeaveDetail(leaveId) {
       <div class="haven-detail-row"><span class="haven-detail-label">Reason</span><span>${escapeHtml(lv.reason || '\u2014')}</span></div>
       <div class="haven-detail-row"><span class="haven-detail-label">Supervisor</span><span>${escapeHtml(lv.supervisor || '\u2014')}</span></div>
       
-      ${lv.om_reviewer ? `<div class="haven-detail-row"><span class="haven-detail-label">Operations Manager</span><span>${escapeHtml(lv.om_reviewer)}</span></div>` : ''}
       ${lv.rejection_reason ? `<div class="haven-detail-row"><span class="haven-detail-label">Rejection Reason</span><span style="color:#dc2626;">${escapeHtml(lv.rejection_reason)}</span></div>` : ''}
       <div class="haven-detail-row"><span class="haven-detail-label">Filed</span><span>${lv.created_at ? new Date(lv.created_at).toLocaleString() : '\u2014'}</span></div>
+      ${lv.tl_review_date ? `<div class="haven-detail-row"><span class="haven-detail-label">FLM Approved</span><span>${new Date(lv.tl_review_date).toLocaleString()}</span></div>` : ''}
     </div>
     <div id="haven-inline-action-zone"></div>
   `;
@@ -442,10 +448,17 @@ function havenShowDayLeaves(dateStr) {
   // Bulk actions — group by status so tier is always correct
   let bulkHtml = '';
   if (role === 'tl' || role === 'om') {
-    // OM can act on both Pending TL and Pending OM; TL only on Pending TL
+    const bulkMyAgents = havenGetMyAgentOhrs();
+    // TL: Pending TL for their agents; OM/Admin: own agents' Pending TL + any Pending OM
     const pendingTL = dayLeaves.filter(l => l.status === 'Pending TL');
     const pendingOM = dayLeaves.filter(l => l.status === 'Pending OM');
-    const actionable = role === 'om' ? [...pendingTL, ...pendingOM] : pendingTL;
+    let actionable;
+    if (role === 'om') {
+      const myPendingTL = pendingTL.filter(l => bulkMyAgents.includes(l.ohr_id));
+      actionable = [...myPendingTL, ...pendingOM];
+    } else {
+      actionable = pendingTL;
+    }
     if (actionable.length > 0) {
       // For mixed statuses, we group by status for correct tier handling
       const allSameStatus = actionable.every(l => l.status === actionable[0].status);

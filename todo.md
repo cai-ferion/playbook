@@ -3575,3 +3575,10 @@
 ## Haven — Notification Cleanup & Filing Notification
 - [x] Bulk-delete all stale haven-type notifications from DB
 - [x] Add notification to FLM when agent files a new leave request
+
+## Haven — Admin Visibility & Conditional Actions
+- [x] Remove "Operations Manager" field from leave detail modal
+- [x] Admin sees all leave requests regardless of team lead
+- [x] Admin can FLM approve/reject only for their own agents
+- [x] Admin can OM approve/reject any Pending OM request
+- [x] Add FLM Approved date-timestamp below Filed in detail modal
