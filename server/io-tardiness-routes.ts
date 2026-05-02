@@ -178,13 +178,21 @@ router.post("/tardiness/upload", async (req: Request, res: Response) => {
       for (const e of empData) empMap.set(e.ohr_id, e);
     }
 
+    // BU Filter: only process records for employees in our roster (COMMUNITY_OPS / INTEGRITY_OPS)
+    // Employees not in io_employees are outside our business unit scope and are rejected.
+    const ALLOWED_BUS = new Set(Array.from(empMap.keys())); // Only OHRs present in io_employees
+
     let inserted = 0;
     let skipped = 0;
+    let skippedNoBU = 0;
     let enriched = 0;
 
     for (const r of records) {
       const ohr = String(r.ohr || r.OHR || r.ohr_id || "").trim();
       if (!ohr) { skipped++; continue; }
+
+      // Reject OHRs not in our roster (outside COMMUNITY_OPS / INTEGRITY_OPS scope)
+      if (!ALLOWED_BUS.has(ohr)) { skippedNoBU++; skipped++; continue; }
 
       const rawDate = String(r.date || r.Date || "").trim();
       const dateNorm = normalizeDate(rawDate);
@@ -236,7 +244,7 @@ router.post("/tardiness/upload", async (req: Request, res: Response) => {
       inserted++;
     }
 
-    res.json({ success: true, inserted, skipped, enriched, total: records.length, batch_id: batchId });
+    res.json({ success: true, inserted, skipped, skipped_not_in_roster: skippedNoBU, enriched, total: records.length, batch_id: batchId });
   } catch (err: any) {
     console.error("[IO API] tardiness upload error:", err);
     res.status(500).json({ error: err.message });

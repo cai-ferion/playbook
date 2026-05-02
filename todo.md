@@ -3707,3 +3707,16 @@
 - [ ] Sub-Phase 2.6: Zod input validation on critical endpoints
 - [x] Audit 3 pre-existing test failures: removed stale ALLOWED_BUS test (never implemented), removed supabase-sync.test.ts (Supabase has no io_employees table — TiDB is primary store)
 - [x] Full test suite: 42 files, 1428 tests, ALL PASSING
+
+## Tardiness BU Filter Implementation
+- [x] Add ALLOWED_BUS constant (COMMUNITY_OPS, INTEGRITY_OPS) to io-tardiness-routes.ts
+- [x] Filter uploaded CSV rows — reject OHRs not in io_employees roster (ALLOWED_BUS)
+- [x] Return skipped_not_in_roster count in upload response
+- [x] Update tardiness.test.ts to verify ALLOWED_BUS + skippedNoBU (87 tests pass)
+
+## Blueprint Phase 2 — Sub-Phase 2.2: Shared Infrastructure
+- [x] Create server/io/shared.ts (getManagerOhrSet, normalizePg, generateCoachingId, generateTaskId, sendTaskAssignmentNotifications, getPermissionDefaults)
+- [x] Create server/io/types.ts (IORequest, filter params, entity views, response shapes)
+- [x] Create server/io/index.ts (barrel router with registerModularIORoutes + migration roadmap)
+- [ ] Wire server/io/index.ts into _core/index.ts (deferred — will activate when first domain module is extracted)
+- [x] Verify: tsc --noEmit clean, 42 files / 1429 tests ALL PASSING

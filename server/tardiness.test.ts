@@ -119,7 +119,12 @@ describe("Tardiness — Upload Logic", () => {
   it("skips non-late records (tardiness <= 0)", () => {
     expect(tardinessRoutes).toContain("tardMins <= 0");
   });
-  // NOTE: BU filtering (COMMUNITY_OPS, INTEGRITY_OPS) is a future enhancement — not yet implemented.
+  it("filters by business unit — only processes OHRs in io_employees roster (COMMUNITY_OPS, INTEGRITY_OPS)", () => {
+    expect(tardinessRoutes).toContain("ALLOWED_BUS");
+    expect(tardinessRoutes).toContain("COMMUNITY_OPS");
+    expect(tardinessRoutes).toContain("INTEGRITY_OPS");
+    expect(tardinessRoutes).toContain("skippedNoBU");
+  });
   it("auto-invalidates records with <5 min tardiness on upload", () => {
     expect(tardinessRoutes).toContain("autoInvalid");
     expect(tardinessRoutes).toContain("tardMins < 5");
