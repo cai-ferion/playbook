@@ -29,7 +29,11 @@ describe("Batch 15 Changes", () => {
   describe("Helm - Task Assignment Notification", () => {
     it("should have sendTaskAssignmentNotifications function in io-routes.ts", () => {
       const ioRoutes = fs.readFileSync(
-        path.join(__dirname, "io-routes.ts"),
+        path.join(__dirname, "io-routes.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/attendance.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/coaching.ts"),
         "utf-8"
       );
       expect(ioRoutes).toContain("sendTaskAssignmentNotifications");
@@ -37,7 +41,11 @@ describe("Batch 15 Changes", () => {
 
     it("should create in-app notifications after task creation (not emails)", () => {
       const ioRoutes = fs.readFileSync(
-        path.join(__dirname, "io-routes.ts"),
+        path.join(__dirname, "io-routes.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/attendance.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/coaching.ts"),
         "utf-8"
       );
       // Should NOT have Resend or Brevo
@@ -52,7 +60,11 @@ describe("Batch 15 Changes", () => {
   describe("Anchor - Date-based Locking", () => {
     it("should enforce date-based lock on attendance update endpoint", () => {
       const ioRoutes = fs.readFileSync(
-        path.join(__dirname, "io-routes.ts"),
+        path.join(__dirname, "io-routes.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/attendance.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/coaching.ts"),
         "utf-8"
       );
       // Should have date-based lock logic in the attendance update
@@ -61,7 +73,11 @@ describe("Batch 15 Changes", () => {
 
     it("should enforce date-based lock on bulk-tag endpoint", () => {
       const ioRoutes = fs.readFileSync(
-        path.join(__dirname, "io-routes.ts"),
+        path.join(__dirname, "io-routes.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/attendance.ts"), "utf-8"
+      ) + "\n" + fs.readFileSync(
+        path.join(__dirname, "io/coaching.ts"),
         "utf-8"
       );
       // Should have date-based lock in bulk-tag

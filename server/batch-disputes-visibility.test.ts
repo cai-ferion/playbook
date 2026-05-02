@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const compassJs = readFileSync(join(__dirname, 'public', 'js', 'compass.js'), 'utf-8');
-const ioRoutesTs = readFileSync(join(__dirname, 'io-routes.ts'), 'utf-8');
+const ioRoutesTs = readFileSync(join(__dirname, 'io-routes.ts'), 'utf-8') + "\n" + readFileSync(join(__dirname, 'io/attendance.ts'), 'utf-8') + "\n" + readFileSync(join(__dirname, 'io/coaching.ts'), 'utf-8') + "\n" + readFileSync(join(__dirname, 'io/leaves.ts'), 'utf-8');
 
 describe('Disputes Area — Renamed Kanban Columns', () => {
   it('LV1 renamed to SUPPORT REVIEW', () => {

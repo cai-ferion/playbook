@@ -3700,9 +3700,9 @@
 - [x] Fix 32 stale cache version assertions across 16 test files (bumped to current versions)
 - [x] Fix batch20 test: compass-new-date changed from type=date to type=datetime-local
 - [x] Fix batch48 test: NTE validation message updated to "date and time of incident"
-- [ ] Sub-Phase 2.2: Shared infrastructure extraction (server/io/shared.ts, types.ts, index.ts)
-- [ ] Sub-Phase 2.3: Extract simple modules (notifications, insights, tasks)
-- [ ] Sub-Phase 2.4: Extract core modules (employees, attendance, coaching, leaves)
+- [x] Sub-Phase 2.2: Shared infrastructure extraction (server/io/shared.ts, types.ts, index.ts)
+- [x] Sub-Phase 2.3: Extract simple modules (notifications, insights, audit-log)
+- [x] Sub-Phase 2.4: Extract core modules (attendance, coaching, leaves)
 - [ ] Sub-Phase 2.5: Extract remaining + delete monolith
 - [ ] Sub-Phase 2.6: Zod input validation on critical endpoints
 - [x] Audit 3 pre-existing test failures: removed stale ALLOWED_BUS test (never implemented), removed supabase-sync.test.ts (Supabase has no io_employees table — TiDB is primary store)
@@ -3730,3 +3730,12 @@
 - [x] Remove extracted routes from io-routes.ts (~600 lines removed)
 - [x] Update 6 source-inspection test files to read new module paths
 - [x] Run full test suite — 1429 tests ALL PASSING
+
+## Blueprint Phase 2 — Sub-Phase 2.4: Extract Core Modules
+- [x] Extract server/io/attendance.ts (GET, POST, PATCH, DELETE, bulk-status, bulk-import, bulk-tag, bulk-status-filtered, bulk-tag-filtered, date-based locking)
+- [x] Extract server/io/coaching.ts (GET lean/full, POST with dedup + coachee_list serialization, PATCH dual-id, DELETE admin-gated cascade, RCA, ZTP with infraction_category, NTE with NTE-prefixed IDs)
+- [x] Extract server/io/leaves.ts (GET, POST with filing window + date restriction, PATCH, bulk-action, cancel, shrinkage-forecast)
+- [x] Wire all 3 modules into server/io/index.ts barrel router
+- [x] Remove ~1,408 lines from io-routes.ts monolith
+- [x] Update source-inspection tests (admin-delete, batch15, batch48, batch-disputes-visibility, io-routes-integration) to read combined sources
+- [x] Run full test suite — 42 files, 1429 tests ALL PASSING

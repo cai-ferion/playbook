@@ -7,7 +7,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 const ROOT = join(__dirname, "..");
-const ioRoutes = readFileSync(join(ROOT, "server/io-routes.ts"), "utf-8");
+const ioRoutes = readFileSync(join(ROOT, "server/io-routes.ts"), "utf-8") + "\n" + readFileSync(join(ROOT, "server/io/coaching.ts"), "utf-8");
 const insightsModule = readFileSync(join(ROOT, "server/io/insights.ts"), "utf-8");
 const compassJs = readFileSync(join(ROOT, "server/public/js/compass.js"), "utf-8");
 const sandboxJs = readFileSync(join(ROOT, "server/public/js/sandbox.js"), "utf-8");

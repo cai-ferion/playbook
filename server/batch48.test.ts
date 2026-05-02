@@ -12,8 +12,11 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
     "utf-8"
   );
   const ioRoutes = fs.readFileSync(
-    path.resolve(__dirname, "io-routes.ts"),
-    "utf-8"
+    path.resolve(__dirname, "io-routes.ts"), "utf-8"
+  ) + "\n" + fs.readFileSync(
+    path.resolve(__dirname, "io/coaching.ts"), "utf-8"
+  ) + "\n" + fs.readFileSync(
+    path.resolve(__dirname, "io/leaves.ts"), "utf-8"
   );
   const schema = fs.readFileSync(
     path.resolve(__dirname, "../drizzle/schema.ts"),

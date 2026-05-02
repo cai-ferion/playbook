@@ -13,7 +13,7 @@ const schemaPath = path.resolve(__dirname, "../drizzle/schema.ts");
 const schemaContent = fs.readFileSync(schemaPath, "utf-8");
 
 const ioRoutesPath = path.resolve(__dirname, "io-routes.ts");
-const ioRoutesContent = fs.readFileSync(ioRoutesPath, "utf-8");
+const ioRoutesContent = fs.readFileSync(ioRoutesPath, "utf-8") + "\n" + fs.readFileSync(path.join(path.dirname(ioRoutesPath), "io/attendance.ts"), "utf-8");
 
 const dataJsPath = path.resolve(__dirname, "public/js/data.js");
 const dataJsContent = fs.readFileSync(dataJsPath, "utf-8");

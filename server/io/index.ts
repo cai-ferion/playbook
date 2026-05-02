@@ -12,19 +12,19 @@
  * ┌─────────────────────────────────────────────────────────────────┐
  * │ Module              │ Status      │ File                        │
  * ├─────────────────────┼─────────────┼─────────────────────────────┤
- * │ Employees           │ Planned     │ ./employees.ts              │
- * │ Attendance          │ Planned     │ ./attendance.ts             │
- * │ Coaching            │ Planned     │ ./coaching.ts               │
- * │ Leaves              │ Planned     │ ./leaves.ts                 │
- * │ Notifications       │ Planned     │ ./notifications.ts          │
+ * │ Employees           │ ✅ Extracted │ ./employees.ts              │
+ * │ Attendance          │ ✅ Extracted │ ./attendance.ts             │
+ * │ Coaching            │ ✅ Extracted │ ./coaching.ts               │
+ * │ Leaves              │ ✅ Extracted │ ./leaves.ts                 │
+ * │ Notifications       │ ✅ Extracted │ ./notifications.ts          │
  * │ Tasks               │ Planned     │ ./tasks.ts                  │
  * │ Billing             │ Planned     │ ./billing.ts                │
  * │ Permissions         │ Planned     │ ./permissions.ts            │
  * │ Corrective Actions  │ Planned     │ ./corrective-actions.ts     │
  * │ WFM                 │ Planned     │ ./wfm.ts                    │
  * │ NTE Build Assist    │ Planned     │ ./nte-build-assist.ts       │
- * │ Insights            │ Planned     │ ./insights.ts               │
- * │ Audit Log           │ Planned     │ ./audit-log.ts              │
+ * │ Insights            │ ✅ Extracted │ ./insights.ts               │
+ * │ Audit Log           │ ✅ Extracted │ ./audit-log.ts              │
  * └─────────────────────┴─────────────┴─────────────────────────────┘
  * 
  * Migration Strategy:
@@ -51,15 +51,14 @@ ioRouter.use(insightsRouter);
 import auditLogRouter from "./audit-log.js";
 ioRouter.use(auditLogRouter);
 
-// ── Planned (uncomment when extracted) ──────────────────────────
-// import attendanceRouter from "./attendance.js";
-// ioRouter.use(attendanceRouter);
+import attendanceRouter from "./attendance.js";
+ioRouter.use(attendanceRouter);
 
-// import coachingRouter from "./coaching.js";
-// ioRouter.use(coachingRouter);
+import coachingRouter from "./coaching.js";
+ioRouter.use(coachingRouter);
 
-// import leavesRouter from "./leaves.js";
-// ioRouter.use(leavesRouter);
+import leavesRouter from "./leaves.js";
+ioRouter.use(leavesRouter);
 
 // import tasksRouter from "./tasks.js";
 // ioRouter.use(tasksRouter);
