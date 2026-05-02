@@ -7,6 +7,7 @@ describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", (
   const appJs = fs.readFileSync(path.join(__dirname, "../server/public/js/app.js"), "utf-8");
   const indexHtml = fs.readFileSync(path.join(__dirname, "../server/public/index.html"), "utf-8");
   const ioRoutes = fs.readFileSync(path.join(__dirname, "./io-routes.ts"), "utf-8");
+  const employeesModule = fs.readFileSync(path.join(__dirname, "./io/employees.ts"), "utf-8");
 
   // ===== Compass Visibility =====
   describe("Compass Visibility", () => {
@@ -189,14 +190,14 @@ describe("Regimen Overhaul, Filter System, Incomplete Rostering & CSV Export", (
     });
 
     it("PATCH endpoint should extract _actor_ohr and _actor_name", () => {
-      expect(ioRoutes).toContain("rawBody._actor_ohr");
-      expect(ioRoutes).toContain("rawBody._actor_name");
+      expect(employeesModule).toContain("rawBody._actor_ohr");
+      expect(employeesModule).toContain("rawBody._actor_name");
     });
 
     it("PATCH endpoint should log field-level changes to io_audit_log", () => {
-      expect(ioRoutes).toContain("record_type: 'io_employees'");
-      expect(ioRoutes).toContain("action: 'UPDATE'");
-      expect(ioRoutes).toContain("field_name: key");
+      expect(employeesModule).toContain("record_type: 'io_employees'");
+      expect(employeesModule).toContain("action: 'UPDATE'");
+      expect(employeesModule).toContain("field_name: key");
     });
   });
 

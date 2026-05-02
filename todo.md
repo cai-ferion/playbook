@@ -3720,3 +3720,13 @@
 - [x] Create server/io/index.ts (barrel router with registerModularIORoutes + migration roadmap)
 - [ ] Wire server/io/index.ts into _core/index.ts (deferred — will activate when first domain module is extracted)
 - [x] Verify: tsc --noEmit clean, 42 files / 1429 tests ALL PASSING
+
+## Blueprint Phase 2 — Sub-Phase 2.3: Extract Simple Modules
+- [x] Extract server/io/employees.ts (GET, GET /slim, PATCH, POST, DELETE + auto-attendance + Supabase sync)
+- [x] Extract server/io/notifications.ts (GET, POST, PUT maintenance, PATCH mark-all-read, DELETE clear-all, PATCH :id)
+- [x] Extract server/io/insights.ts (GET, POST, PATCH, DELETE, bulk-delete with admin gating)
+- [x] Extract server/io/audit-log.ts (GET, POST)
+- [x] Wire all 4 modules into server/io/index.ts barrel router + registered in _core/index.ts
+- [x] Remove extracted routes from io-routes.ts (~600 lines removed)
+- [x] Update 6 source-inspection test files to read new module paths
+- [x] Run full test suite — 1429 tests ALL PASSING

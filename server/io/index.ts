@@ -38,11 +38,20 @@ import { Router } from "express";
 
 const ioRouter = Router();
 
-// ── Domain Routers (mount as they are extracted) ────────────────
-// Example (uncomment when module is ready):
-// import employeesRouter from "./employees.js";
-// ioRouter.use(employeesRouter);
+// ── Domain Routers (mounted in extraction order) ────────────────
+import employeesRouter from "./employees.js";
+ioRouter.use(employeesRouter);
 
+import notificationsRouter from "./notifications.js";
+ioRouter.use(notificationsRouter);
+
+import insightsRouter from "./insights.js";
+ioRouter.use(insightsRouter);
+
+import auditLogRouter from "./audit-log.js";
+ioRouter.use(auditLogRouter);
+
+// ── Planned (uncomment when extracted) ──────────────────────────
 // import attendanceRouter from "./attendance.js";
 // ioRouter.use(attendanceRouter);
 
@@ -51,9 +60,6 @@ const ioRouter = Router();
 
 // import leavesRouter from "./leaves.js";
 // ioRouter.use(leavesRouter);
-
-// import notificationsRouter from "./notifications.js";
-// ioRouter.use(notificationsRouter);
 
 // import tasksRouter from "./tasks.js";
 // ioRouter.use(tasksRouter);
@@ -72,12 +78,6 @@ const ioRouter = Router();
 
 // import nteBuildAssistRouter from "./nte-build-assist.js";
 // ioRouter.use(nteBuildAssistRouter);
-
-// import insightsRouter from "./insights.js";
-// ioRouter.use(insightsRouter);
-
-// import auditLogRouter from "./audit-log.js";
-// ioRouter.use(auditLogRouter);
 
 /**
  * Register the modular IO router.

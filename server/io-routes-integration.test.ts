@@ -172,7 +172,7 @@ describe("IO Routes — Route Handler Logic (via source inspection)", () => {
   it("employees GET handler accepts filter params: ohr_id, employement_status, srt_id_not_null", async () => {
     // Verify the route source contains the expected query params
     const fs = await import("fs");
-    const source = fs.readFileSync("/home/ubuntu/playbook/server/io-routes.ts", "utf-8");
+    const source = fs.readFileSync("/home/ubuntu/playbook/server/io/employees.ts", "utf-8");
     
     expect(source).toContain('const { select: selectCols, limit, offset, order, ohr_id, employement_status, srt_id_not_null } = req.query');
     expect(source).toContain("eq(ioEmployees.ohr_id, String(ohr_id))");
@@ -265,7 +265,7 @@ describe("IO Routes — Route Handler Logic (via source inspection)", () => {
 
   it("employees PATCH includes audit logging with actor metadata", async () => {
     const fs = await import("fs");
-    const source = fs.readFileSync("/home/ubuntu/playbook/server/io-routes.ts", "utf-8");
+    const source = fs.readFileSync("/home/ubuntu/playbook/server/io/employees.ts", "utf-8");
     
     expect(source).toContain("const actorOhr = rawBody._actor_ohr || null");
     expect(source).toContain("const actorName = rawBody._actor_name || null");
@@ -275,7 +275,7 @@ describe("IO Routes — Route Handler Logic (via source inspection)", () => {
 
   it("employees DELETE also mirrors deletion to Supabase", async () => {
     const fs = await import("fs");
-    const source = fs.readFileSync("/home/ubuntu/playbook/server/io-routes.ts", "utf-8");
+    const source = fs.readFileSync("/home/ubuntu/playbook/server/io/employees.ts", "utf-8");
     
     expect(source).toContain("deleteEmployeesFromSupabase");
   });
@@ -365,7 +365,7 @@ describe("IO Routes — Attendance Endpoints", () => {
 describe("IO Routes — Notifications", () => {
   it("notifications endpoints exist", async () => {
     const fs = await import("fs");
-    const source = fs.readFileSync("/home/ubuntu/playbook/server/io-routes.ts", "utf-8");
+    const source = fs.readFileSync("/home/ubuntu/playbook/server/io/notifications.ts", "utf-8");
     
     expect(source).toContain('router.get("/notifications"');
     // Notifications may use a different verb or be under a sub-path
@@ -465,7 +465,7 @@ describe("IO Routes — Business Logic Invariants", () => {
 
   it("employee POST auto-generates attendance rows for new active employees", async () => {
     const fs = await import("fs");
-    const source = fs.readFileSync("/home/ubuntu/playbook/server/io-routes.ts", "utf-8");
+    const source = fs.readFileSync("/home/ubuntu/playbook/server/io/employees.ts", "utf-8");
     
     expect(source).toContain("Auto-generated");
     expect(source).toContain("attendance rows for new employee");

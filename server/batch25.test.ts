@@ -18,11 +18,11 @@ describe("Batch 25 — Fixes & Enhancements", () => {
     });
 
     it("server-side notification POST sets created_at if missing", () => {
-      const ioRoutes = fs.readFileSync(
-        path.join(__dirname, "io-routes.ts"),
+      const notificationsModule = fs.readFileSync(
+        path.join(__dirname, "io/notifications.ts"),
         "utf-8"
       );
-      expect(ioRoutes).toContain("if (!body.created_at) body.created_at = new Date().toISOString()");
+      expect(notificationsModule).toContain("if (!body.created_at) body.created_at = new Date().toISOString()");
     });
   });
 

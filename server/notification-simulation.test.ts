@@ -23,6 +23,7 @@ function readFile(relPath: string): string {
 const notificationsJs = readFile("public/js/notifications.js");
 const autoMailerTs = readFile("auto-mailer.ts");
 const ioRoutesTs = readFile("io-routes.ts");
+const notificationsModule = readFile("io/notifications.ts");
 const compassJs = readFile("public/js/compass.js");
 const havenJs = readFile("public/js/haven.js");
 const sandboxJs = readFile("public/js/sandbox.js");
@@ -345,10 +346,10 @@ describe("Role-Based Notification Visibility Simulation", () => {
 });
 
 describe("Notification API Endpoints", () => {
-  it("CRUD endpoints exist in io-routes.ts", () => {
-    expect(ioRoutesTs).toContain("/notifications");
-    expect(ioRoutesTs).toContain("mark-all-read");
-    expect(ioRoutesTs).toContain("clear-all");
+  it("CRUD endpoints exist in notifications module", () => {
+    expect(notificationsModule).toContain("/notifications");
+    expect(notificationsModule).toContain("mark-all-read");
+    expect(notificationsModule).toContain("clear-all");
   });
 
   it("auto-mailer manual trigger endpoints exist", () => {

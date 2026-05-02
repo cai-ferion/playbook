@@ -8,6 +8,7 @@ import { join } from "path";
 
 const ROOT = join(__dirname, "..");
 const ioRoutes = readFileSync(join(ROOT, "server/io-routes.ts"), "utf-8");
+const insightsModule = readFileSync(join(ROOT, "server/io/insights.ts"), "utf-8");
 const compassJs = readFileSync(join(ROOT, "server/public/js/compass.js"), "utf-8");
 const sandboxJs = readFileSync(join(ROOT, "server/public/js/sandbox.js"), "utf-8");
 const indexHtml = readFileSync(join(ROOT, "server/public/index.html"), "utf-8");
@@ -64,32 +65,32 @@ describe("Server — Compass Coaching DELETE Endpoint", () => {
 // ============================================================
 describe("Server — Sandbox Insights DELETE Endpoint (admin-gated)", () => {
   it("has a DELETE /insights/:insight_id route", () => {
-    expect(ioRoutes).toContain('router.delete("/insights/:insight_id"');
+    expect(insightsModule).toContain('router.delete("/insights/:insight_id"');
   });
 
   it("gates single-delete to ADMIN_OHRS (centralized config)", () => {
-    const idx = ioRoutes.indexOf('router.delete("/insights/:insight_id"');
-    const section = ioRoutes.slice(idx, idx + 500);
+    const idx = insightsModule.indexOf('router.delete("/insights/:insight_id"');
+    const section = insightsModule.slice(idx, idx + 500);
     expect(section).toContain("ADMIN_OHRS");
     expect(section).toContain("Admin-only operation");
   });
 
   it("gates bulk-delete to ADMIN_OHRS (centralized config)", () => {
-    const idx = ioRoutes.indexOf('router.post("/insights-bulk-delete"');
-    const section = ioRoutes.slice(idx, idx + 500);
+    const idx = insightsModule.indexOf('router.post("/insights-bulk-delete"');
+    const section = insightsModule.slice(idx, idx + 500);
     expect(section).toContain("ADMIN_OHRS");
     expect(section).toContain("Only admin users can delete insights");
   });
 
   it("returns 403 for non-admin on single delete", () => {
-    const idx = ioRoutes.indexOf('router.delete("/insights/:insight_id"');
-    const section = ioRoutes.slice(idx, idx + 500);
+    const idx = insightsModule.indexOf('router.delete("/insights/:insight_id"');
+    const section = insightsModule.slice(idx, idx + 500);
     expect(section).toContain("res.status(403)");
   });
 
   it("returns 403 for non-admin on bulk delete", () => {
-    const idx = ioRoutes.indexOf('router.post("/insights-bulk-delete"');
-    const section = ioRoutes.slice(idx, idx + 500);
+    const idx = insightsModule.indexOf('router.post("/insights-bulk-delete"');
+    const section = insightsModule.slice(idx, idx + 500);
     expect(section).toContain("res.status(403)");
   });
 });

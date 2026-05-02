@@ -12,6 +12,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerIORoutes } from "../io-routes.js";
+import { registerModularIORoutes } from "../io/index.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
 import { registerTardinessRoutes } from "../io-tardiness-routes.js";
 import { registerRoleChangeRoutes } from "../io-role-change-routes.js";
@@ -78,6 +79,9 @@ async function startServer() {
 
   // IO Operations API routes — all protected by session auth
   app.use('/api/io', requireAuth);
+  // Modular domain routers (Sub-Phase 2.3+): employees, notifications, insights, audit-log
+  registerModularIORoutes(app);
+  // Legacy monolith (routes not yet extracted remain here)
   registerIORoutes(app);
   registerIOBackupRoutes(app);
   registerTardinessRoutes(app);
