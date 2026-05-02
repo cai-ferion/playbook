@@ -205,6 +205,6 @@ describe("Cache Version Bumps", () => {
   });
 
   it("corrective-actions.js version is bumped to v13", () => {
-    expect(indexHtml).toContain("corrective-actions.js?v=13");
+    expect(indexHtml).toContain("corrective-actions.js?v=14");
   });
 });

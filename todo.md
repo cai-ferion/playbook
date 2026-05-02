@@ -3694,3 +3694,14 @@
 - [x] Update duplicate detection to use full timestamp (exact ISO string match)
 - [x] Verify: different times on same date will produce different ISO strings, passing dedup
 - [x] Cache-bust: compass.js v126, corrective-actions.js v14
+
+## Blueprint Phase 2 — Code Decomposition + Security
+- [x] Sub-Phase 2.1: Integration test harness (41 tests, all green) — server/io-routes-integration.test.ts
+- [x] Fix 32 stale cache version assertions across 16 test files (bumped to current versions)
+- [x] Fix batch20 test: compass-new-date changed from type=date to type=datetime-local
+- [x] Fix batch48 test: NTE validation message updated to "date and time of incident"
+- [ ] Sub-Phase 2.2: Shared infrastructure extraction (server/io/shared.ts, types.ts, index.ts)
+- [ ] Sub-Phase 2.3: Extract simple modules (notifications, insights, tasks)
+- [ ] Sub-Phase 2.4: Extract core modules (employees, attendance, coaching, leaves)
+- [ ] Sub-Phase 2.5: Extract remaining + delete monolith
+- [ ] Sub-Phase 2.6: Zod input validation on critical endpoints

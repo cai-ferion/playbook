@@ -73,6 +73,6 @@ describe("Visibility — Helm hidden for agents", () => {
 // ── 4. Cache Versions ──
 describe("Visibility — Cache Versions", () => {
   it("app.js cache version is bumped to v=126", () => {
-    expect(indexHtml).toContain("app.js?v=127");
+    expect(indexHtml).toContain("app.js?v=131");
   });
 });

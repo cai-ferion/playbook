@@ -138,7 +138,7 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
     });
 
     it("NTE form validates required fields", () => {
-      expect(compassJs).toContain("Please enter the date of incident");
+      expect(compassJs).toContain("Please enter the date and time of incident");
       expect(compassJs).toContain("Please describe the incident");
       expect(compassJs).toContain("Please specify the policy violated");
       // Expected behavior validation removed — field no longer in form

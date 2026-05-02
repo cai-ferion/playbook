@@ -8,12 +8,12 @@ const sandboxCss = readFileSync(resolve(__dirname, 'public/css/sandbox-redesign.
 const indexHtml = readFileSync(resolve(__dirname, 'public/index.html'), 'utf-8');
 
 describe('Coaching Profile — Date Field', () => {
-  it('renders a date input with id compass-new-date in the form', () => {
+  it('renders a datetime-local input with id compass-new-date in the form', () => {
     expect(compassJs).toContain('id="compass-new-date"');
-    expect(compassJs).toContain("type=\"date\"");
+    expect(compassJs).toContain('type="datetime-local"');
   });
 
-  it('defaults the date to today in Asia/Manila timezone', () => {
+  it('has date reset logic for Asia/Manila timezone', () => {
     expect(compassJs).toContain("toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })");
   });
 
@@ -111,13 +111,13 @@ describe('Sandbox Review Side Panel — CSS', () => {
 
 describe('Cache Versions', () => {
   it('sandbox-redesign.css bumped to v102', () => {
-    expect(indexHtml).toContain('sandbox-redesign.css?v=107');
+    expect(indexHtml).toContain('sandbox-redesign.css?v=122');
   });
   it('compass.js bumped to v120', () => {
-    expect(indexHtml).toContain('compass.js?v=124');
+    expect(indexHtml).toContain('compass.js?v=126');
   });
   it('sandbox.js bumped to v106', () => {
-    expect(indexHtml).toContain('sandbox.js?v=124');
+    expect(indexHtml).toContain('sandbox.js?v=127');
   });
 });
 
