@@ -446,3 +446,104 @@ export const capBuildAssistDocxSchema = z.object({
   issuance_date: z.string().optional(),
   nte_response_text: optionalText,
 }).passthrough();
+
+// ── Tardiness schemas ──────────────────────────────────────────
+
+/** Single row in a tardiness bulk upload */
+const tardinessUploadRow = z.object({
+  ohr: z.string().min(1, "ohr is required").max(20).optional(),
+  OHR: z.string().min(1).max(20).optional(),
+  ohr_id: z.string().min(1).max(20).optional(),
+  date: z.string().optional(),
+  tardiness_date: z.string().optional(),
+  minutes: z.union([z.number(), z.string()]).optional(),
+  tardiness_minutes: z.union([z.number(), z.string()]).optional(),
+}).passthrough().refine(
+  (row) => !!(row.ohr || row.OHR || row.ohr_id),
+  { message: "Each row must have an OHR identifier (ohr, OHR, or ohr_id)" }
+);
+
+/** POST /api/io/tardiness/upload — bulk upload tardiness records */
+export const tardinessUploadSchema = z.object({
+  records: z.array(tardinessUploadRow).min(1, "records array must not be empty"),
+}).passthrough();
+
+/** PATCH /api/io/tardiness/:id — update a single tardiness record */
+export const tardinessUpdateSchema = z.object({
+  validation_status: z.enum(["Valid", "Invalid", "Pending"], {
+    error: "validation_status must be 'Valid', 'Invalid', or 'Pending'",
+  }).optional(),
+  remarks: optionalText,
+  unlock: z.boolean().optional(),
+}).passthrough();
+
+/** PATCH /api/io/tardiness/bulk-validate — bulk validate tardiness records */
+export const tardinessBulkValidateSchema = z.object({
+  ids: z.array(z.union([z.number().int().positive(), z.string().min(1)])).min(1, "ids array must not be empty"),
+  validation_status: z.enum(["Valid", "Invalid"], {
+    error: "validation_status must be 'Valid' or 'Invalid'",
+  }),
+  remarks: optionalText,
+}).strict();
+
+// ── Group Tasks schemas ────────────────────────────────────────
+
+/** POST /api/io/group-tasks — create a new group task */
+export const groupTaskCreateSchema = z.object({
+  title: z.string().min(1, "title is required").max(500),
+  description: optionalText,
+  category: optionalVarchar,
+  planning_groups: z.union([z.array(z.string()), z.null()]).optional(),
+  departments: z.union([z.array(z.string()), z.null()]).optional(),
+  roles: z.union([z.array(z.string()), z.null()]).optional(),
+  excluded_ohrs: z.union([z.array(z.string()), z.null()]).optional(),
+  due_date: dateString.optional(),
+  created_by_ohr: ohrId,
+  created_by_name: optionalVarchar,
+}).passthrough();
+
+/** POST /api/io/group-tasks/preview — preview target employees */
+export const groupTaskPreviewSchema = z.object({
+  planning_groups: z.union([z.array(z.string()), z.null()]).optional(),
+  departments: z.union([z.array(z.string()), z.null()]).optional(),
+  roles: z.union([z.array(z.string()), z.null()]).optional(),
+  excluded_ohrs: z.union([z.array(z.string()), z.null()]).optional(),
+}).passthrough();
+
+/** POST /api/io/group-tasks/:id/complete — mark assignment as completed */
+export const groupTaskCompleteSchema = z.object({
+  ohr: ohrId,
+  attachment_url: z.string().optional(),
+  attachment_urls: z.array(z.any()).optional(),
+}).passthrough();
+
+/** POST /api/io/group-tasks/:id/exclude — exclude OHRs from a group task */
+export const groupTaskExcludeSchema = z.object({
+  ohrs: z.array(z.string().min(1)).min(1, "ohrs array must not be empty"),
+}).strict();
+
+// ── Shift Extension schemas ────────────────────────────────────
+
+/** POST /api/io/shift-extensions — create a new shift extension request */
+export const shiftExtensionCreateSchema = z.object({
+  agent_ohr: ohrId,
+  agent_name: optionalVarchar,
+  supervisor_ohr: ohrId.optional(),
+  supervisor_name: optionalVarchar,
+  planning_group: varchar100.optional(),
+  shift_date: dateString,
+  extension_minutes: z.union([
+    z.number().int().positive("extension_minutes must be positive"),
+    z.string().min(1, "extension_minutes is required"),
+  ]),
+  reason_details: z.string().min(1, "reason_details is required"),
+}).passthrough();
+
+/** PATCH /api/io/shift-extensions/:id/tl-action — TL approve/reject */
+export const shiftExtensionActionSchema = z.object({
+  action: z.enum(["Approved", "Rejected"], {
+    error: "action must be 'Approved' or 'Rejected'",
+  }),
+  comments: optionalText,
+  actioned_by: optionalVarchar,
+}).passthrough();

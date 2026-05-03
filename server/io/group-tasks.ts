@@ -14,6 +14,7 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { sql } from "drizzle-orm";
 import { ioNotifications } from "../../drizzle/schema.js";
+import { validate, groupTaskPreviewSchema, groupTaskCreateSchema, groupTaskCompleteSchema, groupTaskExcludeSchema } from "./validation.js";
 
 const router = Router();
 
@@ -51,7 +52,7 @@ async function resolveTargetEmployees(filters: {
 }
 
 // ── POST /preview — preview how many employees will be assigned ──
-router.post("/preview", async (req: Request, res: Response) => {
+router.post("/preview", validate(groupTaskPreviewSchema), async (req: Request, res: Response) => {
   try {
     const { planning_groups, departments, roles, excluded_ohrs } = req.body;
     const employees = await resolveTargetEmployees({
@@ -71,7 +72,7 @@ router.post("/preview", async (req: Request, res: Response) => {
 });
 
 // ── POST / — create group task + auto-assign ──
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", validate(groupTaskCreateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
@@ -82,9 +83,7 @@ router.post("/", async (req: Request, res: Response) => {
       created_by_ohr, created_by_name,
     } = req.body;
 
-    if (!title || !created_by_ohr) {
-      return res.status(400).json({ error: "title and created_by_ohr are required" });
-    }
+    // title + created_by_ohr enforced by Zod schema
 
     const taskId = "GT-" + Date.now().toString(36).toUpperCase();
     const now = new Date().toISOString();
@@ -301,7 +300,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
 // ── POST /:id/complete — mark own assignment as completed ──
 // Accepts either `attachment_url` (string, legacy) or `attachment_urls` (JSON array of {name,url})
-router.post("/:id/complete", async (req: Request, res: Response) => {
+router.post("/:id/complete", validate(groupTaskCompleteSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
@@ -344,14 +343,14 @@ router.post("/:id/complete", async (req: Request, res: Response) => {
 });
 
 // ── POST /:id/exclude — exclude specific people from a group task ──
-router.post("/:id/exclude", async (req: Request, res: Response) => {
+router.post("/:id/exclude", validate(groupTaskExcludeSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
     const groupTaskId = parseInt(req.params.id);
-    const { ohrs } = req.body; // array of OHR IDs to exclude
-    if (!ohrs || !Array.isArray(ohrs) || isNaN(groupTaskId)) {
-      return res.status(400).json({ error: "ohrs array and valid task ID required" });
+    const { ohrs } = req.body; // array of OHR IDs to exclude — validated by Zod
+    if (isNaN(groupTaskId)) {
+      return res.status(400).json({ error: "Invalid task ID" });
     }
 
     const escaped = ohrs.map((o: string) => `'${o.replace(/'/g, "''")}'`).join(",");

@@ -3807,3 +3807,13 @@
 - [x] Add volume cap (max 10 failures per endpoint per hour) — in-memory sliding window, per-endpoint tracking, auto-prune expired timestamps
 - [x] Write Vitest tests for observability logging (6 tests: logger on failure, not on success, OHR fallback, unknown actor, dedup fields, logger crash protection)
 - [x] Run full test suite — 43 files, 1,520 tests ALL PASSING
+
+## Blueprint Phase 2 — Complete Zod Validation Coverage (Satellite Write Endpoints)
+- [x] Audit tardiness POST, group-tasks POST, shift-extension POST payloads
+- [x] Add Zod schemas for tardiness POST/PATCH (tardinessUploadSchema, tardinessUpdateSchema, tardinessBulkValidateSchema)
+- [x] Add Zod schemas for group-tasks POST (groupTaskCreateSchema, groupTaskPreviewSchema, groupTaskCompleteSchema, groupTaskExcludeSchema)
+- [x] Add Zod schemas for shift-extension POST/PATCH (shiftExtensionCreateSchema, shiftExtensionActionSchema)
+- [x] Wire validate() middleware into all 3 modules (9 endpoints total)
+- [x] Write Vitest tests for all 9 new schemas (51 new tests)
+- [x] Run full test suite — 43 files, 1,576 tests ALL PASSING
+- [x] TypeScript clean (npx tsc --noEmit)

@@ -8,6 +8,7 @@ import { getDb } from "../db.js";
 import { ioTardiness, ioEmployees, ioNotifications } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, inArray, count } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
+import { validate, tardinessUploadSchema, tardinessUpdateSchema, tardinessBulkValidateSchema } from "./validation.js";
 
 const router = Router();
 
@@ -153,15 +154,12 @@ function toCSV(rows: Record<string, any>[]): string {
 // ============================================================
 // POST /tardiness/upload — CSV upload with auto-calculation
 // ============================================================
-router.post("/tardiness/upload", async (req: Request, res: Response) => {
+router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
 
     const { records } = req.body;
-    if (!Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({ error: "No records provided" });
-    }
 
     const batchId = `TARD-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const now = new Date().toISOString();
@@ -356,7 +354,7 @@ router.get("/tardiness", async (req: Request, res: Response) => {
 // ============================================================
 // PATCH /tardiness/:id — validate single item (lock-in)
 // ============================================================
-router.patch("/tardiness/:id", async (req: Request, res: Response) => {
+router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
@@ -408,7 +406,7 @@ router.patch("/tardiness/:id", async (req: Request, res: Response) => {
 // ============================================================
 // PATCH /tardiness/bulk-validate — bulk validation
 // ============================================================
-router.patch("/tardiness/bulk-validate", async (req: Request, res: Response) => {
+router.patch("/tardiness/bulk-validate", validate(tardinessBulkValidateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
@@ -416,13 +414,6 @@ router.patch("/tardiness/bulk-validate", async (req: Request, res: Response) => 
     const actorOhr = String(req.headers["x-actor-ohr"] || "");
     const actorName = String(req.headers["x-actor-name"] || "");
     const { ids, validation_status, remarks } = req.body;
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: "No IDs provided" });
-    }
-    if (!["Valid", "Invalid"].includes(validation_status)) {
-      return res.status(400).json({ error: "validation_status must be 'Valid' or 'Invalid'" });
-    }
 
     const now = new Date().toISOString();
     const idList = ids.map((i: any) => parseInt(i, 10)).filter((i: number) => !isNaN(i));

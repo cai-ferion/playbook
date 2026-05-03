@@ -2,7 +2,7 @@
  * Vitest tests for Zod validation schemas (server/io/validation.ts)
  * Covers: coaching, leaves, attendance schemas + validate middleware
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import {
   validate,
   setValidationLogger,
@@ -1052,5 +1052,446 @@ describe("Validation rejection volume cap", () => {
     _resetVolumeCap();
     fireInvalidRequest("/api/io/coaching");
     expect(logger).toHaveBeenCalledTimes(11); // logged again
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Tardiness schemas
+// ══════════════════════════════════════════════════════════════════
+
+describe("tardinessUploadSchema", () => {
+  let tardinessUploadSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    tardinessUploadSchema = mod.tardinessUploadSchema;
+  });
+
+  it("accepts valid records array with ohr field", () => {
+    const result = tardinessUploadSchema.safeParse({
+      records: [{ ohr: "12345", date: "2025-01-15", minutes: 10 }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts records with OHR (uppercase) field", () => {
+    const result = tardinessUploadSchema.safeParse({
+      records: [{ OHR: "67890", date: "2025-01-15", tardiness_minutes: "5" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts records with ohr_id field", () => {
+    const result = tardinessUploadSchema.safeParse({
+      records: [{ ohr_id: "11111", date: "2025-01-15" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty records array", () => {
+    const result = tardinessUploadSchema.safeParse({ records: [] });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("records array must not be empty");
+  });
+
+  it("rejects missing records field", () => {
+    const result = tardinessUploadSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects row without any OHR identifier", () => {
+    const result = tardinessUploadSchema.safeParse({
+      records: [{ date: "2025-01-15", minutes: 5 }],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("OHR identifier");
+  });
+
+  it("passes through extra fields (backward compat)", () => {
+    const result = tardinessUploadSchema.safeParse({
+      records: [{ ohr: "12345", date: "2025-01-15", extra_field: "hello" }],
+      batch_label: "test",
+    });
+    expect(result.success).toBe(true);
+    expect(result.data.batch_label).toBe("test");
+  });
+});
+
+describe("tardinessUpdateSchema", () => {
+  let tardinessUpdateSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    tardinessUpdateSchema = mod.tardinessUpdateSchema;
+  });
+
+  it("accepts valid validation_status", () => {
+    const result = tardinessUpdateSchema.safeParse({ validation_status: "Valid" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts Pending status", () => {
+    const result = tardinessUpdateSchema.safeParse({ validation_status: "Pending" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts unlock boolean", () => {
+    const result = tardinessUpdateSchema.safeParse({ unlock: true });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts remarks only", () => {
+    const result = tardinessUpdateSchema.safeParse({ remarks: "Checked with agent" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid validation_status enum", () => {
+    const result = tardinessUpdateSchema.safeParse({ validation_status: "Cancelled" });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("'Valid', 'Invalid', or 'Pending'");
+  });
+
+  it("passes through extra fields", () => {
+    const result = tardinessUpdateSchema.safeParse({ validation_status: "Valid", extra: 1 });
+    expect(result.success).toBe(true);
+    expect(result.data.extra).toBe(1);
+  });
+});
+
+describe("tardinessBulkValidateSchema", () => {
+  let tardinessBulkValidateSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    tardinessBulkValidateSchema = mod.tardinessBulkValidateSchema;
+  });
+
+  it("accepts valid ids array with Valid status", () => {
+    const result = tardinessBulkValidateSchema.safeParse({
+      ids: [1, 2, 3],
+      validation_status: "Valid",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts string ids", () => {
+    const result = tardinessBulkValidateSchema.safeParse({
+      ids: ["1", "2"],
+      validation_status: "Invalid",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts optional remarks", () => {
+    const result = tardinessBulkValidateSchema.safeParse({
+      ids: [1],
+      validation_status: "Valid",
+      remarks: "Batch approved",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty ids array", () => {
+    const result = tardinessBulkValidateSchema.safeParse({
+      ids: [],
+      validation_status: "Valid",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("ids array must not be empty");
+  });
+
+  it("rejects invalid validation_status", () => {
+    const result = tardinessBulkValidateSchema.safeParse({
+      ids: [1],
+      validation_status: "Pending",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("'Valid' or 'Invalid'");
+  });
+
+  it("rejects unknown extra fields (strict mode)", () => {
+    const result = tardinessBulkValidateSchema.safeParse({
+      ids: [1],
+      validation_status: "Valid",
+      extra: true,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Group Tasks schemas
+// ══════════════════════════════════════════════════════════════════
+
+describe("groupTaskCreateSchema", () => {
+  let groupTaskCreateSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    groupTaskCreateSchema = mod.groupTaskCreateSchema;
+  });
+
+  const validPayload = {
+    title: "Complete Q1 Training Module",
+    created_by_ohr: "12345",
+  };
+
+  it("accepts minimal valid payload", () => {
+    const result = groupTaskCreateSchema.safeParse(validPayload);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts full payload with all optional fields", () => {
+    const result = groupTaskCreateSchema.safeParse({
+      ...validPayload,
+      description: "Complete the module by EOD",
+      category: "Training",
+      planning_groups: ["GY Shift"],
+      departments: ["COMMUNITY_OPS"],
+      roles: ["Agent"],
+      excluded_ohrs: ["99999"],
+      due_date: "2025-02-01",
+      created_by_name: "TL Arvin",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing title", () => {
+    const result = groupTaskCreateSchema.safeParse({ created_by_ohr: "12345" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing created_by_ohr", () => {
+    const result = groupTaskCreateSchema.safeParse({ title: "Test Task" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts null for array fields", () => {
+    const result = groupTaskCreateSchema.safeParse({
+      ...validPayload,
+      planning_groups: null,
+      departments: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("passes through extra fields", () => {
+    const result = groupTaskCreateSchema.safeParse({ ...validPayload, priority: "high" });
+    expect(result.success).toBe(true);
+    expect(result.data.priority).toBe("high");
+  });
+});
+
+describe("groupTaskPreviewSchema", () => {
+  let groupTaskPreviewSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    groupTaskPreviewSchema = mod.groupTaskPreviewSchema;
+  });
+
+  it("accepts empty body (all filters optional)", () => {
+    const result = groupTaskPreviewSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts planning_groups filter", () => {
+    const result = groupTaskPreviewSchema.safeParse({ planning_groups: ["GY Shift"] });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null values for filters", () => {
+    const result = groupTaskPreviewSchema.safeParse({
+      planning_groups: null,
+      departments: null,
+      roles: null,
+      excluded_ohrs: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("passes through extra fields", () => {
+    const result = groupTaskPreviewSchema.safeParse({ planning_groups: ["GY Shift"], custom: 1 });
+    expect(result.success).toBe(true);
+    expect(result.data.custom).toBe(1);
+  });
+});
+
+describe("groupTaskCompleteSchema", () => {
+  let groupTaskCompleteSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    groupTaskCompleteSchema = mod.groupTaskCompleteSchema;
+  });
+
+  it("accepts valid ohr", () => {
+    const result = groupTaskCompleteSchema.safeParse({ ohr: "12345" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts ohr with attachment_url", () => {
+    const result = groupTaskCompleteSchema.safeParse({
+      ohr: "12345",
+      attachment_url: "https://example.com/file.pdf",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts ohr with attachment_urls array", () => {
+    const result = groupTaskCompleteSchema.safeParse({
+      ohr: "12345",
+      attachment_urls: [{ name: "doc.pdf", url: "https://example.com/doc.pdf" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing ohr", () => {
+    const result = groupTaskCompleteSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("passes through extra fields", () => {
+    const result = groupTaskCompleteSchema.safeParse({ ohr: "12345", notes: "done" });
+    expect(result.success).toBe(true);
+    expect(result.data.notes).toBe("done");
+  });
+});
+
+describe("groupTaskExcludeSchema", () => {
+  let groupTaskExcludeSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    groupTaskExcludeSchema = mod.groupTaskExcludeSchema;
+  });
+
+  it("accepts valid ohrs array", () => {
+    const result = groupTaskExcludeSchema.safeParse({ ohrs: ["12345", "67890"] });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty ohrs array", () => {
+    const result = groupTaskExcludeSchema.safeParse({ ohrs: [] });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("ohrs array must not be empty");
+  });
+
+  it("rejects missing ohrs field", () => {
+    const result = groupTaskExcludeSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown extra fields (strict mode)", () => {
+    const result = groupTaskExcludeSchema.safeParse({ ohrs: ["12345"], reason: "test" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// Shift Extension schemas
+// ══════════════════════════════════════════════════════════════════
+
+describe("shiftExtensionCreateSchema", () => {
+  let shiftExtensionCreateSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    shiftExtensionCreateSchema = mod.shiftExtensionCreateSchema;
+  });
+
+  const validPayload = {
+    agent_ohr: "12345",
+    shift_date: "2025-01-20",
+    extension_minutes: 30,
+    reason_details: "Need to complete production hours",
+  };
+
+  it("accepts valid minimal payload", () => {
+    const result = shiftExtensionCreateSchema.safeParse(validPayload);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts full payload with optional fields", () => {
+    const result = shiftExtensionCreateSchema.safeParse({
+      ...validPayload,
+      agent_name: "Juan Dela Cruz",
+      supervisor_ohr: "99999",
+      supervisor_name: "TL Arvin",
+      planning_group: "GY Shift",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts extension_minutes as string", () => {
+    const result = shiftExtensionCreateSchema.safeParse({
+      ...validPayload,
+      extension_minutes: "45",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing agent_ohr", () => {
+    const { agent_ohr, ...rest } = validPayload;
+    const result = shiftExtensionCreateSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing shift_date", () => {
+    const { shift_date, ...rest } = validPayload;
+    const result = shiftExtensionCreateSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing reason_details", () => {
+    const { reason_details, ...rest } = validPayload;
+    const result = shiftExtensionCreateSchema.safeParse(rest);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid shift_date format", () => {
+    const result = shiftExtensionCreateSchema.safeParse({
+      ...validPayload,
+      shift_date: "Jan 20 2025",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("YYYY-MM-DD");
+  });
+
+  it("passes through extra fields", () => {
+    const result = shiftExtensionCreateSchema.safeParse({ ...validPayload, urgency: "high" });
+    expect(result.success).toBe(true);
+    expect(result.data.urgency).toBe("high");
+  });
+});
+
+describe("shiftExtensionActionSchema", () => {
+  let shiftExtensionActionSchema: any;
+  beforeAll(async () => {
+    const mod = await import("./io/validation.js");
+    shiftExtensionActionSchema = mod.shiftExtensionActionSchema;
+  });
+
+  it("accepts Approved action", () => {
+    const result = shiftExtensionActionSchema.safeParse({ action: "Approved" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts Rejected action with comments", () => {
+    const result = shiftExtensionActionSchema.safeParse({
+      action: "Rejected",
+      comments: "Not enough justification",
+      actioned_by: "TL Arvin",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid action value", () => {
+    const result = shiftExtensionActionSchema.safeParse({ action: "Pending" });
+    expect(result.success).toBe(false);
+    expect(result.error.issues[0].message).toContain("'Approved' or 'Rejected'");
+  });
+
+  it("rejects missing action field", () => {
+    const result = shiftExtensionActionSchema.safeParse({ comments: "test" });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes through extra fields", () => {
+    const result = shiftExtensionActionSchema.safeParse({ action: "Approved", extra: true });
+    expect(result.success).toBe(true);
+    expect(result.data.extra).toBe(true);
   });
 });

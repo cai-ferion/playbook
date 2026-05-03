@@ -10,6 +10,7 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { ioShiftExtensions, ioNotifications } from "../../drizzle/schema.js";
 import { eq, desc, sql, and } from "drizzle-orm";
+import { validate, shiftExtensionCreateSchema, shiftExtensionActionSchema } from "./validation.js";
 
 const router = Router();
 
@@ -32,7 +33,7 @@ router.get("/", async (req: Request, res: Response) => {
 });
 
 // ===== POST create a new shift extension request =====
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", validate(shiftExtensionCreateSchema), async (req: Request, res: Response) => {
   try {
     const {
       agent_ohr, agent_name, supervisor_ohr, supervisor_name,
@@ -40,9 +41,7 @@ router.post("/", async (req: Request, res: Response) => {
       reason_details
     } = req.body;
 
-    if (!agent_ohr || !shift_date || !extension_minutes || !reason_details) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
+    // Required fields enforced by Zod schema
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "Database unavailable" });
@@ -96,15 +95,13 @@ router.get("/:id", async (req: Request, res: Response) => {
 });
 
 // ===== PATCH TL action (approve/reject) =====
-router.patch("/:id/tl-action", async (req: Request, res: Response) => {
+router.patch("/:id/tl-action", validate(shiftExtensionActionSchema), async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
     const { action, comments, actioned_by } = req.body;
-    if (!action || !["Approved", "Rejected"].includes(action)) {
-      return res.status(400).json({ error: "Invalid action. Must be Approved or Rejected" });
-    }
+    // action enum validated by Zod schema
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "Database unavailable" });
@@ -131,15 +128,13 @@ router.patch("/:id/tl-action", async (req: Request, res: Response) => {
 });
 
 // ===== PATCH OM action (approve/reject) — triggers notifications =====
-router.patch("/:id/om-action", async (req: Request, res: Response) => {
+router.patch("/:id/om-action", validate(shiftExtensionActionSchema), async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
 
     const { action, comments, actioned_by } = req.body;
-    if (!action || !["Approved", "Rejected"].includes(action)) {
-      return res.status(400).json({ error: "Invalid action. Must be Approved or Rejected" });
-    }
+    // action enum validated by Zod schema
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "Database unavailable" });
