@@ -12,6 +12,7 @@ import { ioShiftExtensions, ioNotifications } from "../../drizzle/schema.js";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { validate, shiftExtensionCreateSchema, shiftExtensionActionSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -111,17 +112,24 @@ router.patch("/:id/tl-action", validate(shiftExtensionActionSchema), async (req:
     const now = new Date().toISOString();
     const newOverall = action === "Approved" ? "Pending OM" : "Rejected";
 
-    await db
-      .update(ioShiftExtensions)
-      .set({
+    const tlUpdateFields = {
         tl_status: action,
         tl_comments: comments || null,
         tl_actioned_by: actioned_by || "",
         tl_actioned_at: now,
         overall_status: newOverall,
         updated_at: now,
-      })
-      .where(eq(ioShiftExtensions.id, id));
+      };
+    const clientVersionTl = getClientVersion(req.body);
+    if (clientVersionTl !== null) {
+      const lockResult = await optimisticUpdate(db, ioShiftExtensions, ioShiftExtensions.id, id, clientVersionTl, tlUpdateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Not found" });
+        return sendConflict(res, clientVersionTl, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioShiftExtensions).set(tlUpdateFields).where(eq(ioShiftExtensions.id, id));
+    }
 
     emitChange(req, "shift-extensions", "record_updated", { id: Number(req.params.id), action: "tl" });
     emitChange(req, "shift-extensions", "record_updated", { id: Number(req.params.id), action: "tl" });
@@ -145,17 +153,24 @@ router.patch("/:id/om-action", validate(shiftExtensionActionSchema), async (req:
     if (!db) return res.status(503).json({ error: "Database unavailable" });
     const now = new Date().toISOString();
 
-    await db
-      .update(ioShiftExtensions)
-      .set({
+    const omUpdateFields = {
         om_status: action,
         om_comments: comments || null,
         om_actioned_by: actioned_by || "",
         om_actioned_at: now,
         overall_status: action,
         updated_at: now,
-      })
-      .where(eq(ioShiftExtensions.id, id));
+      };
+    const clientVersionOm = getClientVersion(req.body);
+    if (clientVersionOm !== null) {
+      const lockResult = await optimisticUpdate(db, ioShiftExtensions, ioShiftExtensions.id, id, clientVersionOm, omUpdateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Not found" });
+        return sendConflict(res, clientVersionOm, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioShiftExtensions).set(omUpdateFields).where(eq(ioShiftExtensions.id, id));
+    }
 
     // Fetch the record to get agent/TL info for notifications
     const rows = await db

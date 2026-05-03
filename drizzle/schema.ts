@@ -71,6 +71,7 @@ export const ioEmployees = mysqlTable("io_employees", {
   exit_reason: varchar("exit_reason", { length: 255 }),
   department: varchar("department", { length: 128 }),
   sex: varchar("sex", { length: 2 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoEmployee = typeof ioEmployees.$inferSelect;
@@ -100,6 +101,7 @@ export const ioAttendance = mysqlTable("io_attendance", {
   internal_planning_group: varchar("internal_planning_group", { length: 100 }),
   wfm_tag: varchar("wfm_tag", { length: 50 }),
   batch_id: varchar("batch_id", { length: 50 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoAttendance = typeof ioAttendance.$inferSelect;
@@ -174,6 +176,7 @@ export const ioCoaching = mysqlTable("io_coaching", {
   job_id: varchar("job_id", { length: 100 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoCoaching = typeof ioCoaching.$inferSelect;
@@ -224,6 +227,7 @@ export const ioCoachingNte = mysqlTable("io_coaching_nte", {
   issued_by_ohr: varchar("issued_by_ohr", { length: 20 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoCoachingNte = typeof ioCoachingNte.$inferSelect;
@@ -314,6 +318,7 @@ export const ioInsights = mysqlTable("io_insights", {
   batch_id: varchar("batch_id", { length: 50 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoInsight = typeof ioInsights.$inferSelect;
@@ -344,6 +349,7 @@ export const ioLeaves = mysqlTable("io_leaves", {
   cancelled_at: varchar("cancelled_at", { length: 64 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoLeave = typeof ioLeaves.$inferSelect;
@@ -388,6 +394,7 @@ export const ioShiftExtensions = mysqlTable("io_shift_extensions", {
   overall_status: varchar("overall_status", { length: 30 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoShiftExtension = typeof ioShiftExtensions.$inferSelect;
@@ -412,6 +419,7 @@ export const ioTasks = mysqlTable("io_tasks", {
   attachments: text("attachments"),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 export type IoTask = typeof ioTasks.$inferSelect;
 export type InsertIoTask = typeof ioTasks.$inferInsert;
@@ -830,6 +838,7 @@ export const ioCorrectiveActions = mysqlTable("io_corrective_actions", {
   created_by_ohr: varchar("created_by_ohr", { length: 20 }),
   created_at: varchar("created_at", { length: 64 }),
   updated_at: varchar("updated_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 export type IoCorrectiveAction = typeof ioCorrectiveActions.$inferSelect;
 export type InsertIoCorrectiveAction = typeof ioCorrectiveActions.$inferInsert;
@@ -891,6 +900,7 @@ export const ioTardiness = mysqlTable("io_tardiness", {
   // ── Upload Tracking ──
   upload_batch: varchar("upload_batch", { length: 64 }),
   created_at: varchar("created_at", { length: 64 }),
+  version: int("version").notNull().default(1),
 });
 
 export type IoTardiness = typeof ioTardiness.$inferSelect;

@@ -8,6 +8,7 @@ import { ioLeaves, ioNotifications, ioEmployees } from "../../drizzle/schema.js"
 import { eq, and, gte, lte, sql, desc, or, count } from "drizzle-orm";
 import { validate, leaveCreateSchema, leavesBulkActionSchema, leaveCancelSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -103,7 +104,17 @@ router.patch("/leaves/:leave_id", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    await db.update(ioLeaves).set(req.body).where(eq(ioLeaves.leave_id, req.params.leave_id));
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = req.body;
+      const lockResult = await optimisticUpdate(db, ioLeaves, ioLeaves.leave_id, req.params.leave_id, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Leave not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioLeaves).set(req.body).where(eq(ioLeaves.leave_id, req.params.leave_id));
+    }
     emitChange(req, "leaves", "record_updated", { leave_id: req.params.leave_id });
     res.json({ ok: true });
   } catch (err: any) {

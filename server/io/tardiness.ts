@@ -10,6 +10,7 @@ import { eq, and, gte, lte, sql, desc, inArray, count } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
 import { validate, tardinessUploadSchema, tardinessUpdateSchema, tardinessBulkValidateSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -384,7 +385,7 @@ router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Requ
     // Admin unlock: reset to Pending
     if (unlock && isAdmin) {
       await db.execute(
-        sql`UPDATE io_tardiness SET validation_status = 'Pending', validated_by = NULL, validated_by_ohr = NULL, validated_at = NULL, remarks = NULL WHERE id = ${id}`
+        sql`UPDATE io_tardiness SET validation_status = 'Pending', validated_by = NULL, validated_by_ohr = NULL, validated_at = NULL, remarks = NULL, version = version + 1 WHERE id = ${id}`
       );
       emitChange(req, "tardiness", "record_updated", { id: Number(req.params.id), action: "unlocked" });
       return res.json({ success: true, action: "unlocked" });
@@ -396,7 +397,7 @@ router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Requ
 
     const now = new Date().toISOString();
     await db.execute(
-      sql`UPDATE io_tardiness SET validation_status = ${validation_status}, validated_by = ${actorName}, validated_by_ohr = ${actorOhr}, validated_at = ${now}, remarks = ${remarks || null} WHERE id = ${id}`
+      sql`UPDATE io_tardiness SET validation_status = ${validation_status}, validated_by = ${actorName}, validated_by_ohr = ${actorOhr}, validated_at = ${now}, remarks = ${remarks || null}, version = version + 1 WHERE id = ${id}`
     );
 
     emitChange(req, "tardiness", "record_updated", { id: Number(req.params.id), action: "validated" });

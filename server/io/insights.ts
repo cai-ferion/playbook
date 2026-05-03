@@ -9,6 +9,7 @@ import { ioInsights } from "../../drizzle/schema.js";
 import { eq, desc, sql, inArray } from "drizzle-orm";
 import { ADMIN_OHRS } from "./shared.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -55,7 +56,17 @@ router.patch("/insights/:insight_id", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
-    await db.update(ioInsights).set(req.body).where(eq(ioInsights.insight_id, req.params.insight_id));
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = req.body;
+      const lockResult = await optimisticUpdate(db, ioInsights, ioInsights.insight_id, req.params.insight_id, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Insight not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioInsights).set(req.body).where(eq(ioInsights.insight_id, req.params.insight_id));
+    }
     emitChange(req, "insights", "record_updated", { insight_id: req.params.insight_id });
     res.json({ ok: true });
   } catch (err: any) {

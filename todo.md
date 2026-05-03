@@ -3839,3 +3839,16 @@
 - [x] Graceful degradation — visibility-based disconnect/reconnect + exponential backoff
 - [x] Write Vitest tests for SSE infrastructure (11 tests)
 - [x] Full test suite passing (44 files, 1,587 tests) + TypeScript clean
+
+## Blueprint Phase 3 — Optimistic Locking + Conflict UI
+- [x] Audit editable tables — identified 10 tables with concurrent edit risk
+- [x] Add `version` INT column (default 1) to all 10 editable tables
+- [x] SQL migration: ALTER TABLE ADD COLUMN version (applied to all 10 tables)
+- [x] Update Drizzle schema with version columns
+- [x] Implement version-aware UPDATE helper (optimisticUpdate, sendConflict, getClientVersion)
+- [x] Return 409 Conflict with server_state when version mismatch detected
+- [x] Wire conflict detection into all 12 PATCH endpoints (backward-compatible: skips if no version sent)
+- [x] Client-side: fetchWithConflictHandling wrapper detects 409 and triggers dialog
+- [x] Conflict dialog: field-by-field diff with Force/Accept/Merge options
+- [x] Write Vitest tests for optimistic locking logic (14 tests)
+- [x] Full test suite passing (45 files, 1,601 tests) + TypeScript clean

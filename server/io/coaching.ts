@@ -9,6 +9,7 @@ import { eq, and, sql, desc, asc } from "drizzle-orm";
 import { ADMIN_OHRS } from "./shared.js";
 import { validate, coachingCreateSchema, coachingUpdateSchema, coachingRcaCreateSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -147,12 +148,24 @@ router.patch("/coaching/:id", validate(coachingUpdateSchema), async (req: Reques
 
     const paramId = req.params.id;
     const updates = { ...req.body, updated_at: new Date().toISOString() };
+    const clientVersion = getClientVersion(req.body);
     // Route by ID type: pure numeric → match by auto-increment id; otherwise → match by coaching_id
     const isNumericId = /^\d+$/.test(paramId);
-    if (isNumericId) {
-      await db.update(ioCoaching).set(updates).where(eq(ioCoaching.id, Number(paramId)));
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = updates;
+      const idCol = isNumericId ? ioCoaching.id : ioCoaching.coaching_id;
+      const idVal = isNumericId ? Number(paramId) : paramId;
+      const lockResult = await optimisticUpdate(db, ioCoaching, idCol, idVal, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Record not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
     } else {
-      await db.update(ioCoaching).set(updates).where(eq(ioCoaching.coaching_id, paramId));
+      if (isNumericId) {
+        await db.update(ioCoaching).set(updates).where(eq(ioCoaching.id, Number(paramId)));
+      } else {
+        await db.update(ioCoaching).set(updates).where(eq(ioCoaching.coaching_id, paramId));
+      }
     }
     emitChange(req, "coaching", "record_updated", { id: paramId });
     res.json({ ok: true });
@@ -343,7 +356,17 @@ router.patch("/coaching-nte/:id", async (req: Request, res: Response) => {
 
     const nteId = req.params.id;
     const updates = { ...req.body, updated_at: new Date().toISOString() };
-    await db.update(ioCoachingNte).set(updates).where(eq(ioCoachingNte.id, nteId));
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = updates;
+      const lockResult = await optimisticUpdate(db, ioCoachingNte, ioCoachingNte.id, nteId, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "NTE not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioCoachingNte).set(updates).where(eq(ioCoachingNte.id, nteId));
+    }
     emitChange(req, "coaching", "record_updated", { sub: "nte", id: nteId });
     res.json({ ok: true });
   } catch (err: any) {

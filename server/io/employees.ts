@@ -14,6 +14,7 @@ import { eq, and, gte, lte, asc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { syncEmployeesToSupabase, deleteEmployeesFromSupabase } from "../supabase-sync.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -92,7 +93,17 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
     // Fetch current state for audit diff
     const [before] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
 
-    await db.update(ioEmployees).set(updates).where(eq(ioEmployees.ohr_id, ohr_id));
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = updates;
+      const lockResult = await optimisticUpdate(db, ioEmployees, ioEmployees.ohr_id, ohr_id, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Employee not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioEmployees).set(updates).where(eq(ioEmployees.ohr_id, ohr_id));
+    }
 
     // Audit logging: log each changed field
     if (before && actorOhr) {

@@ -11,6 +11,7 @@ import { ADMIN_OHRS } from "../config.js";
 import { getManagerOhrSet } from "./shared.js";
 import { validate, attendanceBulkImportSchema, attendanceBulkTagSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -314,9 +315,19 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       }
     }
 
-    // Apply update
-    await db.update(ioAttendance).set(updates).where(eq(ioAttendance.id, recordId));
-
+     // Apply update (with optimistic locking if client sends version)
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      // Remove version from updates to avoid double-set
+      const { version: _v, ...updateFields } = updates;
+      const lockResult = await optimisticUpdate(db, ioAttendance, ioAttendance.id, recordId, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Record not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioAttendance).set(updates).where(eq(ioAttendance.id, recordId));
+    }
     // Insert audit log entries
     if (auditEntries.length > 0) {
       for (const entry of auditEntries) {

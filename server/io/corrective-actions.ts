@@ -19,6 +19,7 @@ import {
   capBuildAssistDocxSchema,
 } from "./validation.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -631,7 +632,17 @@ router.patch("/corrective-actions/:id", validate(correctiveActionUpdateSchema), 
       }
     }
 
-    await db.update(ioCorrectiveActions).set(updates).where(eq(ioCorrectiveActions.id, id));
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = updates;
+      const lockResult = await optimisticUpdate(db, ioCorrectiveActions, ioCorrectiveActions.id, id, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioCorrectiveActions).set(updates).where(eq(ioCorrectiveActions.id, id));
+    }
 
     const [updated] = await db.select().from(ioCorrectiveActions)
       .where(eq(ioCorrectiveActions.id, id));

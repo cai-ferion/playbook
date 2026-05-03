@@ -589,6 +589,7 @@ function normalizeRecord(att) {
     concat: dateStr ? generateConcat(dateStr, (att.ohr_id || '').toString().trim()) : '',
     wfm_tag: (att.wfm_tag || '').trim(),
     is_locked: att.is_locked === true || att.is_locked === 1,
+    _version: att.version || 1,
   };
 }
 
@@ -734,23 +735,27 @@ async function saveRecords(edits) {
       if (edit.ot_hours !== undefined) payload.ot_hours = edit.ot_hours;
       if (edit.role !== undefined) payload.role = edit.role;
       if (edit.planning_group !== undefined) payload.planning_group = edit.planning_group;
-
+      // Attach version for optimistic locking (if available)
+      if (edit._version) payload.version = edit._version;
       const actorHeaders = {};
       if (typeof currentUser !== 'undefined' && currentUser) {
         actorHeaders['x-actor-ohr'] = currentUser.ohr_id || '';
         actorHeaders['x-actor-name'] = currentUser.full_name || '';
       }
-      const resp = await fetch(`${IO_API_BASE}/attendance/${id}`, {
+      const resp = await fetchWithConflictHandling(`${IO_API_BASE}/attendance/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...actorHeaders },
         body: JSON.stringify(payload)
-      });
+      }, { tag: 'Tag', upl_reason: 'UPL Reason', remarks: 'Remarks', ot_hours: 'OT Hours', role: 'Role', planning_group: 'Planning Group' });
 
-      if (resp.ok) {
+      if (resp.ok || resp._synthetic) {
         successCount++;
-      } else {
+      } else if (resp.status !== 409) {
         failCount++;
         console.error('Save error for id', id, ':', await resp.text());
+      } else {
+        // 409 was handled by conflict dialog but user may have retried
+        failCount++;
       }
     }
 

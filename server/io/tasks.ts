@@ -9,6 +9,7 @@ import { eq, desc, asc } from "drizzle-orm";
 import crypto from "crypto";
 import { sendTaskAssignmentNotifications, generateTaskId } from "./shared.js";
 import { emitChange } from "./emit-change.js";
+import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
 
 const router = Router();
 
@@ -61,7 +62,17 @@ router.patch("/tasks/:taskId", async (req: Request, res: Response) => {
     const { taskId } = req.params;
     const now = new Date().toISOString();
     const updates = { ...req.body, updated_at: now };
-    await db.update(ioTasks).set(updates).where(eq(ioTasks.task_id, taskId));
+    const clientVersion = getClientVersion(req.body);
+    if (clientVersion !== null) {
+      const { version: _v, ...updateFields } = updates;
+      const lockResult = await optimisticUpdate(db, ioTasks, ioTasks.task_id, taskId, clientVersion, updateFields);
+      if (!lockResult.ok) {
+        if (lockResult.reason === "not_found") return res.status(404).json({ error: "Task not found" });
+        return sendConflict(res, clientVersion, lockResult.serverState);
+      }
+    } else {
+      await db.update(ioTasks).set(updates).where(eq(ioTasks.task_id, taskId));
+    }
     emitChange(req, "tasks", "record_updated", { task_id: taskId });
     res.json({ ok: true });
   } catch (err: any) {
