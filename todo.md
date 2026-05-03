@@ -3817,3 +3817,13 @@
 - [x] Write Vitest tests for all 9 new schemas (51 new tests)
 - [x] Run full test suite — 43 files, 1,576 tests ALL PASSING
 - [x] TypeScript clean (npx tsc --noEmit)
+
+## Blueprint Phase 1 — Database Index Migration
+- [x] Audit all 34 tables for existing indexes (found 12 tables with NO indexes)
+- [x] Design index strategy based on query patterns across all route modules
+- [x] Create migration SQL (drizzle/migrations/add_indexes_phase1.sql)
+- [x] Apply 33 new indexes to 14 previously-unindexed tables
+- [x] Add supplemental indexes to already-indexed tables (tardiness, coaching, perf_sync_history)
+- [x] Validate via EXPLAIN: TiDB optimizer now uses IndexLookUp/IndexRangeScan on all hot paths
+- [x] Full test suite: 43 files, 1,576 tests ALL PASSING
+- [x] Result: 85 non-PK indexes across 34 tables — 100% table coverage (was 0 indexes on 12 tables)
