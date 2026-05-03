@@ -14,6 +14,7 @@ import {
 } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, inArray, or } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
+import { validate, roleChangeGenerateSchema } from "./validation.js";
 
 const router = Router();
 
@@ -354,7 +355,7 @@ router.get("/available-staff", async (req: Request, res: Response) => {
 // Creates role change records, generates email HTML,
 // and auto-updates attendance records
 // ============================================================
-router.post("/generate", async (req: Request, res: Response) => {
+router.post("/generate", validate(roleChangeGenerateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });

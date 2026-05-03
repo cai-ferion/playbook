@@ -34,8 +34,38 @@
  * └─────────────────────┴──────────────────────┴────────────────────┘
  */
 import { Router } from "express";
+import { setValidationLogger } from "./validation.js";
+import type { ValidationRejection } from "./validation.js";
 
 const ioRouter = Router();
+
+// ── Wire observability logger (fire-and-forget to io_audit_log) ──
+// Logs rejected payloads: endpoint, method, actor OHR, failed fields.
+// NEVER logs field values (PII). Silently drops on DB error.
+setValidationLogger((entry: ValidationRejection) => {
+  import("../db.js").then(({ getDb }) => {
+    getDb().then((db: any) => {
+      if (!db) return;
+      import("../../drizzle/schema.js").then(({ ioAuditLog }) => {
+        db.insert(ioAuditLog).values({
+          record_type: "validation_rejection",
+          record_id: entry.endpoint,
+          action: `${entry.method} rejected`,
+          field_name: entry.failed_fields.slice(0, 5).join(", "),
+          old_value: null,
+          new_value: null,
+          actor_ohr: entry.actor_ohr.slice(0, 20),
+          actor_name: null,
+          timestamp: entry.timestamp,
+          metadata: JSON.stringify({
+            error_summary: entry.error_summary.slice(0, 200),
+            failed_fields: entry.failed_fields.slice(0, 10),
+          }),
+        }).execute().catch(() => { /* swallow — observability must never break requests */ });
+      }).catch(() => {});
+    }).catch(() => {});
+  }).catch(() => {});
+});
 
 // ── Sub-Phase 2.3 — simple modules ────────────────────────────────
 import employeesRouter from "./employees.js";

@@ -7,6 +7,7 @@ import { getDb } from "../db.js";
 import { ioPermissions, ioEmployees, ioAuditLog } from "../../drizzle/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ADMIN_OHRS, getPermissionDefaults, ALL_PERMISSION_KEYS } from "./shared.js";
+import { validate, permissionsUpdateSchema, permissionsSeedSchema, permissionsBulkKeyUpdateSchema } from "./validation.js";
 import { OWNER_OHR } from "../config.js";
 
 const router = Router();
@@ -98,7 +99,7 @@ router.get("/permissions/:ohr_id", async (req: Request, res: Response) => {
 });
 
 // PUT /api/io/permissions/:ohr_id — update permissions (admin only)
-router.put("/permissions/:ohr_id", async (req: Request, res: Response) => {
+router.put("/permissions/:ohr_id", validate(permissionsUpdateSchema), async (req: Request, res: Response) => {
   try {
     const { ohr_id } = req.params;
     const { permissions, actor_ohr, actor_name } = req.body;
@@ -170,7 +171,7 @@ router.put("/permissions/:ohr_id", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/permissions/seed/:ohr_id — seed defaults for a single employee (used when new employee added)
-router.post("/permissions/seed/:ohr_id", async (req: Request, res: Response) => {
+router.post("/permissions/seed/:ohr_id", validate(permissionsSeedSchema), async (req: Request, res: Response) => {
   try {
     const { ohr_id } = req.params;
     const { role } = req.body;
@@ -205,7 +206,7 @@ router.post("/permissions/seed/:ohr_id", async (req: Request, res: Response) => 
 });
 
 // POST /api/io/permissions/bulk-key-update — update a single permission key for all employees (admin only)
-router.post("/permissions/bulk-key-update", async (req: Request, res: Response) => {
+router.post("/permissions/bulk-key-update", validate(permissionsBulkKeyUpdateSchema), async (req: Request, res: Response) => {
   try {
     const { permission_key, granted, actor_ohr } = req.body;
     if (!permission_key || typeof granted !== 'boolean') {

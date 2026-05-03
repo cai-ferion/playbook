@@ -9,6 +9,15 @@ import { ioCorrectiveActions, ioEmployees, ioNotifications } from "../../drizzle
 import { eq, and, gte, lte, desc, or } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm.js";
 import crypto from "crypto";
+import {
+  validate,
+  correctiveActionCreateSchema,
+  correctiveActionUpdateSchema,
+  nteBuildAssistGenerateSchema,
+  nteBuildAssistDocxSchema,
+  capBuildAssistGenerateSchema,
+  capBuildAssistDocxSchema,
+} from "./validation.js";
 
 const router = Router();
 
@@ -26,7 +35,7 @@ const CAP_ACTIVE_DAYS: Record<string, number> = {
 // NTE BUILD ASSIST — AI Narrative Generation
 // ============================================================
 
-router.post("/nte-build-assist/generate", async (req: Request, res: Response) => {
+router.post("/nte-build-assist/generate", validate(nteBuildAssistGenerateSchema), async (req: Request, res: Response) => {
   try {
     const { employee, violation, violations, cap_level, date_range, attendance, previous_ntes } = req.body;
     const allViolations = (violations && violations.length > 0) ? violations : (violation ? [violation] : []);
@@ -147,7 +156,7 @@ Format your response as JSON with two keys: "narrative" (HTML string) and "polic
 // NTE BUILD ASSIST — DOCX Document Generation
 // ============================================================
 
-router.post("/nte-build-assist/docx", async (req: Request, res: Response) => {
+router.post("/nte-build-assist/docx", validate(nteBuildAssistDocxSchema), async (req: Request, res: Response) => {
   try {
     const { generateNTEDocx } = await import("../nte-docx-generator.js");
     const {
@@ -319,7 +328,7 @@ router.get("/corrective-actions/:id", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/corrective-actions — create new NTE
-router.post("/corrective-actions", async (req: Request, res: Response) => {
+router.post("/corrective-actions", validate(correctiveActionCreateSchema), async (req: Request, res: Response) => {
   try {
     if (!(await caEnforceRole(req, res))) return;
     const db = await getDb();
@@ -450,7 +459,7 @@ router.post("/corrective-actions", async (req: Request, res: Response) => {
 });
 
 // PATCH /api/io/corrective-actions/:id — update (assign CAP, dismiss)
-router.patch("/corrective-actions/:id", async (req: Request, res: Response) => {
+router.patch("/corrective-actions/:id", validate(correctiveActionUpdateSchema), async (req: Request, res: Response) => {
   try {
     if (!(await caEnforceRole(req, res))) return;
     const db = await getDb();
@@ -636,7 +645,7 @@ router.patch("/corrective-actions/:id", async (req: Request, res: Response) => {
 // CAP BUILD ASSIST — DOCX Document Generation
 // ============================================================
 
-router.post("/cap-build-assist/docx", async (req: Request, res: Response) => {
+router.post("/cap-build-assist/docx", validate(capBuildAssistDocxSchema), async (req: Request, res: Response) => {
   try {
     const {
       cap_level, employee, explanation_date, explanation_summary,
@@ -752,7 +761,7 @@ router.post("/cap-build-assist/docx", async (req: Request, res: Response) => {
 // CAP BUILD ASSIST — AI Narrative Generation
 // ============================================================
 
-router.post("/cap-build-assist/generate", async (req: Request, res: Response) => {
+router.post("/cap-build-assist/generate", validate(capBuildAssistGenerateSchema), async (req: Request, res: Response) => {
   try {
     const { employee, violation, violations, cap_level, explanation_date, explanation_summary, nte_narrative, previous_caps } = req.body;
 

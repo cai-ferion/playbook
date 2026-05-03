@@ -3791,3 +3791,19 @@
 - [x] Write Vitest tests for all schemas (39 tests in io-validation.test.ts — valid/invalid payloads, error messages, passthrough, strict mode)
 - [x] Run full test suite — 43 files, 1,468 tests ALL PASSING
 - [x] TypeScript clean (npx tsc --noEmit)
+
+## Blueprint Phase 2 — Extend Zod Validation to Remaining Write Endpoints
+- [x] Audit corrective-actions, permissions, role-change POST/PATCH payloads
+- [x] Add Zod schemas for permissions CRUD (permissionsUpdateSchema, permissionsSeedSchema, permissionsBulkKeyUpdateSchema)
+- [x] Add Zod schemas for role-change POST (roleChangeGenerateSchema with assignment array validation)
+- [x] Add Zod schemas for corrective-actions (correctiveActionCreateSchema, correctiveActionUpdateSchema, nteBuildAssistGenerateSchema, nteBuildAssistDocxSchema, capBuildAssistGenerateSchema, capBuildAssistDocxSchema)
+- [x] Write Vitest tests for all 10 new schemas (46 new tests)
+- [x] Run full test suite — 43 files, 1,520 tests ALL PASSING
+- [x] TypeScript clean (npx tsc --noEmit)
+
+## Blueprint Phase 2 — Observability: Validation Rejection Logging
+- [x] Add fire-and-forget audit logging to validate() middleware (setValidationLogger + dynamic import in io/index.ts)
+- [x] Log: endpoint, method, actor OHR, failed field names, error summary → io_audit_log (record_type=validation_rejection). NEVER logs field values (PII protection)
+- [ ] Add volume cap (max 10 failures per endpoint per hour) — deferred, low priority until traffic warrants it
+- [x] Write Vitest tests for observability logging (6 tests: logger on failure, not on success, OHR fallback, unknown actor, dedup fields, logger crash protection)
+- [x] Run full test suite — 43 files, 1,520 tests ALL PASSING

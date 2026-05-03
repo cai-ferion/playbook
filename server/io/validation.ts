@@ -18,6 +18,28 @@
 import { z, ZodSchema, ZodError } from "zod";
 import type { Request, Response, NextFunction } from "express";
 
+// ── Observability: fire-and-forget audit log for rejected payloads ──
+// Logs: endpoint, method, actor OHR, failed field names, error messages.
+// NEVER logs field values (PII protection). Silently swallows DB errors.
+let _logRejection: ((entry: ValidationRejection) => void) | null = null;
+
+export interface ValidationRejection {
+  endpoint: string;
+  method: string;
+  actor_ohr: string;
+  failed_fields: string[];
+  error_summary: string;
+  timestamp: string;
+}
+
+/**
+ * Inject the logging function from outside (called once at boot).
+ * This avoids a circular dependency on getDb() inside the validation module.
+ */
+export function setValidationLogger(fn: (entry: ValidationRejection) => void) {
+  _logRejection = fn;
+}
+
 // ── Express middleware factory ──────────────────────────────────
 export function validate(schema: ZodSchema, source: "body" | "query" = "body") {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -26,6 +48,23 @@ export function validate(schema: ZodSchema, source: "body" | "query" = "body") {
       const flat = result.error.flatten();
       const firstMsg =
         result.error.issues[0]?.message ?? "Validation failed";
+
+      // Fire-and-forget: log rejection to audit log (no await, no throw)
+      if (_logRejection) {
+        try {
+          const failedFields = result.error.issues.map((i) => i.path.join(".")).filter(Boolean);
+          const actorOhr = (req as any).user?.ohr_id || (req as any).user?.openId || "unknown";
+          _logRejection({
+            endpoint: req.originalUrl || req.url,
+            method: req.method,
+            actor_ohr: actorOhr,
+            failed_fields: Array.from(new Set(failedFields)),
+            error_summary: firstMsg,
+            timestamp: new Date().toISOString(),
+          });
+        } catch { /* observability must never break the request */ }
+      }
+
       return res.status(400).json({
         error: firstMsg,
         details: result.error.issues,
@@ -218,3 +257,153 @@ export const attendanceBulkStatusSchema = z.object({
     { message: "updates object must not be empty" }
   ),
 }).strict();
+
+// ── Permissions schemas ────────────────────────────────────────
+
+/** PUT /api/io/permissions/:ohr_id — upsert permissions for a single employee */
+export const permissionsUpdateSchema = z.object({
+  permissions: z.record(z.string(), z.boolean()).refine(
+    (obj) => Object.keys(obj).length > 0,
+    { message: "permissions object must not be empty" }
+  ),
+  actor_ohr: ohrId.optional(),
+  actor_name: varchar255.optional(),
+}).passthrough();
+
+/** POST /api/io/permissions/seed/:ohr_id — seed defaults for a new employee */
+export const permissionsSeedSchema = z.object({
+  role: z.string().min(1, "role is required").max(50),
+}).strict();
+
+/** POST /api/io/permissions/bulk-key-update — update a single key for all employees */
+export const permissionsBulkKeyUpdateSchema = z.object({
+  permission_key: z.string().min(1, "permission_key is required").max(100),
+  granted: z.boolean({ message: "granted must be a boolean" }),
+  actor_ohr: ohrId.optional(),
+}).strict();
+
+// ── Role Change schemas ────────────────────────────────────────
+
+/** Single assignment in a role-change batch */
+const roleChangeAssignment = z.object({
+  ohr_id: ohrId,
+  new_role: varchar100.min(1, "new_role is required"),
+  new_pg: varchar100.min(1, "new_pg is required"),
+  date_from: dateString,
+  date_to: dateString,
+}).passthrough();
+
+/** POST /api/io/role-change/generate — generate role change records */
+export const roleChangeGenerateSchema = z.object({
+  week_ending: dateString,
+  assignments: z.array(roleChangeAssignment).min(1, "assignments array must not be empty"),
+}).passthrough();
+
+// ── Corrective Actions schemas ─────────────────────────────────
+
+/** POST /api/io/corrective-actions — create a new corrective action record */
+export const correctiveActionCreateSchema = z.object({
+  employee_name: varchar255.min(1, "employee_name is required"),
+  ohr_id: ohrId,
+  employee_email: email320,
+  supervisor_name: optionalVarchar,
+  supervisor_ohr: ohrId.optional(),
+  supervisor_email: email320,
+  planning_group: varchar100.optional(),
+  actual_role: varchar100.optional(),
+  nte_type: varchar100.optional(),
+  date_of_incident: varchar64.optional(),
+  incident_description: optionalText,
+  policy_violated: optionalText,
+  violations: z.union([z.string(), z.array(z.any()), z.null()]).optional(),
+  linked_coaching_id: z.string().max(50).optional(),
+  attachments: z.union([z.string(), z.array(z.any()), z.null()]).optional(),
+  indicated_cap_level: varchar100.optional(),
+  created_by: optionalVarchar,
+  created_by_ohr: ohrId.optional(),
+}).passthrough();
+
+/** PATCH /api/io/corrective-actions/:id — update status/assign CAP */
+export const correctiveActionUpdateSchema = z.object({
+  action: z.string().max(50).optional(),
+  cap_level: varchar100.optional(),
+  remarks: optionalText,
+  decision_by: optionalVarchar,
+  decision_by_ohr: ohrId.optional(),
+  cap_start_date: dateString.optional(),
+  suspension_days: z.number().int().min(0).optional(),
+  nod_issued: z.boolean().optional(),
+  nod_summary: optionalText,
+  // Employee response fields
+  employee_response: optionalText,
+  response_date: varchar64.optional(),
+  status: varchar100.optional(),
+}).passthrough();
+
+/** POST /api/io/nte-build-assist/generate — AI-generate NTE narrative */
+export const nteBuildAssistGenerateSchema = z.object({
+  employee: z.object({
+    full_name: varchar255.min(1, "employee.full_name is required"),
+    ohr_id: ohrId,
+    actual_role: varchar100.optional(),
+    department: varchar100.optional(),
+    supervisor_name: optionalVarchar,
+    gender: z.string().max(20).optional(),
+    sex: z.string().max(20).optional(),
+  }).passthrough(),
+  attendance: z.array(z.any()).optional(),
+  coaching: z.array(z.any()).optional(),
+  previous_ntes: z.array(z.any()).optional(),
+  violation: z.any().optional(),
+  violations: z.array(z.any()).optional(),
+}).passthrough();
+
+/** POST /api/io/nte-build-assist/docx — generate NTE DOCX document */
+export const nteBuildAssistDocxSchema = z.object({
+  employee: z.object({
+    full_name: varchar255.min(1, "employee.full_name is required"),
+    ohr_id: ohrId.optional(),
+    actual_role: varchar100.optional(),
+    department: varchar100.optional(),
+    supervisor_name: optionalVarchar,
+    gender: z.string().max(20).optional(),
+    sex: z.string().max(20).optional(),
+  }).passthrough(),
+  narrative: z.string().min(1, "narrative is required"),
+  date: z.string().optional(),
+  policy_sections: z.union([z.array(z.string()), z.string()]).optional(),
+}).passthrough();
+
+/** POST /api/io/cap-build-assist/generate — AI-generate CAP deliberation */
+export const capBuildAssistGenerateSchema = z.object({
+  employee: z.object({
+    full_name: varchar255.min(1, "employee.full_name is required"),
+    ohr_id: ohrId,
+    actual_role: varchar100.optional(),
+  }).passthrough(),
+  cap_level: z.string().min(1, "cap_level is required").max(50),
+  violation: z.any().optional(),
+  violations: z.array(z.any()).optional(),
+  explanation_date: z.string().optional(),
+  explanation_summary: optionalText,
+  nte_narrative: optionalText,
+  previous_caps: z.array(z.any()).optional(),
+}).passthrough();
+
+/** POST /api/io/cap-build-assist/docx — generate CAP DOCX document */
+export const capBuildAssistDocxSchema = z.object({
+  employee: z.object({
+    full_name: varchar255.min(1, "employee.full_name is required"),
+    ohr_id: ohrId.optional(),
+    actual_role: varchar100.optional(),
+  }).passthrough(),
+  cap_level: z.string().min(1, "cap_level is required").max(50),
+  explanation_date: z.string().optional(),
+  explanation_summary: optionalText,
+  violation_section: z.string().optional(),
+  violation_subsection: z.string().optional(),
+  violations: z.array(z.any()).optional(),
+  flm_name: optionalVarchar,
+  issuance_date: z.string().optional(),
+  nte_response_text: optionalText,
+}).passthrough();
