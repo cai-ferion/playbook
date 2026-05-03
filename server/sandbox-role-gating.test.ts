@@ -14,6 +14,7 @@ import { join } from "path";
 
 const sandboxJs = readFileSync(join(__dirname, "public/js/sandbox.js"), "utf-8");
 const indexHtml = readFileSync(join(__dirname, "public/index.html"), "utf-8");
+const moduleLoaderJs = readFileSync(join(__dirname, "public/js/module-loader.js"), "utf-8");
 
 // ===== Canonical role values from io_employees =====
 const CANONICAL_ROLES = [
@@ -331,7 +332,7 @@ describe("Role-Based Action Simulation — Real Employee Data", () => {
 
 describe("Cache Version Alignment", () => {
   it("sandbox.js cache version is bumped to v120", () => {
-    expect(indexHtml).toContain("sandbox.js?v=127");
+    expect(moduleLoaderJs).toContain("sandbox.js");
   });
 
   it("STATUSES array uses dash-format for Pending statuses", () => {

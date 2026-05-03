@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/mascot.css?v=200">
   <link rel="stylesheet" href="css/tardiness-restyle.css?v=100">
   <link rel="stylesheet" href="css/haven.css?v=217">
+  <link rel="stylesheet" href="css/skeleton.css?v=1">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
@@ -2075,40 +2076,27 @@
   <div class="toast-container" id="toast-container"></div>
 
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+  <!-- Core shell scripts (always loaded) -->
+  <script src="js/skeleton.js?v=1"></script>
+  <script src="js/module-loader.js?v=1"></script>
   <script src="js/data.js?v=109"></script>
   <script src="js/conflict-dialog.js?v=1"></script>
   <script src="js/app.js?v=131"></script>
   <script src="js/sse-client.js?v=1"></script>
-  <script src="js/dashboard-anim.js?v=121b"></script>
-  <script src="js/input-portal.js?v=127"></script>
-  <script src="js/input-compact.js?v=123"></script>
-  <script src="js/dash-omnibar.js?v=102g"></script>
+  <script src="js/command-palette.js?v=1"></script>
   <script src="js/notifications.js?v=107"></script>
   <script src="js/maintenance.js?v=105"></script>
-  <script src="js/admin.js?v=109"></script>
-  <script src="js/billing.js?v=138"></script>
-  <script src="js/billing-v2.js?v=122"></script>
-  <script src="js/billing-v2-page.js?v=101"></script>
   <script src="js/role-change.js?v=103"></script>
-
   <script src="js/performance.js?v=102g" defer></script>
-  <!-- compass-violations.js lazy-loaded by initCompass() on first Compass open -->
-  <script src="js/compass.js?v=126" defer></script>
-  <script src="js/ca-knowledge-base.js?v=1" defer></script>
-  <script src="js/corrective-actions.js?v=14" defer></script>
-  <script src="js/compass-omnibar.js?v=105" defer></script>
-  <script src="js/sandbox.js?v=127" defer></script>
-  <script src="js/sandbox-omnibar.js?v=100" defer></script>
-  <script src="js/haven.js?v=220" defer></script>
-  <script src="js/helm.js?v=120" defer></script>
-  <script src="js/group-task.js?v=107" defer></script>
-  <script src="js/shift-extension.js?v=101" defer></script>
-  <script src="js/helm-dashboard.js?v=103" defer></script>
-  <script src="js/roster.js?v=214" defer></script>
-  <script src="js/permissions.js?v=3" defer></script>
   <script src="js/horizon.js?v=103" defer></script>
-  <script src="js/managers-nook.js?v=101" defer></script>
-  <script src="js/tardiness.js?v=112" defer></script>
+  <!-- Module scripts below are lazy-loaded on demand by module-loader.js -->
+  <!-- input-portal.js, input-compact.js, dashboard-anim.js, dash-omnibar.js,
+       anchor-analytics.js, admin.js, billing.js, billing-v2.js, billing-v2-page.js,
+       compass.js, compass-omnibar.js, compass-coaching.js, compass-ai-assistant.js,
+       corrective-actions.js, ca-knowledge-base.js, compass-violations.js, compass-ca-cases.js,
+       sandbox.js, sandbox-omnibar.js, haven.js, helm.js, group-task.js,
+       shift-extension.js, helm-dashboard.js, roster.js, permissions.js,
+       managers-nook.js, tardiness.js -->
 
   <!-- Maintenance Overlay -->
   <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">

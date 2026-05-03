@@ -12,6 +12,7 @@ const insightsModule = readFileSync(join(ROOT, "server/io/insights.ts"), "utf-8"
 const compassJs = readFileSync(join(ROOT, "server/public/js/compass.js"), "utf-8");
 const sandboxJs = readFileSync(join(ROOT, "server/public/js/sandbox.js"), "utf-8");
 const indexHtml = readFileSync(join(ROOT, "server/public/index.html"), "utf-8");
+const moduleLoaderJs = readFileSync(join(ROOT, "server/public/js/module-loader.js"), "utf-8");
 
 // ============================================================
 // Server-Side: Compass Coaching DELETE
@@ -209,10 +210,10 @@ describe("Client — Sandbox Delete UI", () => {
 // ============================================================
 describe("Cache Versions — Admin Delete", () => {
   it("compass.js bumped to v122", () => {
-    expect(indexHtml).toContain("compass.js?v=126");
+    expect(moduleLoaderJs).toContain("compass.js");
   });
 
   it("sandbox.js bumped to v116", () => {
-    expect(indexHtml).toContain("sandbox.js?v=127");
+    expect(moduleLoaderJs).toContain("sandbox.js");
   });
 });

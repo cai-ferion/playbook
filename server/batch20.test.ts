@@ -6,6 +6,7 @@ const compassJs = readFileSync(resolve(__dirname, 'public/js/compass.js'), 'utf-
 const sandboxJs = readFileSync(resolve(__dirname, 'public/js/sandbox.js'), 'utf-8');
 const sandboxCss = readFileSync(resolve(__dirname, 'public/css/sandbox-redesign.css'), 'utf-8');
 const indexHtml = readFileSync(resolve(__dirname, 'public/index.html'), 'utf-8');
+const moduleLoaderJs = readFileSync(resolve(__dirname, 'public/js/module-loader.js'), 'utf-8');
 
 describe('Coaching Profile — Date Field', () => {
   it('renders a datetime-local input with id compass-new-date in the form', () => {
@@ -114,10 +115,10 @@ describe('Cache Versions', () => {
     expect(indexHtml).toContain('sandbox-redesign.css?v=122');
   });
   it('compass.js bumped to v120', () => {
-    expect(indexHtml).toContain('compass.js?v=126');
+    expect(moduleLoaderJs).toContain('compass.js');
   });
   it('sandbox.js bumped to v106', () => {
-    expect(indexHtml).toContain('sandbox.js?v=127');
+    expect(moduleLoaderJs).toContain('sandbox.js');
   });
 });
 

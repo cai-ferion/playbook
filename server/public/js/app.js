@@ -1058,6 +1058,17 @@ function applyNavPermissions(user) {
 async function switchView(view) {
   appState.activeView = view;
 
+  // Lazy-load module scripts on demand (with skeleton loading state)
+  if (window.ModuleLoader && !window.ModuleLoader.isModuleLoaded(view)) {
+    if (window.Skeleton) window.Skeleton.show(view);
+    try {
+      await window.ModuleLoader.ensureModuleLoaded(view);
+    } catch (e) {
+      console.error('[switchView] Failed to load module for:', view, e);
+    }
+    if (window.Skeleton) window.Skeleton.hide();
+  }
+
   const allViews = ['input', 'dashboard', 'alerts', 'admin', 'billing', 'compass-input', 'compass-disputes', 'compass-corrective', 'sandbox-input', 'sandbox-review', 'sandbox-analytics', 'haven', 'helm-board', 'helm-dashboard', 'regimen', 'managers-nook', 'tardiness-validator'];
   allViews.forEach(v => {
     const el = document.getElementById('view-' + v);

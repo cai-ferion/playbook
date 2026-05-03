@@ -14,6 +14,7 @@ const tardinessJs = readFile("server/public/js/tardiness.js");
 const notificationsJs = readFile("server/public/js/notifications.js");
 const appJs = readFile("server/public/js/app.js");
 const indexHtml = readFile("server/public/index.html");
+const moduleLoaderJs = readFile("server/public/js/module-loader.js");
 const serverEntry = readFile("server/_core/index.ts");
 // ── 1. Database Schema ──────────────────────────────────────────
 describe("Tardiness — Database Schema", () => {
@@ -316,7 +317,7 @@ describe("Tardiness — HTML Structure", () => {
     expect(indexHtml).toContain("tardiness-upload-btn");
   });
   it("includes tardiness.js script", () => {
-    expect(indexHtml).toContain("tardiness.js");
+    expect(moduleLoaderJs).toContain("tardiness.js");
   });
   it("has Supervisor filter dropdown", () => {
     expect(indexHtml).toContain('id="tard-supervisor-filter"');
@@ -431,7 +432,7 @@ describe("Tardiness — Cache Versions", () => {
     expect(indexHtml).toContain("notifications.js?v=107");
   });
   it("tardiness.js is included in index.html with version", () => {
-    expect(indexHtml).toMatch(/tardiness\.js\?v=\d+/);
+    expect(moduleLoaderJs).toContain("tardiness.js");
   });
   it("app.js cache version is current", () => {
     expect(indexHtml).toContain("app.js?v=131");

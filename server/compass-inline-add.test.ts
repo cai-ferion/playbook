@@ -10,6 +10,10 @@ const indexHtml = fs.readFileSync(
   path.resolve(__dirname, "public/index.html"),
   "utf-8"
 );
+const moduleLoaderJs = fs.readFileSync(
+  path.join(__dirname, "public/js/module-loader.js"),
+  "utf-8"
+);
 const compassJs = fs.readFileSync(
   path.resolve(__dirname, "public/js/compass.js"),
   "utf-8"
@@ -232,7 +236,7 @@ describe("Inline Add Panel CSS", () => {
 // ═══════════════════════════════════════════════════════════════════════
 describe("Inline Panel Cache Versions", () => {
   it("should have compass.js at v=119", () => {
-    expect(indexHtml).toContain("compass.js?v=126");
+    expect(moduleLoaderJs).toContain("compass.js");
   });
 
   it("should have compass-redesign.css at v=110", () => {

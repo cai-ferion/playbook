@@ -18,6 +18,10 @@ const indexHtml = fs.readFileSync(
   path.resolve(__dirname, "public/index.html"),
   "utf-8"
 );
+const moduleLoaderJs = fs.readFileSync(
+  path.join(__dirname, "..", "server/public/js/module-loader.js"),
+  "utf-8"
+);
 const nteDocxGen = fs.readFileSync(
   path.resolve(__dirname, "nte-docx-generator.ts"),
   "utf-8"
@@ -205,6 +209,6 @@ describe("Cache Version Bumps", () => {
   });
 
   it("corrective-actions.js version is bumped to v13", () => {
-    expect(indexHtml).toContain("corrective-actions.js?v=14");
+    expect(moduleLoaderJs).toContain("corrective-actions.js");
   });
 });

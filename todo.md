@@ -3869,3 +3869,12 @@
 - [x] Enrich edit objects with _version, _agent_name, _log_date from serverPagState.rows
 - [x] Handle "Accept All" / "Force All" / "Per-Row" bulk actions with retry logic
 - [x] All JS files syntax-checked + full test suite passing (45 files, 1,601 tests)
+
+## Blueprint Phase 5 — Frontend Performance & UX
+- [x] Audit current module loading (34 JS files, ~1.6MB loaded upfront)
+- [x] Implement lazy module loading — module-loader.js dynamically loads scripts per view on switchView()
+- [x] Add loading skeletons per module type (table rows, calendar, cards, charts) — skeleton.js + skeleton.css
+- [x] Virtual scrolling N/A — attendance already uses server-side pagination (50 rows/page), DOM is already minimal
+- [x] Build command palette (Cmd+K) — quick-jump to modules, search employees, recent actions, keyboard nav
+- [x] Update 12 test files to check module-loader.js instead of index.html for lazy-loaded scripts
+- [x] Full test suite passing (45 files, 1,601 tests) + TypeScript clean

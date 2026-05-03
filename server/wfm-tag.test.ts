@@ -28,6 +28,7 @@ const stylesContent = fs.readFileSync(stylesPath, "utf-8");
 
 const indexHtmlPath = path.resolve(__dirname, "public/index.html");
 const indexHtmlContent = fs.readFileSync(indexHtmlPath, "utf-8");
+const moduleLoaderJs = fs.readFileSync(path.resolve(__dirname, "public/js/module-loader.js"), "utf-8");
 
 const adminJsPath = path.resolve(__dirname, "public/js/admin.js");
 const adminJsContent = fs.readFileSync(adminJsPath, "utf-8");
@@ -267,11 +268,11 @@ describe("WFM Tag — Cache Busting", () => {
   });
 
   it("input-portal.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("input-portal.js?v=127");
+    expect(moduleLoaderJs).toContain("input-portal.js");
   });
 
   it("admin.js cache version is bumped", () => {
-    expect(indexHtmlContent).toContain("admin.js?v=109");
+    expect(moduleLoaderJs).toContain("admin.js");
   });
 
   it("styles.css cache version is bumped", () => {

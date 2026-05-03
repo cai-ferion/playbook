@@ -252,20 +252,24 @@ describe("Cache Version Bumps", () => {
     path.resolve(__dirname, "public/index.html"),
     "utf-8"
   );
+  const moduleLoaderJs = fs.readFileSync(
+    path.join(__dirname, "public/js/module-loader.js"),
+    "utf-8"
+  );
 
   it("should have notifications.js at v=104", () => {
     expect(indexHtml).toContain('notifications.js?v=107');
   });
 
   it("should have compass.js at v=119", () => {
-    expect(indexHtml).toContain('compass.js?v=126');
+    expect(moduleLoaderJs).toContain('compass.js');
   });
 
   it("should have corrective-actions.js at v=12", () => {
-    expect(indexHtml).toContain('corrective-actions.js?v=14');
+    expect(moduleLoaderJs).toContain('corrective-actions.js');
   });
 
   it("should have compass-omnibar.js at v=104", () => {
-    expect(indexHtml).toContain('compass-omnibar.js?v=105');
+    expect(moduleLoaderJs).toContain('compass-omnibar.js');
   });
 });

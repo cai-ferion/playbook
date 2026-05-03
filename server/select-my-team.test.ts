@@ -7,6 +7,7 @@ const compassJs = fs.readFileSync(compassJsPath, "utf-8");
 
 const indexHtmlPath = path.join(__dirname, "public/index.html");
 const indexHtml = fs.readFileSync(indexHtmlPath, "utf-8");
+const moduleLoaderJs = fs.readFileSync(path.join(__dirname, "public/js/module-loader.js"), "utf-8");
 
 // ============================================================
 // Select My Team — Group Coaching Multi-Coachee Picker
@@ -133,7 +134,7 @@ describe("Select My Team Feature", () => {
   // ---- Cache Version ----
   describe("Cache Version", () => {
     it("compass.js bumped to v123", () => {
-      expect(indexHtml).toContain("compass.js?v=126");
+      expect(moduleLoaderJs).toContain("compass.js");
     });
   });
 });

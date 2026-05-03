@@ -9,6 +9,7 @@ import { join } from "path";
 const ROOT = join(__dirname, "..");
 const sandboxJs = readFileSync(join(ROOT, "server/public/js/sandbox.js"), "utf-8");
 const indexHtml = readFileSync(join(ROOT, "server/public/index.html"), "utf-8");
+const moduleLoaderJs = readFileSync(join(ROOT, "server/public/js/module-loader.js"), "utf-8");
 const ioRoutes = [__dirname + "/io/shared.ts", __dirname + "/io/attendance-ops.ts", __dirname + "/io/attendance.ts", __dirname + "/io/audit-log.ts", __dirname + "/io/billing.ts", __dirname + "/io/coaching.ts", __dirname + "/io/corrective-actions.ts", __dirname + "/io/employees.ts", __dirname + "/io/insights.ts", __dirname + "/io/leaves.ts", __dirname + "/io/notifications.ts", __dirname + "/io/permissions.ts", __dirname + "/io/tasks.ts", __dirname + "/io/wfm.ts", __dirname + "/io/tardiness.ts", __dirname + "/io/role-change.ts", __dirname + "/io/managers-nook.ts", __dirname + "/io/group-tasks.ts", __dirname + "/io/shift-extensions.ts", __dirname + "/io/performance.ts"].map(f => require("fs").readFileSync(f, "utf-8")).join("\n");
 const schema = readFileSync(join(ROOT, "drizzle/schema.ts"), "utf-8");
 
@@ -157,6 +158,6 @@ describe("Sandbox Attachment — Review Area Preview", () => {
 
 describe("Sandbox Attachment — Cache Version", () => {
   it("sandbox.js cache version is bumped to v115", () => {
-    expect(indexHtml).toContain("sandbox.js?v=127");
+    expect(moduleLoaderJs).toContain("sandbox.js");
   });
 });

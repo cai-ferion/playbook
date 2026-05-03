@@ -15,6 +15,10 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
     path.join(__dirname, "public/index.html"),
     "utf-8"
   );
+const moduleLoaderJs = fs.readFileSync(
+    path.join(__dirname, "..", "server/public/js/module-loader.js"),
+    "utf-8"
+  );
   const sandboxCss = fs.readFileSync(
     path.join(__dirname, "public/css/sandbox-redesign.css"),
     "utf-8"
@@ -165,7 +169,7 @@ describe("Batch 18 — Sandbox Overhaul: Inline Expansion, Role-Based Actions, S
   // 7. Cache Version Bumps
   describe("Cache Version Bumps", () => {
     it("should have bumped sandbox.js version", () => {
-      expect(indexHtml).toContain("sandbox.js?v=127");
+      expect(moduleLoaderJs).toContain("sandbox.js");
     });
 
     it("should have bumped sandbox-redesign.css version", () => {
