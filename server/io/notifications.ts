@@ -7,6 +7,7 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { ioNotifications } from "../../drizzle/schema.js";
 import { eq, and, ne, desc, sql } from "drizzle-orm";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -43,6 +44,7 @@ router.post("/notifications", async (req: Request, res: Response) => {
     const body = { ...req.body };
     if (!body.created_at) body.created_at = new Date().toISOString();
     await db.insert(ioNotifications).values(body);
+    emitChange(req, "notifications", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] notifications POST error:", err);
@@ -71,6 +73,7 @@ router.put("/notifications/maintenance", async (req: Request, res: Response) => 
         is_read: true,
       });
     }
+    emitChange(req, "notifications", "record_updated", { sub: "maintenance" });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] notifications maintenance error:", err);
@@ -86,6 +89,7 @@ router.patch("/notifications/mark-all-read", async (req: Request, res: Response)
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.update(ioNotifications).set({ is_read: true }).where(eq(ioNotifications.is_read, false));
+    emitChange(req, "notifications", "bulk_update", { action: "mark_all_read" });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] notifications mark-all-read error:", err);
@@ -100,6 +104,7 @@ router.delete("/notifications/clear-all", async (req: Request, res: Response) =>
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.delete(ioNotifications).where(ne(ioNotifications.type, "system_maintenance"));
+    emitChange(req, "notifications", "record_deleted", { action: "clear_all" });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] notifications clear-all error:", err);
@@ -115,6 +120,7 @@ router.patch("/notifications/:id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.update(ioNotifications).set(req.body).where(eq(ioNotifications.id, Number(req.params.id)));
+    emitChange(req, "notifications", "record_updated", { id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] notifications PATCH error:", err);

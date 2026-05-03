@@ -134,6 +134,10 @@ ioRouter.use("/shift-extensions", shiftExtensionsRouter);
 import performanceRouter from "./performance.js";
 ioRouter.use("/performance", performanceRouter);
 
+// ── SSE Real-Time Sync — event stream + presence ─────────────────────
+import sseRouter from "./sse.js";
+ioRouter.use(sseRouter);
+
 /**
  * Register the modular IO router.
  * This is the sole route registrar for /api/io domain routes.

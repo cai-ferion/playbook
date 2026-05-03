@@ -3827,3 +3827,15 @@
 - [x] Validate via EXPLAIN: TiDB optimizer now uses IndexLookUp/IndexRangeScan on all hot paths
 - [x] Full test suite: 43 files, 1,576 tests ALL PASSING
 - [x] Result: 85 non-PK indexes across 34 tables — 100% table coverage (was 0 indexes on 12 tables)
+
+## Blueprint Phase 2 — Real-Time Synchronization (SSE)
+- [x] Design SSE architecture (event bus, connection manager, event schema)
+- [x] Create server/io/sse.ts — SSE connection manager + /api/io/events endpoint
+- [x] Create server/io/event-bus.ts — typed EventEmitter for change events
+- [x] Wire change event emitter into all 70 write operations (POST/PATCH/DELETE across 17 modules)
+- [x] Client-side EventSource listener (sse-client.js) — subscribe to SSE, trigger targeted refresh on matching module
+- [x] Presence indicators — track who is viewing, broadcast join/leave, render avatar bar
+- [x] Heartbeat mechanism (30s keep-alive) for connection health
+- [x] Graceful degradation — visibility-based disconnect/reconnect + exponential backoff
+- [x] Write Vitest tests for SSE infrastructure (11 tests)
+- [x] Full test suite passing (44 files, 1,587 tests) + TypeScript clean

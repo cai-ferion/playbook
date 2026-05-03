@@ -6,6 +6,7 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { wfmSessionLog } from "../../drizzle/schema.js";
 import { sql, desc } from "drizzle-orm";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.post("/wfm-session-log", async (req: Request, res: Response) => {
       action: act || "login",
       details: details || null,
     });
+    emitChange(req, "wfm", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[WFM-LOG] Error:", err.message);

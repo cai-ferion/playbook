@@ -15,6 +15,7 @@ import { getDb } from "../db.js";
 import { sql } from "drizzle-orm";
 import { ioNotifications } from "../../drizzle/schema.js";
 import { validate, groupTaskPreviewSchema, groupTaskCreateSchema, groupTaskCompleteSchema, groupTaskExcludeSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -167,6 +168,7 @@ router.post("/", validate(groupTaskCreateSchema), async (req: Request, res: Resp
       })();
     }
 
+    emitChange(req, "group-tasks", "record_created", { id: groupTaskId });
     res.json({
       id: groupTaskId,
       task_id: taskId,
@@ -335,6 +337,7 @@ router.post("/:id/complete", validate(groupTaskCompleteSchema), async (req: Requ
       return res.status(404).json({ error: "No pending assignment found" });
     }
 
+    emitChange(req, "group-tasks", "record_updated", { id: req.params.id, action: "complete" });
     res.json({ success: true, completed_at: now });
   } catch (err: any) {
     console.error("[GroupTask] Complete error:", err);
@@ -381,6 +384,7 @@ router.post("/:id/exclude", validate(groupTaskExcludeSchema), async (req: Reques
       WHERE id = ${groupTaskId}
     `));
 
+    emitChange(req, "group-tasks", "record_updated", { id: req.params.id, action: "exclude" });
     res.json({ success: true, excluded_count: result.affectedRows });
   } catch (err: any) {
     console.error("[GroupTask] Exclude error:", err);

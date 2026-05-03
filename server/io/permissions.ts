@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { ADMIN_OHRS, getPermissionDefaults, ALL_PERMISSION_KEYS } from "./shared.js";
 import { validate, permissionsUpdateSchema, permissionsSeedSchema, permissionsBulkKeyUpdateSchema } from "./validation.js";
 import { OWNER_OHR } from "../config.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -163,6 +164,7 @@ router.put("/permissions/:ohr_id", validate(permissionsUpdateSchema), async (req
       console.log(`[PERMISSIONS] ${changes.length} permission changes for ${ohr_id} by ${actor_ohr}`);
     }
 
+    emitChange(req, "permissions", "record_updated", { ohr_id, changes: changes.length });
     res.json({ ok: true, changes_count: changes.length });
   } catch (err: any) {
     console.error("[PERMISSIONS] Error updating permissions for", req.params.ohr_id, err.message);
@@ -198,6 +200,7 @@ router.post("/permissions/seed/:ohr_id", validate(permissionsSeedSchema), async 
       await db.insert(ioPermissions).values(row);
     }
 
+    emitChange(req, "permissions", "record_created", { ohr_id, count: rows.length });
     res.json({ ok: true, count: rows.length });
   } catch (err: any) {
     console.error("[PERMISSIONS] Error seeding permissions for", req.params.ohr_id, err.message);
@@ -224,6 +227,7 @@ router.post("/permissions/bulk-key-update", validate(permissionsBulkKeyUpdateSch
       .where(eq(ioPermissions.permission_key, permission_key));
 
     console.log(`[PERMISSIONS] Bulk update: ${permission_key} = ${granted} by ${actor_ohr}`);
+    emitChange(req, "permissions", "bulk_update", { permission_key, granted });
     res.json({ ok: true, permission_key, granted });
   } catch (err: any) {
     console.error("[PERMISSIONS] Bulk key update error:", err.message);

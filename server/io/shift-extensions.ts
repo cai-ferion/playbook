@@ -11,6 +11,7 @@ import { getDb } from "../db.js";
 import { ioShiftExtensions, ioNotifications } from "../../drizzle/schema.js";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { validate, shiftExtensionCreateSchema, shiftExtensionActionSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -65,6 +66,8 @@ router.post("/", validate(shiftExtensionCreateSchema), async (req: Request, res:
       updated_at: now,
     });
 
+    emitChange(req, "shift-extensions", "record_created", { request_id: reqId });
+    emitChange(req, "shift-extensions", "record_created", { request_id: reqId });
     res.json({ request_id: reqId, message: "Shift extension request created" });
   } catch (e: any) {
     console.error("[shift-ext] POST error:", e.message);
@@ -120,6 +123,8 @@ router.patch("/:id/tl-action", validate(shiftExtensionActionSchema), async (req:
       })
       .where(eq(ioShiftExtensions.id, id));
 
+    emitChange(req, "shift-extensions", "record_updated", { id: Number(req.params.id), action: "tl" });
+    emitChange(req, "shift-extensions", "record_updated", { id: Number(req.params.id), action: "tl" });
     res.json({ message: `TL ${action.toLowerCase()} shift extension`, overall_status: newOverall });
   } catch (e: any) {
     console.error("[shift-ext] TL action error:", e.message);
@@ -206,6 +211,8 @@ router.patch("/:id/om-action", validate(shiftExtensionActionSchema), async (req:
       }
     }
 
+    emitChange(req, "shift-extensions", "record_updated", { id: Number(req.params.id), action: "om" });
+    emitChange(req, "shift-extensions", "record_updated", { id: Number(req.params.id), action: "om" });
     res.json({ message: `OM ${action.toLowerCase()} shift extension`, overall_status: action });
   } catch (e: any) {
     console.error("[shift-ext] OM action error:", e.message);

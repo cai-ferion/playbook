@@ -7,6 +7,7 @@ import { getDb } from "../db.js";
 import { ioLeaves, ioNotifications, ioEmployees } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, or, count } from "drizzle-orm";
 import { validate, leaveCreateSchema, leavesBulkActionSchema, leaveCancelSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -88,6 +89,7 @@ router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Re
       }
     }
 
+    emitChange(req, "leaves", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leaves POST error:", err);
@@ -102,6 +104,7 @@ router.patch("/leaves/:leave_id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.update(ioLeaves).set(req.body).where(eq(ioLeaves.leave_id, req.params.leave_id));
+    emitChange(req, "leaves", "record_updated", { leave_id: req.params.leave_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leaves PATCH error:", err);
@@ -228,6 +231,7 @@ router.post("/leaves/bulk-action", validate(leavesBulkActionSchema), async (req:
       }
     }
 
+    emitChange(req, "leaves", "bulk_update", { count: updated });
     res.json({ ok: true, updated });
   } catch (err: any) {
     console.error("[IO API] leaves bulk-action error:", err);
@@ -257,6 +261,7 @@ router.post("/leaves/:leave_id/cancel", async (req: Request, res: Response) => {
       updated_at: now,
     }).where(eq(ioLeaves.leave_id, leave_id));
 
+    emitChange(req, "leaves", "record_updated", { leave_id, status: "Cancelled" });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leaves cancel error:", err);
@@ -271,6 +276,7 @@ router.delete("/leaves/:leave_id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
     const { leave_id } = req.params;
     await db.delete(ioLeaves).where(eq(ioLeaves.leave_id, leave_id));
+    emitChange(req, "leaves", "record_deleted", { leave_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leaves DELETE error:", err);

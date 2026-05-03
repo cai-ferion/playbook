@@ -9,6 +9,7 @@ import { ioTardiness, ioEmployees, ioNotifications } from "../../drizzle/schema.
 import { eq, and, gte, lte, sql, desc, inArray, count } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
 import { validate, tardinessUploadSchema, tardinessUpdateSchema, tardinessBulkValidateSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -242,6 +243,7 @@ router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Re
       inserted++;
     }
 
+    emitChange(req, "tardiness", "bulk_update", { inserted, skipped });
     res.json({ success: true, inserted, skipped, skipped_not_in_roster: skippedNoBU, enriched, total: records.length, batch_id: batchId });
   } catch (err: any) {
     console.error("[IO API] tardiness upload error:", err);
@@ -384,6 +386,7 @@ router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Requ
       await db.execute(
         sql`UPDATE io_tardiness SET validation_status = 'Pending', validated_by = NULL, validated_by_ohr = NULL, validated_at = NULL, remarks = NULL WHERE id = ${id}`
       );
+      emitChange(req, "tardiness", "record_updated", { id: Number(req.params.id), action: "unlocked" });
       return res.json({ success: true, action: "unlocked" });
     }
 
@@ -396,6 +399,7 @@ router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Requ
       sql`UPDATE io_tardiness SET validation_status = ${validation_status}, validated_by = ${actorName}, validated_by_ohr = ${actorOhr}, validated_at = ${now}, remarks = ${remarks || null} WHERE id = ${id}`
     );
 
+    emitChange(req, "tardiness", "record_updated", { id: Number(req.params.id), action: "validated" });
     res.json({ success: true, action: "validated", status: validation_status });
   } catch (err: any) {
     console.error("[IO API] tardiness PATCH error:", err);
@@ -424,6 +428,7 @@ router.patch("/tardiness/bulk-validate", validate(tardinessBulkValidateSchema), 
     );
 
     const info = Array.isArray(result[0]) ? result[0] : result;
+    emitChange(req, "tardiness", "bulk_update", { count: idList.length });
     res.json({ success: true, updated: info.affectedRows || idList.length, total: idList.length });
   } catch (err: any) {
     console.error("[IO API] tardiness bulk-validate error:", err);

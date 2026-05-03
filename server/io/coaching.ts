@@ -8,6 +8,7 @@ import { ioCoaching, ioCoachingRca, ioCoachingZtp, ioCoachingNte } from "../../d
 import { eq, and, sql, desc, asc } from "drizzle-orm";
 import { ADMIN_OHRS } from "./shared.js";
 import { validate, coachingCreateSchema, coachingUpdateSchema, coachingRcaCreateSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -130,6 +131,7 @@ router.post("/coaching", validate(coachingCreateSchema), async (req: Request, re
 
     const result = await db.insert(ioCoaching).values(values);
     const insertId = (result as any)[0]?.insertId;
+    emitChange(req, "coaching", "record_created", { id: insertId, coaching_id });
     res.json({ ok: true, id: insertId, coaching_id });
   } catch (err: any) {
     console.error("[IO API] coaching POST error:", err);
@@ -152,6 +154,7 @@ router.patch("/coaching/:id", validate(coachingUpdateSchema), async (req: Reques
     } else {
       await db.update(ioCoaching).set(updates).where(eq(ioCoaching.coaching_id, paramId));
     }
+    emitChange(req, "coaching", "record_updated", { id: paramId });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] coaching PATCH error:", err);
@@ -189,6 +192,7 @@ router.delete("/coaching/:id", async (req: Request, res: Response) => {
       await db.delete(ioCoaching).where(eq(ioCoaching.coaching_id, paramId));
     }
     console.log(`[IO API] Coaching log ${paramId} deleted by ${actorOhr} (cascade: RCA + ZTP)`);
+    emitChange(req, "coaching", "record_deleted", { id: paramId });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] coaching DELETE error:", err);
@@ -224,6 +228,7 @@ router.post("/coaching-rca", validate(coachingRcaCreateSchema), async (req: Requ
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.insert(ioCoachingRca).values(req.body);
+    emitChange(req, "coaching", "record_created", { sub: "rca", coaching_id: req.body.coaching_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] coaching-rca POST error:", err);
@@ -323,6 +328,7 @@ router.post("/coaching-nte", async (req: Request, res: Response) => {
     };
 
     await db.insert(ioCoachingNte).values(values);
+    emitChange(req, "coaching", "record_created", { sub: "nte", id, coaching_id: req.body.coaching_id });
     res.json({ ok: true, id });
   } catch (err: any) {
     console.error("[IO API] coaching-nte POST error:", err);
@@ -338,6 +344,7 @@ router.patch("/coaching-nte/:id", async (req: Request, res: Response) => {
     const nteId = req.params.id;
     const updates = { ...req.body, updated_at: new Date().toISOString() };
     await db.update(ioCoachingNte).set(updates).where(eq(ioCoachingNte.id, nteId));
+    emitChange(req, "coaching", "record_updated", { sub: "nte", id: nteId });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] coaching-nte PATCH error:", err);

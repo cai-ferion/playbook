@@ -8,6 +8,7 @@ import { getDb } from "../db.js";
 import { ioInsights } from "../../drizzle/schema.js";
 import { eq, desc, sql, inArray } from "drizzle-orm";
 import { ADMIN_OHRS } from "./shared.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.post("/insights", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.insert(ioInsights).values(req.body);
+    emitChange(req, "insights", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] insights POST error:", err);
@@ -54,6 +56,7 @@ router.patch("/insights/:insight_id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.update(ioInsights).set(req.body).where(eq(ioInsights.insight_id, req.params.insight_id));
+    emitChange(req, "insights", "record_updated", { insight_id: req.params.insight_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] insights PATCH error:", err);
@@ -72,6 +75,7 @@ router.delete("/insights/:insight_id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
     await db.delete(ioInsights).where(eq(ioInsights.insight_id, req.params.insight_id));
     console.log(`[IO API] Insight ${req.params.insight_id} deleted by ${actorOhr}`);
+    emitChange(req, "insights", "record_deleted", { insight_id: req.params.insight_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] insights DELETE error:", err);
@@ -98,6 +102,7 @@ router.post("/insights-bulk-delete", async (req: Request, res: Response) => {
       deleted += batch.length;
     }
     console.log(`[IO API] ${deleted} insights bulk-deleted by ${actorOhr}`);
+    emitChange(req, "insights", "record_deleted", { action: "bulk", count: deleted });
     res.json({ ok: true, deleted });
   } catch (err: any) {
     console.error("[IO API] insights bulk-delete error:", err);

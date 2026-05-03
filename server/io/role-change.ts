@@ -15,6 +15,7 @@ import {
 import { eq, and, gte, lte, sql, desc, inArray, or } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
 import { validate, roleChangeGenerateSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -446,6 +447,8 @@ router.post("/generate", validate(roleChangeGenerateSchema), async (req: Request
     // Generate email HTML matching Jennifer's format
     const emailHtml = generateRoleChangeEmailHtml(week_ending, results);
 
+    emitChange(req, "role-change", "record_created", { count: results.length });
+    emitChange(req, "role-change", "record_created", { count: results.length });
     res.json({
       success: true,
       total_assignments: results.length,

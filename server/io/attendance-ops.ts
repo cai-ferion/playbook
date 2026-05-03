@@ -7,6 +7,7 @@ import { getDb } from "../db.js";
 import { ioAttendance, ioAuditLog, ioEmployees } from "../../drizzle/schema.js";
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { ADMIN_OHRS, OWNER_OHR } from "./shared.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -154,6 +155,7 @@ router.delete("/attendance-purge", async (req: Request, res: Response) => {
     );
 
     console.log(`[IO API] PURGE: Deleted ${totalRows} attendance rows for ${ohr_id} from ${from_date}${hasToDate ? ` to ${to_date}` : ' onwards'} (actor: ${actor_ohr})`);
+    emitChange(req, "attendance-ops", "record_deleted", { action: "purge", deleted: totalRows });
     res.json({ success: true, deleted: totalRows });
   } catch (err: any) {
     console.error("[IO API] attendance-purge error:", err);
@@ -357,6 +359,7 @@ router.post("/attendance-bulk-insert", async (req: Request, res: Response) => {
     });
 
     console.log(`[IO API] BULK INSERT: ${inserted} attendance rows inserted, ${skipped} duplicates skipped, batch: ${batchId} (actor: ${actor_ohr})`);
+    emitChange(req, "attendance-ops", "bulk_update", { inserted, skipped });
     res.json({ success: true, inserted, skipped, batch_id: batchId });
   } catch (err: any) {
     console.error("[IO API] attendance-bulk-insert error:", err);
@@ -404,6 +407,7 @@ router.post("/attendance-bulk-undo", async (req: Request, res: Response) => {
     });
 
     console.log(`[IO API] BULK UNDO: ${rowCount} attendance rows deleted for batch ${batch_id} (actor: ${actor_ohr})`);
+    emitChange(req, "attendance-ops", "bulk_update", { action: "undo", deleted: rowCount });
     res.json({ success: true, deleted: rowCount, batch_id });
   } catch (err: any) {
     console.error("[IO API] attendance-bulk-undo error:", err);

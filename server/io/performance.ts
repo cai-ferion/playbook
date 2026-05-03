@@ -19,6 +19,7 @@ import { parseMainMetrics } from "../performanceParser";
 import { storagePut } from "../storage";
 import { getDb } from "../db";
 import { sql } from "drizzle-orm";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -138,6 +139,8 @@ router.post("/upload", async (req, res) => {
 
     // Create sync record
     const syncId = await createSyncRecord({ syncedBy, syncedByName });
+    emitChange(req, "performance", "bulk_update", { action: "upload", syncId });
+    emitChange(req, "performance", "bulk_update", { action: "upload", syncId });
     res.json({ syncId, status: "processing" });
 
     // Process in background
@@ -161,6 +164,8 @@ router.post("/resync", async (req, res) => {
     }
 
     const syncId = await createSyncRecord({ syncedBy, syncedByName });
+    emitChange(req, "performance", "bulk_update", { action: "resync", syncId });
+    emitChange(req, "performance", "bulk_update", { action: "resync", syncId });
     res.json({ syncId, status: "processing" });
 
     // Download from S3 and re-process

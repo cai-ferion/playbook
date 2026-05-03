@@ -18,6 +18,7 @@ import {
   capBuildAssistGenerateSchema,
   capBuildAssistDocxSchema,
 } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -634,6 +635,8 @@ router.patch("/corrective-actions/:id", validate(correctiveActionUpdateSchema), 
 
     const [updated] = await db.select().from(ioCorrectiveActions)
       .where(eq(ioCorrectiveActions.id, id));
+    emitChange(req, "corrective-actions", "record_updated", { id: req.params.id });
+    emitChange(req, "corrective-actions", "record_updated", { id: req.params.id });
     res.json(updated);
   } catch (err: any) {
     console.error("[IO API] corrective-actions PATCH error:", err);

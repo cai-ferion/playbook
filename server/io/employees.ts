@@ -13,6 +13,7 @@ import {
 import { eq, and, gte, lte, asc, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { syncEmployeesToSupabase, deleteEmployeesFromSupabase } from "../supabase-sync.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -125,6 +126,7 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
     // Fire-and-forget: mirror change to Supabase
     const [updated] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
     if (updated) syncEmployeesToSupabase([updated]).catch(() => {});
+    emitChange(req, "employees", "record_updated", { ohr_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] employees PATCH error:", err);
@@ -204,6 +206,7 @@ router.post("/employees", async (req: Request, res: Response) => {
       }
     }
 
+    emitChange(req, "employees", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] employees POST error:", err);
@@ -220,6 +223,7 @@ router.delete("/employees/:ohr_id", async (req: Request, res: Response) => {
     await db.delete(ioEmployees).where(eq(ioEmployees.ohr_id, req.params.ohr_id));
     // Fire-and-forget: mirror deletion to Supabase
     deleteEmployeesFromSupabase([req.params.ohr_id]).catch(() => {});
+    emitChange(req, "employees", "record_deleted", { ohr_id: req.params.ohr_id });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] employees DELETE error:", err);

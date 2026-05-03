@@ -10,6 +10,7 @@ import { eq, and, gte, lte, sql, desc, asc, inArray, or } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
 import { getManagerOhrSet } from "./shared.js";
 import { validate, attendanceBulkImportSchema, attendanceBulkTagSchema } from "./validation.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -180,6 +181,7 @@ router.post("/attendance/bulk-import", validate(attendanceBulkImportSchema), asy
       }
     }
 
+    emitChange(req, "attendance", "bulk_update", { updatedCount, createdCount });
     res.json({ ok: true, updatedCount, createdCount, errors: errors.slice(0, 20), totalErrors: errors.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-import error:", err);
@@ -206,6 +208,7 @@ router.patch("/attendance/bulk-update", async (req: Request, res: Response) => {
     }
 
     await db.update(ioAttendance).set(updates).where(and(...conditions));
+    emitChange(req, "attendance", "bulk_update", { ohr_id, log_date_gte, log_date_lte });
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-update error:", err);
@@ -332,6 +335,7 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       }).catch(err => console.warn("[StatusNotify] Failed:", err.message));
     }
 
+    emitChange(req, "attendance", "record_updated", { id: Number(req.params.id) });
     res.json({ ok: true, audited: auditEntries.length });
   } catch (err: any) {
     console.error("[IO API] attendance PATCH error:", err);
@@ -391,6 +395,7 @@ router.post("/attendance/bulk-tag", validate(attendanceBulkTagSchema), async (re
       updated++;
     }
 
+    emitChange(req, "attendance", "bulk_update", { tag, count: updated });
     res.json({ ok: true, updated, locked, total: ids.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-tag error:", err);
@@ -482,6 +487,7 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
       updated++;
     }
 
+    emitChange(req, "attendance", "bulk_update", { tag, count: updated });
     res.json({ ok: true, updated, locked, skipped, total: allRecords.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-tag-filtered error:", err);
@@ -561,6 +567,7 @@ router.post("/attendance/bulk-status", async (req: Request, res: Response) => {
       }).catch(err => console.warn("[BulkStatusNotify] Failed:", err.message));
     }
 
+    emitChange(req, "attendance", "bulk_update", { status, count: updated });
     res.json({ ok: true, updated, locked, skipped, total: ids.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-status error:", err);
@@ -672,6 +679,7 @@ router.post("/attendance/bulk-status-filtered", async (req: Request, res: Respon
       }).catch(err => console.warn("[BulkStatusFilteredNotify] Failed:", err.message));
     }
 
+    emitChange(req, "attendance", "bulk_update", { status, count: updated });
     res.json({ ok: true, updated, locked, skipped, total: allRecords.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-status-filtered error:", err);

@@ -14,6 +14,7 @@ import {
 import { eq, and, gte, lte, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
 import { ADMIN_OHRS, normalizePg, getManagerOhrSet } from "./shared.js";
 import { syncEmployeesToSupabase } from "../supabase-sync.js";
+import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
@@ -168,6 +169,8 @@ router.post("/backfill-snap-status", async (req: Request, res: Response) => {
       SET a.snap_status = e.srt_status
       WHERE e.srt_status IS NOT NULL AND e.srt_status != ''
     `);
+    emitChange(req, "billing", "bulk_update", { action: "snap_status_backfill" });
+    emitChange(req, "billing", "bulk_update", { action: "snap_status_backfill" });
     res.json({ ok: true, message: "snap_status backfilled from io_employees.srt_status", affectedRows: (result as any)[0]?.affectedRows });
   } catch (err: any) {
     console.error("[IO API] backfill-snap-status error:", err);
@@ -229,6 +232,8 @@ router.post("/productivity-hours/upload", async (req: Request, res: Response) =>
       if (info.affectedRows === 1) inserted++;
       else if (info.affectedRows === 2) updated++;
     }
+    emitChange(req, "billing", "bulk_update", { inserted, updated });
+    emitChange(req, "billing", "bulk_update", { inserted, updated });
     res.json({ success: true, inserted, updated, total: records.length });
   } catch (err: any) {
     console.error("[IO API] productivity-hours upload error:", err);
@@ -329,6 +334,8 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
         console.error("[IO API] srt-bill-upload employee sync error:", syncErr.message);
       }
     }
+    emitChange(req, "billing", "bulk_update", { action: "sync_srt" });
+    emitChange(req, "billing", "bulk_update", { action: "sync_srt" });
     res.json({ success: true, totalAffected, total: rows.length, employeesSynced: synced });;
   } catch (err: any) {
     console.error("[IO API] srt-bill-upload error:", err);
@@ -429,6 +436,8 @@ router.post("/billing-targets-v2", async (req: Request, res: Response) => {
       );
       upserted++;
     }
+    emitChange(req, "billing", "bulk_update", { action: "target_hours", upserted });
+    emitChange(req, "billing", "bulk_update", { action: "target_hours", upserted });
     res.json({ success: true, upserted });
   } catch (err: any) {
     console.error("[IO API] billing-targets-v2 POST error:", err);
