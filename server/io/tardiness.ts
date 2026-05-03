@@ -4,10 +4,10 @@
  * Weekly cadence: Saturday to Friday.
  */
 import { Router, Request, Response } from "express";
-import { getDb } from "./db.js";
-import { ioTardiness, ioEmployees, ioNotifications } from "../drizzle/schema.js";
+import { getDb } from "../db.js";
+import { ioTardiness, ioEmployees, ioNotifications } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, inArray, count } from "drizzle-orm";
-import { ADMIN_OHRS } from "./config.js";
+import { ADMIN_OHRS } from "../config.js";
 
 const router = Router();
 
@@ -474,7 +474,4 @@ router.get("/tardiness/export", async (req: Request, res: Response) => {
   }
 });
 
-export function registerTardinessRoutes(app: import("express").Express) {
-  app.use("/api/io", router);
-  console.log("[IO API] Tardiness routes registered under /api/io/tardiness/*");
-}
+export default router;

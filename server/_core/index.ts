@@ -13,14 +13,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerModularIORoutes } from "../io/index.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
-import { registerTardinessRoutes } from "../io-tardiness-routes.js";
-import { registerRoleChangeRoutes } from "../io-role-change-routes.js";
-import { registerManagersNookRoutes } from "../managers-nook-routes.js";
-import { registerGroupTaskRoutes } from "../group-task-routes.js";
-import { registerShiftExtensionRoutes } from "../shift-extension-routes.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { registerAutoMailer } from "../auto-mailer.js";
-import performanceRouter from "../io-performance-routes.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
 import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
 
@@ -78,15 +72,9 @@ async function startServer() {
 
   // IO Operations API routes — all protected by session auth
   app.use('/api/io', requireAuth);
-  // Modular domain routers (Sub-Phase 2.3+): employees, notifications, insights, audit-log
+  // All 20 domain modules served via single barrel router
   registerModularIORoutes(app);
   registerIOBackupRoutes(app);
-  registerTardinessRoutes(app);
-  registerRoleChangeRoutes(app);
-  app.use('/api/io/performance', performanceRouter);
-  registerManagersNookRoutes(app);
-  registerGroupTaskRoutes(app);
-  registerShiftExtensionRoutes(app);
 
   // Auto-mailer for UPL/LATE notifications
   registerAutoMailer(app);

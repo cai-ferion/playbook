@@ -4,16 +4,16 @@
  * attendance auto-update, and role change history.
  */
 import { Router, Request, Response } from "express";
-import { getDb } from "./db.js";
+import { getDb } from "../db.js";
 import {
   ioEmployees,
   ioAttendance,
   ioRoleChanges,
   ioWfmSchedules,
   ioBillingTargetsV2,
-} from "../drizzle/schema.js";
+} from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, inArray, or } from "drizzle-orm";
-import { ADMIN_OHRS } from "./config.js";
+import { ADMIN_OHRS } from "../config.js";
 
 const router = Router();
 
@@ -588,7 +588,4 @@ function formatDateRange(from: string, to: string): string {
   return `${fStr} - ${tStr}`;
 }
 
-export function registerRoleChangeRoutes(app: import("express").Express) {
-  app.use("/api/io/role-change", router);
-  console.log("[IO API] Role Change routes registered under /api/io/role-change/*");
-}
+export default router;

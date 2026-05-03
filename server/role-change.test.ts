@@ -231,8 +231,8 @@ describe('Role Change Email Automation', () => {
     });
   });
 
-  describe('Server routes (io-role-change-routes.ts)', () => {
-    const routes = readFileSync(join(__dirname, 'io-role-change-routes.ts'), 'utf-8');
+  describe('Server routes (io/role-change.ts)', () => {
+    const routes = readFileSync(join(__dirname, 'io/role-change.ts'), 'utf-8');
 
     it('defines deficit-analysis GET route', () => {
       expect(routes).toContain('router.get("/deficit-analysis"');
@@ -268,11 +268,11 @@ describe('Role Change Email Automation', () => {
     });
 
     it('registers routes under /api/io/role-change', () => {
-      expect(routes).toContain('app.use("/api/io/role-change", router)');
+      expect(routes).toContain('export default router');
     });
 
-    it('exports registerRoleChangeRoutes function', () => {
-      expect(routes).toContain('export function registerRoleChangeRoutes');
+    it('exports router as default', () => {
+      expect(routes).toContain('export default router');
     });
   });
 

@@ -11,7 +11,7 @@ import path from "path";
  */
 
 const routesSource = fs.readFileSync(
-  path.resolve(__dirname, "group-task-routes.ts"),
+  path.resolve(__dirname, "io/group-tasks.ts"),
   "utf-8"
 );
 const autoMailerSource = fs.readFileSync(

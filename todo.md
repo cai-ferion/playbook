@@ -3762,3 +3762,18 @@
 - [x] Delete server/io-routes.ts (file removed entirely)
 - [x] Run full test suite — 42 files, 1,428 tests ALL PASSING
 - [x] TypeScript clean (npx tsc --noEmit)
+
+## Blueprint Phase 2 — Extract Satellite Route Files into Barrel Router
+- [x] Move io-tardiness-routes.ts → server/io/tardiness.ts (477 lines)
+- [x] Move io-role-change-routes.ts → server/io/role-change.ts (591 lines)
+- [x] Move managers-nook-routes.ts → server/io/managers-nook.ts (308 lines)
+- [x] Move group-task-routes.ts → server/io/group-tasks.ts (412 lines)
+- [x] Move io-performance-routes.ts → server/io/performance.ts (242 lines)
+- [x] Refactor shift-extension-routes.ts to Router() → server/io/shift-extensions.ts (221 lines)
+- [x] Update barrel router (server/io/index.ts) with all 20 domain modules (116 lines)
+- [x] Remove 6 satellite imports/calls from _core/index.ts
+- [x] Fix 4 test files + io-routes-integration.test.ts barrel assertions + 7 combined source arrays
+- [x] Delete 6 original satellite files
+- [x] Run full test suite — 42 files, 1,424 tests ALL PASSING
+- [x] TypeScript clean (npx tsc --noEmit)
+- [x] Smoke test 11 routes via curl — all 401 (auth required = correct)

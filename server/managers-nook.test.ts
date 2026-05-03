@@ -176,8 +176,8 @@ describe("Manager's Nook", () => {
     });
   });
 
-  describe('Server routes (managers-nook-routes.ts)', () => {
-    const routeFile = readFileSync(join(__dirname, 'managers-nook-routes.ts'), 'utf-8');
+  describe('Server routes (io/managers-nook.ts)', () => {
+    const routeFile = readFileSync(join(__dirname, 'io/managers-nook.ts'), 'utf-8');
 
     it('defines scorecard endpoint', () => {
       expect(routeFile).toContain('"/scorecard"');
@@ -216,12 +216,14 @@ describe("Manager's Nook", () => {
       expect(routeFile).toContain('GROUP_CONCAT');
     });
 
-    it('exports registerManagersNookRoutes function', () => {
-      expect(routeFile).toContain('registerManagersNookRoutes');
+    it('exports router as default', () => {
+      expect(routeFile).toContain('export default router');
     });
 
-    it('mounts under /api/io/managers-nook prefix', () => {
-      expect(routeFile).toContain('"/api/io/managers-nook"');
+    it('is mounted under /managers-nook prefix via barrel router', () => {
+      const barrel = readFileSync(join(__dirname, 'io/index.ts'), 'utf-8');
+      expect(barrel).toContain('managersNookRouter');
+      expect(barrel).toContain('"/managers-nook"');
     });
   });
 });

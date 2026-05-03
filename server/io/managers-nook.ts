@@ -4,7 +4,7 @@
  * Access: Managers + Admin only.
  */
 import { Router, Request, Response } from "express";
-import { getDb } from "./db.js";
+import { getDb } from "../db.js";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -304,8 +304,5 @@ router.get("/available-months", async (req: Request, res: Response) => {
   }
 });
 
-export function registerManagersNookRoutes(parentRouter: Router) {
-  parentRouter.use("/api/io/managers-nook", router);
-}
 
 export default router;

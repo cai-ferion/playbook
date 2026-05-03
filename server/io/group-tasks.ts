@@ -11,9 +11,9 @@
  */
 
 import { Router, Request, Response } from "express";
-import { getDb } from "./db.js";
+import { getDb } from "../db.js";
 import { sql } from "drizzle-orm";
-import { ioNotifications } from "../drizzle/schema.js";
+import { ioNotifications } from "../../drizzle/schema.js";
 
 const router = Router();
 
@@ -409,6 +409,4 @@ router.post("/:id/close", async (req: Request, res: Response) => {
   }
 });
 
-export function registerGroupTaskRoutes(app: Router) {
-  app.use("/api/io/group-tasks", router);
-}
+export default router;

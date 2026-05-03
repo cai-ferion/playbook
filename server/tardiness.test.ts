@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, "..");
 const readFile = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf-8");
 // ── Source files ──────────────────────────────────────────────────
 const schema = readFile("drizzle/schema.ts");
-const tardinessRoutes = readFile("server/io-tardiness-routes.ts");
+const tardinessRoutes = readFile("server/io/tardiness.ts");
 const tardinessJs = readFile("server/public/js/tardiness.js");
 const notificationsJs = readFile("server/public/js/notifications.js");
 const appJs = readFile("server/public/js/app.js");
@@ -40,7 +40,7 @@ describe("Tardiness — Database Schema", () => {
 // ── 2. Server Routes ────────────────────────────────────────────
 describe("Tardiness — Server Routes", () => {
   it("registers routes under /api/io", () => {
-    expect(tardinessRoutes).toContain('app.use("/api/io", router)');
+    expect(tardinessRoutes).toContain('export default router');
   });
   it("has upload endpoint", () => {
     expect(tardinessRoutes).toContain('router.post("/tardiness/upload"');
@@ -92,8 +92,11 @@ describe("Tardiness — Server Routes", () => {
   it("PG filter metadata uses live io_employees data (not stale io_tardiness snapshot)", () => {
     expect(tardinessRoutes).toContain("SELECT DISTINCT e.planning_group FROM io_tardiness t LEFT JOIN io_employees");
   });
-  it("is registered in server entry", () => {
-    expect(serverEntry).toContain("registerTardinessRoutes");
+  it("is registered via barrel router in server entry", () => {
+    expect(serverEntry).toContain("registerModularIORoutes");
+    // Tardiness is mounted in io/index.ts barrel, not directly in _core/index.ts
+    const barrel = readFile("server/io/index.ts");
+    expect(barrel).toContain("tardinessRouter");
   });
 });
 // ── 3. Upload Logic ─────────────────────────────────────────────
