@@ -22,7 +22,7 @@ function readFile(relPath: string): string {
 // ===== File Sources =====
 const notificationsJs = readFile("public/js/notifications.js");
 const autoMailerTs = readFile("auto-mailer.ts");
-const ioRoutesTs = ["io-routes.ts", "io/shared.ts", "io/attendance-ops.ts", "io/attendance.ts", "io/audit-log.ts", "io/billing.ts", "io/coaching.ts", "io/corrective-actions.ts", "io/employees.ts", "io/insights.ts", "io/leaves.ts", "io/notifications.ts", "io/permissions.ts", "io/tasks.ts", "io/wfm.ts"].map(f => readFile(f)).join("\n");
+const ioRoutesTs = ["io/shared.ts", "io/attendance-ops.ts", "io/attendance.ts", "io/audit-log.ts", "io/billing.ts", "io/coaching.ts", "io/corrective-actions.ts", "io/employees.ts", "io/insights.ts", "io/leaves.ts", "io/notifications.ts", "io/permissions.ts", "io/tasks.ts", "io/wfm.ts"].map(f => readFile(f)).join("\n");
 const notificationsModule = readFile("io/notifications.ts");
 const compassJs = readFile("public/js/compass.js");
 const havenJs = readFile("public/js/haven.js");

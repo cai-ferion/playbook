@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 /**
- * Tests for IO Operations API routes.
- * These tests verify the route registration, request handling, and database interactions
- * for the workforce management system's core API endpoints.
+ * Tests for IO Operations API — module registration, schema, and type exports.
+ * registerIORoutes has been deleted (monolith fully decomposed into server/io/*.ts).
+ * Modular routes are tested via registerModularIORoutes in io-routes-integration.test.ts.
  */
 
 // Mock the database module
@@ -55,21 +55,20 @@ vi.mock("./storage.js", () => ({
   storagePut: vi.fn().mockResolvedValue({ url: "https://cdn.example.com/file.png", key: "test-key" }),
 }));
 
-describe("IO Routes Module", () => {
-  it("exports registerIORoutes function", async () => {
-    const mod = await import("./io-routes.js");
-    expect(mod.registerIORoutes).toBeDefined();
-    expect(typeof mod.registerIORoutes).toBe("function");
+describe("IO Modular Router", () => {
+  it("exports registerModularIORoutes function", async () => {
+    const mod = await import("./io/index.js");
+    expect(mod.registerModularIORoutes).toBeDefined();
+    expect(typeof mod.registerModularIORoutes).toBe("function");
   });
 
-  it("registerIORoutes is a no-op stub (routes served by modular IO router)", async () => {
-    const { registerIORoutes } = await import("./io-routes.js");
+  it("registerModularIORoutes mounts routes under /api/io", async () => {
+    const { registerModularIORoutes } = await import("./io/index.js");
     const mockApp = {
       use: vi.fn(),
     };
-    registerIORoutes(mockApp as any);
-    // No-op stub: should NOT call app.use (all routes now in io/index.ts)
-    expect(mockApp.use).not.toHaveBeenCalled();
+    registerModularIORoutes(mockApp as any);
+    expect(mockApp.use).toHaveBeenCalledWith("/api/io", expect.anything());
   });
 });
 

@@ -3753,3 +3753,12 @@
 - [x] Run full test suite — 42 files, 1,429 tests ALL PASSING
 - [x] TypeScript clean (npx tsc --noEmit)
 - [x] Dev server routes respond (401 = auth required = correct)
+
+## Blueprint Phase 2 — Delete io-routes.ts Stub
+- [x] Remove registerIORoutes import + call from server/_core/index.ts
+- [x] Strip __dirname + "/io-routes.ts" from all test file combined source arrays (19 files)
+- [x] Update io-routes.test.ts (replaced registerIORoutes tests with registerModularIORoutes tests)
+- [x] Update io-routes-integration.test.ts (replaced registerIORoutes with registerModularIORoutes)
+- [x] Delete server/io-routes.ts (file removed entirely)
+- [x] Run full test suite — 42 files, 1,428 tests ALL PASSING
+- [x] TypeScript clean (npx tsc --noEmit)
