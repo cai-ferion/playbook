@@ -3860,3 +3860,12 @@
 - [x] Wire fetchWithConflictHandling + version into helm.js (tasks + attendance tag) — 3 PATCH calls
 - [x] Add version field to coaching lean query response
 - [x] Full test suite passing (45 files, 1,601 tests) + TypeScript clean
+
+## Tier 2 — Batch Conflict Summary (Attendance Bulk-Save)
+- [x] Audit data.js saveRecords flow and current fetchWithConflictHandling usage
+- [x] Build showBatchConflictDialog() — multi-row conflict table with Force All/Accept All/Per-Row options
+- [x] Add batch-specific CSS (scrollable table wrap, wider dialog body)
+- [x] Refactor saveRecords to collect all 409 responses, then show single batch dialog
+- [x] Enrich edit objects with _version, _agent_name, _log_date from serverPagState.rows
+- [x] Handle "Accept All" / "Force All" / "Per-Row" bulk actions with retry logic
+- [x] All JS files syntax-checked + full test suite passing (45 files, 1,601 tests)

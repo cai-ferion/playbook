@@ -187,7 +187,189 @@ async function fetchWithConflictHandling(url, options, fieldLabels = {}) {
   return resp;
 }
 
-// ── CSS Injection ────────────────────────────────────────────────────
+// ── Batch Conflict Summary Dialog ─────────────────────────────────────────────────────
+
+/**
+ * Show a batch conflict summary for multiple records that had version conflicts.
+ * Instead of per-record popups, shows one table with all conflicting rows.
+ *
+ * @param {Array<Object>} conflicts - Array of conflict objects:
+ *   { id, identifier, userPayload, conflict: { your_version, server_version, server_state } }
+ * @param {Object} fieldLabels - Map of field keys to human-readable labels
+ * @returns {Promise<{action: string, resolutions: Array}>}
+ *   action: 'force_all' | 'accept_all' | 'per_row'
+ *   resolutions: Array of { id, action: 'force'|'accept', payload } for per_row
+ */
+function showBatchConflictDialog(conflicts, fieldLabels = {}) {
+  return new Promise((resolve) => {
+    const dialog = getOrCreateBatchDialog();
+    const body = dialog.querySelector('.batch-conflict-body');
+
+    // Identify which fields actually differ across all conflicts
+    const allChangedFields = new Set();
+    conflicts.forEach(c => {
+      const serverState = c.conflict.server_state || {};
+      Object.keys(c.userPayload).forEach(k => {
+        if (k !== 'version' && k !== '_id' && String(c.userPayload[k] ?? '') !== String(serverState[k] ?? '')) {
+          allChangedFields.add(k);
+        }
+      });
+    });
+    const changedFieldsArr = Array.from(allChangedFields);
+
+    let html = `
+      <div class="conflict-header">
+        <div class="conflict-icon">⚠️</div>
+        <h3>Batch Edit Conflicts Detected</h3>
+        <p><strong>${conflicts.length}</strong> record(s) were modified by another user while you were editing.</p>
+      </div>
+      <div class="batch-conflict-table-wrap">
+        <table class="conflict-table batch-conflict-table">
+          <thead>
+            <tr>
+              <th style="width:30px;"><input type="checkbox" id="batch-conflict-select-all" checked /></th>
+              <th>Record</th>
+              ${changedFieldsArr.map(f => `<th>${fieldLabels[f] || f.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</th>`).join('')}
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    conflicts.forEach((c, idx) => {
+      const serverState = c.conflict.server_state || {};
+      html += `<tr data-idx="${idx}">`;
+      html += `<td><input type="checkbox" class="batch-row-check" data-idx="${idx}" checked /></td>`;
+      html += `<td class="field-name">${escapeHtml(c.identifier || 'ID: ' + c.id)}</td>`;
+      changedFieldsArr.forEach(f => {
+        const yours = c.userPayload[f] ?? '—';
+        const server = serverState[f] ?? '—';
+        const differs = String(yours) !== String(server);
+        if (differs) {
+          html += `<td><span class="your-value" title="Your value">${escapeHtml(String(yours))}</span> <span style="color:var(--text-secondary,#777)">→</span> <span class="server-value" title="Server value">${escapeHtml(String(server))}</span></td>`;
+        } else {
+          html += `<td style="color:var(--text-secondary,#777);">${escapeHtml(String(yours))}</td>`;
+        }
+      });
+      html += `<td>
+        <select class="conflict-pick batch-row-action" data-idx="${idx}">
+          <option value="force">Force Mine</option>
+          <option value="accept">Accept Server</option>
+        </select>
+      </td>`;
+      html += `</tr>`;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+      <div class="batch-conflict-summary" style="font-size:12px;color:var(--text-secondary,#aaa);margin:12px 0;text-align:center;">
+        <span id="batch-conflict-count">${conflicts.length}</span> of ${conflicts.length} selected
+      </div>
+      <div class="conflict-actions">
+        <button class="conflict-btn conflict-btn-overwrite" data-action="force_all">
+          Force All My Changes
+        </button>
+        <button class="conflict-btn conflict-btn-accept" data-action="accept_all">
+          Accept All Server Values
+        </button>
+        <button class="conflict-btn conflict-btn-merge" data-action="per_row">
+          Apply Per-Row Selections
+        </button>
+      </div>
+    `;
+
+    body.innerHTML = html;
+    dialog.style.display = 'flex';
+    document.body.classList.add('conflict-dialog-open');
+
+    // Select-all checkbox
+    const selectAll = dialog.querySelector('#batch-conflict-select-all');
+    selectAll.onchange = () => {
+      dialog.querySelectorAll('.batch-row-check').forEach(cb => { cb.checked = selectAll.checked; });
+      updateBatchCount();
+    };
+
+    // Individual checkboxes
+    dialog.querySelectorAll('.batch-row-check').forEach(cb => {
+      cb.onchange = updateBatchCount;
+    });
+
+    function updateBatchCount() {
+      const checked = dialog.querySelectorAll('.batch-row-check:checked').length;
+      const countEl = dialog.querySelector('#batch-conflict-count');
+      if (countEl) countEl.textContent = checked;
+    }
+
+    // Action buttons
+    dialog.querySelectorAll('.conflict-btn').forEach(btn => {
+      btn.onclick = () => {
+        const action = btn.dataset.action;
+        let resolutions = [];
+
+        if (action === 'force_all') {
+          resolutions = conflicts.map(c => ({
+            id: c.id,
+            action: 'force',
+            payload: { ...c.userPayload, version: c.conflict.server_version }
+          }));
+        } else if (action === 'accept_all') {
+          resolutions = conflicts.map(c => ({
+            id: c.id,
+            action: 'accept',
+            payload: null
+          }));
+        } else if (action === 'per_row') {
+          conflicts.forEach((c, idx) => {
+            const checkbox = dialog.querySelector(`.batch-row-check[data-idx="${idx}"]`);
+            const select = dialog.querySelector(`.batch-row-action[data-idx="${idx}"]`);
+            if (!checkbox || !checkbox.checked) return; // skip unchecked rows
+            const rowAction = select ? select.value : 'accept';
+            if (rowAction === 'force') {
+              resolutions.push({
+                id: c.id,
+                action: 'force',
+                payload: { ...c.userPayload, version: c.conflict.server_version }
+              });
+            } else {
+              resolutions.push({
+                id: c.id,
+                action: 'accept',
+                payload: null
+              });
+            }
+          });
+        }
+
+        closeBatchConflictDialog();
+        resolve({ action, resolutions });
+      };
+    });
+  });
+}
+
+function getOrCreateBatchDialog() {
+  let dialog = document.getElementById('batch-conflict-dialog');
+  if (!dialog) {
+    dialog = document.createElement('div');
+    dialog.id = 'batch-conflict-dialog';
+    dialog.className = 'conflict-overlay';
+    dialog.innerHTML = '<div class="batch-conflict-body conflict-body"></div>';
+    document.body.appendChild(dialog);
+  }
+  return dialog;
+}
+
+function closeBatchConflictDialog() {
+  const dialog = document.getElementById('batch-conflict-dialog');
+  if (dialog) {
+    dialog.style.display = 'none';
+    document.body.classList.remove('conflict-dialog-open');
+  }
+}
+
+// ── CSS Injection ──────────────────────────────────────────────────────────────────────
 (function injectConflictStyles() {
   if (document.getElementById('conflict-dialog-styles')) return;
   const style = document.createElement('style');
@@ -302,6 +484,18 @@ async function fetchWithConflictHandling(url, options, fieldLabels = {}) {
     }
     body.conflict-dialog-open {
       overflow: hidden;
+    }
+    .batch-conflict-table-wrap {
+      overflow-x: auto;
+      margin-bottom: 16px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    .batch-conflict-table {
+      min-width: 500px;
+    }
+    .batch-conflict-body {
+      max-width: 850px;
     }
   `;
   document.head.appendChild(style);

@@ -1964,6 +1964,15 @@ async function confirmSave() {
         const dbCol = fieldMap[field] || field;
         edit[dbCol] = value;
       }
+      // Enrich with version + identifier for batch conflict dialog
+      const srcRow = (typeof serverPagState !== 'undefined' && serverPagState.rows)
+        ? serverPagState.rows.find(r => r._id === recId)
+        : null;
+      if (srcRow) {
+        edit._version = srcRow._version || null;
+        edit._agent_name = srcRow.agent || '';
+        edit._log_date = srcRow.date || '';
+      }
       edits.push(edit);
     }
 

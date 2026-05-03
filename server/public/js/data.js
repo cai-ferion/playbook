@@ -720,9 +720,18 @@ async function fetchRecords() {
  * Save edits back to io_attendance table via API.
  */
 async function saveRecords(edits) {
+  const FIELD_LABELS = { tag: 'Tag', upl_reason: 'UPL Reason', remarks: 'Remarks', ot_hours: 'OT Hours', role: 'Role', planning_group: 'Planning Group' };
+
   try {
     let successCount = 0;
     let failCount = 0;
+    const conflicts = []; // Collect 409s for batch dialog
+
+    const actorHeaders = {};
+    if (typeof currentUser !== 'undefined' && currentUser) {
+      actorHeaders['x-actor-ohr'] = currentUser.ohr_id || '';
+      actorHeaders['x-actor-name'] = currentUser.full_name || '';
+    }
 
     for (const edit of edits) {
       const id = edit._id;
@@ -737,26 +746,63 @@ async function saveRecords(edits) {
       if (edit.planning_group !== undefined) payload.planning_group = edit.planning_group;
       // Attach version for optimistic locking (if available)
       if (edit._version) payload.version = edit._version;
-      const actorHeaders = {};
-      if (typeof currentUser !== 'undefined' && currentUser) {
-        actorHeaders['x-actor-ohr'] = currentUser.ohr_id || '';
-        actorHeaders['x-actor-name'] = currentUser.full_name || '';
-      }
-      const resp = await fetchWithConflictHandling(`${IO_API_BASE}/attendance/${id}`, {
+
+      // Use raw fetch (not fetchWithConflictHandling) to collect 409s for batch dialog
+      const resp = await fetch(`${IO_API_BASE}/attendance/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...actorHeaders },
         body: JSON.stringify(payload)
-      }, { tag: 'Tag', upl_reason: 'UPL Reason', remarks: 'Remarks', ot_hours: 'OT Hours', role: 'Role', planning_group: 'Planning Group' });
+      });
 
-      if (resp.ok || resp._synthetic) {
+      if (resp.ok) {
         successCount++;
-      } else if (resp.status !== 409) {
-        failCount++;
-        console.error('Save error for id', id, ':', await resp.text());
+      } else if (resp.status === 409) {
+        // Collect conflict for batch resolution
+        const errorData = await resp.json().catch(() => ({}));
+        if (errorData.error === 'VERSION_CONFLICT') {
+          conflicts.push({
+            id,
+            identifier: edit._agent_name ? `${edit._agent_name} (${edit._log_date || ''})` : `Record #${id}`,
+            userPayload: payload,
+            conflict: errorData.conflict
+          });
+        } else {
+          failCount++;
+        }
       } else {
-        // 409 was handled by conflict dialog but user may have retried
         failCount++;
+        console.error('Save error for id', id, ':', await resp.text().catch(() => 'Unknown'));
       }
+    }
+
+    // If there are conflicts, show the batch dialog
+    if (conflicts.length > 0) {
+      const result = await showBatchConflictDialog(conflicts, FIELD_LABELS);
+
+      // Process resolutions
+      let resolvedCount = 0;
+      for (const resolution of result.resolutions) {
+        if (resolution.action === 'force' && resolution.payload) {
+          // Retry with the server version
+          const retryResp = await fetch(`${IO_API_BASE}/attendance/${resolution.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...actorHeaders },
+            body: JSON.stringify(resolution.payload)
+          });
+          if (retryResp.ok) {
+            resolvedCount++;
+          } else {
+            failCount++;
+          }
+        } else if (resolution.action === 'accept') {
+          // User accepted server values — count as resolved (no retry needed)
+          resolvedCount++;
+        }
+      }
+      successCount += resolvedCount;
+      // Any conflicts not in resolutions (unchecked rows) are counted as failures
+      const unresolvedCount = conflicts.length - result.resolutions.length;
+      failCount += unresolvedCount;
     }
 
     if (failCount === 0) {
