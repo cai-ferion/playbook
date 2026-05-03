@@ -1283,7 +1283,8 @@ async function compassDisputeAction(newStatus) {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -1764,7 +1765,8 @@ async function compassSubmitAcknowledge() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4090,7 +4092,8 @@ async function disputesSubmitDisputeMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4150,7 +4153,8 @@ async function disputesSubmitAcceptMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4217,7 +4221,8 @@ async function disputesQuickAction(newStatus) {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4404,7 +4409,8 @@ async function disputesSubmitRetainMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4462,7 +4468,8 @@ async function disputesSubmitReverseMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4526,7 +4533,8 @@ async function disputesSubmitQADecisionAccepted() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4639,7 +4647,8 @@ async function disputesSubmitQADecisionRejected() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4699,7 +4708,8 @@ async function disputesSubmitLV5AcceptDecision() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4798,7 +4808,8 @@ async function disputesSubmitLV5RejectDecision(){
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4907,7 +4918,8 @@ async function disputesSubmitLV4RetainMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -4966,7 +4978,8 @@ async function disputesSubmitLV4ReverseMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -5065,7 +5078,8 @@ async function disputesSubmitLV6ReverseMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -5173,7 +5187,8 @@ async function disputesSubmitLV6RetainMarkdown() {
 
   try {
     const url = `${IO_API_BASE}/coaching/${log.coaching_id || log.id}`;
-    const resp = await fetch(url, {
+    if (log.version) update.version = log.version;
+    const resp = await fetchWithConflictHandling(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)

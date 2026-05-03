@@ -3852,3 +3852,11 @@
 - [x] Conflict dialog: field-by-field diff with Force/Accept/Merge options
 - [x] Write Vitest tests for optimistic locking logic (14 tests)
 - [x] Full test suite passing (45 files, 1,601 tests) + TypeScript clean
+
+## Tier 1 — Frontend Optimistic Locking Wiring
+- [x] Wire fetchWithConflictHandling + version into coaching (compass.js) — 15 PATCH calls
+- [x] Wire fetchWithConflictHandling + version into corrective-actions.js — 5 PATCH calls
+- [x] Wire fetchWithConflictHandling + version into shift-extensions (shift-extension.js) — 1 PATCH call
+- [x] Wire fetchWithConflictHandling + version into helm.js (tasks + attendance tag) — 3 PATCH calls
+- [x] Add version field to coaching lean query response
+- [x] Full test suite passing (45 files, 1,601 tests) + TypeScript clean

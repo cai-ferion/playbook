@@ -80,6 +80,7 @@ router.get("/coaching", async (req: Request, res: Response) => {
         ack_date: ioCoaching.ack_date,
         created_at: ioCoaching.created_at,
         updated_at: ioCoaching.updated_at,
+        version: ioCoaching.version,
       }).from(ioCoaching).orderBy(desc(ioCoaching.id)).limit(lim);
       return res.json(rows);
     }

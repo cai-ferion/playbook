@@ -326,14 +326,17 @@ async function seActionFromDetail(id, level, action) {
 /* ===== Submit Action ===== */
 async function seSubmitAction(id, level, action, comments, actionedBy) {
   try {
-    const resp = await fetch(`${IO_API_BASE}/shift-extensions/${id}/${level}-action`, {
+    const record = SE.data.find(d => d.id === id);
+    const payload = {
+      action: action,
+      comments: comments,
+      actioned_by: actionedBy
+    };
+    if (record && record.version) payload.version = record.version;
+    const resp = await fetchWithConflictHandling(`${IO_API_BASE}/shift-extensions/${id}/${level}-action`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: action,
-        comments: comments,
-        actioned_by: actionedBy
-      })
+      body: JSON.stringify(payload)
     });
     if (!resp.ok) throw new Error('Action failed');
     showToast(`Request ${action.toLowerCase()} successfully`, 'success');

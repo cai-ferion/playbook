@@ -831,9 +831,11 @@ async function helmUpdateStatus(taskId, newStatus) {
   if (newStatus === 'Completed') {
     update.completed_date = new Date().toISOString();
   }
+  const task = HELM.tasks.find(t => t.task_id === taskId);
+  if (task && task.version) update.version = task.version;
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/tasks/${taskId}`, {
+    const resp = await fetchWithConflictHandling(`${IO_API_BASE}/tasks/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(update)
@@ -1511,13 +1513,15 @@ async function helmApproveRequest(taskId, decision) {
     if (!task) throw new Error('Task not found');
 
     // Update the task's approval status (keep status as Open so it stays visible)
-    const resp = await fetch(`${IO_API_BASE}/tasks/${taskId}`, {
+    const payload = {
+      approval_status: decision,
+      completed_date: new Date().toISOString()
+    };
+    if (task.version) payload.version = task.version;
+    const resp = await fetchWithConflictHandling(`${IO_API_BASE}/tasks/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        approval_status: decision,
-        completed_date: new Date().toISOString()
-      })
+      body: JSON.stringify(payload)
     });
     if (!resp.ok) throw new Error('Failed to update request status');
 
@@ -1585,14 +1589,16 @@ async function helmApplyApprovedTagChange(task) {
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
 
   // Update the attendance record's tag
-  const updateResp = await fetch(`${IO_API_BASE}/attendance/${record.id}`, {
+  const attPayload = { tag: newTag };
+  if (record.version) attPayload.version = record.version;
+  const updateResp = await fetchWithConflictHandling(`${IO_API_BASE}/attendance/${record.id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       'x-actor-ohr': cu ? cu.ohr_id : '',
       'x-actor-name': cu ? cu.full_name : 'System'
     },
-    body: JSON.stringify({ tag: newTag })
+    body: JSON.stringify(attPayload)
   });
 
   if (!updateResp.ok) {

@@ -1571,7 +1571,8 @@ async function caSubmitCap() {
 
   if (submitBtn) submitBtn.disabled = true;
   try {
-    const resp = await fetch(`${IO_API_BASE}/corrective-actions/${CA.currentDetail.id}`, {
+    if (CA.currentDetail.version) payload.version = CA.currentDetail.version;
+    const resp = await fetchWithConflictHandling(`${IO_API_BASE}/corrective-actions/${CA.currentDetail.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -1662,7 +1663,8 @@ async function caSubmitDismiss() {
 
   if (submitBtn) submitBtn.disabled = true;
   try {
-    const resp = await fetch(`${IO_API_BASE}/corrective-actions/${CA.currentDetail.id}`, {
+    if (CA.currentDetail.version) payload.version = CA.currentDetail.version;
+    const resp = await fetchWithConflictHandling(`${IO_API_BASE}/corrective-actions/${CA.currentDetail.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -2029,7 +2031,8 @@ async function _caCap1Submit() {
       decided_by_ohr: coach ? coach.ohr_id : '',
     };
 
-    var patchResp = await fetch(IO_API_BASE + '/corrective-actions/' + nte.id, {
+    if (nte.version) patchPayload.version = nte.version;
+    var patchResp = await fetchWithConflictHandling(IO_API_BASE + '/corrective-actions/' + nte.id, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patchPayload)
@@ -2555,7 +2558,8 @@ async function _capNSubmit(capKey) {
       decided_by_ohr: coach ? coach.ohr_id : '',
     };
 
-    var patchResp = await fetch(IO_API_BASE + '/corrective-actions/' + nte.id, {
+    if (nte.version) patchPayload.version = nte.version;
+    var patchResp = await fetchWithConflictHandling(IO_API_BASE + '/corrective-actions/' + nte.id, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patchPayload)
@@ -3103,7 +3107,8 @@ async function caSubmitManualLog() {
         cap_active_days: CA_CAP_ACTIVE_DAYS[CA_MANUAL_LOG.caType] || 60,
         decision_by_ohr: coach ? coach.ohr_id : '',
       };
-      await fetch(IO_API_BASE + '/corrective-actions/' + created.id, {
+      capPatch.version = created.version || 1;
+      await fetchWithConflictHandling(IO_API_BASE + '/corrective-actions/' + created.id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(capPatch)
