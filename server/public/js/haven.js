@@ -135,10 +135,18 @@ function havenIsFilingWindowOpen() {
   return false;
 }
 function havenGetMinLeaveDate() {
-  // Minimum leave date: 1st of NEXT month (filing in May = June+, filing in June = July+, etc.)
+  // Earliest filing date: Saturday of the last Sat-Fri week whose week still overlaps the current month.
+  // e.g. In May 2026, last day = May 31 (Sun). Saturday on or before May 31 = May 30 (Sat).
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  return havenFormatDate(nextMonth);
+  // Last day of current month
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // Find Saturday on or before lastDayOfMonth
+  // getDay(): 0=Sun, 1=Mon, ..., 6=Sat
+  const dow = lastDayOfMonth.getDay();
+  const daysBack = (dow + 1) % 7; // Sat=0, Sun=1, Mon=2, ..., Fri=6
+  const saturday = new Date(lastDayOfMonth);
+  saturday.setDate(lastDayOfMonth.getDate() - daysBack);
+  return havenFormatDate(saturday);
 }
 
 
@@ -592,7 +600,7 @@ function havenSubmitLeave() {
   const typeVal = typeEl ? typeEl.value : 'PTO';
   const reasonVal = (document.getElementById('haven-file-reason')?.value || '').trim();
   if (!dateVal) { showToast('Please select a date', 'error'); return; }
-  if (dateVal < havenGetMinLeaveDate()) { showToast('Leave dates must be next month onwards', 'error'); return; }
+  if (dateVal < havenGetMinLeaveDate()) { showToast('Leave date is too early. Earliest allowed: ' + havenGetMinLeaveDate(), 'error'); return; }
   if (!havenIsFilingWindowOpen()) { showToast('Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month.', 'error'); return; }
   if (typeEl && !typeVal) { showToast('Please select a leave type', 'error'); return; }
   if (!reasonVal) { showToast('Please provide a reason for your leave', 'error'); return; }

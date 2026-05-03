@@ -214,11 +214,11 @@ describe("IO Routes — Route Handler Logic (via source inspection)", () => {
     expect(source).toContain("Filing window is closed");
   });
 
-  it("leaves POST enforces next-month-onwards date restriction", async () => {
+  it("leaves POST enforces earliest-filing-date restriction (last WE of current month)", async () => {
     const fs = await import("fs");
     const source = [__dirname + "/io/shared.ts", __dirname + "/io/attendance-ops.ts", __dirname + "/io/attendance.ts", __dirname + "/io/audit-log.ts", __dirname + "/io/billing.ts", __dirname + "/io/coaching.ts", __dirname + "/io/corrective-actions.ts", __dirname + "/io/employees.ts", __dirname + "/io/insights.ts", __dirname + "/io/leaves.ts", __dirname + "/io/notifications.ts", __dirname + "/io/permissions.ts", __dirname + "/io/tasks.ts", __dirname + "/io/wfm.ts", __dirname + "/io/tardiness.ts", __dirname + "/io/role-change.ts", __dirname + "/io/managers-nook.ts", __dirname + "/io/group-tasks.ts", __dirname + "/io/shift-extensions.ts", __dirname + "/io/performance.ts"].map(f => require("fs").readFileSync(f, "utf-8")).join("\n");
     
-    expect(source).toContain("Leave dates must be next month onwards");
+    expect(source).toContain("start of last week-ending of the current month");
   });
 
   it("leaves GET supports filters: leave_id, status, ohr_id, supervisor, month", async () => {

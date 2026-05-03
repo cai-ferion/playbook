@@ -12,6 +12,35 @@ import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-l
 
 const router = Router();
 
+/**
+ * Compute the earliest date an agent can file a leave for.
+ * Rule: Saturday of the last Sat–Fri week whose week still overlaps the current month.
+ *
+ * Algorithm:
+ * 1. Find the last day of the current month.
+ * 2. Find the Saturday on or before that last day (this is the start of the last
+ *    Sat–Fri week that overlaps the current month).
+ * 3. Return that Saturday as YYYY-MM-DD.
+ */
+export function getEarliestFilingDate(now: Date): string {
+  // Last day of current month
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  // Find the Saturday on or before lastDayOfMonth
+  // getDay(): 0=Sun, 1=Mon, ..., 6=Sat
+  const dow = lastDayOfMonth.getDay();
+  // Days to subtract to reach the previous (or current) Saturday
+  // If dow=6 (Sat), subtract 0. If dow=0 (Sun), subtract 1. If dow=5 (Fri), subtract 6.
+  const daysBack = (dow + 1) % 7; // Sat=0, Sun=1, Mon=2, ..., Fri=6
+  const saturday = new Date(lastDayOfMonth);
+  saturday.setDate(lastDayOfMonth.getDate() - daysBack);
+
+  const y = saturday.getFullYear();
+  const m = String(saturday.getMonth() + 1).padStart(2, '0');
+  const d = String(saturday.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // GET /api/io/leaves - list leaves with filters
 router.get("/leaves", async (req: Request, res: Response) => {
   try {
@@ -50,13 +79,15 @@ router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Re
     if (dayOfMonth < 1 || dayOfMonth > 7) {
       return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
     }
-    // Date restriction: next month onwards
+    // Date restriction: earliest filing date = Saturday of the last Sat-Fri week
+    // whose week still overlaps with the current month.
+    // e.g. In May 2026, the last WE (Friday) whose week overlaps May is June 6
+    // (week: Sat May 31 – Fri June 6). Earliest filing date = Sat May 31.
     const leaveDate = req.body.start_date;
     if (leaveDate) {
-      const nextMonth = new Date(nowMNL.getFullYear(), nowMNL.getMonth() + 1, 1);
-      const minDate = nextMonth.toISOString().slice(0, 10);
+      const minDate = getEarliestFilingDate(nowMNL);
       if (leaveDate < minDate) {
-        return res.status(400).json({ error: "Leave dates must be next month onwards." });
+        return res.status(400).json({ error: `Leave dates must be ${minDate} or later (start of last week-ending of the current month).` });
       }
     }
     const db = await getDb();

@@ -3887,3 +3887,8 @@
 - [x] 7.2 Error Monitoring & Observability — global error handler, request duration logging, alerting
 - [x] 7.3 Database Migrations Strategy — SOP documentation
 - [x] 7.4 Load Testing — k6 script for post-deploy validation
+## Haven — Leave Filing Date Restriction Revision
+- [x] Revise earliest filing date: Saturday of last WE (Sat-Fri) whose week overlaps current month
+- [x] Update server-side validation in leaves module
+- [x] Update client-side date picker min-date in haven.js
+- [x] Write tests to verify new date logic
