@@ -946,11 +946,11 @@ initHelm = async function(view) {
   // Fetch group tasks data
   await gtFetchMyGroupTasks();
 
-  // Role-based visibility for New Group Task button
+  // Role-based visibility for New Group Task button — only ADMIN_OHRS can see it
   const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  const isAgent = cu && cu.actual_role === 'Agent' && !(window.ADMIN_OHRS || []).includes(cu.ohr_id);
+  const isAdminOhr = cu && (window.ADMIN_OHRS || []).includes(cu.ohr_id);
   const groupTaskBtn = document.getElementById('helm-new-group-task-btn');
-  if (groupTaskBtn) groupTaskBtn.style.display = isAgent ? 'none' : '';
+  if (groupTaskBtn) groupTaskBtn.style.display = isAdminOhr ? '' : 'none';
 
   // New Request button: visible to all roles (agents can submit shift extension requests)
   const reqBtn = document.getElementById('helm-new-request-btn');

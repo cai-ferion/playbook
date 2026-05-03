@@ -3895,3 +3895,6 @@
 ## Haven — Calendar Visual Cue + Blank Date Picker
 - [x] Grey out dates before earliest filing date on Haven calendar
 - [x] Default File Leave form date picker to blank (no pre-selected date)
+
+## Helm — New Group Task Button Visibility
+- [x] Restrict "New Group Task" button to ADMIN_OHRS only (hide from all other roles)
