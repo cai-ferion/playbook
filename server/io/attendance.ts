@@ -9,6 +9,7 @@ import { ioAttendance, ioAuditLog, ioEmployees } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, asc, inArray, or } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
 import { getManagerOhrSet } from "./shared.js";
+import { validate, attendanceBulkImportSchema, attendanceBulkTagSchema } from "./validation.js";
 
 const router = Router();
 
@@ -137,7 +138,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/attendance/bulk-import - bulk create/update attendance records (admin only)
-router.post("/attendance/bulk-import", async (req: Request, res: Response) => {
+router.post("/attendance/bulk-import", validate(attendanceBulkImportSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
@@ -339,7 +340,7 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/attendance/bulk-tag - bulk tag multiple records with audit logging
-router.post("/attendance/bulk-tag", async (req: Request, res: Response) => {
+router.post("/attendance/bulk-tag", validate(attendanceBulkTagSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });

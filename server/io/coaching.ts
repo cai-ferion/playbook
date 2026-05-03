@@ -7,6 +7,7 @@ import { getDb } from "../db.js";
 import { ioCoaching, ioCoachingRca, ioCoachingZtp, ioCoachingNte } from "../../drizzle/schema.js";
 import { eq, and, sql, desc, asc } from "drizzle-orm";
 import { ADMIN_OHRS } from "./shared.js";
+import { validate, coachingCreateSchema, coachingUpdateSchema, coachingRcaCreateSchema } from "./validation.js";
 import crypto from "crypto";
 
 const router = Router();
@@ -90,7 +91,7 @@ router.get("/coaching", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/coaching - create a coaching log
-router.post("/coaching", async (req: Request, res: Response) => {
+router.post("/coaching", validate(coachingCreateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
@@ -137,7 +138,7 @@ router.post("/coaching", async (req: Request, res: Response) => {
 });
 
 // PATCH /api/io/coaching/:id - update a coaching log (supports numeric id or alphanumeric coaching_id)
-router.patch("/coaching/:id", async (req: Request, res: Response) => {
+router.patch("/coaching/:id", validate(coachingUpdateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
@@ -217,7 +218,7 @@ router.get("/coaching-rca", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/coaching-rca", async (req: Request, res: Response) => {
+router.post("/coaching-rca", validate(coachingRcaCreateSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });

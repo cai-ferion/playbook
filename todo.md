@@ -3704,7 +3704,7 @@
 - [x] Sub-Phase 2.3: Extract simple modules (notifications, insights, audit-log)
 - [x] Sub-Phase 2.4: Extract core modules (attendance, coaching, leaves)
 - [x] Sub-Phase 2.5: Extract remaining + delete monolith
-- [ ] Sub-Phase 2.6: Zod input validation on critical endpoints
+- [x] Sub-Phase 2.6: Zod input validation on critical endpoints
 - [x] Audit 3 pre-existing test failures: removed stale ALLOWED_BUS test (never implemented), removed supabase-sync.test.ts (Supabase has no io_employees table — TiDB is primary store)
 - [x] Full test suite: 42 files, 1428 tests, ALL PASSING
 
@@ -3777,3 +3777,17 @@
 - [x] Run full test suite — 42 files, 1,424 tests ALL PASSING
 - [x] TypeScript clean (npx tsc --noEmit)
 - [x] Smoke test 11 routes via curl — all 401 (auth required = correct)
+
+## Blueprint Phase 2 — Sub-Phase 2.6: Zod Input Validation on Critical Write Endpoints
+- [x] Install Zod v4.1.12 dependency
+- [x] Create server/io/validation.ts (validate middleware + 8 schema definitions + reusable primitives)
+- [x] Add Zod validation to coaching POST (coachingCreateSchema: coaching_type, coach_ohr, coaching_date, coachee_ohr + passthrough for backward compat)
+- [x] Add Zod validation to coaching PATCH (coachingUpdateSchema: all fields optional, date regex enforced)
+- [x] Add Zod validation to coaching RCA POST (coachingRcaCreateSchema: coaching_id required, min 1 char)
+- [x] Add Zod validation to leaves POST (leaveCreateSchema: leave_type, ohr_id, full_name, start_date + passthrough)
+- [x] Add Zod validation to leaves bulk-action (leavesBulkActionSchema: strict — leave_ids, action enum, tier enum; removed redundant manual checks)
+- [x] Add Zod validation to attendance bulk-import (attendanceBulkImportSchema: creates/updates arrays with row shape + date regex)
+- [x] Add Zod validation to attendance bulk-tag (attendanceBulkTagSchema: strict — ids array, tag max 50 chars)
+- [x] Write Vitest tests for all schemas (39 tests in io-validation.test.ts — valid/invalid payloads, error messages, passthrough, strict mode)
+- [x] Run full test suite — 43 files, 1,468 tests ALL PASSING
+- [x] TypeScript clean (npx tsc --noEmit)

@@ -6,6 +6,7 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { ioLeaves, ioNotifications, ioEmployees } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, or, count } from "drizzle-orm";
+import { validate, leaveCreateSchema, leavesBulkActionSchema, leaveCancelSchema } from "./validation.js";
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.get("/leaves", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/leaves - file a new leave request
-router.post("/leaves", async (req: Request, res: Response) => {
+router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Response) => {
   try {
     // Filing window check: 1st-7th of month, PHT
     const nowMNL = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
@@ -109,21 +110,13 @@ router.patch("/leaves/:leave_id", async (req: Request, res: Response) => {
 });
 
 // POST /api/io/leaves/bulk-action - bulk approve/reject leaves
-router.post("/leaves/bulk-action", async (req: Request, res: Response) => {
+router.post("/leaves/bulk-action", validate(leavesBulkActionSchema), async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
+    // Zod schema (leavesBulkActionSchema) validates leave_ids, action, tier
     const { leave_ids, action, tier, reviewer_name, rejection_reason } = req.body;
-    if (!leave_ids || !Array.isArray(leave_ids) || leave_ids.length === 0) {
-      return res.status(400).json({ error: "leave_ids array required" });
-    }
-    if (!action || !['approve', 'reject'].includes(action)) {
-      return res.status(400).json({ error: "action must be 'approve' or 'reject'" });
-    }
-    if (!tier || !['tl', 'om'].includes(tier)) {
-      return res.status(400).json({ error: "tier must be 'tl' or 'om'" });
-    }
 
     const now = new Date().toISOString();
     let updated = 0;
