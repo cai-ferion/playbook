@@ -20,6 +20,7 @@ import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
 import { corsMiddleware } from "../middleware/cors.js";
 import { rateLimitMiddleware } from "../middleware/rate-limit.js";
 import { initCacheManifest, injectCacheHashes, getCacheManifest, getFileHash } from "../cache-manifest.js";
+import { observabilityMiddleware, getObservabilityMetrics, recordClientError, getClientErrors, type ClientErrorReport } from "../middleware/observability.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +56,8 @@ async function startServer() {
   app.use(corsMiddleware);
   // Rate limiting — per-endpoint tiered sliding window (Phase 6.2 Security Hardening)
   app.use(rateLimitMiddleware);
+  // Observability — request duration logging, slow query detection, error rate alerting (Phase 7.2)
+  app.use(observabilityMiddleware);
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
@@ -71,6 +74,31 @@ async function startServer() {
   // Health check
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
+  });
+
+  // Observability metrics endpoint (protected by auth via /api/io prefix)
+  app.get("/api/io/observability", (_req, res) => {
+    const metrics = getObservabilityMetrics();
+    res.json(metrics);
+  });
+
+  // Client error reporting endpoint (public — must work before auth)
+  app.post("/api/client-errors", (req, res) => {
+    const report = req.body as ClientErrorReport;
+    if (!report || !report.message) {
+      res.status(400).json({ error: 'Missing error message' });
+      return;
+    }
+    // Add actor from session header if available
+    report.actor = report.actor || (req.headers["x-actor-ohr"] as string) || "anonymous";
+    report.timestamp = report.timestamp || Date.now();
+    recordClientError(report);
+    res.status(204).end();
+  });
+
+  // Client errors list (protected)
+  app.get("/api/io/client-errors", (_req, res) => {
+    res.json(getClientErrors());
   });
 
   // Serve the Playbook desktop site from server/public under /api/site/
