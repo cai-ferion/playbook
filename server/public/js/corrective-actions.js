@@ -38,7 +38,8 @@ async function initCorrectiveActions() {
     } else {
       // Compass hasn't been opened yet — load violations directly
       const script = document.createElement('script');
-      script.src = 'js/compass-violations.js?v=102g';
+      const _caHash = (window._cacheHashes && window._cacheHashes['js/compass-violations.js']) || 'auto';
+      script.src = 'js/compass-violations.js?v=' + _caHash;
       script.onerror = () => console.error('CA: Failed to lazy-load compass-violations.js');
       document.head.appendChild(script);
     }

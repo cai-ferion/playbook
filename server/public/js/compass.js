@@ -3293,7 +3293,8 @@ function _compassLazyLoadViolations() {
   if (typeof HR_VIOLATIONS !== 'undefined' || COMPASS._violationsLoading) return;
   COMPASS._violationsLoading = true;
   const script = document.createElement('script');
-  script.src = 'js/compass-violations.js?v=102g';
+  const _cvHash = (window._cacheHashes && window._cacheHashes['js/compass-violations.js']) || 'auto';
+  script.src = 'js/compass-violations.js?v=' + _cvHash;
   script.onload = () => { COMPASS._violationsLoading = false; };
   script.onerror = () => { COMPASS._violationsLoading = false; console.error('Failed to lazy-load compass-violations.js'); };
   document.head.appendChild(script);

@@ -13,6 +13,13 @@
 (function() {
   'use strict';
 
+  // Cache manifest — fetched once at startup for content-hash-based cache busting
+  let _cacheHashes = null;
+  fetch('/api/site/cache-manifest.json')
+    .then(r => r.json())
+    .then(manifest => { _cacheHashes = manifest; window._cacheHashes = manifest; })
+    .catch(() => { console.warn('[ModuleLoader] Failed to fetch cache manifest, falling back to Date.now()'); });
+
   // Track which modules have been loaded
   const loadedModules = new Set();
   const loadingPromises = {};
@@ -102,7 +109,9 @@
       }
 
       const script = document.createElement('script');
-      script.src = src + '?v=' + Date.now(); // Cache-bust
+      // Use content-hash from manifest (Phase 7.1) or fall back to Date.now()
+      const hash = (_cacheHashes && _cacheHashes[src]) || Date.now();
+      script.src = src + '?v=' + hash;
       script.dataset.src = src;
       script.dataset.lazy = 'true';
       script.onload = resolve;

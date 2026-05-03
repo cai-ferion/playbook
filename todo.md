@@ -3882,3 +3882,8 @@
 - [x] 6.1 CORS Policy — strict origin allowlist + preflight handling
 - [x] 6.2 Rate Limiting — per-endpoint tiered in-memory sliding window
 - [x] 6.3 Session Idle Timeout — 30-min idle timeout, 5-min pre-expiry warning, unsaved-changes guard, graceful SSE reconnection
+## Blueprint Phase 7 — Polish + Load Testing
+- [x] 7.1 Automated Cache Busting — content-hash filenames replacing manual ?v=N query strings
+- [ ] 7.2 Error Monitoring & Observability — global error handler, request duration logging, alerting
+- [ ] 7.3 Database Migrations Strategy — SOP documentation
+- [ ] 7.4 Load Testing — k6 script for post-deploy validation

@@ -19,6 +19,7 @@ import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
 import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
 import { corsMiddleware } from "../middleware/cors.js";
 import { rateLimitMiddleware } from "../middleware/rate-limit.js";
+import { initCacheManifest, injectCacheHashes, getCacheManifest, getFileHash } from "../cache-manifest.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,24 +87,45 @@ async function startServer() {
       break;
     }
   }
+  // Initialize cache manifest for content-hash-based cache busting (Phase 7.1)
+  const cacheManifest = initCacheManifest(publicDir);
+
+  // Cache manifest endpoint — must be registered BEFORE static middleware
+  app.get("/api/site/cache-manifest.json", (_req, res) => {
+    const manifest = getCacheManifest();
+    if (!manifest) {
+      res.status(503).json({ error: 'Manifest not ready' });
+      return;
+    }
+    res.set('Cache-Control', 'no-cache');
+    res.json(manifest.entries);
+  });
+
   app.use("/api/site", express.static(publicDir, {
-    maxAge: '1d',        // 86400s — versioned via ?v= query strings for cache-busting
+    maxAge: '7d',        // 7 days — safe because content-hash query strings guarantee freshness
     etag: true,
     lastModified: true,
+    immutable: true,     // Tell browsers hashed URLs never change
     index: false,        // Disable auto-index to prevent redirect loops
     redirect: false,     // Disable directory redirect to prevent loops
     setHeaders: (res, filePath) => {
-      // Never cache index.html so ?v= busting on JS/CSS always works
+      // Never cache index.html — it contains the hash references
       if (filePath.endsWith('index.html')) {
         res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       }
     },
   }));
-  // Serve index.html for /api/site and /api/site/ with no-cache
+
+  // Serve index.html with injected content hashes (no-cache so hash changes propagate immediately)
   app.get("/api/site", (_req, res) => {
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.sendFile(path.join(publicDir, 'index.html'));
+    const htmlPath = path.join(publicDir, 'index.html');
+    let html = fs.readFileSync(htmlPath, 'utf-8');
+    html = injectCacheHashes(html, cacheManifest);
+    res.type('html').send(html);
   });
+
+
 
   // Debug endpoint for path diagnostics
   app.get("/api/debug-paths", (_req, res) => {
