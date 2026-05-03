@@ -3878,3 +3878,7 @@
 - [x] Build command palette (Cmd+K) — quick-jump to modules, search employees, recent actions, keyboard nav
 - [x] Update 12 test files to check module-loader.js instead of index.html for lazy-loaded scripts
 - [x] Full test suite passing (45 files, 1,601 tests) + TypeScript clean
+## Blueprint Phase 6 — Security Hardening
+- [x] 6.1 CORS Policy — strict origin allowlist + preflight handling
+- [x] 6.2 Rate Limiting — per-endpoint tiered in-memory sliding window
+- [x] 6.3 Session Idle Timeout — 30-min idle timeout, 5-min pre-expiry warning, unsaved-changes guard, graceful SSE reconnection

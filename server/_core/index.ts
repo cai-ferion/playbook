@@ -17,6 +17,8 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import { registerAutoMailer } from "../auto-mailer.js";
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
 import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
+import { corsMiddleware } from "../middleware/cors.js";
+import { rateLimitMiddleware } from "../middleware/rate-limit.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,24 +50,10 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // Enable CORS for all routes
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.header("Access-Control-Allow-Origin", origin);
-    }
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-actor-ohr, x-actor-name",
-    );
-    res.header("Access-Control-Allow-Credentials", "true");
-    if (req.method === "OPTIONS") {
-      res.sendStatus(200);
-      return;
-    }
-    next();
-  });
+  // CORS — strict origin allowlist (Phase 6.1 Security Hardening)
+  app.use(corsMiddleware);
+  // Rate limiting — per-endpoint tiered sliding window (Phase 6.2 Security Hardening)
+  app.use(rateLimitMiddleware);
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);

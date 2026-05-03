@@ -541,10 +541,16 @@ function _resetIdleTimers() {
     _showIdleToast();
   }, SESSION_WARN_MS);
 
-  // Hard logout at 30 min
+  // Hard logout at 30 min — with unsaved-changes guard
   _idleTimer = setTimeout(() => {
     _dismissIdleToast();
-    handleLogout('timeout');
+    // Check for unsaved edits before forcing logout
+    const hasUnsavedEdits = appState.pendingEdits && Object.keys(appState.pendingEdits).length > 0;
+    if (hasUnsavedEdits) {
+      _showUnsavedTimeoutWarning();
+    } else {
+      handleLogout('timeout');
+    }
   }, SESSION_TIMEOUT_MS);
 }
 
@@ -571,6 +577,61 @@ function _dismissIdleToast() {
   }
 }
 
+// Unsaved-changes guard: gives user 60s to save before forced logout
+let _unsavedTimeoutEl = null;
+let _unsavedForceTimer = null;
+function _showUnsavedTimeoutWarning() {
+  if (_unsavedTimeoutEl) return;
+  _unsavedTimeoutEl = document.createElement('div');
+  _unsavedTimeoutEl.id = 'unsaved-timeout-warning';
+  _unsavedTimeoutEl.style.cssText =
+    'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+    'background:#1e293b;color:#f1f5f9;padding:24px 32px;border-radius:12px;' +
+    'font-size:14px;z-index:100000;box-shadow:0 8px 32px rgba(0,0,0,.5);' +
+    'max-width:420px;text-align:center;border:2px solid var(--warning, #f59e0b);';
+  const editCount = Object.keys(appState.pendingEdits).length;
+  _unsavedTimeoutEl.innerHTML =
+    '<div style="font-size:16px;font-weight:700;margin-bottom:12px;color:#f59e0b;">\u26A0 Unsaved Changes Detected</div>' +
+    '<p style="margin-bottom:16px;line-height:1.5;">You have <strong>' + editCount + ' unsaved edit(s)</strong>. ' +
+    'Your session has timed out due to inactivity. Save your work now or you will be logged out in 60 seconds.</p>' +
+    '<div style="display:flex;gap:12px;justify-content:center;">' +
+    '<button onclick="_handleUnsavedSaveAndLogout()" style="background:#22c55e;color:#fff;border:none;' +
+    'padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">Save & Logout</button>' +
+    '<button onclick="_handleUnsavedDiscardLogout()" style="background:#ef4444;color:#fff;border:none;' +
+    'padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">Discard & Logout</button>' +
+    '<button onclick="_handleUnsavedStayLoggedIn()" style="background:#3b82f6;color:#fff;border:none;' +
+    'padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">Stay Logged In</button>' +
+    '</div>';
+  document.body.appendChild(_unsavedTimeoutEl);
+  // Force logout after 60s even if user doesn't act
+  _unsavedForceTimer = setTimeout(() => {
+    _dismissUnsavedWarning();
+    handleLogout('timeout');
+  }, 60000);
+}
+function _dismissUnsavedWarning() {
+  if (_unsavedTimeoutEl) { _unsavedTimeoutEl.remove(); _unsavedTimeoutEl = null; }
+  if (_unsavedForceTimer) { clearTimeout(_unsavedForceTimer); _unsavedForceTimer = null; }
+}
+function _handleUnsavedSaveAndLogout() {
+  _dismissUnsavedWarning();
+  // Trigger the save flow, then logout
+  if (typeof confirmSave === 'function') {
+    confirmSave().then(() => handleLogout('timeout')).catch(() => handleLogout('timeout'));
+  } else {
+    handleLogout('timeout');
+  }
+}
+function _handleUnsavedDiscardLogout() {
+  _dismissUnsavedWarning();
+  appState.pendingEdits = {};
+  handleLogout('timeout');
+}
+function _handleUnsavedStayLoggedIn() {
+  _dismissUnsavedWarning();
+  _resetIdleTimers();
+}
+
 function startIdleTimer() {
   // Attach activity listeners (passive, low overhead)
   const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
@@ -592,6 +653,11 @@ function stopIdleTimer() {
 
 function handleLogout(reason) {
   stopIdleTimer();
+  _dismissUnsavedWarning();
+  // Disconnect SSE to stop reconnection attempts after session end
+  if (window.sseClient && typeof window.sseClient.disconnect === 'function') {
+    window.sseClient.disconnect();
+  }
   currentUser = null;
   window.currentUserOhr = null;
   window.currentUserName = null;
@@ -599,6 +665,7 @@ function handleLogout(reason) {
   appState.records = [];
   appState.originalRecords = [];
   appState.loadedRanges = [];
+  appState.pendingEdits = {};
   if (typeof billingDropdownInitialized !== 'undefined') billingDropdownInitialized = false;
   document.getElementById('app-container').style.display = 'none';
   document.getElementById('auth-page').style.display = 'flex';

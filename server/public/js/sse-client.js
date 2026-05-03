@@ -200,11 +200,43 @@
 
       eventSource.onerror = () => {
         connected = false;
-        updateConnectionIndicator('reconnecting');
         eventSource.close();
         eventSource = null;
 
-        // Exponential backoff with jitter
+        // If user is logged out (no session), don't reconnect — session expired
+        if (!window.currentUserOhr) {
+          console.log('[SSE] User logged out — stopping reconnection.');
+          updateConnectionIndicator('disconnected');
+          return;
+        }
+
+        // Check if session is still valid before reconnecting
+        // If we've failed 5+ times, probe the auth endpoint
+        if (reconnectAttempts >= 5) {
+          fetch('/api/io/employees?limit=1', { credentials: 'same-origin' })
+            .then(resp => {
+              if (resp.status === 401) {
+                // Session expired server-side — trigger logout
+                console.log('[SSE] Session expired (401) — triggering logout.');
+                updateConnectionIndicator('disconnected');
+                if (typeof handleLogout === 'function') handleLogout('timeout');
+                return;
+              }
+              // Server is reachable but SSE failed — keep trying
+              _scheduleReconnect();
+            })
+            .catch(() => {
+              // Network error — keep trying
+              _scheduleReconnect();
+            });
+          return;
+        }
+
+        _scheduleReconnect();
+      };
+
+      function _scheduleReconnect() {
+        updateConnectionIndicator('reconnecting');
         const delay = Math.min(
           RECONNECT_DELAY_MS * Math.pow(1.5, reconnectAttempts) + Math.random() * 1000,
           MAX_RECONNECT_DELAY_MS
@@ -212,7 +244,7 @@
         reconnectAttempts++;
         console.log(`[SSE] Disconnected. Reconnecting in ${Math.round(delay / 1000)}s (attempt ${reconnectAttempts})`);
         setTimeout(connect, delay);
-      };
+      }
     } catch (err) {
       console.error('[SSE] Failed to create EventSource:', err);
       updateConnectionIndicator('disconnected');
