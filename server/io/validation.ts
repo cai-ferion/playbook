@@ -23,6 +23,41 @@ import type { Request, Response, NextFunction } from "express";
 // NEVER logs field values (PII protection). Silently swallows DB errors.
 let _logRejection: ((entry: ValidationRejection) => void) | null = null;
 
+// ── Volume cap: max rejections logged per endpoint per hour ──────
+// Prevents log flooding from bots or broken clients.
+// In-memory sliding window — resets naturally as entries expire.
+const VOLUME_CAP_PER_HOUR = 10;
+const VOLUME_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const _rejectionCounts = new Map<string, number[]>();
+
+/** Exported for testing — allows overriding the cap and resetting state. */
+export function _resetVolumeCap() {
+  _rejectionCounts.clear();
+}
+
+/**
+ * Returns true if the endpoint is under the volume cap (safe to log).
+ * Prunes expired timestamps on each check to prevent memory leaks.
+ */
+function _isUnderVolumeCap(endpoint: string): boolean {
+  const now = Date.now();
+  const cutoff = now - VOLUME_WINDOW_MS;
+  let timestamps = _rejectionCounts.get(endpoint);
+  if (!timestamps) {
+    timestamps = [];
+    _rejectionCounts.set(endpoint, timestamps);
+  }
+  // Prune expired entries
+  while (timestamps.length > 0 && timestamps[0] < cutoff) {
+    timestamps.shift();
+  }
+  if (timestamps.length >= VOLUME_CAP_PER_HOUR) {
+    return false; // Over cap — suppress this log
+  }
+  timestamps.push(now);
+  return true;
+}
+
 export interface ValidationRejection {
   endpoint: string;
   method: string;
@@ -50,18 +85,22 @@ export function validate(schema: ZodSchema, source: "body" | "query" = "body") {
         result.error.issues[0]?.message ?? "Validation failed";
 
       // Fire-and-forget: log rejection to audit log (no await, no throw)
+      // Volume-capped: max 10 per endpoint per hour to prevent log flooding.
       if (_logRejection) {
         try {
-          const failedFields = result.error.issues.map((i) => i.path.join(".")).filter(Boolean);
-          const actorOhr = (req as any).user?.ohr_id || (req as any).user?.openId || "unknown";
-          _logRejection({
-            endpoint: req.originalUrl || req.url,
-            method: req.method,
-            actor_ohr: actorOhr,
-            failed_fields: Array.from(new Set(failedFields)),
-            error_summary: firstMsg,
-            timestamp: new Date().toISOString(),
-          });
+          const endpoint = req.originalUrl || req.url;
+          if (_isUnderVolumeCap(endpoint)) {
+            const failedFields = result.error.issues.map((i) => i.path.join(".")).filter(Boolean);
+            const actorOhr = (req as any).user?.ohr_id || (req as any).user?.openId || "unknown";
+            _logRejection({
+              endpoint,
+              method: req.method,
+              actor_ohr: actorOhr,
+              failed_fields: Array.from(new Set(failedFields)),
+              error_summary: firstMsg,
+              timestamp: new Date().toISOString(),
+            });
+          }
         } catch { /* observability must never break the request */ }
       }
 

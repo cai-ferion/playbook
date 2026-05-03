@@ -3804,6 +3804,6 @@
 ## Blueprint Phase 2 — Observability: Validation Rejection Logging
 - [x] Add fire-and-forget audit logging to validate() middleware (setValidationLogger + dynamic import in io/index.ts)
 - [x] Log: endpoint, method, actor OHR, failed field names, error summary → io_audit_log (record_type=validation_rejection). NEVER logs field values (PII protection)
-- [ ] Add volume cap (max 10 failures per endpoint per hour) — deferred, low priority until traffic warrants it
+- [x] Add volume cap (max 10 failures per endpoint per hour) — in-memory sliding window, per-endpoint tracking, auto-prune expired timestamps
 - [x] Write Vitest tests for observability logging (6 tests: logger on failure, not on success, OHR fallback, unknown actor, dedup fields, logger crash protection)
 - [x] Run full test suite — 43 files, 1,520 tests ALL PASSING

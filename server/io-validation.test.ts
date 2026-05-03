@@ -2,10 +2,11 @@
  * Vitest tests for Zod validation schemas (server/io/validation.ts)
  * Covers: coaching, leaves, attendance schemas + validate middleware
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   validate,
   setValidationLogger,
+  _resetVolumeCap,
   coachingCreateSchema,
   coachingUpdateSchema,
   coachingRcaCreateSchema,
@@ -969,5 +970,87 @@ describe("validate() observability logging", () => {
     expect(res.status).toHaveBeenCalledWith(400);
 
     setValidationLogger(null as any);
+  });
+});
+
+// ================================================================
+// Volume Cap Tests
+// ================================================================
+describe("Validation rejection volume cap", () => {
+  let logger: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    _resetVolumeCap();
+    logger = vi.fn();
+    setValidationLogger(logger);
+  });
+
+  afterEach(() => {
+    setValidationLogger(null as any);
+    _resetVolumeCap();
+  });
+
+  function fireInvalidRequest(endpoint: string) {
+    const { req, res, next } = mockReqResNext({});
+    req.originalUrl = endpoint;
+    req.method = "POST";
+    validate(coachingCreateSchema)(req, res, next);
+    return { req, res, next };
+  }
+
+  it("logs the first 10 rejections for the same endpoint", () => {
+    for (let i = 0; i < 10; i++) {
+      fireInvalidRequest("/api/io/coaching");
+    }
+    expect(logger).toHaveBeenCalledTimes(10);
+  });
+
+  it("suppresses the 11th rejection for the same endpoint", () => {
+    for (let i = 0; i < 15; i++) {
+      fireInvalidRequest("/api/io/coaching");
+    }
+    // Only the first 10 should be logged
+    expect(logger).toHaveBeenCalledTimes(10);
+  });
+
+  it("still returns 400 even when log is suppressed", () => {
+    for (let i = 0; i < 12; i++) {
+      const { res } = fireInvalidRequest("/api/io/coaching");
+      expect(res.status).toHaveBeenCalledWith(400);
+    }
+    // All 12 requests got 400, but only 10 were logged
+    expect(logger).toHaveBeenCalledTimes(10);
+  });
+
+  it("tracks endpoints independently", () => {
+    for (let i = 0; i < 10; i++) {
+      fireInvalidRequest("/api/io/coaching");
+    }
+    // Coaching is now at cap
+    fireInvalidRequest("/api/io/coaching");
+    expect(logger).toHaveBeenCalledTimes(10); // suppressed
+
+    // Leaves should still be under cap
+    const { req, res, next } = mockReqResNext({});
+    req.originalUrl = "/api/io/leaves";
+    req.method = "POST";
+    validate(leaveCreateSchema)(req, res, next);
+    expect(logger).toHaveBeenCalledTimes(11); // leaves logged
+  });
+
+  it("resets after _resetVolumeCap is called", () => {
+    for (let i = 0; i < 10; i++) {
+      fireInvalidRequest("/api/io/coaching");
+    }
+    expect(logger).toHaveBeenCalledTimes(10);
+
+    // At cap — next one suppressed
+    fireInvalidRequest("/api/io/coaching");
+    expect(logger).toHaveBeenCalledTimes(10);
+
+    // Reset and try again
+    _resetVolumeCap();
+    fireInvalidRequest("/api/io/coaching");
+    expect(logger).toHaveBeenCalledTimes(11); // logged again
   });
 });
