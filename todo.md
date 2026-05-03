@@ -3892,3 +3892,6 @@
 - [x] Update server-side validation in leaves module
 - [x] Update client-side date picker min-date in haven.js
 - [x] Write tests to verify new date logic
+## Haven — Calendar Visual Cue + Blank Date Picker
+- [x] Grey out dates before earliest filing date on Haven calendar
+- [x] Default File Leave form date picker to blank (no pre-selected date)

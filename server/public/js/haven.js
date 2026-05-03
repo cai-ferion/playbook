@@ -209,6 +209,7 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
   // OMs/Managers see all leaves
 
   let html = '';
+  const minLeaveDate = havenGetMinLeaveDate(); // Earliest eligible filing date
   let currentSaturday = new Date(startSaturday);
   let lastRenderedMonth = -1;
 
@@ -243,6 +244,7 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
       let cellClass = 'haven-cal-cell';
       if (isToday) cellClass += ' haven-cal-today';
       if (isWeekend) cellClass += ' haven-cal-weekend';
+      if (dateStr < minLeaveDate) cellClass += ' haven-cal-ineligible';
 
       html += `<div class="${cellClass}" data-date="${dateStr}">`;
       // Day number with month indicator for 1st of month
@@ -279,8 +281,8 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
         html += '</div>';
       }
 
-      // Add button for filing leave (agents + TLs, today or future)
-      if ((role === 'agent' || role === 'tl') && dateStr >= todayStr) {
+      // Add button for filing leave (agents + TLs, eligible dates only)
+      if ((role === 'agent' || role === 'tl') && dateStr >= minLeaveDate) {
         html += `<div class="haven-cal-add" onclick="havenShowFileForm('${dateStr}')" title="File leave for this date">+</div>`;
       }
 
@@ -579,7 +581,7 @@ function havenShowFileForm(prefillDate) {
   formBody.innerHTML = `
     <div class="haven-form-field">
       <label class="haven-form-label">Date <span class="haven-form-req">*</span></label>
-      <input type="date" class="haven-form-input" id="haven-file-date" value="${prefillDate || havenGetTodayPHT()}" min="${havenGetMinLeaveDate()}">
+      <input type="date" class="haven-form-input" id="haven-file-date" value="${prefillDate || ''}" min="${havenGetMinLeaveDate()}">
     </div>
     ${leaveTypeField}
     <div class="haven-form-field">
