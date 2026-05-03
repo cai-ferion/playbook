@@ -56,10 +56,7 @@ describe("Notification Registration in notifications.js", () => {
 // 2. Real-time Notifications in io-routes.ts (NTE served, CAP supervisor, repeat offender, CAP escalation, docx_generated)
 // ═══════════════════════════════════════════════════════════════════════
 describe("Real-time Notifications in io-routes.ts", () => {
-  const ioRoutes = fs.readFileSync(
-    path.resolve(__dirname, "io-routes.ts"),
-    "utf-8"
-  );
+  const ioRoutes = [__dirname + "/io-routes.ts", __dirname + "/io/shared.ts", __dirname + "/io/attendance-ops.ts", __dirname + "/io/attendance.ts", __dirname + "/io/audit-log.ts", __dirname + "/io/billing.ts", __dirname + "/io/coaching.ts", __dirname + "/io/corrective-actions.ts", __dirname + "/io/employees.ts", __dirname + "/io/insights.ts", __dirname + "/io/leaves.ts", __dirname + "/io/notifications.ts", __dirname + "/io/permissions.ts", __dirname + "/io/tasks.ts", __dirname + "/io/wfm.ts"].map(f => require("fs").readFileSync(f, "utf-8")).join("\n");
 
   it("should send nte_served notification when NTE is created", () => {
     expect(ioRoutes).toContain("type: 'nte_served'");

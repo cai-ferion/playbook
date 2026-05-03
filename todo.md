@@ -3703,7 +3703,7 @@
 - [x] Sub-Phase 2.2: Shared infrastructure extraction (server/io/shared.ts, types.ts, index.ts)
 - [x] Sub-Phase 2.3: Extract simple modules (notifications, insights, audit-log)
 - [x] Sub-Phase 2.4: Extract core modules (attendance, coaching, leaves)
-- [ ] Sub-Phase 2.5: Extract remaining + delete monolith
+- [x] Sub-Phase 2.5: Extract remaining + delete monolith
 - [ ] Sub-Phase 2.6: Zod input validation on critical endpoints
 - [x] Audit 3 pre-existing test failures: removed stale ALLOWED_BUS test (never implemented), removed supabase-sync.test.ts (Supabase has no io_employees table — TiDB is primary store)
 - [x] Full test suite: 42 files, 1428 tests, ALL PASSING
@@ -3739,3 +3739,17 @@
 - [x] Remove ~1,408 lines from io-routes.ts monolith
 - [x] Update source-inspection tests (admin-delete, batch15, batch48, batch-disputes-visibility, io-routes-integration) to read combined sources
 - [x] Run full test suite — 42 files, 1429 tests ALL PASSING
+
+## Blueprint Phase 2 — Sub-Phase 2.5: Extract Remaining Modules & Delete Monolith
+- [x] Extract server/io/tasks.ts (138 lines: Tasks CRUD, comments, file upload, sendTaskAssignmentNotifications)
+- [x] Extract server/io/billing.ts (1,441 lines: billing-target-hours, srt-bill, billing-targets-v2, billing-compliance engine, billing-csv-upload, billing-sheet-sync, sync-log, attendance/export, productivity-hours, backfill-snap-status)
+- [x] Extract server/io/permissions.ts (233 lines: RBAC config/admin-ohrs, my-permissions, permissions CRUD, seed, bulk-key-update)
+- [x] Extract server/io/wfm.ts (239 lines: wfm-session-log, wfm-schedule-upload, wfm-schedule/dates)
+- [x] Extract server/io/corrective-actions.ts (842 lines: NTE Build Assist AI+DOCX, Corrective Actions CRUD + stats + history, CAP Build Assist AI+DOCX)
+- [x] Extract server/io/attendance-ops.ts (449 lines: attendance-purge owner-only, attendance-bulk-insert/undo, attendance-last-batch)
+- [x] Wire all 14 domain modules into server/io/index.ts barrel router
+- [x] Update 20+ source-inspection test files to read combined modular sources
+- [x] Convert io-routes.ts to 38-line no-op stub (registerIORoutes kept for backward compat)
+- [x] Run full test suite — 42 files, 1,429 tests ALL PASSING
+- [x] TypeScript clean (npx tsc --noEmit)
+- [x] Dev server routes respond (401 = auth required = correct)

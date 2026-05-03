@@ -3,12 +3,12 @@
  * Barrel router for IO domain modules.
  * 
  * Architecture:
- * - This file imports and mounts all domain-specific routers under /api/io.
- * - The monolithic io-routes.ts is being decomposed into domain modules here.
- * - During migration, the legacy registerIORoutes still handles routes not yet extracted.
- * - Once all routes are extracted, registerIORoutes will be removed.
+ * - All domain routes are now extracted from the monolith into individual modules.
+ * - The legacy io-routes.ts is now a stub (registerIORoutes is a no-op).
+ * - Separately-owned feature routers (group-tasks, managers-nook, shift-extensions,
+ *   io-performance, io-role-change, io-tardiness, io-backup) remain mounted in _core/index.ts.
  * 
- * Domain Module Roadmap:
+ * Domain Module Map:
  * ┌─────────────────────────────────────────────────────────────────┐
  * │ Module              │ Status      │ File                        │
  * ├─────────────────────┼─────────────┼─────────────────────────────┤
@@ -17,28 +17,23 @@
  * │ Coaching            │ ✅ Extracted │ ./coaching.ts               │
  * │ Leaves              │ ✅ Extracted │ ./leaves.ts                 │
  * │ Notifications       │ ✅ Extracted │ ./notifications.ts          │
- * │ Tasks               │ Planned     │ ./tasks.ts                  │
- * │ Billing             │ Planned     │ ./billing.ts                │
- * │ Permissions         │ Planned     │ ./permissions.ts            │
- * │ Corrective Actions  │ Planned     │ ./corrective-actions.ts     │
- * │ WFM                 │ Planned     │ ./wfm.ts                    │
- * │ NTE Build Assist    │ Planned     │ ./nte-build-assist.ts       │
  * │ Insights            │ ✅ Extracted │ ./insights.ts               │
  * │ Audit Log           │ ✅ Extracted │ ./audit-log.ts              │
+ * │ Tasks/Helm          │ ✅ Extracted │ ./tasks.ts                  │
+ * │ Billing             │ ✅ Extracted │ ./billing.ts                │
+ * │ Permissions/RBAC    │ ✅ Extracted │ ./permissions.ts            │
+ * │ Corrective Actions  │ ✅ Extracted │ ./corrective-actions.ts     │
+ * │ WFM                 │ ✅ Extracted │ ./wfm.ts                    │
+ * │ Attendance Ops      │ ✅ Extracted │ ./attendance-ops.ts         │
  * └─────────────────────┴─────────────┴─────────────────────────────┘
- * 
- * Migration Strategy:
- * 1. Extract one domain at a time from io-routes.ts into its own file.
- * 2. Import and mount the new router here.
- * 3. Remove the corresponding routes from io-routes.ts.
- * 4. Run integration tests after each extraction.
- * 5. Once io-routes.ts is empty, delete it and remove registerIORoutes from _core/index.ts.
  */
 import { Router } from "express";
 
 const ioRouter = Router();
 
 // ── Domain Routers (mounted in extraction order) ────────────────
+
+// Sub-Phase 2.3 — simple modules
 import employeesRouter from "./employees.js";
 ioRouter.use(employeesRouter);
 
@@ -51,6 +46,7 @@ ioRouter.use(insightsRouter);
 import auditLogRouter from "./audit-log.js";
 ioRouter.use(auditLogRouter);
 
+// Sub-Phase 2.4 — core modules
 import attendanceRouter from "./attendance.js";
 ioRouter.use(attendanceRouter);
 
@@ -60,28 +56,29 @@ ioRouter.use(coachingRouter);
 import leavesRouter from "./leaves.js";
 ioRouter.use(leavesRouter);
 
-// import tasksRouter from "./tasks.js";
-// ioRouter.use(tasksRouter);
+// Sub-Phase 2.5 — remaining modules (full monolith decomposition)
+import tasksRouter from "./tasks.js";
+ioRouter.use(tasksRouter);
 
-// import billingRouter from "./billing.js";
-// ioRouter.use(billingRouter);
+import billingRouter from "./billing.js";
+ioRouter.use(billingRouter);
 
-// import permissionsRouter from "./permissions.js";
-// ioRouter.use(permissionsRouter);
+import permissionsRouter from "./permissions.js";
+ioRouter.use(permissionsRouter);
 
-// import correctiveActionsRouter from "./corrective-actions.js";
-// ioRouter.use(correctiveActionsRouter);
+import correctiveActionsRouter from "./corrective-actions.js";
+ioRouter.use(correctiveActionsRouter);
 
-// import wfmRouter from "./wfm.js";
-// ioRouter.use(wfmRouter);
+import wfmRouter from "./wfm.js";
+ioRouter.use(wfmRouter);
 
-// import nteBuildAssistRouter from "./nte-build-assist.js";
-// ioRouter.use(nteBuildAssistRouter);
+import attendanceOpsRouter from "./attendance-ops.js";
+ioRouter.use(attendanceOpsRouter);
 
 /**
  * Register the modular IO router.
- * Call this from _core/index.ts AFTER registerIORoutes during migration,
- * or INSTEAD OF registerIORoutes once migration is complete.
+ * This is now the sole route registrar for /api/io domain routes.
+ * The legacy registerIORoutes in io-routes.ts is a no-op stub.
  */
 export function registerModularIORoutes(app: import("express").Express) {
   app.use("/api/io", ioRouter);

@@ -10,7 +10,7 @@ import path from "path";
 const ROOT = path.resolve(__dirname, "..");
 const readFile = (rel: string) => fs.readFileSync(path.join(ROOT, rel), "utf-8");
 
-const ioRoutes = readFile("server/io-routes.ts");
+const ioRoutes = ["server/io-routes.ts", "server/io/shared.ts", "server/io/attendance-ops.ts", "server/io/attendance.ts", "server/io/audit-log.ts", "server/io/billing.ts", "server/io/coaching.ts", "server/io/corrective-actions.ts", "server/io/employees.ts", "server/io/insights.ts", "server/io/leaves.ts", "server/io/notifications.ts", "server/io/permissions.ts", "server/io/tasks.ts", "server/io/wfm.ts"].map(f => readFile(f)).join("\n");
 const appJs = readFile("server/public/js/app.js");
 const indexHtml = readFile("server/public/index.html");
 

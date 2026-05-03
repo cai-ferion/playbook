@@ -8,8 +8,7 @@ const compassJs = fs.readFileSync(compassJsPath, "utf-8");
 const indexHtmlPath = path.join(__dirname, "public/index.html");
 const indexHtml = fs.readFileSync(indexHtmlPath, "utf-8");
 
-const ioRoutesPath = path.join(__dirname, "io-routes.ts");
-const ioRoutes = fs.readFileSync(ioRoutesPath, "utf-8");
+const ioRoutes = [__dirname + "/io-routes.ts", __dirname + "/io/shared.ts", __dirname + "/io/attendance-ops.ts", __dirname + "/io/attendance.ts", __dirname + "/io/audit-log.ts", __dirname + "/io/billing.ts", __dirname + "/io/coaching.ts", __dirname + "/io/corrective-actions.ts", __dirname + "/io/employees.ts", __dirname + "/io/insights.ts", __dirname + "/io/leaves.ts", __dirname + "/io/notifications.ts", __dirname + "/io/permissions.ts", __dirname + "/io/tasks.ts", __dirname + "/io/wfm.ts"].map(f => require("fs").readFileSync(f, "utf-8")).join("\n");
 
 const schemaPath = path.join(__dirname, "../drizzle/schema.ts");
 const schema = fs.readFileSync(schemaPath, "utf-8");

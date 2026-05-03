@@ -62,13 +62,14 @@ describe("IO Routes Module", () => {
     expect(typeof mod.registerIORoutes).toBe("function");
   });
 
-  it("registerIORoutes registers routes on an Express app", async () => {
+  it("registerIORoutes is a no-op stub (routes served by modular IO router)", async () => {
     const { registerIORoutes } = await import("./io-routes.js");
     const mockApp = {
       use: vi.fn(),
     };
     registerIORoutes(mockApp as any);
-    expect(mockApp.use).toHaveBeenCalledWith("/api/io", expect.anything());
+    // No-op stub: should NOT call app.use (all routes now in io/index.ts)
+    expect(mockApp.use).not.toHaveBeenCalled();
   });
 });
 
