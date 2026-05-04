@@ -4018,3 +4018,9 @@
 - [x] Remove Remarks, OT Hours, and UPL Reason from the Bulk Edit Field dropdown
 - [x] Replace free-text value input with dynamic dropdown populated from existing Input Portal values per field
 - [x] Trim backend ALLOWED_FIELDS to only: snap_supervisor, role, planning_group, snap_shift_time, snap_status
+
+## Bug Fixes — Haven Leave Period Configuration
+- [x] Fix leave date calculation: frontend havenGetMinLeaveDate() now uses period-based min (WE - 6 = Saturday of configured week) instead of hard-coded last-Saturday-of-month
+- [x] Remove backend getEarliestFilingDate hard floor check (period validation already handles date restrictions)
+- [x] Remove redundant "Close" button from Leave Period Configuration modal (X button already exists)
+- [x] Replace browser confirm() dialog on Delete with inline confirmation expansion in the table row

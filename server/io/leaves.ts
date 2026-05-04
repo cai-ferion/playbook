@@ -80,17 +80,7 @@ router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Re
     if (dayOfMonth < 1 || dayOfMonth > 7) {
       return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
     }
-    // Date restriction: earliest filing date = Saturday of the last Sat-Fri week
-    // whose week still overlaps with the current month.
-    // e.g. In May 2026, the last WE (Friday) whose week overlaps May is June 6
-    // (week: Sat May 31 – Fri June 6). Earliest filing date = Sat May 31.
     const leaveDate = req.body.start_date;
-    if (leaveDate) {
-      const minDate = getEarliestFilingDate(nowMNL);
-      if (leaveDate < minDate) {
-        return res.status(400).json({ error: `Leave dates must be ${minDate} or later (start of last week-ending of the current month).` });
-      }
-    }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 

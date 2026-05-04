@@ -18,6 +18,7 @@ const HAVEN = {
   _loading: false,
   _WEEKS_INITIAL: 12, // Render 12 weeks initially (6 before today, 6 after)
   _WEEKS_LOAD: 6,     // Load 6 more weeks on scroll
+  _periodMinDate: null, // Period-based minimum leave date (from admin config)
 };
 
 // ─── Initialization ────────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ async function initHaven() {
   try {
     await havenLoadEmployees();
     await havenLoadLeaves();
+    await havenLoadPeriodConfig();
     havenRenderContinuous();
   } catch (e) {
     console.error('[Haven] init error:', e);
@@ -54,6 +56,23 @@ async function havenLoadLeaves() {
   } catch (e) {
     console.error('[Haven] loadLeaves error:', e);
     HAVEN.leaves = [];
+  }
+}
+async function havenLoadPeriodConfig() {
+  try {
+    const res = await fetch(`${IO_API_BASE}/leave-periods/current`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.configured && data.start_week_ending) {
+        // Compute Saturday of the configured week (WE Friday - 6 days)
+        const weDate = new Date(data.start_week_ending + "T00:00:00");
+        const satDate = new Date(weDate);
+        satDate.setDate(weDate.getDate() - 6);
+        HAVEN._periodMinDate = havenFormatDate(satDate);
+      }
+    }
+  } catch (e) {
+    console.error("[Haven] loadPeriodConfig error:", e);
   }
 }
 
@@ -135,19 +154,31 @@ function havenIsFilingWindowOpen() {
   return false;
 }
 function havenGetMinLeaveDate() {
-  // Earliest filing date: Saturday of the last Sat-Fri week whose week still overlaps the current month.
-  // e.g. In May 2026, last day = May 31 (Sun). Saturday on or before May 31 = May 30 (Sat).
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-  // Last day of current month
+  // If admin has configured a period for the current month, use that as the minimum
+  if (HAVEN._periodMinDate) return HAVEN._periodMinDate;
+  // Fallback: Saturday of the last Sat-Fri week whose week still overlaps the current month
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
   const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  // Find Saturday on or before lastDayOfMonth
-  // getDay(): 0=Sun, 1=Mon, ..., 6=Sat
   const dow = lastDayOfMonth.getDay();
-  const daysBack = (dow + 1) % 7; // Sat=0, Sun=1, Mon=2, ..., Fri=6
+  const daysBack = (dow + 1) % 7;
   const saturday = new Date(lastDayOfMonth);
   saturday.setDate(lastDayOfMonth.getDate() - daysBack);
   return havenFormatDate(saturday);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // ─── Continuous Calendar Rendering ─────────────────────────────────────────────
@@ -663,6 +694,7 @@ function havenSubmitLeave() {
         showToast('Leave filed successfully', 'success');
         havenCloseForm();
         await havenLoadLeaves();
+    await havenLoadPeriodConfig();
         havenRefreshCalendar();
       } else {
         showToast('Error: ' + (result.error || 'Unknown'), 'error');
@@ -700,6 +732,7 @@ function havenInlineCancel(leaveId) {
         showToast('Leave cancelled', 'success');
         havenCloseForm();
         await havenLoadLeaves();
+    await havenLoadPeriodConfig();
         havenRefreshCalendar();
       } else {
         showToast('Error: ' + (result.error || 'Unknown'), 'error');
@@ -856,6 +889,7 @@ function havenInlineDelete(leaveId) {
         showToast('Leave deleted', 'success');
         havenCloseForm();
         await havenLoadLeaves();
+    await havenLoadPeriodConfig();
         havenRefreshCalendar();
       } else {
         showToast('Error: ' + (result.error || 'Unknown'), 'error');
@@ -959,6 +993,7 @@ async function havenDoBulkAction(leaveIds, action, tier, rejectionReason) {
       showToast(`${result.updated} leave(s) ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
       havenCloseForm();
       await havenLoadLeaves();
+    await havenLoadPeriodConfig();
       havenRefreshCalendar();
     } else {
       showToast('Error: ' + (result.error || 'Unknown'), 'error');
@@ -1029,7 +1064,7 @@ async function havenShowPeriodConfig() {
   if (!formBody) return;
   formTitle.textContent = 'Leave Period Configuration';
   formBody.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;">Loading...</div>';
-  formFooter.innerHTML = `<button class="haven-form-btn haven-form-btn-cancel" onclick="havenCloseForm()">Close</button>`;
+  formFooter.innerHTML = ""; // No Close button — X suffices
   havenOpenForm();
   // Fetch existing periods
   let periods = [];
@@ -1101,7 +1136,7 @@ async function havenShowPeriodConfig() {
                     <td style="padding:4px 8px;">${mLabel}</td>
                     <td style="padding:4px 8px;">${weMM}/${weDD}</td>
                     <td style="padding:4px 8px;">${p.created_by || p.created_by_ohr || '-'}</td>
-                    <td style="padding:4px 8px;"><button class="btn btn-ghost btn-sm" style="color:#ef4444;font-size:11px;" onclick="havenDeletePeriod(${p.id})">Delete</button></td>
+                    <td style="padding:4px 8px;"><span id="haven-period-del-${p.id}"><button class="btn btn-ghost btn-sm" style="color:#ef4444;font-size:11px;" onclick="havenConfirmDeletePeriod(${p.id})">Delete</button></span></td>
                   </tr>`;
                 }).join('')}
               </tbody>
@@ -1139,6 +1174,7 @@ async function havenSavePeriodConfig() {
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed to save', 'error'); return; }
     showToast('Leave period configured successfully', 'success');
+    await havenLoadPeriodConfig(); // Refresh period min date
     havenShowPeriodConfig(); // Refresh the panel
   } catch (e) {
     console.error('[Haven] save period error:', e);
@@ -1146,13 +1182,25 @@ async function havenSavePeriodConfig() {
   }
 }
 
+function havenConfirmDeletePeriod(id) {
+  const span = document.getElementById('haven-period-del-' + id);
+  if (!span) return;
+  span.innerHTML = '<span style="font-size:11px;color:#f87171;">Remove?</span> ' +
+    '<button class="btn btn-ghost btn-sm" style="color:#22c55e;font-size:11px;margin-left:4px;" onclick="havenDeletePeriod(' + id + ')">Yes</button>' +
+    '<button class="btn btn-ghost btn-sm" style="color:#94a3b8;font-size:11px;margin-left:2px;" onclick="havenCancelDeletePeriod(' + id + ')">No</button>';
+}
+function havenCancelDeletePeriod(id) {
+  const span = document.getElementById('haven-period-del-' + id);
+  if (!span) return;
+  span.innerHTML = '<button class="btn btn-ghost btn-sm" style="color:#ef4444;font-size:11px;" onclick="havenConfirmDeletePeriod(' + id + ')">Delete</button>';
+}
 async function havenDeletePeriod(id) {
-  if (!confirm('Remove this period configuration?')) return;
   try {
     const res = await fetch(`${IO_API_BASE}/leave-periods/${id}`, { method: 'DELETE', headers: { 'x-actor-ohr': currentUser.ohr_id } });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed to delete', 'error'); return; }
     showToast('Period configuration removed', 'success');
+    await havenLoadPeriodConfig(); // Refresh period min date
     havenShowPeriodConfig(); // Refresh
   } catch (e) {
     console.error('[Haven] delete period error:', e);
@@ -1165,6 +1213,8 @@ window.havenShowPeriodConfig = havenShowPeriodConfig;
 window.havenPeriodMonthChanged = havenPeriodMonthChanged;
 window.havenSavePeriodConfig = havenSavePeriodConfig;
 window.havenDeletePeriod = havenDeletePeriod;
+window.havenConfirmDeletePeriod = havenConfirmDeletePeriod;
+window.havenCancelDeletePeriod = havenCancelDeletePeriod;
 
 // ─── Period Status Check (shown in File Leave form) ────────────────────────────
 async function havenCheckPeriodStatus() {
