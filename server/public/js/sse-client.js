@@ -137,6 +137,10 @@
 
   // ── Connect to SSE ──
   function connect() {
+    // Guard: Do not connect if user is not authenticated
+    if (!sessionStorage.getItem('playbook_user')) {
+      return;
+    }
     if (eventSource) {
       eventSource.close();
     }
@@ -262,8 +266,8 @@
         updateConnectionIndicator('disconnected');
       }
     } else {
-      // Tab visible: reconnect and refresh stale data
-      if (!eventSource) {
+      // Tab visible: reconnect and refresh stale data (only if authenticated)
+      if (!eventSource && sessionStorage.getItem('playbook_user')) {
         reconnectAttempts = 0;
         connect();
         // Refresh current view since data may have changed while tab was hidden

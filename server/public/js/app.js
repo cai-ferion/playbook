@@ -896,6 +896,10 @@ function initDashboardMultiSelects() {
  * 3. Show the UI immediately
  */
 async function loadDataOptimized() {
+  // Guard: Do not load data if user is not authenticated
+  if (!sessionStorage.getItem('playbook_user')) {
+    return;
+  }
   appState.isLoading = true;
   showLoading(true);
 

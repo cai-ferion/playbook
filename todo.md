@@ -3938,3 +3938,6 @@
 - [x] Delete server/external-api.test.ts
 - [x] Remove route registrations from server/_core/index.ts
 - [x] Remove EXTERNAL_API_KEY dependency
+
+## Bug Fix — Loading Overlay Showing When Logged Out
+- [x] Fix loading overlay appearing on login screen when user is not authenticated
