@@ -959,6 +959,17 @@ async function loadDataOptimized(opts) {
   }
 
   try {
+    // In silent mode (tab-return refresh), use the current omnibar filters
+    // instead of resetting to defaults. This preserves user's selected date/filters.
+    if (silent && typeof omnibarApplyView === 'function' && typeof omnibarState !== 'undefined' && omnibarState.filters && omnibarState.filters.date_range) {
+      // Refresh employee lookup in background, then re-apply current view filters
+      await loadEmployeeLookup();
+      await omnibarApplyView();
+      appState.lastRefreshedTime = new Date();
+      appState.isLoading = false;
+      return;
+    }
+
     const today = getTodayStr();
 
     // Parallel fetch: employees + today's attendance in one shot

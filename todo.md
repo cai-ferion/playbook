@@ -3961,3 +3961,9 @@
 
 ## Performance — Notifications ETag/304
 - [x] Add in-memory cache (30s TTL) with mutation invalidation to GET /api/io/notifications (eliminates ~700ms DB queries on every poll)
+
+## Bug Fix — Failed to Fetch Paginated Attendance on Page 2
+- [ ] Fix "Failed to fetch paginated attendance" error when navigating to page 2 with filters in Input Portal
+
+## Bug Fix — Input Portal Date Filter Resets on Tab Return
+- [x] Fix date filter reverting to today when returning to tab (background refresh should preserve user's selected filters)
