@@ -3921,3 +3921,9 @@
 - [x] Support query filters (status, planning_group, role)
 - [x] Write vitest tests for external API
 - [x] Document usage (headers, query params, response shape)
+
+## Cross-Site Integration — Scheduled Task Roster Endpoint
+- [x] Create GET /api/scheduled/roster endpoint (OAuth-wrapped, allows user role)
+- [x] Support query filters (status, planning_group, role)
+- [x] Test endpoint locally with session auth
+- [x] Provide integration instructions for the other Manus site
