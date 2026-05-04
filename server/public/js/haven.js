@@ -1133,7 +1133,7 @@ async function havenSavePeriodConfig() {
   try {
     const res = await fetch(`${IO_API_BASE}/leave-periods`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-actor-ohr': currentUser.ohr_id, 'x-actor-name': currentUser.full_name || '' },
       body: JSON.stringify({ month, year, start_week_ending })
     });
     const data = await res.json();
@@ -1149,7 +1149,7 @@ async function havenSavePeriodConfig() {
 async function havenDeletePeriod(id) {
   if (!confirm('Remove this period configuration?')) return;
   try {
-    const res = await fetch(`${IO_API_BASE}/leave-periods/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${IO_API_BASE}/leave-periods/${id}`, { method: 'DELETE', headers: { 'x-actor-ohr': currentUser.ohr_id } });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'Failed to delete', 'error'); return; }
     showToast('Period configuration removed', 'success');

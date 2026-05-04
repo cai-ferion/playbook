@@ -3994,3 +3994,6 @@
 
 ## Bug — Admin Tools section not showing for 740045023
 - [x] Fix: nav.admin was missing from ALL_PERMISSION_KEYS array — added it and granted it to all admin OHRs via isAdminOhr() check in getPermissionDefaults
+
+## Bug — "Only admins can configure leave periods" error for 740045023
+- [x] Fix: leave-periods POST/DELETE used (req as any).ohrId (always empty) instead of req.headers["x-actor-ohr"]; also added x-actor-ohr header to haven.js fetch calls

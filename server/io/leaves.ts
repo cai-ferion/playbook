@@ -476,7 +476,7 @@ router.get("/leave-periods/current", async (req: Request, res: Response) => {
 // POST /api/io/leave-periods - create/update a period config (admin-only)
 router.post("/leave-periods", async (req: Request, res: Response) => {
   try {
-    const actorOhr = (req as any).ohrId || '';
+    const actorOhr = req.headers["x-actor-ohr"] as string || '';
     if (!isAdminOhr(actorOhr)) {
       return res.status(403).json({ error: "Only admins can configure leave periods" });
     }
@@ -505,7 +505,7 @@ router.post("/leave-periods", async (req: Request, res: Response) => {
         month: Number(month),
         year: Number(year),
         start_week_ending,
-        created_by: (req as any).fullName || '',
+        created_by: req.headers["x-actor-name"] as string || actorOhr,
         created_by_ohr: actorOhr,
         created_at: now,
         updated_at: now,
@@ -522,7 +522,7 @@ router.post("/leave-periods", async (req: Request, res: Response) => {
 // DELETE /api/io/leave-periods/:id - remove a period config (admin-only)
 router.delete("/leave-periods/:id", async (req: Request, res: Response) => {
   try {
-    const actorOhr = (req as any).ohrId || '';
+    const actorOhr = req.headers["x-actor-ohr"] as string || '';
     if (!isAdminOhr(actorOhr)) {
       return res.status(403).json({ error: "Only admins can delete leave periods" });
     }
