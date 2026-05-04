@@ -720,7 +720,7 @@ async function fetchRecords() {
  * Save edits back to io_attendance table via API.
  */
 async function saveRecords(edits) {
-  const FIELD_LABELS = { tag: 'Tag', upl_reason: 'UPL Reason', remarks: 'Remarks', ot_hours: 'OT Hours', role: 'Role', planning_group: 'Planning Group' };
+  const FIELD_LABELS = { tag: 'Tag', upl_reason: 'UPL Reason', remarks: 'Remarks', ot_hours: 'OT Hours', role: 'Role', planning_group: 'Planning Group', snap_status: 'Status', snap_supervisor: 'Supervisor', snap_shift_time: 'Shift Time' };
 
   try {
     let successCount = 0;
@@ -744,6 +744,9 @@ async function saveRecords(edits) {
       if (edit.ot_hours !== undefined) payload.ot_hours = edit.ot_hours;
       if (edit.role !== undefined) payload.role = edit.role;
       if (edit.planning_group !== undefined) payload.planning_group = edit.planning_group;
+      if (edit.snap_status !== undefined) payload.snap_status = edit.snap_status;
+      if (edit.snap_supervisor !== undefined) payload.snap_supervisor = edit.snap_supervisor;
+      if (edit.snap_shift_time !== undefined) payload.snap_shift_time = edit.snap_shift_time;
       // Attach version for optimistic locking (if available)
       if (edit._version) payload.version = edit._version;
 

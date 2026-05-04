@@ -4002,3 +4002,13 @@
 - [x] Investigate current supervisor handling in Anchor Input Portal and Regimen
 - [x] Implement: Anchor Input Portal uses Regimen supervisor_name for records dated April 18+ (frontend normalizeRecord + backend buildFlmCondition helper in shared.ts)
 - [x] Write tests and verify (53 files, 1,828 tests passing)
+
+## Feature — Anchor Input Portal Enhancements (Inline, Bulk Tag, Bulk Status, Bulk Field Change)
+- [x] Add supervisor field to inline expansion details (with autocomplete datalist)
+- [x] Make supervisor editable in inline expansion (admin/manager only, updates snap_supervisor on that record)
+- [x] Editable inline fields for admin/manager: supervisor, shift_time, status (+ existing role, planning_group, remarks, OT hours)
+- [x] Align bulk tag permissions: already correct — available to ALL users with edit access
+- [x] Restrict bulk status change to admin and manager roles only (removed anchor.edit_attendance check)
+- [x] Build bulk field change: POST /attendance/bulk-field-filtered, FCB UI with field dropdown + value input (admin/manager only)
+- [x] Fix bug: snap_status not sent in saveRecords payload (silently dropped status edits)
+- [x] Write tests and verify (54 files, 1,860 tests passing)

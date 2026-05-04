@@ -551,6 +551,20 @@
           <option value="Exit">Exit</option>
         </select>
         <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-status-btn" style="display:none;" onclick="fcbApplyStatus()">Apply Status</button>
+        <div class="fcb-divider fcb-status-only" id="fcb-field-divider" style="display:none;"></div>
+        <select class="fcb-select fcb-status-only" id="fcb-field-select" style="display:none;">
+          <option value="_select">&mdash; Field &mdash;</option>
+          <option value="snap_supervisor">Supervisor</option>
+          <option value="role">Billing Role</option>
+          <option value="planning_group">Billing PG</option>
+          <option value="snap_shift_time">Shift Time</option>
+          <option value="snap_status">Status</option>
+          <option value="remarks">Remarks</option>
+          <option value="ot_hours">OT Hours</option>
+          <option value="upl_reason">UPL Reason</option>
+        </select>
+        <input class="fcb-input fcb-status-only" id="fcb-field-value" style="display:none;" placeholder="New value..." />
+        <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-field-btn" style="display:none;" onclick="fcbApplyField()">Apply Field</button>
         <div class="fcb-divider"></div>
         <button class="fcb-btn fcb-btn--ghost" onclick="fcbDeselectAll()">Cancel</button>
       </div>
@@ -2245,5 +2259,6 @@
     </div>
   </div>
 </div>
+    <datalist id="supervisor-datalist"></datalist>
 </body>
 </html>

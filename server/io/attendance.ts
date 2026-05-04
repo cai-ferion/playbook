@@ -273,7 +273,8 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
       tag: "tag", upl_reason: "upl_reason", remarks: "remarks",
       ot_hours: "ot_hours",
       role: "role", planning_group: "planning_group",
-      snap_status: "snap_status"
+      snap_status: "snap_status",
+      snap_supervisor: "snap_supervisor", snap_shift_time: "snap_shift_time"
     };
 
     const auditEntries: any[] = [];
@@ -694,6 +695,104 @@ router.post("/attendance/bulk-status-filtered", async (req: Request, res: Respon
     res.json({ ok: true, updated, locked, skipped, total: allRecords.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-status-filtered error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/attendance/bulk-field-filtered - bulk update any editable field for ALL records matching filters (Managers/Admins only)
+router.post("/attendance/bulk-field-filtered", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const { field, value, actor_ohr, actor_name, filters } = req.body;
+    // Validate field is in the allowed set
+    const ALLOWED_FIELDS: Record<string, any> = {
+      snap_supervisor: ioAttendance.snap_supervisor,
+      role: ioAttendance.snap_actual_role,
+      planning_group: ioAttendance.snap_planning_group,
+      snap_shift_time: ioAttendance.snap_shift_time,
+      snap_status: ioAttendance.snap_status,
+      remarks: ioAttendance.remarks,
+      ot_hours: ioAttendance.ot_hours,
+      tag: ioAttendance.tag,
+      upl_reason: ioAttendance.upl_reason,
+    };
+    if (!field || !ALLOWED_FIELDS[field]) {
+      return res.status(400).json({ error: `Invalid field. Allowed: ${Object.keys(ALLOWED_FIELDS).join(", ")}` });
+    }
+    if (value === undefined) return res.status(400).json({ error: "value is required (can be empty string)" });
+    if (!filters) return res.status(400).json({ error: "filters object is required" });
+    // Role gate: Managers and Admins only
+    if (!ADMIN_OHRS.includes(actor_ohr)) {
+      const [actor] = await db.select({ role: ioEmployees.actual_role })
+        .from(ioEmployees).where(eq(ioEmployees.ohr_id, actor_ohr)).limit(1);
+      if (!actor || actor.role !== "Manager") {
+        return res.status(403).json({ error: "Only Managers and Admins can bulk-edit fields" });
+      }
+    }
+    const { log_date_gte, log_date_lte, tag_in, agent_in, flm_in,
+            planning_group_in, status_in, shift_time_in, role_in, wfm_tag_in, blanks_only } = filters;
+    const conditions: any[] = [];
+    // Exclude managers from attendance
+    const mgrSet = await getManagerOhrSet();
+    if (mgrSet.size > 0) {
+      const mgrArr = Array.from(mgrSet);
+      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (${sql.join(mgrArr.map(o => sql`${o}`), sql`, `)})`);
+    }
+    if (log_date_gte) conditions.push(gte(ioAttendance.log_date, String(log_date_gte)));
+    if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
+    if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
+    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
+    if (flm_in) conditions.push(await buildFlmCondition(db, String(flm_in).split("|"), log_date_gte ? String(log_date_gte) : undefined));
+    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
+    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
+    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
+    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
+    if (blanks_only) conditions.push(sql`(${ioAttendance.tag} IS NULL OR ${ioAttendance.tag} = '')`);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    // Fetch all matching records
+    const allRecords = await db.select({ id: ioAttendance.id, currentVal: ALLOWED_FIELDS[field] })
+      .from(ioAttendance).where(whereClause);
+    let updated = 0;
+    let skipped = 0;
+    const now = new Date().toISOString();
+    // Human-readable field label for audit
+    const FIELD_LABELS: Record<string, string> = {
+      snap_supervisor: "Supervisor", role: "Role", planning_group: "Planning Group",
+      snap_shift_time: "Shift Time", snap_status: "Status", remarks: "Remarks",
+      ot_hours: "OT Hours", tag: "Tag", upl_reason: "UPL Reason",
+    };
+    for (const record of allRecords) {
+      const oldVal = (record as any).currentVal;
+      if (oldVal === value) { skipped++; continue; }
+      // Update the record
+      await db.update(ioAttendance).set({ [field]: value || null }).where(eq(ioAttendance.id, record.id));
+      // Audit log
+      await db.insert(ioAuditLog).values({
+        record_type: "attendance",
+        record_id: record.id,
+        action: "bulk_field_change",
+        field_name: FIELD_LABELS[field] || field,
+        old_value: oldVal || "",
+        new_value: value || "",
+        actor_ohr: actor_ohr || "",
+        actor_name: actor_name || "",
+        timestamp: now,
+      });
+      updated++;
+    }
+    // Notify owner
+    if (updated > 0) {
+      notifyOwner({
+        title: `Bulk Field Change: ${updated} record(s) \u2192 ${FIELD_LABELS[field] || field} = "${value}"`,
+        content: `${actor_name || actor_ohr} changed ${FIELD_LABELS[field] || field} to "${value}" for ${updated} record(s) (filtered).${skipped > 0 ? ` ${skipped} already had this value.` : ""}`,
+      }).catch(err => console.warn("[BulkFieldFilteredNotify] Failed:", err.message));
+    }
+    emitChange(req, "attendance", "bulk_update", { field, value, count: updated });
+    res.json({ ok: true, updated, skipped, total: allRecords.length });
+  } catch (err: any) {
+    console.error("[IO API] attendance bulk-field-filtered error:", err);
     res.status(500).json({ error: err.message });
   }
 });

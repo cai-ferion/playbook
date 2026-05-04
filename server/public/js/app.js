@@ -1636,6 +1636,9 @@ function populateInputFilterDropdowns() {
 
   if (appState.multiSelects.tag) appState.multiSelects.tag.setOptions(tags);
   if (appState.multiSelects.agent) appState.multiSelects.agent.setOptions(agents);
+  // Populate supervisor datalist for inline edit autocomplete
+  var supDL = document.getElementById("supervisor-datalist");
+  if (supDL) { supDL.innerHTML = flms.map(function(f) { return "<option value=\"" + f + "\">"; }).join(""); }
   if (appState.multiSelects.flm) appState.multiSelects.flm.setOptions(flms);
   if (appState.multiSelects.role) appState.multiSelects.role.setOptions(roles);
   if (appState.multiSelects.pg) appState.multiSelects.pg.setOptions(pgs);
@@ -2058,7 +2061,7 @@ function handleCellEdit(el) {
     if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
       var spRow = serverPagState.rows.find(function(r) { return r._id === recordId; });
       if (spRow) {
-        var keyMap = { tag: ['tag'], uplReason: ['uplReason', 'upl_reason'], remarks: ['remarks'], ot: ['ot', 'ot_hours'], role: ['role'], actualPlanningGroup: ['actualPlanningGroup', 'planning_group'], status: ['status', 'snap_status'] };
+        var keyMap = { tag: ["tag"], uplReason: ["uplReason", "upl_reason"], remarks: ["remarks"], ot: ["ot", "ot_hours"], role: ["role"], actualPlanningGroup: ["actualPlanningGroup", "planning_group"], status: ["status", "snap_status"], flm: ["flm", "snap_supervisor"], shiftTime: ["shiftTime", "snap_shift_time"] };
         var targets = keyMap[key] || [key];
         for (var ti = 0; ti < targets.length; ti++) { spRow[targets[ti]] = value; }
         if (key === 'tag' && value !== 'UPL' && value !== 'LATE') {
@@ -2144,7 +2147,7 @@ async function confirmSave() {
     for (const [recId, changes] of Object.entries(appState.pendingEdits)) {
       // recId is now the record _id directly (not a numeric index)
       const edit = { _id: recId };
-      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', role: 'role', actualPlanningGroup: 'planning_group', status: 'snap_status' };
+      const fieldMap = { tag: 'tag', uplReason: 'upl_reason', remarks: 'remarks', ot: 'ot_hours', role: 'role', actualPlanningGroup: 'planning_group', status: 'snap_status', flm: 'snap_supervisor', shiftTime: 'snap_shift_time' };
       for (const [field, value] of Object.entries(changes)) {
         const dbCol = fieldMap[field] || field;
         edit[dbCol] = value;
@@ -2168,7 +2171,7 @@ async function confirmSave() {
 
       // Sync serverPagState.rows with saved values so re-render shows fresh data
       if (typeof serverPagState !== 'undefined' && serverPagState.enabled && serverPagState.rows) {
-        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', role: 'role', planning_group: 'actualPlanningGroup', snap_status: 'status' };
+        const reverseFieldMap = { tag: 'tag', upl_reason: 'uplReason', remarks: 'remarks', ot_hours: 'ot', role: 'role', planning_group: 'actualPlanningGroup', snap_status: 'status', snap_supervisor: 'flm', snap_shift_time: 'shiftTime' };
         for (const edit of edits) {
           const row = serverPagState.rows.find(r => r._id === edit._id);
           if (row) {

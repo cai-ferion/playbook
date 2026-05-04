@@ -347,15 +347,34 @@ function renderDetailPanel(r, idx, locked) {
       + '</select>';
   }
 
+  // Supervisor field — editable only by Managers and ADMIN_OHRS (updates snap_supervisor on this record only)
+  var _ADMIN_OHRS_SUP = window.ADMIN_OHRS || ['740045023', '740044909'];
+  var isAdminOrManager = cu && (cu.actual_role === 'Manager' || _ADMIN_OHRS_SUP.indexOf(cu.ohr_id) !== -1);
+  var supervisorField;
+  if (locked || isWFM || !isAdminOrManager) {
+    supervisorField = '<span class="detail-readonly">' + escapeHtml(r.flm || '\u2014') + '</span>';
+  } else {
+    supervisorField = '<input type="text" class="detail-input" value="' + escapeAttr(r.flm || '') + '" data-idx="' + idx + '" data-key="flm" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()" placeholder="\u2014" list="supervisor-datalist">';
+  }
+  // Shift Time field — editable only by Managers and ADMIN_OHRS
+  var SHIFT_OPTIONS = ['GY Shift', 'Mid-Shift'];
+  var shiftField;
+  if (locked || isWFM || !isAdminOrManager) {
+    shiftField = '<span class="detail-readonly">' + escapeHtml(r.shiftTime || '\u2014') + '</span>';
+  } else {
+    shiftField = '<select class="detail-select" data-idx="' + idx + '" data-key="shiftTime" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
+      + '<option value="">\u2014</option>'
+      + SHIFT_OPTIONS.map(function(s) { return '<option value="' + s + '" ' + (r.shiftTime === s ? 'selected' : '') + '>' + s + '</option>'; }).join('')
+      + '</select>';
+  }
   // Status dropdown — editable only by Managers and ADMIN_OHRS
   var STATUS_OPTIONS = ['Production', 'Training', 'Nesting', 'Attrition Backfill Training', 'Inactive', 'Exit'];
-  var _ADMIN_OHRS_STATUS = window.ADMIN_OHRS || ['740045023', '740044909'];
-  var isStatusEditor = cu && (cu.actual_role === 'Manager' || _ADMIN_OHRS_STATUS.indexOf(cu.ohr_id) !== -1 || (cu.permissions && cu.permissions['anchor.edit_attendance']));
+  var isStatusEditor = isAdminOrManager;
   var statusField;
   if (locked || isWFM || !isStatusEditor) {
     statusField = '<span class="detail-readonly">' + escapeHtml(r.status || '\u2014') + '</span>';
   } else {
-    statusField = '<select class="detail-select" data-idx="' + idx + '" data-key="status" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">'
+    statusField = '<select class="detail-select" data-idx="' + idx + '" data-key="status" data-record-id="' + escapeAttr(r._id || '') + '" onchange="handleCellEdit(this)" onclick="event.stopPropagation()">' 
       + '<option value="">\u2014</option>'
       + STATUS_OPTIONS.map(function(s) { return '<option value="' + s + '" ' + (r.status === s ? 'selected' : '') + '>' + s + '</option>'; }).join('')
       + '</select>';
@@ -375,10 +394,10 @@ function renderDetailPanel(r, idx, locked) {
     // Row 2: Remarks (full width within left column)
     + '<div class="detail-section" style="grid-column:1/-1;"><span class="detail-label">REMARKS</span>' + remarksField + '</div>'
     + '<div class="detail-divider"></div>'
-    // Row 3: Status (editable dropdown)
+    // Row 3: Supervisor and Shift Time (admin/manager editable)
+    + '<div class="detail-section"><span class="detail-label">SUPERVISOR</span>' + supervisorField + '</div>'
+    + '<div class="detail-section"><span class="detail-label">SHIFT TIME</span>' + shiftField + '</div>'
     + '<div class="detail-section"><span class="detail-label">STATUS</span>' + statusField + '</div>'
-    + '<div class="detail-section"></div>' /* spacer */
-    + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-section"></div>' /* spacer */
     + '<div class="detail-divider"></div>'
     // Row 4: Billing Role and Billing Planning Group (editable dropdowns)
@@ -501,7 +520,7 @@ window.toggleSelectionMode = function() {
   // Show/hide bulk status action for Managers/Admins only
   var cu = typeof currentUser !== 'undefined' ? currentUser : null;
   var _ADMIN_OHRS_BULK = window.ADMIN_OHRS || ['740045023', '740044909'];
-  var isStatusEditor = cu && (cu.actual_role === 'Manager' || _ADMIN_OHRS_BULK.indexOf(cu.ohr_id) !== -1 || (cu.permissions && cu.permissions['anchor.edit_attendance']));
+  var isStatusEditor = cu && (cu.actual_role === 'Manager' || _ADMIN_OHRS_BULK.indexOf(cu.ohr_id) !== -1);
   var statusEls = document.querySelectorAll('.fcb-status-only');
   for (var si = 0; si < statusEls.length; si++) {
     statusEls[si].style.display = (compactState.selectionMode && isStatusEditor) ? '' : 'none';
@@ -1023,3 +1042,74 @@ window.invalidateAuditCache = function(recordId) {
     setTimeout(initFcbTagDropdown, 100);
   }
 })();
+
+// ===== Bulk Field Change (Admin/Manager only) =====
+window.fcbApplyField = async function() {
+  var fieldSel = document.getElementById('fcb-field-select');
+  var valueSel = document.getElementById('fcb-field-value');
+  var field = fieldSel ? fieldSel.value : '';
+  var value = valueSel ? valueSel.value.trim() : '';
+  if (field === '_select') { showToast('Please select a field first', 'info'); return; }
+  // For shift time, validate value
+  if (field === 'snap_shift_time' && value && value !== 'GY Shift' && value !== 'Mid-Shift') {
+    showToast('Shift Time must be "GY Shift" or "Mid-Shift" (or empty to clear)', 'info'); return;
+  }
+  var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
+  if (count === 0) { showToast('No rows selected/matched', 'info'); return; }
+  // Field label for display
+  var FIELD_LABELS = {
+    snap_supervisor: 'Supervisor', role: 'Billing Role', planning_group: 'Billing PG',
+    snap_shift_time: 'Shift Time', snap_status: 'Status', remarks: 'Remarks',
+    ot_hours: 'OT Hours', upl_reason: 'UPL Reason'
+  };
+  var label = FIELD_LABELS[field] || field;
+  if (!confirm('Change "' + label + '" to "' + (value || '(empty)') + '" for ' + formatNumber(count) + ' record(s) matching current filters?\n\nThis will be logged in the audit trail.')) return;
+  var user = typeof currentUser !== 'undefined' ? currentUser : null;
+  var applyBtn = document.getElementById('fcb-apply-field-btn');
+  if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Applying...'; }
+  try {
+    // Build filters from current appState
+    var filters = {};
+    if (appState.dateRange && appState.dateRange.start) filters.log_date_gte = appState.dateRange.start;
+    if (appState.dateRange && appState.dateRange.end) filters.log_date_lte = appState.dateRange.end;
+    if (appState.filters) {
+      if (appState.filters.tag_in) filters.tag_in = appState.filters.tag_in;
+      if (appState.filters.agent_in) filters.agent_in = appState.filters.agent_in;
+      if (appState.filters.flm_in) filters.flm_in = appState.filters.flm_in;
+      if (appState.filters.planning_group_in) filters.planning_group_in = appState.filters.planning_group_in;
+      if (appState.filters.status_in) filters.status_in = appState.filters.status_in;
+      if (appState.filters.shift_time_in) filters.shift_time_in = appState.filters.shift_time_in;
+      if (appState.filters.role_in) filters.role_in = appState.filters.role_in;
+      if (appState.filters.wfm_tag_in) filters.wfm_tag_in = appState.filters.wfm_tag_in;
+      if (appState.filters.blanks_only) filters.blanks_only = true;
+    }
+    var resp = await fetch(IO_API_BASE + '/attendance/bulk-field-filtered', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        field: field,
+        value: value,
+        actor_ohr: user ? user.ohr_id || '' : '',
+        actor_name: user ? user.full_name || '' : '',
+        filters: filters,
+      }),
+    });
+    var result = await resp.json();
+    if (result.ok) {
+      showToast(label + ' updated for ' + formatNumber(result.updated) + ' record(s)' + (result.skipped > 0 ? ' (' + result.skipped + ' already had this value)' : ''), 'success');
+      // Reset field selection
+      if (fieldSel) fieldSel.value = '_select';
+      if (valueSel) valueSel.value = '';
+      // Refresh data
+      if (typeof serverPageChange === 'function') {
+        try { await serverPageChange(appState.inputPage); } catch (e) { renderCompactTable(); }
+      } else { renderCompactTable(); }
+    } else {
+      showToast('Bulk field change failed: ' + (result.error || 'Unknown error'), 'error');
+    }
+  } catch (err) {
+    showToast('Bulk field change failed: ' + err.message, 'error');
+  } finally {
+    if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply Field'; }
+  }
+};
