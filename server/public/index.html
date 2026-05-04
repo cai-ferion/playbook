@@ -920,6 +920,7 @@
         <div class="regimen-tabs" id="admin-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
           <button class="regimen-tab active" id="admin-tab-tools" onclick="adminSwitchTab('tools')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Tools</button>
           <button class="regimen-tab" id="admin-tab-permissions" onclick="adminSwitchTab('permissions')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);">Permissions</button>
+          <button class="regimen-tab" id="admin-tab-admins" onclick="adminSwitchTab('admins')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);">Admin List</button>
         </div>
         <!-- Tools Tab Content -->
         <div id="admin-panel-tools">
@@ -1088,6 +1089,34 @@
             </div>
           </div>
         </div><!-- /admin-panel-permissions -->
+
+        <div id="admin-panel-admins" style="display:none;">
+          <div class="card admin-card" style="margin-bottom:20px;">
+            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+              <h3 style="margin:0;font-size:16px;font-weight:600;">Admin OHR List</h3>
+              <button class="btn btn-primary btn-sm" onclick="adminOhrShowAddForm()">+ Add Admin</button>
+            </div>
+            <p style="color:var(--fg-muted);font-size:12px;margin:8px 0 16px;">Manage who has admin privileges. The system owner (740045023) cannot be removed.</p>
+            <div id="admin-ohr-add-form" style="display:none;margin-bottom:16px;padding:12px;background:var(--bg-alt);border-radius:8px;">
+              <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div style="flex:1;">
+                  <label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">OHR ID</label>
+                  <input type="text" id="admin-ohr-add-input" class="form-input" placeholder="Enter OHR ID" style="width:100%;" />
+                </div>
+                <div style="flex:1;">
+                  <label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Full Name (optional)</label>
+                  <input type="text" id="admin-ohr-add-name" class="form-input" placeholder="Full name" style="width:100%;" />
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="adminOhrAdd()">Add</button>
+                <button class="btn btn-ghost btn-sm" onclick="adminOhrHideAddForm()">Cancel</button>
+              </div>
+              <div id="admin-ohr-add-error" style="color:var(--danger);font-size:12px;margin-top:6px;display:none;"></div>
+            </div>
+            <div id="admin-ohr-list-container">
+              <div style="text-align:center;padding:20px;color:var(--fg-muted);">Loading...</div>
+            </div>
+          </div>
+        </div><!-- /admin-panel-admins -->
       </div>
 
       <!-- ===== View 3: Risk Alerts ===== -->

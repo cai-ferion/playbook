@@ -960,3 +960,17 @@ export const ioLeavePeriods = mysqlTable("io_leave_periods", {
 });
 export type IoLeavePeriod = typeof ioLeavePeriods.$inferSelect;
 export type InsertIoLeavePeriod = typeof ioLeavePeriods.$inferInsert;
+
+// ─── Admin OHR Management ───
+// Dynamic admin list — replaces hardcoded ADMIN_OHRS array.
+// 740045023 is the permanent super-admin (cannot be removed via UI).
+export const ioAdminOhrs = mysqlTable("io_admin_ohrs", {
+  id: int("id").autoincrement().primaryKey(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  full_name: varchar("full_name", { length: 255 }),
+  added_by: varchar("added_by", { length: 255 }),
+  added_by_ohr: varchar("added_by_ohr", { length: 20 }),
+  added_at: varchar("added_at", { length: 64 }),
+});
+export type IoAdminOhr = typeof ioAdminOhrs.$inferSelect;
+export type InsertIoAdminOhr = typeof ioAdminOhrs.$inferInsert;

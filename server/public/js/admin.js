@@ -231,21 +231,30 @@ function onAdminViewLoad() {
 function adminSwitchTab(tab) {
   const toolsPanel = document.getElementById('admin-panel-tools');
   const permsPanel = document.getElementById('admin-panel-permissions');
+  const adminsPanel = document.getElementById('admin-panel-admins');
   const toolsTab = document.getElementById('admin-tab-tools');
   const permsTab = document.getElementById('admin-tab-permissions');
-
+  const adminsTab = document.getElementById('admin-tab-admins');
+  // Hide all panels
+  if (toolsPanel) toolsPanel.style.display = 'none';
+  if (permsPanel) permsPanel.style.display = 'none';
+  if (adminsPanel) adminsPanel.style.display = 'none';
+  // Deactivate all tabs
+  [toolsTab, permsTab, adminsTab].forEach(t => {
+    if (t) { t.style.borderBottomColor = 'transparent'; t.style.color = 'var(--fg-muted)'; t.classList.remove('active'); }
+  });
+  // Show selected
   if (tab === 'tools') {
     if (toolsPanel) toolsPanel.style.display = '';
-    if (permsPanel) permsPanel.style.display = 'none';
     if (toolsTab) { toolsTab.style.borderBottomColor = 'var(--primary)'; toolsTab.style.color = 'var(--primary)'; toolsTab.classList.add('active'); }
-    if (permsTab) { permsTab.style.borderBottomColor = 'transparent'; permsTab.style.color = 'var(--fg-muted)'; permsTab.classList.remove('active'); }
   } else if (tab === 'permissions') {
-    if (toolsPanel) toolsPanel.style.display = 'none';
     if (permsPanel) permsPanel.style.display = '';
     if (permsTab) { permsTab.style.borderBottomColor = 'var(--primary)'; permsTab.style.color = 'var(--primary)'; permsTab.classList.add('active'); }
-    if (toolsTab) { toolsTab.style.borderBottomColor = 'transparent'; toolsTab.style.color = 'var(--fg-muted)'; toolsTab.classList.remove('active'); }
-    // Initialize permissions if not loaded
     if (typeof initPermissions === 'function') initPermissions();
+  } else if (tab === 'admins') {
+    if (adminsPanel) adminsPanel.style.display = '';
+    if (adminsTab) { adminsTab.style.borderBottomColor = 'var(--primary)'; adminsTab.style.color = 'var(--primary)'; adminsTab.classList.add('active'); }
+    adminOhrLoadList();
   }
 }
 
@@ -523,5 +532,130 @@ async function exportAllTables() {
     resultEl.textContent = 'Export error: ' + err.message;
     resultEl.className = 'admin-result warning';
     showToast('Export error: ' + err.message, 'error');
+  }
+}
+
+// ===== Admin OHR List Management =====
+let _adminOhrData = [];
+
+async function adminOhrLoadList() {
+  const container = document.getElementById('admin-ohr-list-container');
+  if (!container) return;
+  try {
+    const resp = await fetch('/api/io/admin-ohrs', {
+      headers: { 'x-actor-ohr': currentUser.ohr_id }
+    });
+    if (!resp.ok) throw new Error('Failed to load admin list');
+    const result = await resp.json();
+    _adminOhrData = result.data || [];
+    const ownerOhr = result.owner_ohr || '740045023';
+    adminOhrRenderList(_adminOhrData, ownerOhr);
+  } catch (err) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);">Error: ' + err.message + '</div>';
+  }
+}
+
+function adminOhrRenderList(data, ownerOhr) {
+  const container = document.getElementById('admin-ohr-list-container');
+  if (!container) return;
+  if (!data.length) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--fg-muted);">No admins configured.</div>';
+    return;
+  }
+  let html = '<table class="data-table" style="width:100%;"><thead><tr>' +
+    '<th style="text-align:left;">OHR ID</th>' +
+    '<th style="text-align:left;">Full Name</th>' +
+    '<th style="text-align:left;">Added By</th>' +
+    '<th style="text-align:left;">Added At</th>' +
+    '<th style="text-align:center;">Actions</th>' +
+    '</tr></thead><tbody>';
+  for (const row of data) {
+    const isOwner = row.ohr_id === ownerOhr;
+    const addedAt = row.added_at ? new Date(row.added_at).toLocaleDateString() : '—';
+    html += '<tr>' +
+      '<td style="font-weight:600;">' + escapeHtml(row.ohr_id) + (isOwner ? ' <span style="font-size:10px;background:var(--primary);color:#fff;padding:2px 6px;border-radius:4px;">OWNER</span>' : '') + '</td>' +
+      '<td>' + escapeHtml(row.full_name || '—') + '</td>' +
+      '<td>' + escapeHtml(row.added_by || '—') + '</td>' +
+      '<td>' + addedAt + '</td>' +
+      '<td style="text-align:center;">' +
+        (isOwner ? '<span style="color:var(--fg-muted);font-size:11px;">Protected</span>' : '<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="adminOhrRemove(\'' + row.ohr_id + '\')">Remove</button>') +
+      '</td>' +
+      '</tr>';
+  }
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function adminOhrShowAddForm() {
+  const form = document.getElementById('admin-ohr-add-form');
+  if (form) form.style.display = '';
+  const errEl = document.getElementById('admin-ohr-add-error');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function adminOhrHideAddForm() {
+  const form = document.getElementById('admin-ohr-add-form');
+  if (form) form.style.display = 'none';
+  document.getElementById('admin-ohr-add-input').value = '';
+  document.getElementById('admin-ohr-add-name').value = '';
+}
+
+async function adminOhrAdd() {
+  const ohrInput = document.getElementById('admin-ohr-add-input');
+  const nameInput = document.getElementById('admin-ohr-add-name');
+  const errEl = document.getElementById('admin-ohr-add-error');
+  const ohrId = (ohrInput.value || '').trim();
+  const fullName = (nameInput.value || '').trim();
+  if (!ohrId) {
+    errEl.textContent = 'OHR ID is required';
+    errEl.style.display = '';
+    return;
+  }
+  errEl.style.display = 'none';
+  try {
+    const resp = await fetch('/api/io/admin-ohrs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-actor-ohr': currentUser.ohr_id,
+        'x-actor-name': currentUser.full_name || currentUser.ohr_id,
+      },
+      body: JSON.stringify({ ohr_id: ohrId, full_name: fullName || null }),
+    });
+    const result = await resp.json();
+    if (!resp.ok) {
+      errEl.textContent = result.error || 'Failed to add admin';
+      errEl.style.display = '';
+      return;
+    }
+    showToast('Admin added: ' + ohrId, 'success');
+    adminOhrHideAddForm();
+    // Update global ADMIN_OHRS
+    if (result.admin_ohrs) window.ADMIN_OHRS = result.admin_ohrs;
+    adminOhrLoadList();
+  } catch (err) {
+    errEl.textContent = 'Network error: ' + err.message;
+    errEl.style.display = '';
+  }
+}
+
+async function adminOhrRemove(ohrId) {
+  if (!confirm('Remove ' + ohrId + ' from admin list?')) return;
+  try {
+    const resp = await fetch('/api/io/admin-ohrs/' + encodeURIComponent(ohrId), {
+      method: 'DELETE',
+      headers: { 'x-actor-ohr': currentUser.ohr_id },
+    });
+    const result = await resp.json();
+    if (!resp.ok) {
+      showToast(result.error || 'Failed to remove admin', 'error');
+      return;
+    }
+    showToast('Admin removed: ' + ohrId, 'success');
+    // Update global ADMIN_OHRS
+    if (result.admin_ohrs) window.ADMIN_OHRS = result.admin_ohrs;
+    adminOhrLoadList();
+  } catch (err) {
+    showToast('Network error: ' + err.message, 'error');
   }
 }

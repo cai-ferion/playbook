@@ -232,6 +232,13 @@
       "when": 1777927050469,
       "tag": "0032_sour_morlun",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1777929411099,
+      "tag": "0033_dazzling_blindfold",
+      "breakpoints": true
     }
   ]
 }

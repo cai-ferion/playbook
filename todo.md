@@ -3983,3 +3983,11 @@
 
 ## Bug Fix — CA_STATUS_COLORS Duplicate Declaration
 - [x] Fix CA_STATUS_COLORS SyntaxError caused by module preloader loading compass CA script twice (wrapped compass-ca-cases.js in IIFE, exposed public API via window)
+
+## Feature — Dynamic Admin OHR Management (Admin Tools)
+- [x] Create io_admin_ohrs DB table (ohr_id, full_name, added_by, added_at)
+- [x] Create CRUD endpoints for admin OHR list (GET, POST, DELETE) — any existing admin can modify
+- [x] Seed 740045023 as permanent default admin (cannot be removed)
+- [x] Migrate all hardcoded ADMIN_OHRS references to use DB-backed list (config.ts now loads from DB on startup)
+- [x] Build Admin Tools UI panel for managing admin OHRs (Admin List tab with add/remove)
+- [x] Write vitest tests for admin OHR management (53 files, 1,828 tests passing)

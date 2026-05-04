@@ -18,6 +18,7 @@ import { registerAutoMailer } from "../auto-mailer.js";
 
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
 import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
+import { refreshAdminOhrs } from "../config.js";
 import { corsMiddleware } from "../middleware/cors.js";
 import { rateLimitMiddleware } from "../middleware/rate-limit.js";
 import { initCacheManifest, injectCacheHashes, getCacheManifest, getFileHash } from "../cache-manifest.js";
@@ -228,6 +229,8 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Load admin OHRs from DB into memory cache
+    refreshAdminOhrs().then(list => console.log(`[config] Loaded ${list.length} admin OHRs from DB`));
     // Initialize cron jobs after server is listening
     initAttendanceSyncCron();
     initRosterSyncCron();

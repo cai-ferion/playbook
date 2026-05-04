@@ -4,18 +4,86 @@
  */
 import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
-import { ioPermissions, ioEmployees, ioAuditLog } from "../../drizzle/schema.js";
+import { ioPermissions, ioEmployees, ioAuditLog, ioAdminOhrs } from "../../drizzle/schema.js";
 import { eq, and } from "drizzle-orm";
 import { ADMIN_OHRS, getPermissionDefaults, ALL_PERMISSION_KEYS } from "./shared.js";
 import { validate, permissionsUpdateSchema, permissionsSeedSchema, permissionsBulkKeyUpdateSchema } from "./validation.js";
-import { OWNER_OHR } from "../config.js";
+import { OWNER_OHR, refreshAdminOhrs } from "../config.js";
 import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
-// GET /api/io/config/admin-ohrs — single source of truth for admin OHR list
+// GET /api/io/config/admin-ohrs — single source of truth for admin OHR list (cached from DB)
 router.get("/config/admin-ohrs", (_req: Request, res: Response) => {
   res.json({ admin_ohrs: ADMIN_OHRS, owner_ohr: OWNER_OHR });
+});
+
+// ─── Admin OHR Management CRUD ───
+// GET /api/io/admin-ohrs — list all admins with metadata
+router.get("/admin-ohrs", async (_req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    const rows = await db.select().from(ioAdminOhrs);
+    res.json({ data: rows, owner_ohr: OWNER_OHR });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/admin-ohrs — add a new admin (only existing admins can add)
+router.post("/admin-ohrs", async (req: Request, res: Response) => {
+  const actorOhr = req.headers["x-actor-ohr"] as string;
+  if (!actorOhr || !ADMIN_OHRS.includes(actorOhr)) {
+    return res.status(403).json({ error: "Only admins can manage the admin list" });
+  }
+  const { ohr_id, full_name } = req.body;
+  if (!ohr_id || typeof ohr_id !== "string" || !ohr_id.trim()) {
+    return res.status(400).json({ error: "ohr_id is required" });
+  }
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    // Check duplicate
+    const [existing] = await db.select().from(ioAdminOhrs).where(eq(ioAdminOhrs.ohr_id, ohr_id.trim()));
+    if (existing) return res.status(409).json({ error: "OHR is already an admin" });
+    await db.insert(ioAdminOhrs).values({
+      ohr_id: ohr_id.trim(),
+      full_name: full_name || null,
+      added_by: req.headers["x-actor-name"] as string || actorOhr,
+      added_by_ohr: actorOhr,
+      added_at: new Date().toISOString(),
+    });
+    // Refresh in-memory cache
+    await refreshAdminOhrs();
+    emitChange(req, "admin-ohrs", "record_created", { ohr_id: ohr_id.trim() });
+    res.json({ success: true, admin_ohrs: ADMIN_OHRS });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/io/admin-ohrs/:ohr_id — remove an admin (cannot remove OWNER_OHR)
+router.delete("/admin-ohrs/:ohr_id", async (req: Request, res: Response) => {
+  const actorOhr = req.headers["x-actor-ohr"] as string;
+  if (!actorOhr || !ADMIN_OHRS.includes(actorOhr)) {
+    return res.status(403).json({ error: "Only admins can manage the admin list" });
+  }
+  const targetOhr = req.params.ohr_id;
+  if (targetOhr === OWNER_OHR) {
+    return res.status(403).json({ error: "Cannot remove the system owner from admin list" });
+  }
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+    await db.delete(ioAdminOhrs).where(eq(ioAdminOhrs.ohr_id, targetOhr));
+    // Refresh in-memory cache
+    await refreshAdminOhrs();
+    emitChange(req, "admin-ohrs", "record_deleted", { ohr_id: targetOhr });
+    res.json({ success: true, admin_ohrs: ADMIN_OHRS });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/io/my-permissions — current user's permissions (merged DB + defaults)
