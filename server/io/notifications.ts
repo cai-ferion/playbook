@@ -2,6 +2,9 @@
  * server/io/notifications.ts
  * Domain module: Notification CRUD + maintenance flag + mark-all-read.
  * Extracted from io-routes.ts during Sub-Phase 2.3.
+ *
+ * Performance: In-memory cache with 30s TTL to avoid ~700ms DB queries on every poll.
+ * Cache is keyed by query params and invalidated on any mutation (POST/PATCH/PUT/DELETE).
  */
 import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
@@ -11,9 +14,35 @@ import { emitChange } from "./emit-change.js";
 
 const router = Router();
 
-// GET /api/io/notifications
+// ── In-memory cache for GET /notifications ──
+const CACHE_TTL_MS = 30_000; // 30 seconds
+interface CacheEntry {
+  data: any[];
+  timestamp: number;
+}
+const queryCache = new Map<string, CacheEntry>();
+
+function getCacheKey(query: Record<string, any>): string {
+  // Deterministic key from sorted query params
+  const parts = Object.entries(query).filter(([, v]) => v !== undefined).sort(([a], [b]) => a.localeCompare(b));
+  return parts.map(([k, v]) => `${k}=${v}`).join('&') || '__default__';
+}
+
+function invalidateCache(): void {
+  queryCache.clear();
+}
+
+// GET /api/io/notifications — cached with 30s TTL
 router.get("/notifications", async (req: Request, res: Response) => {
   try {
+    const cacheKey = getCacheKey(req.query as Record<string, any>);
+    const cached = queryCache.get(cacheKey);
+
+    // Return cached result if still fresh
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL_MS) {
+      return res.json(cached.data);
+    }
+
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
@@ -28,6 +57,10 @@ router.get("/notifications", async (req: Request, res: Response) => {
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const lim = limit ? Number(limit) : 100;
     const rows = await db.select().from(ioNotifications).where(where).orderBy(desc(sql`created_at`)).limit(lim);
+
+    // Store in cache
+    queryCache.set(cacheKey, { data: rows, timestamp: Date.now() });
+
     res.json(rows);
   } catch (err: any) {
     console.error("[IO API] notifications GET error:", err);
@@ -44,6 +77,7 @@ router.post("/notifications", async (req: Request, res: Response) => {
     const body = { ...req.body };
     if (!body.created_at) body.created_at = new Date().toISOString();
     await db.insert(ioNotifications).values(body);
+    invalidateCache();
     emitChange(req, "notifications", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
@@ -73,6 +107,7 @@ router.put("/notifications/maintenance", async (req: Request, res: Response) => 
         is_read: true,
       });
     }
+    invalidateCache();
     emitChange(req, "notifications", "record_updated", { sub: "maintenance" });
     res.json({ ok: true });
   } catch (err: any) {
@@ -89,6 +124,7 @@ router.patch("/notifications/mark-all-read", async (req: Request, res: Response)
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.update(ioNotifications).set({ is_read: true }).where(eq(ioNotifications.is_read, false));
+    invalidateCache();
     emitChange(req, "notifications", "bulk_update", { action: "mark_all_read" });
     res.json({ ok: true });
   } catch (err: any) {
@@ -104,6 +140,7 @@ router.delete("/notifications/clear-all", async (req: Request, res: Response) =>
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.delete(ioNotifications).where(ne(ioNotifications.type, "system_maintenance"));
+    invalidateCache();
     emitChange(req, "notifications", "record_deleted", { action: "clear_all" });
     res.json({ ok: true });
   } catch (err: any) {
@@ -120,6 +157,7 @@ router.patch("/notifications/:id", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     await db.update(ioNotifications).set(req.body).where(eq(ioNotifications.id, Number(req.params.id)));
+    invalidateCache();
     emitChange(req, "notifications", "record_updated", { id: Number(req.params.id) });
     res.json({ ok: true });
   } catch (err: any) {

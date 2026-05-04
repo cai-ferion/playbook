@@ -3958,3 +3958,6 @@
 
 ## Bug Fix — classList TypeError at Line 168
 - [x] Add null guards to MultiSelect close(), toggle(), renderTrigger(), and renderDropdown() to prevent TypeError on stale DOM references (Group Task wizard destroys DOM while instances persist)
+
+## Performance — Notifications ETag/304
+- [x] Add in-memory cache (30s TTL) with mutation invalidation to GET /api/io/notifications (eliminates ~700ms DB queries on every poll)
