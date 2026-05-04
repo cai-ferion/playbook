@@ -3898,3 +3898,6 @@
 
 ## Helm — New Group Task Button Visibility
 - [x] Restrict "New Group Task" button to ADMIN_OHRS only (hide from all other roles)
+
+## Bug Fix — Anchor Input Portal Filters Missing
+- [x] Fix: Filters in Anchor - Input Portal disappeared after deployment (root cause: lazy loading race — setDefaultOmnibarFilters not called on switchView)

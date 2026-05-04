@@ -1213,7 +1213,7 @@ async function switchView(view) {
   const headerMeta = document.getElementById('header-meta');
   if (headerMeta) headerMeta.style.display = view === 'input' ? '' : 'none';
 
-  if (view === 'input') { window.renderInputTable(); }
+  if (view === 'input') { if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters(); window.renderInputTable(); }
   if (view === 'dashboard') renderDashboard();
   if (view === 'alerts') await loadAllDataForAlerts();
   if (view === 'billing') await initBillingCompliance();
