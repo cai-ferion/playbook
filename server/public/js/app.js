@@ -942,26 +942,28 @@ function initDashboardMultiSelects() {
  * 2. Load only today's records (fast)
  * 3. Show the UI immediately
  */
-async function loadDataOptimized() {
+async function loadDataOptimized(opts) {
+  var silent = opts && opts.silent; // silent mode: no progress bar overlay (used for background refreshes)
   // Guard: Do not load data if user is not authenticated
   if (!sessionStorage.getItem('playbook_user')) {
     return;
   }
   appState.isLoading = true;
-  showLoading(true);
+  if (!silent) {
+    showLoading(true);
+    showProgressBar('Loading...');
+  }
 
   try {
-    showProgressBar('Loading...');
     const today = getTodayStr();
 
     // Parallel fetch: employees + today's attendance in one shot
-    // Skip the count query for single-day loads (< 500 records, progress bar unnecessary)
     const [empCount, attendanceRaw] = await Promise.all([
       loadEmployeeLookup(),
       fetchRecordsDirect(today, today)
     ]);
 
-    updateProgressBar(attendanceRaw.length, attendanceRaw.length, 'Processing...');
+    if (!silent) updateProgressBar(attendanceRaw.length, attendanceRaw.length, 'Processing...');
 
     // Normalize after employee lookup is ready
     const records = attendanceRaw.map(r => normalizeRecord(r));
@@ -973,16 +975,16 @@ async function loadDataOptimized() {
     appState.pendingEdits = {};
     appState.loadedRanges = [{ start: today, end: today }];
 
-    hideProgressBar();
+    if (!silent) hideProgressBar();
     buildRosterFromRecords();
     setDefaultFilters();
     updateAllViews();
   } catch (err) {
-    hideProgressBar();
+    if (!silent) hideProgressBar();
     showToast('Failed to load data: ' + err.message, 'error');
   } finally {
     appState.isLoading = false;
-    showLoading(false);
+    if (!silent) showLoading(false);
   }
 }
 

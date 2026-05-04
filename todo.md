@@ -3952,3 +3952,6 @@
 
 ## Performance — Preload All Module Scripts After Login
 - [x] Add background preloading of all module scripts after login completes (eliminates filter bar lazy-load delay on all views)
+
+## UX — Remove Loading Bar on Tab-Return Refresh
+- [x] Remove progress bar overlay when refreshing data on tab visibility restore (keep silent background refresh)

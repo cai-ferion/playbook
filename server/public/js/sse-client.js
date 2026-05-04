@@ -23,12 +23,12 @@
   const MODULE_REFRESH_MAP = {
     'attendance': () => {
       if (appState.activeView === 'input' || appState.activeView === 'dashboard') {
-        loadDataOptimized();
+        loadDataOptimized({ silent: true });
       }
     },
     'attendance-ops': () => {
       if (appState.activeView === 'input' || appState.activeView === 'dashboard') {
-        loadDataOptimized();
+        loadDataOptimized({ silent: true });
       }
     },
     'coaching': () => {
