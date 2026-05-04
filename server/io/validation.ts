@@ -286,6 +286,8 @@ export const attendanceBulkImportSchema = z.object({
 export const attendanceBulkTagSchema = z.object({
   ids: z.array(z.string().min(1)).min(1, "ids array must not be empty"),
   tag: z.string().max(50),
+  actor_ohr: z.string().max(20).optional(),
+  actor_name: z.string().max(255).optional(),
 }).strict();
 
 /** PATCH /api/io/attendance/bulk-status — batch update status fields */

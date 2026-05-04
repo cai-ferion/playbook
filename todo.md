@@ -3904,3 +3904,6 @@
 
 ## Cleanup — Remove Dead Code
 - [x] Remove anchor-analytics.js (dead code, never called)
+
+## Bug Fix — Bulk Tag Validation Error
+- [x] Fix: Bulk tag rejected actor_ohr and actor_name (added to Zod schema as optional fields)
