@@ -524,10 +524,10 @@ async function handleLogin() {
 
 
 // ===== Inactivity Session Timeout =====
-// 30-minute idle timeout — warns at 25 min, auto-logout at 30 min.
+// 8-hour idle timeout — warns at 7h 50m, auto-logout at 8h (full shift).
 // Resets on mouse, keyboard, touch, or scroll activity.
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000;   // 30 minutes
-const SESSION_WARN_MS   = 25 * 60 * 1000;    // warn at 25 minutes
+const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000;   // 8 hours
+const SESSION_WARN_MS   = (8 * 60 - 10) * 60 * 1000;  // warn at 7h 50m
 let _idleTimer = null;
 let _idleWarnTimer = null;
 let _idleToastEl = null;
@@ -539,12 +539,12 @@ function _resetIdleTimers() {
   clearTimeout(_idleWarnTimer);
   _dismissIdleToast();
 
-  // Warning toast at 25 min
+  // Warning toast at 7h 50m
   _idleWarnTimer = setTimeout(() => {
     _showIdleToast();
   }, SESSION_WARN_MS);
 
-  // Hard logout at 30 min — with unsaved-changes guard
+  // Hard logout at 8 hours — with unsaved-changes guard
   _idleTimer = setTimeout(() => {
     _dismissIdleToast();
     // Check for unsaved edits before forcing logout

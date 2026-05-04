@@ -3941,3 +3941,6 @@
 
 ## Bug Fix — Loading Overlay Showing When Logged Out
 - [x] Fix loading overlay appearing on login screen when user is not authenticated
+
+## Config Change — Inactivity Timeout
+- [x] Update idle timer from 30 minutes to 8 hours (full shift)
