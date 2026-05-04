@@ -3944,3 +3944,8 @@
 
 ## Config Change — Inactivity Timeout
 - [x] Update idle timer from 30 minutes to 8 hours (full shift)
+
+## Performance — Login Loading Optimization
+- [x] Parallelize permissions + admin-ohrs + employees/slim + attendance fetches
+- [x] Add server-side in-memory cache for employees/slim (5-min TTL)
+- [x] Show app shell immediately after permissions, load data in background

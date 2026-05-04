@@ -18,9 +18,19 @@ import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-l
 
 const router = Router();
 
+// ── In-memory cache for employees/slim (5-minute TTL) ──
+// This data changes rarely (roster updates) but is fetched on every login.
+let _slimCache: any[] | null = null;
+let _slimCacheTs = 0;
+const SLIM_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // GET /api/io/employees/slim — lightweight lookup for attendance normalization
 router.get("/employees/slim", async (req: Request, res: Response) => {
   try {
+    // Serve from cache if fresh
+    if (_slimCache && Date.now() - _slimCacheTs < SLIM_CACHE_TTL) {
+      return res.json(_slimCache);
+    }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
     const rows = await db.select({
@@ -35,6 +45,8 @@ router.get("/employees/slim", async (req: Request, res: Response) => {
       department: ioEmployees.department,
       sex: ioEmployees.sex,
     }).from(ioEmployees).orderBy(asc(ioEmployees.ohr_id)).limit(3000);
+    _slimCache = rows;
+    _slimCacheTs = Date.now();
     res.json(rows);
   } catch (err: any) {
     console.error("[IO API] employees/slim GET error:", err);
@@ -137,6 +149,7 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
     // Fire-and-forget: mirror change to Supabase
     const [updated] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
     if (updated) syncEmployeesToSupabase([updated]).catch(() => {});
+    _slimCache = null; // Invalidate cache on update
     emitChange(req, "employees", "record_updated", { ohr_id });
     res.json({ ok: true });
   } catch (err: any) {
@@ -217,6 +230,7 @@ router.post("/employees", async (req: Request, res: Response) => {
       }
     }
 
+    _slimCache = null; // Invalidate cache on create
     emitChange(req, "employees", "record_created", {});
     res.json({ ok: true });
   } catch (err: any) {
@@ -234,6 +248,7 @@ router.delete("/employees/:ohr_id", async (req: Request, res: Response) => {
     await db.delete(ioEmployees).where(eq(ioEmployees.ohr_id, req.params.ohr_id));
     // Fire-and-forget: mirror deletion to Supabase
     deleteEmployeesFromSupabase([req.params.ohr_id]).catch(() => {});
+    _slimCache = null; // Invalidate cache on delete
     emitChange(req, "employees", "record_deleted", { ohr_id: req.params.ohr_id });
     res.json({ ok: true });
   } catch (err: any) {

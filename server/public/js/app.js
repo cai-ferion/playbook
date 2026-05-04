@@ -393,34 +393,55 @@ async function loginAsEmployee(emp) {
   document.getElementById('app-container').style.display = 'flex';
   stopAuthCarousel();
 
-  // RBAC: Fetch permissions from DB and apply nav visibility
-  try {
-    const permRes = await fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`);
-    const permData = await permRes.json();
-    currentUser.permissions = permData.permissions || {};
-  } catch (permErr) {
-    console.warn('[RBAC] Failed to fetch permissions, using empty:', permErr);
-    currentUser.permissions = {};
-  }
+  // Show loading state immediately while data loads
+  appState.isLoading = true;
+  showLoading(true);
+  showProgressBar('Loading...');
 
-  // Fetch centralized admin OHR list — single source of truth
-  try {
-    const cfgRes = await fetch('/api/io/config/admin-ohrs');
-    const cfgData = await cfgRes.json();
-    window.ADMIN_OHRS = cfgData.admin_ohrs || [];
-    window.OWNER_OHR = cfgData.owner_ohr || '';
-  } catch (cfgErr) {
-    console.warn('[Config] Failed to fetch admin OHRs, using fallback:', cfgErr);
-    window.ADMIN_OHRS = ['740045023', '740044909'];
-    window.OWNER_OHR = '740045023';
-  }
+  const today = getTodayStr();
+
+  // ── PARALLEL FETCH: permissions + admin config + employees + attendance ──
+  // All 4 are independent reads — run simultaneously to cut wall time from ~3s to ~1s
+  const [permResult, cfgResult, empCount, attendanceRaw] = await Promise.all([
+    // 1. RBAC permissions
+    fetch(`/api/io/my-permissions?ohr_id=${encodeURIComponent(currentUser.ohr_id)}&role=${encodeURIComponent(currentUser.actual_role)}`)
+      .then(r => r.json()).catch(() => ({ permissions: {} })),
+    // 2. Admin OHR list
+    fetch('/api/io/config/admin-ohrs')
+      .then(r => r.json()).catch(() => ({ admin_ohrs: ['740045023', '740044909'], owner_ohr: '740045023' })),
+    // 3. Employee lookup (slim)
+    loadEmployeeLookup(),
+    // 4. Today's attendance
+    fetchRecordsDirect(today, today)
+  ]);
+
+  // Apply permissions
+  currentUser.permissions = permResult.permissions || {};
+  window.ADMIN_OHRS = cfgResult.admin_ohrs || ['740045023', '740044909'];
+  window.OWNER_OHR = cfgResult.owner_ohr || '740045023';
   sessionStorage.setItem('playbook_user', JSON.stringify(currentUser));
 
   applyNavPermissions(currentUser);
-
   initMultiSelects();
   initDashboardMultiSelects();
-  await loadDataOptimized();
+
+  // Process attendance data (employee lookup is already ready from parallel fetch)
+  updateProgressBar(attendanceRaw.length, attendanceRaw.length, 'Processing...');
+  const records = attendanceRaw.map(r => normalizeRecord(r));
+  appState.records = records;
+  appState.originalRecords = JSON.parse(JSON.stringify(records));
+  appState.lastUpdated = new Date().toISOString();
+  appState.lastRefreshedTime = new Date();
+  appState.pendingEdits = {};
+  appState.loadedRanges = [{ start: today, end: today }];
+
+  hideProgressBar();
+  buildRosterFromRecords();
+  setDefaultFilters();
+  updateAllViews();
+  appState.isLoading = false;
+  showLoading(false);
+
   startRefreshTimer();
   // Auto-expand Anchor and Helm nav groups
   const anchorGroup = document.getElementById('nav-group-anchor');

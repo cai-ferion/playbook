@@ -16,12 +16,12 @@ describe("Session Idle Timeout — Phase 6.3", () => {
   const sseJs = fs.readFileSync(SSE_JS_PATH, "utf-8");
 
   describe("Idle Timer Configuration", () => {
-    it("has 30-minute session timeout", () => {
-      expect(appJs).toContain("SESSION_TIMEOUT_MS = 30 * 60 * 1000");
+    it("has 8-hour session timeout (full shift)", () => {
+      expect(appJs).toContain("SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000");
     });
 
-    it("has 25-minute warning (5 min before timeout)", () => {
-      expect(appJs).toContain("SESSION_WARN_MS   = 25 * 60 * 1000");
+    it("has 7h 50m warning (10 min before timeout)", () => {
+      expect(appJs).toContain("SESSION_WARN_MS   = (8 * 60 - 10) * 60 * 1000");
     });
 
     it("listens to all relevant activity events", () => {
