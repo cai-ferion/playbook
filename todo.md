@@ -3955,3 +3955,6 @@
 
 ## UX — Remove Loading Bar on Tab-Return Refresh
 - [x] Remove progress bar overlay when refreshing data on tab visibility restore (keep silent background refresh)
+
+## Bug Fix — classList TypeError at Line 168
+- [x] Add null guards to MultiSelect close(), toggle(), renderTrigger(), and renderDropdown() to prevent TypeError on stale DOM references (Group Task wizard destroys DOM while instances persist)

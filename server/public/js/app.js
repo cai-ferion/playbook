@@ -49,12 +49,14 @@ class MultiSelect {
       this.selected.length === 0 ? this.allLabel :
       this.selected.length === 1 ? this.selected[0] :
       `${this.selected.length} selected`;
+    if (!this.trigger) return;
     this.trigger.innerHTML = `<span>${escapeHtml(label)}</span><span class="arrow">&#9662;</span>`;
     if (this.isOpen) this.trigger.classList.add('active');
     else this.trigger.classList.remove('active');
   }
 
   renderDropdown() {
+    if (!this.dropdown) return;
     let html = '';
 
     if (this.searchable) {
@@ -151,22 +153,24 @@ class MultiSelect {
     this.isOpen = !this.isOpen;
     if (this.isOpen) {
       this.searchTerm = '';
-      this.renderDropdown();
-      this.dropdown.classList.add('open');
-      this.trigger.classList.add('active');
-      if (this.searchable) {
+      if (this.dropdown) {
+        this.renderDropdown();
+        this.dropdown.classList.add('open');
+      }
+      if (this.trigger) this.trigger.classList.add('active');
+      if (this.searchable && this.dropdown) {
         setTimeout(() => { const si = this.dropdown.querySelector('.ms-search-input'); if (si) si.focus(); }, 50);
       }
     } else {
-      this.dropdown.classList.remove('open');
-      this.trigger.classList.remove('active');
+      if (this.dropdown) this.dropdown.classList.remove('open');
+      if (this.trigger) this.trigger.classList.remove('active');
     }
   }
 
   close() {
     this.isOpen = false;
-    this.dropdown.classList.remove('open');
-    this.trigger.classList.remove('active');
+    if (this.dropdown) this.dropdown.classList.remove('open');
+    if (this.trigger) this.trigger.classList.remove('active');
   }
 
   reset() {
