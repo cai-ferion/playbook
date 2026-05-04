@@ -1214,7 +1214,7 @@ async function switchView(view) {
   if (headerMeta) headerMeta.style.display = view === 'input' ? '' : 'none';
 
   if (view === 'input') { if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters(); window.renderInputTable(); }
-  if (view === 'dashboard') renderDashboard();
+  if (view === 'dashboard') { if (typeof setDefaultDashFilterBar === 'function') setDefaultDashFilterBar(); renderDashboard(); }
   if (view === 'alerts') await loadAllDataForAlerts();
   if (view === 'billing') await initBillingCompliance();
   if (view === 'managers-nook') { if (typeof initManagersNook === 'function') initManagersNook(); }
