@@ -3977,3 +3977,9 @@
 - [x] Build Haven admin UI panel for configuring leave periods (month picker + Friday dropdown)
 - [x] Integrate period validation into agent leave filing flow (block current month if not configured, future months always open)
 - [x] Write vitest tests for leave period endpoints (52 files, 1,794 tests passing)
+
+## Push to GitHub
+- [x] Push codebase to cai-ferion/playbook repository
+
+## Bug Fix — CA_STATUS_COLORS Duplicate Declaration
+- [x] Fix CA_STATUS_COLORS SyntaxError caused by module preloader loading compass CA script twice (wrapped compass-ca-cases.js in IIFE, exposed public API via window)

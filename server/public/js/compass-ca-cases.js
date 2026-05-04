@@ -1,8 +1,11 @@
 /**
  * Compass CA Cases — Full corrective action lifecycle management.
  * State machine: incident → NTE → response → hearing → NOD → CAP → active period → closed
+ * Wrapped in IIFE to avoid global const/function conflicts with corrective-actions.js
  */
 /* global currentUser, showToast, switchView */
+;(function() {
+'use strict';
 
 const CA_API = '/api/io/compass';
 
@@ -608,3 +611,18 @@ function compassCaCloseForm() {
   var overlay = document.getElementById('compass-ca-form-overlay');
   if (overlay) overlay.style.display = 'none';
 }
+
+// Expose public API to global scope (called from dynamic onclick handlers)
+window.initCompassCaCases = initCompassCaCases;
+window.caShowDetail = caShowDetail;
+window.caShowNewForm = caShowNewForm;
+window.caSubmitNewForm = caSubmitNewForm;
+window.caTransition = caTransition;
+window.caGenerateDoc = caGenerateDoc;
+window.caUploadSigned = caUploadSigned;
+window.caOnSearch = caOnSearch;
+window.caFormCategoryChanged = caFormCategoryChanged;
+window.caFormGetAiRecommendation = caFormGetAiRecommendation;
+window.compassCaCloseDetail = compassCaCloseDetail;
+window.compassCaCloseForm = compassCaCloseForm;
+})();
