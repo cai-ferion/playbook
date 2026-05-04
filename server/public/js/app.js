@@ -460,6 +460,32 @@ async function loginAsEmployee(emp) {
   } else {
     switchView('alerts');
   }
+
+  // ── BACKGROUND PRELOAD: Load all module scripts in idle time ──
+  // Eliminates filter bar lazy-load delay when navigating to any view for the first time.
+  // Uses requestIdleCallback (with setTimeout fallback) to avoid blocking the initial render.
+  const preloadModules = () => {
+    if (!window.ModuleLoader) return;
+    const moduleMap = window.ModuleLoader.getModuleMap();
+    const views = Object.keys(moduleMap);
+    let idx = 0;
+    // Stagger loads to avoid saturating the network
+    function loadNext() {
+      if (idx >= views.length) return;
+      const view = views[idx++];
+      if (!window.ModuleLoader.isModuleLoaded(view)) {
+        window.ModuleLoader.ensureModuleLoaded(view).then(loadNext).catch(loadNext);
+      } else {
+        loadNext();
+      }
+    }
+    loadNext();
+  };
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(preloadModules, { timeout: 2000 });
+  } else {
+    setTimeout(preloadModules, 500);
+  }
 }
 
 async function handleLogin() {

@@ -3949,3 +3949,6 @@
 - [x] Parallelize permissions + admin-ohrs + employees/slim + attendance fetches
 - [x] Add server-side in-memory cache for employees/slim (5-min TTL)
 - [x] Show app shell immediately after permissions, load data in background
+
+## Performance — Preload All Module Scripts After Login
+- [x] Add background preloading of all module scripts after login completes (eliminates filter bar lazy-load delay on all views)
