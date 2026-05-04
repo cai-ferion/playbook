@@ -182,6 +182,16 @@ function havenRenderContinuous() {
       fileBtn.style.display = 'none';
     }
   }
+  // Show/hide Config button for admins only
+  const configBtn = document.getElementById('haven-config-btn');
+  if (configBtn) {
+    const user = typeof currentUser !== 'undefined' ? currentUser : null;
+    if (user && (window.ADMIN_OHRS || []).includes(user.ohr_id)) {
+      configBtn.style.display = '';
+    } else {
+      configBtn.style.display = 'none';
+    }
+  }
   requestAnimationFrame(() => {
     const todayCell = scrollEl.querySelector(`[data-date="${havenGetTodayPHT()}"]`);
     if (todayCell) {
@@ -595,6 +605,8 @@ function havenShowFileForm(prefillDate) {
     <button class="haven-form-btn haven-form-btn-submit" onclick="havenSubmitLeave()">Submit Request</button>
   `;
   havenOpenForm();
+  // Check current month period status and show info message
+  havenCheckPeriodStatus();
 }
 function havenSubmitLeave() {
   const dateVal = document.getElementById('haven-file-date')?.value;
@@ -983,3 +995,200 @@ window.havenBulkApproveList = havenBulkApproveList;
 window.havenBulkRejectList = havenBulkRejectList;
 window.havenDoReject = havenDoReject;
 window.havenScrollToToday = havenScrollToToday;
+
+// ─── Leave Period Configuration (Admin-only) ───────────────────────────────────
+/**
+ * Generates an array of Fridays in and around a given month/year.
+ * Returns objects with { value: 'YYYY-MM-DD', label: 'MM/DD (Fri)' }
+ */
+function havenGetFridaysForMonth(month, year) {
+  // Start from 2 weeks before the 1st of the month, end 2 weeks after last day
+  const start = new Date(year, month - 1, -13); // ~2 weeks before
+  const end = new Date(year, month, 14); // ~2 weeks after
+  const fridays = [];
+  const d = new Date(start);
+  // Advance to first Friday
+  while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+  while (d <= end) {
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    fridays.push({
+      value: `${yyyy}-${mm}-${dd}`,
+      label: `${mm}/${dd} (Fri)`
+    });
+    d.setDate(d.getDate() + 7);
+  }
+  return fridays;
+}
+
+async function havenShowPeriodConfig() {
+  const formBody = document.getElementById('haven-form-body');
+  const formTitle = document.getElementById('haven-form-title');
+  const formFooter = document.getElementById('haven-form-footer');
+  if (!formBody) return;
+  formTitle.textContent = 'Leave Period Configuration';
+  formBody.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;">Loading...</div>';
+  formFooter.innerHTML = `<button class="haven-form-btn haven-form-btn-cancel" onclick="havenCloseForm()">Close</button>`;
+  havenOpenForm();
+  // Fetch existing periods
+  let periods = [];
+  try {
+    const res = await fetch(`${IO_API_BASE}/leave-periods`);
+    if (res.ok) periods = await res.json();
+  } catch (e) { console.error('[Haven] load periods error:', e); }
+  // Build the config UI
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+  // Month options: current month + next 3 months
+  const monthOptions = [];
+  for (let i = 0; i < 4; i++) {
+    let m = curMonth + i;
+    let y = curYear;
+    if (m > 12) { m -= 12; y++; }
+    const label = new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    monthOptions.push({ month: m, year: y, label });
+  }
+  const defaultMonth = monthOptions[0].month;
+  const defaultYear = monthOptions[0].year;
+  const fridays = havenGetFridaysForMonth(defaultMonth, defaultYear);
+  formBody.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <p style="font-size:12px;color:#94a3b8;margin:0 0 12px 0;">
+        Set the start week ending (Friday) for each month. Agents can only file leaves for the current month once configured.
+        Future months are always open for filing.
+      </p>
+      <div class="haven-form-field">
+        <label class="haven-form-label">Month</label>
+        <div class="haven-form-select-wrap">
+          <select class="haven-form-select" id="haven-period-month" onchange="havenPeriodMonthChanged()">
+            ${monthOptions.map(o => `<option value="${o.month}-${o.year}">${o.label}</option>`).join('')}
+          </select>
+          <svg class="haven-form-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="haven-form-field">
+        <label class="haven-form-label">Start Week Ending (Friday)</label>
+        <div class="haven-form-select-wrap">
+          <select class="haven-form-select" id="haven-period-friday">
+            ${fridays.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
+          </select>
+          <svg class="haven-form-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <button class="haven-form-btn haven-form-btn-submit" onclick="havenSavePeriodConfig()" style="margin-top:8px;">Save Configuration</button>
+    </div>
+    <div style="border-top:1px solid #334155;padding-top:12px;">
+      <h4 style="font-size:13px;font-weight:600;color:#e2e8f0;margin:0 0 8px 0;">Configured Periods</h4>
+      <div id="haven-period-table">
+        ${periods.length === 0
+          ? '<p style="font-size:12px;color:#64748b;">No periods configured yet.</p>'
+          : `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+              <thead><tr style="color:#94a3b8;text-align:left;">
+                <th style="padding:4px 8px;">Month</th>
+                <th style="padding:4px 8px;">Start WE</th>
+                <th style="padding:4px 8px;">Set By</th>
+                <th style="padding:4px 8px;"></th>
+              </tr></thead>
+              <tbody>
+                ${periods.map(p => {
+                  const mLabel = new Date(p.year, p.month - 1, 1).toLocaleString('en-US', { month: 'short', year: 'numeric' });
+                  const weDate = p.start_week_ending;
+                  const weMM = weDate.slice(5,7);
+                  const weDD = weDate.slice(8,10);
+                  return `<tr style="border-top:1px solid #1e293b;">
+                    <td style="padding:4px 8px;">${mLabel}</td>
+                    <td style="padding:4px 8px;">${weMM}/${weDD}</td>
+                    <td style="padding:4px 8px;">${p.created_by || p.created_by_ohr || '-'}</td>
+                    <td style="padding:4px 8px;"><button class="btn btn-ghost btn-sm" style="color:#ef4444;font-size:11px;" onclick="havenDeletePeriod(${p.id})">Delete</button></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>`
+        }
+      </div>
+    </div>
+  `;
+}
+
+function havenPeriodMonthChanged() {
+  const sel = document.getElementById('haven-period-month');
+  if (!sel) return;
+  const [m, y] = sel.value.split('-').map(Number);
+  const fridays = havenGetFridaysForMonth(m, y);
+  const fridaySel = document.getElementById('haven-period-friday');
+  if (fridaySel) {
+    fridaySel.innerHTML = fridays.map(f => `<option value="${f.value}">${f.label}</option>`).join('');
+  }
+}
+
+async function havenSavePeriodConfig() {
+  const monthSel = document.getElementById('haven-period-month');
+  const fridaySel = document.getElementById('haven-period-friday');
+  if (!monthSel || !fridaySel) return;
+  const [month, year] = monthSel.value.split('-').map(Number);
+  const start_week_ending = fridaySel.value;
+  if (!start_week_ending) { showToast('Please select a Friday', 'error'); return; }
+  try {
+    const res = await fetch(`${IO_API_BASE}/leave-periods`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year, start_week_ending })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to save', 'error'); return; }
+    showToast('Leave period configured successfully', 'success');
+    havenShowPeriodConfig(); // Refresh the panel
+  } catch (e) {
+    console.error('[Haven] save period error:', e);
+    showToast('Failed to save period configuration', 'error');
+  }
+}
+
+async function havenDeletePeriod(id) {
+  if (!confirm('Remove this period configuration?')) return;
+  try {
+    const res = await fetch(`${IO_API_BASE}/leave-periods/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Failed to delete', 'error'); return; }
+    showToast('Period configuration removed', 'success');
+    havenShowPeriodConfig(); // Refresh
+  } catch (e) {
+    console.error('[Haven] delete period error:', e);
+    showToast('Failed to delete period', 'error');
+  }
+}
+
+// Expose new functions globally
+window.havenShowPeriodConfig = havenShowPeriodConfig;
+window.havenPeriodMonthChanged = havenPeriodMonthChanged;
+window.havenSavePeriodConfig = havenSavePeriodConfig;
+window.havenDeletePeriod = havenDeletePeriod;
+
+// ─── Period Status Check (shown in File Leave form) ────────────────────────────
+async function havenCheckPeriodStatus() {
+  const zone = document.getElementById('haven-file-confirm-zone');
+  if (!zone) return;
+  try {
+    const res = await fetch(`${IO_API_BASE}/leave-periods/current`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.configured) {
+      const monthName = new Date(data.year, data.month - 1, 1).toLocaleString('en-US', { month: 'long' });
+      zone.innerHTML = `<div style="background:#1e293b;border:1px solid #f59e0b;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;color:#fbbf24;">
+        <strong>⚠ Note:</strong> Leave filing for ${monthName} has not been opened yet. Your admin needs to configure the leave period before you can file for this month. You can still file for future months.
+      </div>`;
+    } else {
+      const weDate = data.start_week_ending;
+      const weMM = weDate.slice(5, 7);
+      const weDD = weDate.slice(8, 10);
+      zone.innerHTML = `<div style="background:#1e293b;border:1px solid #22c55e;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;color:#86efac;">
+        <strong>✓</strong> Leave filing is open for this month (WE ${weMM}/${weDD} onward).
+      </div>`;
+    }
+  } catch (e) {
+    // Silently fail — don't block the form
+  }
+}
+window.havenCheckPeriodStatus = havenCheckPeriodStatus;

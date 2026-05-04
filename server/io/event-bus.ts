@@ -33,7 +33,8 @@ export type SSEModule =
   | "insights"
   | "notifications"
   | "employees"
-  | "audit-log";
+  | "audit-log"
+  | "leave-periods";
 
 export type SSEEventType =
   | "record_created"

@@ -4,7 +4,8 @@
  */
 import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
-import { ioLeaves, ioNotifications, ioEmployees } from "../../drizzle/schema.js";
+import { ioLeaves, ioNotifications, ioEmployees, ioLeavePeriods } from "../../drizzle/schema.js";
+import { isAdminOhr } from "./shared.js";
 import { eq, and, gte, lte, sql, desc, or, count } from "drizzle-orm";
 import { validate, leaveCreateSchema, leavesBulkActionSchema, leaveCancelSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
@@ -92,6 +93,38 @@ router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Re
     }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
+
+    // Leave Period Validation: current month requires admin-configured period
+    if (leaveDate) {
+      const leaveDateObj = new Date(leaveDate + 'T00:00:00');
+      const leaveMonth = leaveDateObj.getMonth() + 1;
+      const leaveYear = leaveDateObj.getFullYear();
+      const currentMonth = nowMNL.getMonth() + 1;
+      const currentYear = nowMNL.getFullYear();
+      // Only enforce for current month (future months always open)
+      if (leaveMonth === currentMonth && leaveYear === currentYear) {
+        const periodRows = await db.select().from(ioLeavePeriods)
+          .where(and(eq(ioLeavePeriods.month, currentMonth), eq(ioLeavePeriods.year, currentYear)))
+          .limit(1);
+        if (periodRows.length === 0) {
+          const monthName = nowMNL.toLocaleString('en-US', { month: 'long' });
+          return res.status(400).json({ error: `Leave filing for ${monthName} has not been opened yet by your admin.` });
+        }
+        // Period configured: enforce start_week_ending constraint
+        // Leaves must be on or after the Saturday of the configured week
+        const weDate = new Date(periodRows[0].start_week_ending + 'T00:00:00');
+        // Saturday = weDate - 6 days (week ending is Friday, so Saturday is 6 days before)
+        const satDate = new Date(weDate);
+        satDate.setDate(weDate.getDate() - 6);
+        const satStr = `${satDate.getFullYear()}-${String(satDate.getMonth() + 1).padStart(2, '0')}-${String(satDate.getDate()).padStart(2, '0')}`;
+        if (leaveDate < satStr) {
+          const weMM = periodRows[0].start_week_ending.slice(5, 7);
+          const weDD = periodRows[0].start_week_ending.slice(8, 10);
+          return res.status(400).json({ error: `Leave dates for this month must be on or after the configured start date (WE ${weMM}/${weDD}).` });
+        }
+      }
+    }
+
     await db.insert(ioLeaves).values(req.body);
 
     // Notify the FLM (supervisor) about the new leave request
@@ -400,6 +433,106 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
     });
   } catch (err: any) {
     console.error("[IO API] shrinkage-forecast error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Leave Period Configuration (Admin-only) ───
+
+// GET /api/io/leave-periods - list all configured periods
+router.get("/leave-periods", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const rows = await db.select().from(ioLeavePeriods).orderBy(desc(ioLeavePeriods.year), desc(ioLeavePeriods.month));
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] leave-periods GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/leave-periods/current - get the period config for the current month
+router.get("/leave-periods/current", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const nowMNL = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const month = nowMNL.getMonth() + 1;
+    const year = nowMNL.getFullYear();
+    const rows = await db.select().from(ioLeavePeriods)
+      .where(and(eq(ioLeavePeriods.month, month), eq(ioLeavePeriods.year, year)))
+      .limit(1);
+    if (rows.length === 0) {
+      return res.json({ configured: false, month, year });
+    }
+    res.json({ configured: true, ...rows[0] });
+  } catch (err: any) {
+    console.error("[IO API] leave-periods/current GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/leave-periods - create/update a period config (admin-only)
+router.post("/leave-periods", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = (req as any).ohrId || '';
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can configure leave periods" });
+    }
+    const { month, year, start_week_ending } = req.body;
+    if (!month || !year || !start_week_ending) {
+      return res.status(400).json({ error: "month, year, and start_week_ending are required" });
+    }
+    // Validate start_week_ending is a Friday
+    const weDate = new Date(start_week_ending + 'T00:00:00');
+    if (weDate.getDay() !== 5) {
+      return res.status(400).json({ error: "start_week_ending must be a Friday" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const now = new Date().toISOString();
+    // Upsert: if month+year exists, update; otherwise insert
+    const existing = await db.select().from(ioLeavePeriods)
+      .where(and(eq(ioLeavePeriods.month, Number(month)), eq(ioLeavePeriods.year, Number(year))))
+      .limit(1);
+    if (existing.length > 0) {
+      await db.update(ioLeavePeriods)
+        .set({ start_week_ending, created_by: actorOhr, updated_at: now })
+        .where(eq(ioLeavePeriods.id, existing[0].id));
+    } else {
+      await db.insert(ioLeavePeriods).values({
+        month: Number(month),
+        year: Number(year),
+        start_week_ending,
+        created_by: (req as any).fullName || '',
+        created_by_ohr: actorOhr,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+    emitChange(req, "leave-periods", "record_updated", {});
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] leave-periods POST error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/io/leave-periods/:id - remove a period config (admin-only)
+router.delete("/leave-periods/:id", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = (req as any).ohrId || '';
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can delete leave periods" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    await db.delete(ioLeavePeriods).where(eq(ioLeavePeriods.id, Number(req.params.id)));
+    emitChange(req, "leave-periods", "record_deleted", {});
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] leave-periods DELETE error:", err);
     res.status(500).json({ error: err.message });
   }
 });

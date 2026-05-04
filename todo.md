@@ -3970,3 +3970,10 @@
 
 ## Bug Fix — Dashboard Filter Bar Not Showing Immediately
 - [x] Fix Dashboard filter bar not rendering instantly when navigating to the page
+
+## Feature — Leave Period Configuration
+- [x] Create io_leave_periods DB table (month, year, start_week_ending_date, created_by, created_at)
+- [x] Create admin-only CRUD endpoints for leave period config (GET, POST, PUT, DELETE)
+- [x] Build Haven admin UI panel for configuring leave periods (month picker + Friday dropdown)
+- [x] Integrate period validation into agent leave filing flow (block current month if not configured, future months always open)
+- [x] Write vitest tests for leave period endpoints (52 files, 1,794 tests passing)

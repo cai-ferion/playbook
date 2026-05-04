@@ -944,3 +944,19 @@ export const ioRoleChanges = mysqlTable("io_role_changes", {
 
 export type IoRoleChange = typeof ioRoleChanges.$inferSelect;
 export type InsertIoRoleChange = typeof ioRoleChanges.$inferInsert;
+
+// ─── Leave Period Configuration ───
+// Admin configures which week ending (Friday) starts the leave filing period for each month.
+// Agents cannot file leaves for the current month until this is set.
+export const ioLeavePeriods = mysqlTable("io_leave_periods", {
+  id: int("id").autoincrement().primaryKey(),
+  month: int("month").notNull(),           // 1-12
+  year: int("year").notNull(),             // e.g. 2026
+  start_week_ending: varchar("start_week_ending", { length: 10 }).notNull(), // YYYY-MM-DD (Friday)
+  created_by: varchar("created_by", { length: 255 }),
+  created_by_ohr: varchar("created_by_ohr", { length: 20 }),
+  created_at: varchar("created_at", { length: 64 }),
+  updated_at: varchar("updated_at", { length: 64 }),
+});
+export type IoLeavePeriod = typeof ioLeavePeriods.$inferSelect;
+export type InsertIoLeavePeriod = typeof ioLeavePeriods.$inferInsert;
