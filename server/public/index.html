@@ -540,17 +540,6 @@
           <option value="">&mdash;</option>
         </select>
         <button class="fcb-btn fcb-btn--primary" id="fcb-apply-btn" onclick="fcbApplyTag()">Apply Tag</button>
-        <div class="fcb-divider fcb-status-only" id="fcb-status-divider" style="display:none;"></div>
-        <select class="fcb-select fcb-status-only" id="fcb-status-select" style="display:none;">
-          <option value="_select">— Status —</option>
-          <option value="Production">Production</option>
-          <option value="Training">Training</option>
-          <option value="Nesting">Nesting</option>
-          <option value="Attrition Backfill Training">Attrition Backfill Training</option>
-          <option value="Inactive">Inactive</option>
-          <option value="Exit">Exit</option>
-        </select>
-        <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-status-btn" style="display:none;" onclick="fcbApplyStatus()">Apply Status</button>
         <div class="fcb-divider fcb-status-only" id="fcb-field-divider" style="display:none;"></div>
         <select class="fcb-select fcb-status-only" id="fcb-field-select" style="display:none;">
           <option value="_select">&mdash; Field &mdash;</option>
@@ -559,11 +548,10 @@
           <option value="planning_group">Billing PG</option>
           <option value="snap_shift_time">Shift Time</option>
           <option value="snap_status">Status</option>
-          <option value="remarks">Remarks</option>
-          <option value="ot_hours">OT Hours</option>
-          <option value="upl_reason">UPL Reason</option>
         </select>
-        <input class="fcb-input fcb-status-only" id="fcb-field-value" style="display:none;" placeholder="New value..." />
+        <select class="fcb-select fcb-status-only" id="fcb-field-value" style="display:none;">
+          <option value="_select">&mdash; Value &mdash;</option>
+        </select>
         <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-field-btn" style="display:none;" onclick="fcbApplyField()">Apply Field</button>
         <div class="fcb-divider"></div>
         <button class="fcb-btn fcb-btn--ghost" onclick="fcbDeselectAll()">Cancel</button>

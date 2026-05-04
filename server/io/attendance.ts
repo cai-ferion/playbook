@@ -712,10 +712,6 @@ router.post("/attendance/bulk-field-filtered", async (req: Request, res: Respons
       planning_group: ioAttendance.snap_planning_group,
       snap_shift_time: ioAttendance.snap_shift_time,
       snap_status: ioAttendance.snap_status,
-      remarks: ioAttendance.remarks,
-      ot_hours: ioAttendance.ot_hours,
-      tag: ioAttendance.tag,
-      upl_reason: ioAttendance.upl_reason,
     };
     if (!field || !ALLOWED_FIELDS[field]) {
       return res.status(400).json({ error: `Invalid field. Allowed: ${Object.keys(ALLOWED_FIELDS).join(", ")}` });

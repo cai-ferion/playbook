@@ -1048,19 +1048,16 @@ window.fcbApplyField = async function() {
   var fieldSel = document.getElementById('fcb-field-select');
   var valueSel = document.getElementById('fcb-field-value');
   var field = fieldSel ? fieldSel.value : '';
-  var value = valueSel ? valueSel.value.trim() : '';
+  var value = valueSel ? valueSel.value : '';
+  if (value === '_select') value = '';
   if (field === '_select') { showToast('Please select a field first', 'info'); return; }
-  // For shift time, validate value
-  if (field === 'snap_shift_time' && value && value !== 'GY Shift' && value !== 'Mid-Shift') {
-    showToast('Shift Time must be "GY Shift" or "Mid-Shift" (or empty to clear)', 'info'); return;
-  }
+  if (!value) { showToast('Please select a value', 'info'); return; }
   var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
   if (count === 0) { showToast('No rows selected/matched', 'info'); return; }
   // Field label for display
   var FIELD_LABELS = {
     snap_supervisor: 'Supervisor', role: 'Billing Role', planning_group: 'Billing PG',
-    snap_shift_time: 'Shift Time', snap_status: 'Status', remarks: 'Remarks',
-    ot_hours: 'OT Hours', upl_reason: 'UPL Reason'
+    snap_shift_time: 'Shift Time', snap_status: 'Status'
   };
   var label = FIELD_LABELS[field] || field;
   if (!confirm('Change "' + label + '" to "' + (value || '(empty)') + '" for ' + formatNumber(count) + ' record(s) matching current filters?\n\nThis will be logged in the audit trail.')) return;
@@ -1099,7 +1096,7 @@ window.fcbApplyField = async function() {
       showToast(label + ' updated for ' + formatNumber(result.updated) + ' record(s)' + (result.skipped > 0 ? ' (' + result.skipped + ' already had this value)' : ''), 'success');
       // Reset field selection
       if (fieldSel) fieldSel.value = '_select';
-      if (valueSel) valueSel.value = '';
+      if (valueSel) valueSel.innerHTML = '<option value="_select">&mdash; Value &mdash;</option>';
       // Refresh data
       if (typeof serverPageChange === 'function') {
         try { await serverPageChange(appState.inputPage); } catch (e) { renderCompactTable(); }
@@ -1113,3 +1110,40 @@ window.fcbApplyField = async function() {
     if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply Field'; }
   }
 };
+
+// === Dynamic value dropdown for Bulk Edit Field ===
+(function() {
+  var fieldSel = document.getElementById('fcb-field-select');
+  var valueSel = document.getElementById('fcb-field-value');
+  if (!fieldSel || !valueSel) return;
+
+  fieldSel.addEventListener('change', function() {
+    var field = fieldSel.value;
+    // Clear existing options and reset to placeholder
+    valueSel.innerHTML = '<option value="_select">&mdash; Value &mdash;</option>';
+
+    if (field === '_select') return;
+
+    var options = [];
+    var ms = (typeof appState !== 'undefined' && appState.multiSelects) ? appState.multiSelects : {};
+
+    if (field === 'snap_supervisor') {
+      options = (ms.flm && ms.flm.options) || [];
+    } else if (field === 'role') {
+      options = (ms.role && ms.role.options) || [];
+    } else if (field === 'planning_group') {
+      options = (ms.pg && ms.pg.options) || [];
+    } else if (field === 'snap_shift_time') {
+      options = ['GY Shift', 'Mid-Shift'];
+    } else if (field === 'snap_status') {
+      options = (ms.status && ms.status.options) || [];
+    }
+
+    for (var i = 0; i < options.length; i++) {
+      var opt = document.createElement('option');
+      opt.value = options[i];
+      opt.textContent = options[i];
+      valueSel.appendChild(opt);
+    }
+  });
+})();

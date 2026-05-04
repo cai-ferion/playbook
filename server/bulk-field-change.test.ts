@@ -50,7 +50,7 @@ describe("Backend — bulk-field-filtered endpoint", () => {
     expect(section).toContain("Invalid field");
   });
 
-  it("ALLOWED_FIELDS includes all editable fields", () => {
+  it("ALLOWED_FIELDS includes only the 5 permitted fields", () => {
     const section = attendanceTs.slice(
       attendanceTs.indexOf("const ALLOWED_FIELDS"),
       attendanceTs.indexOf("const ALLOWED_FIELDS") + 600
@@ -60,10 +60,10 @@ describe("Backend — bulk-field-filtered endpoint", () => {
     expect(section).toContain("planning_group");
     expect(section).toContain("snap_shift_time");
     expect(section).toContain("snap_status");
-    expect(section).toContain("remarks");
-    expect(section).toContain("ot_hours");
-    expect(section).toContain("tag");
-    expect(section).toContain("upl_reason");
+    // These fields were removed from bulk field change
+    expect(section).not.toContain("remarks");
+    expect(section).not.toContain("ot_hours");
+    expect(section).not.toContain("upl_reason");
   });
 
   it("writes to ioAuditLog for each change", () => {
@@ -113,15 +113,16 @@ describe("Frontend — Bulk Field Change UI", () => {
     expect(indexHtml).toContain('id="fcb-apply-field-btn"');
   });
 
-  it("field dropdown includes all editable fields", () => {
+  it("field dropdown includes only the 5 permitted fields", () => {
     expect(indexHtml).toContain('value="snap_supervisor"');
     expect(indexHtml).toContain('value="role"');
     expect(indexHtml).toContain('value="planning_group"');
     expect(indexHtml).toContain('value="snap_shift_time"');
     expect(indexHtml).toContain('value="snap_status"');
-    expect(indexHtml).toContain('value="remarks"');
-    expect(indexHtml).toContain('value="ot_hours"');
-    expect(indexHtml).toContain('value="upl_reason"');
+    // These fields were removed from the dropdown
+    expect(indexHtml).not.toContain('value="remarks"');
+    expect(indexHtml).not.toContain('value="ot_hours"');
+    expect(indexHtml).not.toContain('value="upl_reason"');
   });
 
   it("all bulk field elements have fcb-status-only class (admin/manager only)", () => {
