@@ -3901,3 +3901,6 @@
 
 ## Bug Fix — Anchor Input Portal Filters Missing
 - [x] Fix: Filters in Anchor - Input Portal disappeared after deployment (root cause: lazy loading race — setDefaultOmnibarFilters not called on switchView)
+
+## Cleanup — Remove Dead Code
+- [x] Remove anchor-analytics.js (dead code, never called)

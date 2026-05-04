@@ -31,7 +31,7 @@
       group: 'anchor'
     },
     'dashboard': {
-      scripts: ['js/dashboard-anim.js', 'js/dash-omnibar.js', 'js/anchor-analytics.js'],
+      scripts: ['js/dashboard-anim.js', 'js/dash-omnibar.js'],
       group: 'anchor'
     },
     'billing': {
