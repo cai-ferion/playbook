@@ -3927,3 +3927,7 @@
 - [x] Support query filters (status, planning_group, role)
 - [x] Test endpoint locally with session auth
 - [x] Provide integration instructions for the other Manus site
+
+## Cross-Site Integration — Dual Auth for Scheduled Roster
+- [x] Update /api/scheduled/roster to accept X-API-Key header as alternative to cookie auth
+- [x] Test API key auth path (200), no auth (401), wrong key (401)

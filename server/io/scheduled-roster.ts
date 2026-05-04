@@ -1,18 +1,20 @@
 /**
  * Scheduled Task Endpoint — /api/scheduled/roster
  *
- * Cross-site integration endpoint designed for the Manus platform's scheduled task pattern.
- * The platform automatically creates a session cookie for scheduled tasks, resulting in
- * a user with role == "user". This endpoint allows that role.
+ * Cross-site integration endpoint with DUAL AUTH:
+ *   1. Platform cookie (app_session_id) — for same-project scheduled tasks
+ *   2. API key (X-API-Key header) — for cross-project scheduled tasks
  *
- * Usage from the OTHER Manus site's scheduled task:
- *   curl -H "Cookie: app_session_id=$SCHEDULED_TASK_COOKIE" \
- *        "$SCHEDULED_TASK_ENDPOINT_BASE/api/scheduled/roster"
+ * The API key approach bypasses the platform's OAuth gateway because scheduled
+ * tasks make server-side requests (curl), not browser requests.
  *
- * Supports the same filters as the external API:
- *   ?status=Active&role=Agent&planning_group=MQ&fields=ohr_id,full_name&limit=100&offset=0
+ * Usage from another Manus site's scheduled task:
+ *   curl -H "X-API-Key: <your-key>" \
+ *        "https://play-book.manus.space/api/scheduled/roster?status=Active&limit=2000"
+ *
+ * Supports filters: status, role, planning_group, fields, limit, offset
  */
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { getDb } from "../db.js";
 import { ioEmployees } from "../../drizzle/schema.js";
 import { eq, and, asc, sql } from "drizzle-orm";
@@ -20,24 +22,36 @@ import { sdk } from "../_core/sdk.js";
 
 const router = Router();
 
-// ─── Auth: Accept any authenticated user (role == "user" or "admin") ──────────
-// The platform's scheduled task creates a cookie with role "user", so we allow it.
-async function requireAnyAuth(req: Request, res: Response, next: Function): Promise<void> {
+// ─── Dual Auth: Cookie OR API Key ─────────────────────────────────────────────
+// Tries API key first (fast path for cross-project calls), falls back to cookie.
+async function dualAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Path 1: API key in X-API-Key header
+  const apiKey = process.env.EXTERNAL_API_KEY;
+  const providedKey = req.headers["x-api-key"] as string | undefined;
+  if (apiKey && providedKey && providedKey === apiKey) {
+    // API key valid — skip cookie auth entirely
+    next();
+    return;
+  }
+
+  // Path 2: Platform session cookie (for same-project scheduled tasks)
   try {
     const user = await sdk.authenticateRequest(req);
     req.user = user;
-    // Allow both "user" and "admin" roles
     if (user.role === "user" || user.role === "admin") {
       next();
       return;
     }
     res.status(403).json({ error: "Forbidden" });
   } catch (err) {
-    res.status(401).json({ error: "Unauthorized — valid session required" });
+    // Neither auth method succeeded
+    res.status(401).json({
+      error: "Unauthorized — provide X-API-Key header or valid session cookie",
+    });
   }
 }
 
-router.use(requireAnyAuth);
+router.use(dualAuth);
 
 // ─── GET /api/scheduled/roster ────────────────────────────────────────────────
 router.get("/roster", async (req: Request, res: Response) => {
