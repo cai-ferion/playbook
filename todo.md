@@ -3914,3 +3914,10 @@
 - [x] Loading state/spinner after Sign In click
 - [x] Ensure Enter key submits login form
 - [x] Onboarding form visual refresh (modern layout, spacing, styling)
+
+## External API — Employee Roster (Read-Only)
+- [x] Create API key auth middleware for external endpoints
+- [x] Create GET /api/external/employees endpoint (read-only roster)
+- [x] Support query filters (status, planning_group, role)
+- [x] Write vitest tests for external API
+- [x] Document usage (headers, query params, response shape)
