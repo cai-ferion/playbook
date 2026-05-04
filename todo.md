@@ -3991,3 +3991,6 @@
 - [x] Migrate all hardcoded ADMIN_OHRS references to use DB-backed list (config.ts now loads from DB on startup)
 - [x] Build Admin Tools UI panel for managing admin OHRs (Admin List tab with add/remove)
 - [x] Write vitest tests for admin OHR management (53 files, 1,828 tests passing)
+
+## Bug — Admin Tools section not showing for 740045023
+- [x] Fix: nav.admin was missing from ALL_PERMISSION_KEYS array — added it and granted it to all admin OHRs via isAdminOhr() check in getPermissionDefaults

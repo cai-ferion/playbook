@@ -96,7 +96,7 @@ const ALL_PERMISSION_KEYS = [
   'nav.anchor', 'anchor.input_portal', 'anchor.dashboard', 'anchor.billing_compliance',
   'anchor.risk_intelligence', 'anchor.download_csv', 'anchor.edit_attendance',
   'nav.compass', 'compass.disputes', 'compass.corrective_actions',
-  'nav.helm', 'nav.regimen', 'nav.sandbox', 'nav.haven', 'nav.horizon',
+  'nav.helm', 'nav.regimen', 'nav.sandbox', 'nav.haven', 'nav.horizon', 'nav.admin',
   'regimen.export_csv', 'regimen.full_columns',
   'regimen.onboarding_tab', 'regimen.permissions_tab', 'regimen.add_employee', 'regimen.edit_employee',
 ];
@@ -105,6 +105,8 @@ export function getPermissionDefaults(role: string, ohrId: string): Record<strin
   // Owner gets everything
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
+  // Admin OHRs get nav.admin
+  if (isAdminOhr(ohrId)) b['nav.admin'] = true;
   if (role === 'Agent') { b['nav.compass'] = true; b['nav.sandbox'] = true; b['nav.helm'] = true; b['nav.haven'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;
