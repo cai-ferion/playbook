@@ -2272,14 +2272,14 @@ body {
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  background: linear-gradient(160deg, #00457C 0%, #003060 40%, #001B3A 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 50%, #1d4ed8 100%);
 }
 .auth-hero-bg {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(0, 181, 226, 0.15) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(0, 181, 226, 0.08) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(255, 255, 255, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
   pointer-events: none;
 }
 /* Subtle grid pattern overlay */
@@ -2288,9 +2288,9 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
   pointer-events: none;
 }
 /* Floating accent orb */
@@ -2300,7 +2300,7 @@ body {
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 181, 226, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
   top: -60px;
   right: -80px;
   animation: heroOrbFloat 8s ease-in-out infinite;
@@ -2344,47 +2344,86 @@ body {
   margin-bottom: 40px;
   line-height: 1.5;
 }
-.auth-hero-features {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* --- Module Carousel --- */
+.auth-carousel {
   width: 100%;
+  max-width: 340px;
 }
-.auth-hero-feature {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 14px;
-  font-weight: 500;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  backdrop-filter: blur(8px);
-  transition: background 200ms ease, border-color 200ms ease;
+.auth-carousel-track {
+  position: relative;
+  min-height: 140px;
 }
-.auth-hero-feature:hover {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-.auth-hero-feature svg {
-  flex-shrink: 0;
-  color: #00B5E2;
-}
-.auth-hero-footer {
+.auth-carousel-slide {
   position: absolute;
-  bottom: 24px;
+  top: 0;
   left: 0;
   right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  z-index: 1;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
 }
-.auth-hero-footer span {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+.auth-carousel-slide.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.carousel-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  margin-bottom: 14px;
+  backdrop-filter: blur(4px);
+}
+.carousel-icon svg {
+  color: #FFFFFF;
+}
+.auth-carousel-slide h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 6px;
+  letter-spacing: -0.3px;
+}
+.auth-carousel-slide p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+  max-width: 280px;
+}
+/* Carousel Dots */
+.auth-carousel-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.carousel-dot.active {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  transform: scale(1.2);
+}
+.carousel-dot:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* --- Right Login Panel --- */
@@ -2499,8 +2538,8 @@ body {
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .onboard-scroll input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 181, 226, 0.12);
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
 }
 
 /* --- Auth Buttons --- */
@@ -2515,27 +2554,35 @@ body {
   font-weight: 600;
   font-family: var(--font);
   color: #FFFFFF;
-  background: linear-gradient(135deg, #00457C 0%, #003060 100%);
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 50%, #1d4ed8 100%);
   border: none;
   border-radius: 10px;
   cursor: pointer;
   transition: transform 150ms ease, box-shadow 150ms ease, background 200ms ease;
-  box-shadow: 0 2px 8px rgba(0, 69, 124, 0.25);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
 }
 .auth-submit-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 69, 124, 0.35);
-  background: linear-gradient(135deg, #005A9E 0%, #003A75 100%);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.4);
+  background: linear-gradient(135deg, #0f766e 0%, #0e7490 50%, #1e40af 100%);
 }
 .auth-submit-btn:active {
   transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(0, 69, 124, 0.2);
+  box-shadow: 0 1px 4px rgba(13, 148, 136, 0.2);
 }
-.auth-submit-btn svg {
+.auth-submit-btn .btn-arrow {
   transition: transform 200ms ease;
 }
-.auth-submit-btn:hover svg {
+.auth-submit-btn:hover .btn-arrow {
   transform: translateX(3px);
+}
+/* Spinner animation for sign-in loading state */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.btn-spinner {
+  animation: spin 0.8s linear infinite;
 }
 .auth-cancel-btn {
   width: 100%;
@@ -2615,16 +2662,34 @@ body {
   border-bottom: none;
   margin-bottom: 8px;
 }
+.onboard-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-muted);
+}
+.onboard-step-badge {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d9488;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .onboard-section-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--primary-dark);
+  color: var(--fg);
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid rgba(0, 181, 226, 0.2);
-  display: inline-block;
+  margin: 0;
 }
 .onboard-grid {
   display: grid;
@@ -2661,12 +2726,8 @@ body {
   .auth-hero-tagline {
     margin-bottom: 24px;
   }
-  .auth-hero-features {
+  .auth-carousel {
     display: none;
-  }
-  .auth-hero-footer {
-    position: static;
-    margin-top: 20px;
   }
   .auth-panel {
     padding: 32px 24px;

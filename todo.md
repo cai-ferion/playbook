@@ -3907,3 +3907,10 @@
 
 ## Bug Fix — Bulk Tag Validation Error
 - [x] Fix: Bulk tag rejected actor_ohr and actor_name (added to Zod schema as optional fields)
+
+## Login Screen Overhaul
+- [x] Module showcase carousel on hero panel (auto-cycling through all modules)
+- [x] Teal-to-blue gradient color refresh on hero panel
+- [x] Loading state/spinner after Sign In click
+- [x] Ensure Enter key submits login form
+- [x] Onboarding form visual refresh (modern layout, spacing, styling)

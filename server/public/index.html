@@ -27,7 +27,7 @@
 <body>
   <!-- ===== Auth Page ===== -->
   <div class="auth-page" id="auth-page">
-    <!-- Left: Branded Hero Panel -->
+    <!-- Left: Branded Hero Panel with Module Carousel -->
     <div class="auth-hero">
       <div class="auth-hero-bg"></div>
       <div class="auth-hero-content">
@@ -35,23 +35,72 @@
           <div class="sprite-mascot" role="img" aria-label="Playbook Fox"></div>
         </div>
         <h2 class="auth-hero-title">Playbook</h2>
-        <p class="auth-hero-tagline">Your team's operational command center.</p>
-        <div class="auth-hero-features">
-          <div class="auth-hero-feature">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>Real-time attendance tracking</span>
+        <p class="auth-hero-tagline">BPO workforce management, from attendance to analytics.</p>
+        <!-- Module Showcase Carousel -->
+        <div class="auth-carousel" id="auth-carousel">
+          <div class="auth-carousel-track">
+            <div class="auth-carousel-slide active" data-index="0">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              </div>
+              <h3>Anchor</h3>
+              <p>Real-time attendance tracking, dashboards, billing, and daily input management.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="1">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              </div>
+              <h3>Compass</h3>
+              <p>Quality audits, dispute management, and corrective action workflows.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="2">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              </div>
+              <h3>Sandbox</h3>
+              <p>Performance scoring, metric input, and team review dashboards.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="3">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <h3>Haven</h3>
+              <p>Leave filing, approval workflows, calendar view, and balance tracking.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="4">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+              <h3>Helm</h3>
+              <p>Task assignment, group workflows, and team productivity boards.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="5">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+              <h3>Horizon</h3>
+              <p>Manager tools, tardiness validation, and operational oversight.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="6">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <h3>Regimen</h3>
+              <p>Roster management, shift scheduling, and team composition tracking.</p>
+            </div>
           </div>
-          <div class="auth-hero-feature">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>Team coaching &amp; performance</span>
-          </div>
-          <div class="auth-hero-feature">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-            <span>Task management &amp; workflows</span>
+          <!-- Carousel Dots -->
+          <div class="auth-carousel-dots" id="auth-carousel-dots">
+            <button class="carousel-dot active" data-index="0"></button>
+            <button class="carousel-dot" data-index="1"></button>
+            <button class="carousel-dot" data-index="2"></button>
+            <button class="carousel-dot" data-index="3"></button>
+            <button class="carousel-dot" data-index="4"></button>
+            <button class="carousel-dot" data-index="5"></button>
+            <button class="carousel-dot" data-index="6"></button>
           </div>
         </div>
       </div>
-
     </div>
     <!-- Right: Login / Onboarding Panel -->
     <div class="auth-panel">
@@ -68,29 +117,35 @@
             <h2>Welcome back</h2>
             <p>Sign in with your OHR ID to continue</p>
           </div>
-          <div class="auth-field">
-            <label for="login-ohr">OHR ID</label>
-            <div class="auth-input-wrap">
-              <svg class="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <input type="text" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+          <form id="login-form" onsubmit="event.preventDefault(); handleLogin();">
+            <div class="auth-field">
+              <label for="login-ohr">OHR ID</label>
+              <div class="auth-input-wrap">
+                <svg class="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input type="text" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+              </div>
             </div>
-          </div>
-          <div class="auth-error" id="login-error"></div>
-          <button class="auth-submit-btn" onclick="handleLogin()">
-            <span>Sign In</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
+            <div class="auth-error" id="login-error"></div>
+            <button type="submit" class="auth-submit-btn" id="login-submit-btn">
+              <span class="btn-text">Sign In</span>
+              <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg class="btn-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="10"/></svg>
+            </button>
+          </form>
           <p class="auth-help-text">Enter your OHR ID to access Playbook.<br>Contact your Team Lead if you don't have access.</p>
         </div>
         <!-- Onboarding Form -->
         <div class="auth-form" id="auth-form-onboarding" style="display:none;">
           <div class="auth-form-header">
             <h2>Complete Your Profile</h2>
-            <p>Fill in your details to finish onboarding</p>
+            <p>Fill in your details to get started</p>
           </div>
           <div class="onboard-scroll">
             <div class="onboard-section">
-              <h4 class="onboard-section-title">Personal Information</h4>
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">1</div>
+                <h4 class="onboard-section-title">Personal Information</h4>
+              </div>
               <div class="onboard-grid">
                 <div class="auth-field">
                   <label>Last Name <span class="req">*</span></label>
@@ -121,7 +176,10 @@
               </div>
             </div>
             <div class="onboard-section">
-              <h4 class="onboard-section-title">Contact Details</h4>
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">2</div>
+                <h4 class="onboard-section-title">Contact Details</h4>
+              </div>
               <div class="onboard-grid">
                 <div class="auth-field">
                   <label>Personal Email <span class="req">*</span></label>
@@ -134,7 +192,10 @@
               </div>
             </div>
             <div class="onboard-section">
-              <h4 class="onboard-section-title">Address</h4>
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">3</div>
+                <h4 class="onboard-section-title">Address</h4>
+              </div>
               <div class="auth-field" style="grid-column:1/-1;">
                 <label>Primary Address <span class="req">*</span></label>
                 <input type="text" id="onboard-address" placeholder="Street, Bldg, etc.">
@@ -155,7 +216,10 @@
               </div>
             </div>
             <div class="onboard-section">
-              <h4 class="onboard-section-title">Equipment &amp; Access</h4>
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">4</div>
+                <h4 class="onboard-section-title">Equipment &amp; Access</h4>
+              </div>
               <div class="onboard-grid">
                 <div class="auth-field">
                   <label>Chromebook Asset ID <span class="req">*</span></label>

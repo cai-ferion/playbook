@@ -391,6 +391,7 @@ async function loginAsEmployee(emp) {
 
   document.getElementById('auth-page').style.display = 'none';
   document.getElementById('app-container').style.display = 'flex';
+  stopAuthCarousel();
 
   // RBAC: Fetch permissions from DB and apply nav visibility
   try {
@@ -466,6 +467,7 @@ async function handleLogin() {
     window.currentUserName = currentUser.full_name;
     document.getElementById('auth-page').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
+    stopAuthCarousel();
     applyNavPermissions(currentUser);
     // Log WFM session for traceability
     fetch(`${IO_API_BASE}/wfm-session-log`, {
@@ -515,6 +517,7 @@ async function handleLogin() {
     await loginAsEmployee(emp);
   } catch (err) {
     errorEl.textContent = 'Network error. Please try again.';
+    setLoginLoading(false);
   }
 }
 
@@ -732,6 +735,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.currentUserName = currentUser.full_name;
       document.getElementById('auth-page').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
+      stopAuthCarousel();
 
       // ── WFM session restore: load data and route to Input Portal ──
       if (currentUser.ohr_id === 'WFM' && currentUser.actual_role === 'WFM') {
@@ -820,12 +824,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Enter key support for login form
-  const loginOhr = document.getElementById('login-ohr');
-  if (loginOhr) loginOhr.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+  // Enter key support is now handled by <form onsubmit> in HTML
+  // Carousel auto-cycle initialization
+  initAuthCarousel();
 
 
 });
+
+// ===== Auth Carousel Auto-Cycle =====
+let _carouselInterval = null;
+function initAuthCarousel() {
+  const slides = document.querySelectorAll('.auth-carousel-slide');
+  const dots = document.querySelectorAll('.carousel-dot');
+  if (!slides.length) return;
+  let current = 0;
+  const total = slides.length;
+
+  function goToSlide(idx) {
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current = idx % total;
+    slides[current].classList.add('active');
+    dots[current].classList.add('active');
+  }
+
+  // Auto-cycle every 4 seconds
+  _carouselInterval = setInterval(() => goToSlide(current + 1), 4000);
+
+  // Dot click handlers
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.dataset.index, 10);
+      goToSlide(idx);
+      // Reset interval on manual interaction
+      clearInterval(_carouselInterval);
+      _carouselInterval = setInterval(() => goToSlide(current + 1), 4000);
+    });
+  });
+}
+function stopAuthCarousel() {
+  if (_carouselInterval) { clearInterval(_carouselInterval); _carouselInterval = null; }
+}
 
 function initMultiSelects() {
   const cb = () => applyInputFilters();
