@@ -3997,3 +3997,8 @@
 
 ## Bug — "Only admins can configure leave periods" error for 740045023
 - [x] Fix: leave-periods POST/DELETE used (req as any).ohrId (always empty) instead of req.headers["x-actor-ohr"]; also added x-actor-ohr header to haven.js fetch calls
+
+## Feature — Anchor Input Portal uses Regimen supervisor assignments (from April 18 onwards)
+- [x] Investigate current supervisor handling in Anchor Input Portal and Regimen
+- [x] Implement: Anchor Input Portal uses Regimen supervisor_name for records dated April 18+ (frontend normalizeRecord + backend buildFlmCondition helper in shared.ts)
+- [x] Write tests and verify (53 files, 1,828 tests passing)

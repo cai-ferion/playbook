@@ -12,7 +12,7 @@ import {
   ioSyncLog,
 } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, ne, sql, desc, asc, inArray, or, count } from "drizzle-orm";
-import { ADMIN_OHRS, normalizePg, getManagerOhrSet } from "./shared.js";
+import { ADMIN_OHRS, normalizePg, getManagerOhrSet, buildFlmCondition } from "./shared.js";
 import { syncEmployeesToSupabase } from "../supabase-sync.js";
 import { emitChange } from "./emit-change.js";
 
@@ -84,7 +84,7 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
     // Multi-value filters (pipe-delimited)
     if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
     if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
-    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (flm_in) conditions.push(await buildFlmCondition(db, String(flm_in).split("|"), gteDate ? String(gteDate) : undefined));
     if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));

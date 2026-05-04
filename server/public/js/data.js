@@ -576,7 +576,7 @@ function normalizeRecord(att) {
     date: dateStr,
     ohr: (att.ohr_id || '').toString().trim(),
     agent: (att.snap_full_name || emp.full_name || '').trim(),
-    flm: (att.snap_supervisor || emp.supervisor_name || '').trim(),
+    flm: (dateStr >= '2025-04-18' ? (emp.supervisor_name || att.snap_supervisor || '') : (att.snap_supervisor || emp.supervisor_name || '')).trim(),
     role: (att.role || att.snap_actual_role || emp.actual_role || '').trim(),
     actualPlanningGroup: (att.planning_group || att.snap_planning_group || emp.planning_group || '').trim(),
     internalRole: (att.internal_role || emp.actual_role || '').trim(),

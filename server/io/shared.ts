@@ -4,8 +4,8 @@
  * Contains common helpers, caches, and constants used across multiple route files.
  */
 import { getDb } from "../db.js";
-import { ioEmployees, ioNotifications } from "../../drizzle/schema.js";
-import { eq, inArray, sql } from "drizzle-orm";
+import { ioEmployees, ioNotifications, ioAttendance } from "../../drizzle/schema.js";
+import { eq, inArray, sql, gte } from "drizzle-orm";
 import crypto from "crypto";
 import { ADMIN_OHRS, OWNER_OHR, isAdminOhr } from "../config.js";
 
@@ -148,3 +148,26 @@ export function getPermissionDefaults(role: string, ohrId: string): Record<strin
 }
 
 export { ALL_PERMISSION_KEYS };
+
+// ── Supervisor Filter (Regimen cutover from April 18, 2025) ──────────────────
+const SUPERVISOR_CUTOVER = '2025-04-18';
+
+/**
+ * Build supervisor filter condition for attendance queries.
+ * For date ranges entirely >= SUPERVISOR_CUTOVER, filter by current Regimen supervisor.
+ * Otherwise, fall back to snap_supervisor (historical snapshot).
+ */
+export async function buildFlmCondition(db: any, flmNames: string[], effectiveGte: string | undefined) {
+  if (effectiveGte && String(effectiveGte) >= SUPERVISOR_CUTOVER) {
+    const empRows = await db.select({ ohr_id: ioEmployees.ohr_id })
+      .from(ioEmployees)
+      .where(inArray(ioEmployees.supervisor_name, flmNames));
+    const ohrIds = empRows.map((r: any) => r.ohr_id);
+    if (ohrIds.length > 0) {
+      return inArray(ioAttendance.ohr_id, ohrIds);
+    }
+    return sql`1=0`;
+  }
+  return inArray(ioAttendance.snap_supervisor, flmNames);
+}
+export { SUPERVISOR_CUTOVER };

@@ -8,7 +8,7 @@ import { notifyOwner } from "../_core/notification.js";
 import { ioAttendance, ioAuditLog, ioEmployees } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, sql, desc, asc, inArray, or } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
-import { getManagerOhrSet } from "./shared.js";
+import { getManagerOhrSet, buildFlmCondition } from "./shared.js";
 import { validate, attendanceBulkImportSchema, attendanceBulkTagSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
 import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
@@ -51,7 +51,7 @@ router.get("/attendance", async (req: Request, res: Response) => {
       conditions.push(inArray(ioAttendance.tag, tags));
     }
     if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
-    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (flm_in) conditions.push(await buildFlmCondition(db, String(flm_in).split("|"), gteDate ? String(gteDate) : undefined));
     if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
@@ -437,7 +437,7 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
     if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
     if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
     if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
-    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (flm_in) conditions.push(await buildFlmCondition(db, String(flm_in).split("|"), log_date_gte ? String(log_date_gte) : undefined));
     if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
@@ -618,7 +618,7 @@ router.post("/attendance/bulk-status-filtered", async (req: Request, res: Respon
     if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
     if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
     if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
-    if (flm_in) conditions.push(inArray(ioAttendance.snap_supervisor, String(flm_in).split("|")));
+    if (flm_in) conditions.push(await buildFlmCondition(db, String(flm_in).split("|"), log_date_gte ? String(log_date_gte) : undefined));
     if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
     if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
     if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
