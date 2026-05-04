@@ -478,5 +478,6 @@
   window.dashOmnibarCloseMenu = function () {};
   window.dashFilterState = dashFilterState;
   window.dashRenderFilterBar = dashRenderFilterBar;
+  window.setDefaultDashFilterBar = setDefaultDashFilterBar;
 
 })();

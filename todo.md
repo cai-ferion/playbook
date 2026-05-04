@@ -3967,3 +3967,6 @@
 
 ## Bug Fix — Input Portal Date Filter Resets on Tab Return
 - [x] Fix date filter reverting to today when returning to tab (background refresh should preserve user's selected filters)
+
+## Bug Fix — Dashboard Filter Bar Not Showing Immediately
+- [x] Fix Dashboard filter bar not rendering instantly when navigating to the page

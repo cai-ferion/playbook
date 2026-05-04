@@ -465,18 +465,21 @@ async function loginAsEmployee(emp) {
     switchView('alerts');
   }
 
-  // ── BACKGROUND PRELOAD: Load all module scripts in idle time ──
+  // ── BACKGROUND PRELOAD: Load all module scripts ──
   // Eliminates filter bar lazy-load delay when navigating to any view for the first time.
-  // Uses requestIdleCallback (with setTimeout fallback) to avoid blocking the initial render.
+  // Priority modules (dashboard, input) load immediately; others load during idle time.
   const preloadModules = () => {
     if (!window.ModuleLoader) return;
     const moduleMap = window.ModuleLoader.getModuleMap();
-    const views = Object.keys(moduleMap);
+    // Priority modules load first (most commonly accessed after login)
+    const priorityViews = ['dashboard', 'input'];
+    const remainingViews = Object.keys(moduleMap).filter(v => !priorityViews.includes(v));
+    const allViews = [...priorityViews, ...remainingViews];
     let idx = 0;
     // Stagger loads to avoid saturating the network
     function loadNext() {
-      if (idx >= views.length) return;
-      const view = views[idx++];
+      if (idx >= allViews.length) return;
+      const view = allViews[idx++];
       if (!window.ModuleLoader.isModuleLoaded(view)) {
         window.ModuleLoader.ensureModuleLoaded(view).then(loadNext).catch(loadNext);
       } else {
@@ -485,11 +488,8 @@ async function loginAsEmployee(emp) {
     }
     loadNext();
   };
-  if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(preloadModules, { timeout: 2000 });
-  } else {
-    setTimeout(preloadModules, 500);
-  }
+  // Start preloading immediately (no idle delay) for priority modules
+  setTimeout(preloadModules, 50);
 }
 
 async function handleLogin() {
