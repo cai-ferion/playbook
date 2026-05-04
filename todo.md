@@ -3931,3 +3931,10 @@
 ## Cross-Site Integration — Dual Auth for Scheduled Roster
 - [x] Update /api/scheduled/roster to accept X-API-Key header as alternative to cookie auth
 - [x] Test API key auth path (200), no auth (401), wrong key (401)
+
+## Cleanup — Remove External API & Scheduled Roster
+- [x] Delete server/io/external-api.ts
+- [x] Delete server/io/scheduled-roster.ts
+- [x] Delete server/external-api.test.ts
+- [x] Remove route registrations from server/_core/index.ts
+- [x] Remove EXTERNAL_API_KEY dependency

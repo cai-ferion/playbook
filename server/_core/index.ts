@@ -15,8 +15,7 @@ import { registerModularIORoutes } from "../io/index.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { registerAutoMailer } from "../auto-mailer.js";
-import { externalApiRouter } from "../io/external-api.js";
-import { scheduledRosterRouter } from "../io/scheduled-roster.js";
+
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
 import { initRosterSyncCron, runRosterSync } from "../roster-sync.js";
 import { corsMiddleware } from "../middleware/cors.js";
@@ -63,13 +62,6 @@ async function startServer() {
 
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-
-  // External API — read-only, API-key-secured endpoints for cross-site integration
-  app.use('/api/external', externalApiRouter);
-
-  // Scheduled Task Endpoint — cross-site integration via platform cookie auth
-  // Allows user.role == "user" (which is what scheduled tasks get)
-  app.use('/api/scheduled', scheduledRosterRouter);
 
   // IO Operations API routes — all protected by session auth
   app.use('/api/io', requireAuth);
