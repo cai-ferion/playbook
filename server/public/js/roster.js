@@ -760,7 +760,10 @@ const ROSTER_DROPDOWN_OPTIONS = {
   work_off: ['Sun - Mon', 'Mon - Tue', 'Tue - Wed', 'Wed - Thu', 'Thu - Fri', 'Fri - Sat', 'Sat - Sun'],
   platform: ['Facebook', 'Instagram', 'Not Applicable'],
   department: ['Ops', 'QTP'],
+  locker_floor: Array.from({length: 30}, (_, i) => (i + 1) + (i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th') + ' Floor'),
 };
+// Date fields that should use a date picker
+const ROSTER_DATE_FIELDS = DATE_COLUMNS; // ['dob','hire_date','regular_date','meta_onboarding_date','go_live_date','offboarding_date','resignation_date','relieving_date','exit_date']
 
 // Fields that use searchable autocomplete (handled separately)
 const ROSTER_AUTOCOMPLETE_FIELDS = ['barangay', 'supervisor_name'];
@@ -824,6 +827,34 @@ window.rosterStartFieldEdit = function(el) {
     return;
   }
 
+  // ── Date picker fields ──
+  if (ROSTER_DATE_FIELDS.includes(field)) {
+    const input = document.createElement('input');
+    input.type = 'date';
+    input.className = 'regimen-field-input regimen-field-date';
+    input.setAttribute('data-field', field);
+    input.setAttribute('data-ohr', ohrId);
+    // Parse current value to YYYY-MM-DD for the date input
+    if (currentVal) {
+      const parsed = new Date(currentVal);
+      if (!isNaN(parsed.getTime())) {
+        input.value = parsed.toISOString().split('T')[0];
+      } else {
+        input.value = currentVal; // already in YYYY-MM-DD format
+      }
+    }
+    el.replaceWith(input);
+    input.focus();
+    input.addEventListener('change', function() {
+      rosterCommitFieldEdit(input, ohrId, field, input.value);
+    });
+    input.addEventListener('blur', function() {
+      if (input.parentNode) {
+        rosterCommitFieldEdit(input, ohrId, field, input.value);
+      }
+    });
+    return;
+  }
   // ── Simple dropdown fields ──
   if (ROSTER_DROPDOWN_OPTIONS[field]) {
     const options = ROSTER_DROPDOWN_OPTIONS[field];

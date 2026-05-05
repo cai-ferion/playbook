@@ -4081,3 +4081,7 @@
 ### Phase 7: Testing & Delivery
 - [x] Run full test suite (1860 tests pass), TypeScript clean
 - [x] Push to GitHub, save checkpoint
+
+## Regimen Inline Expansion — Locker Floor + Date Pickers
+- [x] Add Locker Floor dropdown with options 1st to 30th floor
+- [x] Add date pickers for all date fields (DOB, Hire Date, Regular Date, Meta Onboarding, Go Live, Offboarding, Resignation, Relieving, Exit) to enforce YYYY-MM-DD format
