@@ -27,7 +27,8 @@ function escapeHtml(str) {
 // ===== Billing CSV Upload =====
 
 // Enable upload button when a billing CSV file is selected
-document.addEventListener('DOMContentLoaded', () => {
+// Immediately wire up (script is lazy-loaded after DOM ready)
+(function() {
   const csvInput = document.getElementById('billing-csv-input');
   const uploadBtn = document.getElementById('billing-upload-btn');
   if (csvInput && uploadBtn) {
@@ -41,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadBillingUploadStatus();
     }
   }, 2000);
-});
+})();
 
 function billingParseCSV(text) {
   const rows = [];
@@ -336,7 +337,8 @@ async function exportSingleTable(tableName, btn) {
 // ============================================================
 
 // Enable upload button when a file is selected
-document.addEventListener('DOMContentLoaded', () => {
+// Immediately wire up (script is lazy-loaded after DOM ready)
+(function() {
   const csvInput = document.getElementById('wfm-csv-input');
   const uploadBtn = document.getElementById('wfm-upload-btn');
   if (csvInput && uploadBtn) {
@@ -350,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
       wfmLoadScheduleSummary();
     }
   }, 2000);
-});
+})();
 
 function wfmParseCSV(text) {
   const rows = [];

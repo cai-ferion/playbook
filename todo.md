@@ -4085,3 +4085,5 @@
 ## Regimen Inline Expansion — Locker Floor + Date Pickers
 - [x] Add Locker Floor dropdown with options 1st to 30th floor
 - [x] Add date pickers for all date fields (DOB, Hire Date, Regular Date, Meta Onboarding, Go Live, Offboarding, Resignation, Relieving, Exit) to enforce YYYY-MM-DD format
+
+- [x] Fix tardiness CSV upload button staying grayed out after file selection in Admin Tools

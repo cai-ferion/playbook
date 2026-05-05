@@ -29,7 +29,8 @@ const TARD_STATE = {
 // ============================================================
 // Admin Upload
 // ============================================================
-document.addEventListener("DOMContentLoaded", () => {
+// Immediately wire up file-input listener (script is lazy-loaded after DOM ready)
+(function() {
   const fileInput = document.getElementById("tardiness-csv-input");
   const uploadBtn = document.getElementById("tardiness-upload-btn");
   if (fileInput && uploadBtn) {
@@ -37,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
       uploadBtn.disabled = !fileInput.files || fileInput.files.length === 0;
     });
   }
-});
+})();
 
 async function tardinessUploadCSV() {
   const fileInput = document.getElementById("tardiness-csv-input");
