@@ -17,6 +17,7 @@
     { key: 'day', label: 'Day', type: 'multi', recordKey: '_day', searchable: false, sortable: false },
     { key: 'status', label: 'Status', type: 'multi', recordKey: 'status', searchable: false, sortable: false },
     { key: 'shiftTime', label: 'Shift Time', type: 'multi', recordKey: 'shiftTime', searchable: false, sortable: false },
+    { key: 'floor', label: 'Floor', type: 'multi', recordKey: 'floor', searchable: false, sortable: false },
   ];
 
   // ===== State =====

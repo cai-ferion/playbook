@@ -4088,3 +4088,5 @@
 
 - [x] Fix tardiness CSV upload button staying grayed out after file selection in Admin Tools
 - [x] Add 'floor' column to io_employees (27th for RECALL_MEASUREMENT_CTR in Related PG, 28th for rest)
+- [x] Add Floor filter pill to Regimen filter bar
+- [x] Add Floor filter pill to Anchor Dashboard

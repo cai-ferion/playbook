@@ -583,6 +583,7 @@ function normalizeRecord(att) {
     internalPlanningGroup: (att.internal_planning_group || emp.planning_group || '').trim(),
     shiftTime: (att.snap_shift_time || emp.shift_time || '').trim(),
     status: (att.snap_status || emp.srt_status || '').trim(),
+    floor: (emp.floor || '').trim(),
     completePlanningGroup: (emp.complete_planning_group || '').trim(),
     weekEnding: dateStr ? getWeekEnding(dateStr) : '',
     month: dateStr ? getMonthName(dateStr) : '',
