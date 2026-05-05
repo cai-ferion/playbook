@@ -4030,3 +4030,9 @@
 - [x] Remove the 3-tab layout (Tools / Permissions / Admin List) → single unified page with collapsible sections
 - [x] Complete UI/UX overhaul: modern card-based layout with clear visual hierarchy, icons, and better spacing
 - [x] Keep Permissions as a separate section/accordion within the unified page
+
+## Bulk Process — Add Internal Role & Internal Planning Group
+- [x] Add internal_role to ALLOWED_FIELDS in backend attendance.ts
+- [x] Add internal_planning_group to ALLOWED_FIELDS in backend attendance.ts
+- [x] Add corresponding options to the frontend bulk edit field dropdown
+- [x] Populate value dropdown from existing distinct values for these fields (uses same role/PG options from multiSelects)

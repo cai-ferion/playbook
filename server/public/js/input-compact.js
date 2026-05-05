@@ -1057,6 +1057,7 @@ window.fcbApplyField = async function() {
   // Field label for display
   var FIELD_LABELS = {
     snap_supervisor: 'Supervisor', role: 'Billing Role', planning_group: 'Billing PG',
+    internal_role: 'Internal Role', internal_planning_group: 'Internal PG',
     snap_shift_time: 'Shift Time', snap_status: 'Status'
   };
   var label = FIELD_LABELS[field] || field;
@@ -1132,6 +1133,10 @@ window.fcbApplyField = async function() {
     } else if (field === 'role') {
       options = (ms.role && ms.role.options) || [];
     } else if (field === 'planning_group') {
+      options = (ms.pg && ms.pg.options) || [];
+    } else if (field === 'internal_role') {
+      options = (ms.role && ms.role.options) || [];
+    } else if (field === 'internal_planning_group') {
       options = (ms.pg && ms.pg.options) || [];
     } else if (field === 'snap_shift_time') {
       options = ['GY Shift', 'Mid-Shift'];
