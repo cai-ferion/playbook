@@ -2849,6 +2849,44 @@ body {
 .change-new { color: var(--success); font-weight: 600; }
 .change-same { color: var(--fg-subtle); }
 
+/* ===== Admin Hub — Redesigned Layout ===== */
+.admin-hub { padding: 20px 24px 40px; max-width: 1100px; }
+.admin-hub-header { margin-bottom: 24px; }
+.admin-hub-title-row { display: flex; align-items: center; gap: 10px; }
+.admin-hub-title { font-size: 22px; font-weight: 700; color: var(--fg); margin: 0; }
+.admin-hub-subtitle { font-size: 13px; color: var(--fg-muted); margin: 4px 0 0 32px; }
+
+.admin-section { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--bg-surface); }
+.admin-section-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.15s; }
+.admin-section-header:hover { background: var(--bg-alt); }
+.admin-section-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--fg); }
+.admin-section-chevron { transition: transform 0.2s; color: var(--fg-muted); }
+.admin-section.collapsed .admin-section-chevron { transform: rotate(-90deg); }
+.admin-section.collapsed .admin-section-body { display: none; }
+.admin-section-body { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+
+.admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; margin-top: 10px; }
+.admin-grid-uploads { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+.admin-tool-card { display: flex; gap: 12px; padding: 14px; border-radius: 8px; background: var(--bg-alt); border: 1px solid var(--border); transition: box-shadow 0.15s; }
+.admin-tool-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.admin-tool-card-wide { max-width: 100%; }
+.admin-tool-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.admin-tool-content { flex: 1; min-width: 0; }
+.admin-tool-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.admin-tool-title { font-size: 13px; font-weight: 600; color: var(--fg); }
+.admin-tool-desc { font-size: 12px; color: var(--fg-muted); line-height: 1.4; margin: 0 0 6px; }
+.admin-tool-meta { font-size: 10px; color: var(--fg-subtle); margin: 2px 0 6px; }
+.admin-tool-meta code { font-size: 10px; background: var(--bg-inset); padding: 1px 4px; border-radius: 3px; }
+.admin-tool-action { font-size: 11px; }
+.admin-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .admin-hub { padding: 12px 12px 32px; }
+  .admin-grid { grid-template-columns: 1fr; }
+  .admin-tool-card { flex-direction: column; gap: 8px; }
+}
+
 /* Admin Upload Row - side by side */
 .admin-upload-row {
   display: flex;

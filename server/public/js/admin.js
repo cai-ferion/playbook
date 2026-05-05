@@ -221,41 +221,24 @@ function getTimeAgo(date) {
 
 function onAdminViewLoad() {
   if (isAdmin()) {
-    loadLockedAccounts();
     loadBackupTables();
-    loadBillingSyncStatus();
+    adminOhrLoadList();
+    if (typeof initPermissions === 'function') initPermissions();
   }
 }
 
-// ===== Admin Tab Switching (Tools / Permissions) =====
+// ===== Admin Section Toggle (collapsible accordion) =====
+function adminToggleSection(sectionId) {
+  const section = document.getElementById('admin-section-' + sectionId);
+  if (!section) return;
+  section.classList.toggle('collapsed');
+}
+
+// Legacy stub — no-op since tabs are removed
 function adminSwitchTab(tab) {
-  const toolsPanel = document.getElementById('admin-panel-tools');
-  const permsPanel = document.getElementById('admin-panel-permissions');
-  const adminsPanel = document.getElementById('admin-panel-admins');
-  const toolsTab = document.getElementById('admin-tab-tools');
-  const permsTab = document.getElementById('admin-tab-permissions');
-  const adminsTab = document.getElementById('admin-tab-admins');
-  // Hide all panels
-  if (toolsPanel) toolsPanel.style.display = 'none';
-  if (permsPanel) permsPanel.style.display = 'none';
-  if (adminsPanel) adminsPanel.style.display = 'none';
-  // Deactivate all tabs
-  [toolsTab, permsTab, adminsTab].forEach(t => {
-    if (t) { t.style.borderBottomColor = 'transparent'; t.style.color = 'var(--fg-muted)'; t.classList.remove('active'); }
-  });
-  // Show selected
-  if (tab === 'tools') {
-    if (toolsPanel) toolsPanel.style.display = '';
-    if (toolsTab) { toolsTab.style.borderBottomColor = 'var(--primary)'; toolsTab.style.color = 'var(--primary)'; toolsTab.classList.add('active'); }
-  } else if (tab === 'permissions') {
-    if (permsPanel) permsPanel.style.display = '';
-    if (permsTab) { permsTab.style.borderBottomColor = 'var(--primary)'; permsTab.style.color = 'var(--primary)'; permsTab.classList.add('active'); }
-    if (typeof initPermissions === 'function') initPermissions();
-  } else if (tab === 'admins') {
-    if (adminsPanel) adminsPanel.style.display = '';
-    if (adminsTab) { adminsTab.style.borderBottomColor = 'var(--primary)'; adminsTab.style.color = 'var(--primary)'; adminsTab.classList.add('active'); }
-    adminOhrLoadList();
-  }
+  // Tabs removed in redesign; all content is in unified sections
+  if (tab === 'permissions' && typeof initPermissions === 'function') initPermissions();
+  if (tab === 'admins') adminOhrLoadList();
 }
 
 // ===== Database Backup / Export =====

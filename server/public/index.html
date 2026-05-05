@@ -918,207 +918,272 @@
 
       <!-- ===== View 4: Admin Tools ===== -->
       <div class="view-container view-hidden" id="view-admin">
-        <!-- Admin Tools Tab Bar -->
-        <div class="regimen-tabs" id="admin-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
-          <button class="regimen-tab active" id="admin-tab-tools" onclick="adminSwitchTab('tools')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);">Tools</button>
-          <button class="regimen-tab" id="admin-tab-permissions" onclick="adminSwitchTab('permissions')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);">Permissions</button>
-          <button class="regimen-tab" id="admin-tab-admins" onclick="adminSwitchTab('admins')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);">Admin List</button>
-        </div>
-        <!-- Tools Tab Content -->
-        <div id="admin-panel-tools">
-        <div class="admin-tools-container">
+        <!-- Hidden panels for backward compat with adminSwitchTab -->
+        <div id="admin-panel-tools" style="display:none;"></div>
+        <div id="admin-panel-permissions" style="display:none;"></div>
+        <div id="admin-panel-admins" style="display:none;"></div>
+        <div id="admin-tab-tools" style="display:none;"></div>
+        <div id="admin-tab-permissions" style="display:none;"></div>
+        <div id="admin-tab-admins" style="display:none;"></div>
 
-
-          <!-- Pause Site -->
-          <div class="card admin-card" style="margin-bottom:20px;">
-            <div class="card-header">
-              <span class="card-title">SITE MAINTENANCE</span>
-              <span id="pause-status-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- ADMIN TOOLS — Unified Redesign                                  -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="admin-hub">
+          <!-- Page Header -->
+          <div class="admin-hub-header">
+            <div class="admin-hub-title-row">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <h2 class="admin-hub-title">Admin Tools</h2>
             </div>
-            <div class="admin-card-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-              <p style="margin:0;font-size:13px;color:var(--text-secondary);flex:1;min-width:200px;">When paused, all users except you (OHR 740045023) will see a maintenance screen and cannot access the site.</p>
-              <button class="btn btn-sm" id="pause-site-btn" onclick="toggleSitePause()" style="white-space:nowrap;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                <span id="pause-btn-text">Pause Site</span>
-              </button>
-            </div>
+            <p class="admin-hub-subtitle">System configuration, data management, and access control</p>
           </div>
 
-          <!-- Locked Out Accounts -->
-          <!-- Locked Out Accounts card removed — password system removed -->
-
-          <!-- Upload Billing Data (CSV) -->
-          <div class="card admin-card" style="margin-bottom:20px;">
-            <div class="card-header">
-              <span class="card-title">UPLOAD BILLING DATA</span>
-              <span id="billing-upload-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
-            </div>
-            <div class="admin-card-body">
-              <p class="admin-help">Upload the <strong>TEMPLATE_BILLING</strong> CSV file &mdash; updates Billing Role, Planning Group, SRT Status, and Billing Name for all matching attendance rows. Supports large files (10K+ rows).</p>
-              <p class="admin-help" style="font-size:11px;color:var(--fg-muted);margin-top:4px;">Expected columns: <code>date, ohr, srt_id, billing_name, srt_status, role, planning_group</code> &middot; Date format: YYYY-DD-MM</p>
-              <div id="billing-upload-last" style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;"></div>
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="file" id="billing-csv-input" accept=".csv" style="font-size:13px;">
-                <button class="btn btn-primary btn-sm" id="billing-upload-btn" onclick="runBillingCsvUpload()" disabled>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Upload CSV
-                </button>
+          <!-- ─── SECTION: System ─────────────────────────────────────── -->
+          <div class="admin-section" id="admin-section-system">
+            <div class="admin-section-header" onclick="adminToggleSection('system')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span>System</span>
               </div>
-              <div class="admin-progress" id="billing-upload-progress" style="display:none;margin-top:12px;">
-                <div class="admin-progress-bar"><div class="admin-progress-fill" id="billing-upload-progress-fill" style="width:0%;"></div></div>
-                <span class="admin-progress-text" id="billing-upload-progress-text">Uploading...</span>
-              </div>
-              <div class="admin-result" id="billing-upload-result" style="display:none;margin-top:8px;"></div>
-              <div id="billing-upload-summary" style="margin-top:12px;"></div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-          </div>
-
-          <!-- Section 3: Productivity Hours Upload -->
-          <!-- Upload Productivity Hours and Billing Targets V2 sections removed -->
-
-          <!-- Database Backup / Export -->
-          <div class="card admin-card" style="margin-top:20px;">
-            <div class="card-header">
-              <span class="card-title">DATABASE BACKUP / EXPORT</span>
-            </div>
-            <div class="admin-card-body">
-              <p class="admin-help">Export IO Operations tables as CSV files for backup and safekeeping.</p>
-              <div id="backup-loading" style="display:none;color:var(--text-secondary);font-size:13px;padding:8px 0;">Loading table info...</div>
-              <div class="admin-preview-table-wrapper" id="backup-table-wrapper" style="display:none;">
-                <table class="data-table admin-preview-table" id="backup-table">
-                  <thead><tr><th>Table</th><th>Records</th><th>Action</th></tr></thead>
-                  <tbody id="backup-body"></tbody>
-                </table>
-              </div>
-              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn btn-outline btn-sm" onclick="loadBackupTables()">Refresh Counts</button>
-                <button class="btn btn-primary btn-sm" onclick="exportAllTables()">Export All Tables (JSON)</button>
-              </div>
-              <div class="admin-result" id="backup-result" style="display:none;margin-top:8px;"></div>
-            </div>
-          </div>
-
-          <!-- WFM Schedule Upload Card -->
-          <div class="card admin-card" style="margin-top:20px;">
-            <div class="card-header">
-              <span class="card-title">WFM SCHEDULE UPLOAD</span>
-            </div>
-            <div class="admin-card-body">
-              <p class="admin-help">Upload a WFM schedule CSV (OHR &times; Date matrix) to populate the <strong>WFM Tag</strong> column in the Input Portal. The first row must contain date headers; first two columns are OHR and Employee Name.</p>
-              <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="file" id="wfm-csv-input" accept=".csv" style="font-size:13px;" />
-                <button class="btn btn-primary btn-sm" id="wfm-upload-btn" onclick="wfmUploadSchedule()" disabled>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Upload Schedule
-                </button>
-              </div>
-              <div class="admin-progress" id="wfm-upload-progress" style="display:none;margin-top:12px;">
-                <div class="admin-progress-bar"><div class="admin-progress-fill" id="wfm-upload-progress-fill" style="width:0%;"></div></div>
-                <span class="admin-progress-text" id="wfm-upload-progress-text">Parsing CSV...</span>
-              </div>
-              <div class="admin-result" id="wfm-upload-result" style="display:none;margin-top:8px;"></div>
-              <!-- WFM Schedule Summary -->
-              <div id="wfm-schedule-summary" style="margin-top:16px;"></div>
-            </div>
-          </div>
-
-          <!-- Tardiness Data Upload -->
-          <div class="card admin-card" style="margin-top:20px;">
-            <div class="card-header">
-              <span class="card-title">TARDINESS DATA UPLOAD</span>
-              <span id="tardiness-upload-status" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600;"></span>
-            </div>
-            <div class="admin-card-body">
-              <p class="admin-help">Upload a CSV file with tardiness data. Only late logins (tardiness > 0 minutes) will be imported as validation items. Duplicates (same OHR + date) are automatically skipped.</p>
-              <p class="admin-help" style="font-size:11px;color:var(--fg-muted);margin-top:4px;">Required columns: <code>ohr, name, date, roster_login, roster_logout, actual_login, actual_logout</code></p>
-              <p class="admin-help" style="font-size:11px;color:var(--fg-muted);margin-top:2px;">Auto-calculated: tardiness_minutes, shift_type, week_ending, supervisor, planning_group, role (from employee roster)</p>
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
-                <input type="file" id="tardiness-csv-input" accept=".csv,.xlsx,.xls" style="font-size:13px;">
-                <button class="btn btn-primary btn-sm" id="tardiness-upload-btn" onclick="tardinessUploadCSV()" disabled>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  Upload Tardiness Data
-                </button>
-              </div>
-              <div class="admin-progress" id="tardiness-upload-progress" style="display:none;margin-top:12px;">
-                <div class="admin-progress-bar"><div class="admin-progress-fill" id="tardiness-upload-progress-fill" style="width:0%;"></div></div>
-                <span class="admin-progress-text" id="tardiness-upload-progress-text">Parsing file...</span>
-              </div>
-              <div class="admin-result" id="tardiness-upload-result" style="display:none;margin-top:8px;"></div>
-            </div>
-          </div>
-
-        </div>
-        </div><!-- /admin-panel-tools -->
-        <!-- Permissions Tab Content (admin-only, moved from Regimen) -->
-        <div id="admin-panel-permissions" style="display:none;">
-          <div style="padding:16px 0;">
-            <!-- Search & filter -->
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-              <input type="text" class="form-input form-input-sm" id="admin-perm-search" placeholder="Search by name or OHR..." oninput="permFilterTable()" style="max-width:320px;">
-              <select class="form-input form-input-sm" id="admin-perm-role-filter" onchange="permFilterTable()" style="max-width:180px;">
-                <option value="">All Roles</option>
-                <option value="Agent">Agent</option>
-                <option value="Operational SME">SME</option>
-                <option value="Quality Analyst">QA</option>
-                <option value="Trainer">Trainer</option>
-                <option value="Team Lead">Team Lead</option>
-                <option value="Manager">Manager</option>
-              </select>
-            </div>
-            <!-- Permissions Table -->
-            <div class="module-table-wrapper">
-              <table class="data-table module-table" id="admin-perm-table">
-                <thead id="admin-perm-table-head"></thead>
-                <tbody id="admin-perm-table-body"></tbody>
-              </table>
-            </div>
-            <div class="module-pagination" id="admin-perm-pagination"></div>
-          </div>
-          <!-- Permission Detail Panel (modal overlay) -->
-          <div class="module-form-overlay" id="admin-perm-detail-overlay" style="display:none;">
-            <div class="module-form-panel" style="max-width:700px;max-height:90vh;" onclick="event.stopPropagation()">
-              <div class="module-form-header">
-                <h3 id="admin-perm-detail-title">Permissions</h3>
-                <button class="module-form-close" onclick="permCloseDetail()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-              <div class="module-form-body" id="admin-perm-detail-body" style="overflow-y:auto;"></div>
-              <div class="module-form-footer" style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-outline btn-sm" onclick="permResetToDefaults()">Reset to Defaults</button>
-                <button class="btn btn-primary btn-sm" id="admin-perm-save-btn" onclick="permSaveChanges()">Save Changes</button>
-              </div>
-            </div>
-          </div>
-        </div><!-- /admin-panel-permissions -->
-
-        <div id="admin-panel-admins" style="display:none;">
-          <div class="card admin-card" style="margin-bottom:20px;">
-            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-              <h3 style="margin:0;font-size:16px;font-weight:600;">Admin OHR List</h3>
-              <button class="btn btn-primary btn-sm" onclick="adminOhrShowAddForm()">+ Add Admin</button>
-            </div>
-            <p style="color:var(--fg-muted);font-size:12px;margin:8px 0 16px;">Manage who has admin privileges. The system owner (740045023) cannot be removed.</p>
-            <div id="admin-ohr-add-form" style="display:none;margin-bottom:16px;padding:12px;background:var(--bg-alt);border-radius:8px;">
-              <div style="display:flex;gap:8px;align-items:flex-end;">
-                <div style="flex:1;">
-                  <label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">OHR ID</label>
-                  <input type="text" id="admin-ohr-add-input" class="form-input" placeholder="Enter OHR ID" style="width:100%;" />
+            <div class="admin-section-body">
+              <div class="admin-grid">
+                <!-- Site Maintenance -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Site Maintenance</span>
+                      <span id="pause-status-badge" class="admin-badge"></span>
+                    </div>
+                    <p class="admin-tool-desc">Pause the site for all users except admins. Users will see a maintenance screen.</p>
+                    <button class="btn btn-sm admin-tool-action" id="pause-site-btn" onclick="toggleSitePause()">
+                      <span id="pause-btn-text">Pause Site</span>
+                    </button>
+                  </div>
                 </div>
-                <div style="flex:1;">
-                  <label style="font-size:11px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Full Name (optional)</label>
-                  <input type="text" id="admin-ohr-add-name" class="form-input" placeholder="Full name" style="width:100%;" />
+                <!-- Admin List -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Admin Access</span>
+                      <button class="btn btn-ghost btn-sm" onclick="adminOhrShowAddForm()" style="font-size:11px;padding:2px 8px;">+ Add</button>
+                    </div>
+                    <p class="admin-tool-desc">Manage who has admin privileges. Owner (740045023) is protected.</p>
+                    <div id="admin-ohr-add-form" style="display:none;margin:8px 0;padding:10px;background:var(--bg-alt);border-radius:8px;">
+                      <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:120px;">
+                          <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">OHR ID</label>
+                          <input type="text" id="admin-ohr-add-input" class="form-input form-input-sm" placeholder="OHR" style="width:100%;" />
+                        </div>
+                        <div style="flex:1;min-width:120px;">
+                          <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">Name (optional)</label>
+                          <input type="text" id="admin-ohr-add-name" class="form-input form-input-sm" placeholder="Full name" style="width:100%;" />
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="adminOhrAdd()" style="font-size:11px;">Add</button>
+                        <button class="btn btn-ghost btn-sm" onclick="adminOhrHideAddForm()" style="font-size:11px;">Cancel</button>
+                      </div>
+                      <div id="admin-ohr-add-error" style="color:var(--danger);font-size:11px;margin-top:4px;display:none;"></div>
+                    </div>
+                    <div id="admin-ohr-list-container" style="margin-top:8px;">
+                      <span style="font-size:12px;color:var(--fg-muted);">Loading...</span>
+                    </div>
+                  </div>
                 </div>
-                <button class="btn btn-primary btn-sm" onclick="adminOhrAdd()">Add</button>
-                <button class="btn btn-ghost btn-sm" onclick="adminOhrHideAddForm()">Cancel</button>
               </div>
-              <div id="admin-ohr-add-error" style="color:var(--danger);font-size:12px;margin-top:6px;display:none;"></div>
-            </div>
-            <div id="admin-ohr-list-container">
-              <div style="text-align:center;padding:20px;color:var(--fg-muted);">Loading...</div>
             </div>
           </div>
-        </div><!-- /admin-panel-admins -->
+
+          <!-- ─── SECTION: Data Uploads ───────────────────────────────── -->
+          <div class="admin-section" id="admin-section-uploads">
+            <div class="admin-section-header" onclick="adminToggleSection('uploads')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Data Uploads</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div class="admin-grid admin-grid-uploads">
+                <!-- Billing CSV Upload -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Billing Data</span>
+                      <span id="billing-upload-status" class="admin-badge"></span>
+                    </div>
+                    <p class="admin-tool-desc">Upload <strong>TEMPLATE_BILLING</strong> CSV to update Billing Role, PG, SRT Status for attendance rows.</p>
+                    <p class="admin-tool-meta">Columns: <code>date, ohr, srt_id, billing_name, srt_status, role, planning_group</code></p>
+                    <div id="billing-upload-last" style="font-size:11px;color:var(--fg-muted);margin:4px 0;"></div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                      <input type="file" id="billing-csv-input" accept=".csv" style="font-size:12px;max-width:200px;">
+                      <button class="btn btn-primary btn-sm" id="billing-upload-btn" onclick="runBillingCsvUpload()" disabled style="font-size:11px;">
+                        Upload CSV
+                      </button>
+                    </div>
+                    <div class="admin-progress" id="billing-upload-progress" style="display:none;margin-top:8px;">
+                      <div class="admin-progress-bar"><div class="admin-progress-fill" id="billing-upload-progress-fill" style="width:0%;"></div></div>
+                      <span class="admin-progress-text" id="billing-upload-progress-text">Uploading...</span>
+                    </div>
+                    <div class="admin-result" id="billing-upload-result" style="display:none;margin-top:6px;"></div>
+                    <div id="billing-upload-summary" style="margin-top:8px;"></div>
+                  </div>
+                </div>
+
+                <!-- WFM Schedule Upload -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">WFM Schedule</span>
+                    </div>
+                    <p class="admin-tool-desc">Upload OHR x Date matrix CSV to populate the WFM Tag column in Input Portal.</p>
+                    <p class="admin-tool-meta">First row = date headers; first two columns = OHR, Employee Name.</p>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                      <input type="file" id="wfm-csv-input" accept=".csv" style="font-size:12px;max-width:200px;" />
+                      <button class="btn btn-primary btn-sm" id="wfm-upload-btn" onclick="wfmUploadSchedule()" disabled style="font-size:11px;">
+                        Upload Schedule
+                      </button>
+                    </div>
+                    <div class="admin-progress" id="wfm-upload-progress" style="display:none;margin-top:8px;">
+                      <div class="admin-progress-bar"><div class="admin-progress-fill" id="wfm-upload-progress-fill" style="width:0%;"></div></div>
+                      <span class="admin-progress-text" id="wfm-upload-progress-text">Parsing CSV...</span>
+                    </div>
+                    <div class="admin-result" id="wfm-upload-result" style="display:none;margin-top:6px;"></div>
+                    <div id="wfm-schedule-summary" style="margin-top:8px;"></div>
+                  </div>
+                </div>
+
+                <!-- Tardiness Data Upload -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Tardiness Data</span>
+                      <span id="tardiness-upload-status" class="admin-badge"></span>
+                    </div>
+                    <p class="admin-tool-desc">Upload tardiness CSV. Only late logins (tardiness > 0 min) are imported. Duplicates auto-skipped.</p>
+                    <p class="admin-tool-meta">Columns: <code>ohr, name, date, roster_login, roster_logout, actual_login, actual_logout</code></p>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                      <input type="file" id="tardiness-csv-input" accept=".csv,.xlsx,.xls" style="font-size:12px;max-width:200px;">
+                      <button class="btn btn-primary btn-sm" id="tardiness-upload-btn" onclick="tardinessUploadCSV()" disabled style="font-size:11px;">
+                        Upload Tardiness
+                      </button>
+                    </div>
+                    <div class="admin-progress" id="tardiness-upload-progress" style="display:none;margin-top:8px;">
+                      <div class="admin-progress-bar"><div class="admin-progress-fill" id="tardiness-upload-progress-fill" style="width:0%;"></div></div>
+                      <span class="admin-progress-text" id="tardiness-upload-progress-text">Parsing file...</span>
+                    </div>
+                    <div class="admin-result" id="tardiness-upload-result" style="display:none;margin-top:6px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── SECTION: Database ───────────────────────────────────── -->
+          <div class="admin-section" id="admin-section-database">
+            <div class="admin-section-header" onclick="adminToggleSection('database')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                <span>Database</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div class="admin-tool-card admin-tool-card-wide">
+                <div class="admin-tool-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <div class="admin-tool-content">
+                  <div class="admin-tool-title-row">
+                    <span class="admin-tool-title">Backup &amp; Export</span>
+                  </div>
+                  <p class="admin-tool-desc">Export IO Operations tables as CSV or JSON for backup and safekeeping.</p>
+                  <div id="backup-loading" style="display:none;color:var(--fg-muted);font-size:12px;padding:4px 0;">Loading table info...</div>
+                  <div class="admin-preview-table-wrapper" id="backup-table-wrapper" style="display:none;margin-top:8px;">
+                    <table class="data-table admin-preview-table" id="backup-table" style="font-size:12px;">
+                      <thead><tr><th>Table</th><th style="text-align:right;">Records</th><th style="text-align:center;">Action</th></tr></thead>
+                      <tbody id="backup-body"></tbody>
+                    </table>
+                  </div>
+                  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" onclick="loadBackupTables()" style="font-size:11px;">Refresh Counts</button>
+                    <button class="btn btn-primary btn-sm" onclick="exportAllTables()" style="font-size:11px;">Export All (JSON)</button>
+                  </div>
+                  <div class="admin-result" id="backup-result" style="display:none;margin-top:6px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── SECTION: Permissions ────────────────────────────────── -->
+          <div class="admin-section" id="admin-section-permissions">
+            <div class="admin-section-header" onclick="adminToggleSection('permissions')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Permissions</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div style="padding:4px 0;">
+                <!-- Search & filter -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                  <input type="text" class="form-input form-input-sm" id="admin-perm-search" placeholder="Search by name or OHR..." oninput="permFilterTable()" style="max-width:280px;font-size:12px;">
+                  <select class="form-input form-input-sm" id="admin-perm-role-filter" onchange="permFilterTable()" style="max-width:160px;font-size:12px;">
+                    <option value="">All Roles</option>
+                    <option value="Agent">Agent</option>
+                    <option value="Operational SME">SME</option>
+                    <option value="Quality Analyst">QA</option>
+                    <option value="Trainer">Trainer</option>
+                    <option value="Team Lead">Team Lead</option>
+                    <option value="Manager">Manager</option>
+                  </select>
+                </div>
+                <!-- Permissions Table -->
+                <div class="module-table-wrapper">
+                  <table class="data-table module-table" id="admin-perm-table">
+                    <thead id="admin-perm-table-head"></thead>
+                    <tbody id="admin-perm-table-body"></tbody>
+                  </table>
+                </div>
+                <div class="module-pagination" id="admin-perm-pagination"></div>
+              </div>
+              <!-- Permission Detail Panel (modal overlay) -->
+              <div class="module-form-overlay" id="admin-perm-detail-overlay" style="display:none;">
+                <div class="module-form-panel" style="max-width:700px;max-height:90vh;" onclick="event.stopPropagation()">
+                  <div class="module-form-header">
+                    <h3 id="admin-perm-detail-title">Permissions</h3>
+                    <button class="module-form-close" onclick="permCloseDetail()">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <div class="module-form-body" id="admin-perm-detail-body" style="overflow-y:auto;"></div>
+                  <div class="module-form-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-outline btn-sm" onclick="permResetToDefaults()">Reset to Defaults</button>
+                    <button class="btn btn-primary btn-sm" id="admin-perm-save-btn" onclick="permSaveChanges()">Save Changes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /admin-hub -->
       </div>
 
       <!-- ===== View 3: Risk Alerts ===== -->

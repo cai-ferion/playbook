@@ -167,13 +167,12 @@ describe("Admin OHR Management — HTML Structure", () => {
 });
 
 describe("Admin OHR Management — Tab Switching", () => {
-  it("adminSwitchTab handles 'admins' tab", () => {
-    expect(adminJs).toContain("} else if (tab === 'admins')");
-    expect(adminJs).toContain("adminOhrLoadList()");
+  it("adminSwitchTab legacy stub calls adminOhrLoadList for admins tab", () => {
+    expect(adminJs).toContain("if (tab === 'admins') adminOhrLoadList()");
   });
 
-  it("references admin-panel-admins in tab logic", () => {
-    expect(adminJs).toContain("admin-panel-admins");
+  it("has adminToggleSection for collapsible sections", () => {
+    expect(adminJs).toContain("function adminToggleSection(sectionId)");
   });
 });
 

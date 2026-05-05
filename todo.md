@@ -4024,3 +4024,9 @@
 - [x] Remove backend getEarliestFilingDate hard floor check (period validation already handles date restrictions)
 - [x] Remove redundant "Close" button from Leave Period Configuration modal (X button already exists)
 - [x] Replace browser confirm() dialog on Delete with inline confirmation expansion in the table row
+
+## Admin Tools — UI/UX Overhaul
+- [x] Merge Admin List tab functions into the Tools tab (eliminate separate tab)
+- [x] Remove the 3-tab layout (Tools / Permissions / Admin List) → single unified page with collapsible sections
+- [x] Complete UI/UX overhaul: modern card-based layout with clear visual hierarchy, icons, and better spacing
+- [x] Keep Permissions as a separate section/accordion within the unified page

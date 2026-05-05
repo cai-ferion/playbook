@@ -91,7 +91,7 @@
       group: 'horizon'
     },
     'admin': {
-      scripts: ['js/admin.js'],
+      scripts: ['js/admin.js', 'js/permissions.js', 'js/tardiness.js'],
       group: 'admin'
     }
   };
