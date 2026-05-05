@@ -829,9 +829,15 @@ window.rosterStartFieldEdit = function(el) {
 
   // ── Date picker fields ──
   if (ROSTER_DATE_FIELDS.includes(field)) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'regimen-date-wrapper';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '4px';
     const input = document.createElement('input');
     input.type = 'date';
     input.className = 'regimen-field-input regimen-field-date';
+    input.style.flex = '1';
     input.setAttribute('data-field', field);
     input.setAttribute('data-ohr', ohrId);
     // Parse current value to YYYY-MM-DD for the date input
@@ -840,18 +846,35 @@ window.rosterStartFieldEdit = function(el) {
       if (!isNaN(parsed.getTime())) {
         input.value = parsed.toISOString().split('T')[0];
       } else {
-        input.value = currentVal; // already in YYYY-MM-DD format
+        input.value = currentVal;
       }
     }
-    el.replaceWith(input);
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'regimen-date-clear-btn';
+    clearBtn.textContent = '\u00D7';
+    clearBtn.title = 'Clear date';
+    clearBtn.style.cssText = 'width:22px;height:22px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#e74c3c;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+    clearBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      input.value = '';
+      rosterCommitFieldEdit(wrapper, ohrId, field, '');
+    });
+    wrapper.appendChild(input);
+    wrapper.appendChild(clearBtn);
+    el.replaceWith(wrapper);
     input.focus();
     input.addEventListener('change', function() {
-      rosterCommitFieldEdit(input, ohrId, field, input.value);
+      rosterCommitFieldEdit(wrapper, ohrId, field, input.value);
     });
-    input.addEventListener('blur', function() {
-      if (input.parentNode) {
-        rosterCommitFieldEdit(input, ohrId, field, input.value);
-      }
+    input.addEventListener('blur', function(e) {
+      // Don't commit on blur if clicking the clear button
+      if (e.relatedTarget === clearBtn) return;
+      setTimeout(function() {
+        if (wrapper.parentNode && !wrapper.contains(document.activeElement)) {
+          rosterCommitFieldEdit(wrapper, ohrId, field, input.value);
+        }
+      }, 150);
     });
     return;
   }
