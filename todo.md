@@ -4036,3 +4036,8 @@
 - [x] Add internal_planning_group to ALLOWED_FIELDS in backend attendance.ts
 - [x] Add corresponding options to the frontend bulk edit field dropdown
 - [x] Populate value dropdown from existing distinct values for these fields (uses same role/PG options from multiSelects)
+
+## Haven — Prevent Duplicate Leave Filings
+- [x] Add backend validation: reject leave filing if employee already has a leave on the same date (excludes Cancelled)
+- [x] Add frontend indication: checkmark icon on dates with existing leave, + button hidden
+- [x] Show clear error message when duplicate is attempted (both frontend toast and backend 400)

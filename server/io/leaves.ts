@@ -6,7 +6,7 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { ioLeaves, ioNotifications, ioEmployees, ioLeavePeriods } from "../../drizzle/schema.js";
 import { isAdminOhr } from "./shared.js";
-import { eq, and, gte, lte, sql, desc, or, count } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, or, count, not } from "drizzle-orm";
 import { validate, leaveCreateSchema, leavesBulkActionSchema, leaveCancelSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
 import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
@@ -113,6 +113,19 @@ router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Re
           return res.status(400).json({ error: `Leave dates for this month must be on or after the configured start date (WE ${weMM}/${weDD}).` });
         }
       }
+    }
+
+    // Duplicate check: prevent filing on a date the employee already has a leave for
+    const existingLeave = await db.select({ id: ioLeaves.id, status: ioLeaves.status })
+      .from(ioLeaves)
+      .where(and(
+        eq(ioLeaves.ohr_id, req.body.ohr_id),
+        eq(ioLeaves.start_date, req.body.start_date),
+        not(eq(ioLeaves.status, 'Cancelled'))
+      ))
+      .limit(1);
+    if (existingLeave.length > 0) {
+      return res.status(400).json({ error: `You already have a leave filed for ${req.body.start_date}. Please cancel the existing one first if you need to refile.` });
     }
 
     await db.insert(ioLeaves).values(req.body);

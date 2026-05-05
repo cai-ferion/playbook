@@ -249,7 +249,7 @@ describe("Frontend — Haven Period Status in File Leave Form", () => {
   it("is called from havenShowFileForm", () => {
     // Find the havenShowFileForm function and check it calls havenCheckPeriodStatus
     const idx = havenJs.indexOf("function havenShowFileForm");
-    const section = havenJs.slice(idx, idx + 2500);
+    const section = havenJs.slice(idx, idx + 3000);
     expect(section).toContain("havenCheckPeriodStatus()");
   });
 });

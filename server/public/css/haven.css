@@ -334,6 +334,19 @@
   color: #fff;
 }
 
+.haven-cal-add--filed {
+  opacity: 0.7;
+  cursor: default;
+  color: var(--primary);
+  font-size: 11px;
+}
+
+.haven-cal-cell:hover .haven-cal-add--filed {
+  opacity: 0.9;
+  background: transparent;
+  color: var(--primary);
+}
+
 /* ─── Form Overlay (File Leave / Detail / Reject) ─────────────────────────── */
 .haven-form-overlay {
   position: fixed;

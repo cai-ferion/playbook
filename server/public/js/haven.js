@@ -323,8 +323,14 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
       }
 
       // Add button for filing leave (agents + TLs, eligible dates only)
+      // Check if current user already has a non-cancelled leave on this date
+      const userAlreadyFiled = user && dayLeaves.some(l => l.ohr_id === user.ohr_id && l.status !== 'Cancelled');
       if ((role === 'agent' || role === 'tl') && dateStr >= minLeaveDate) {
-        html += `<div class="haven-cal-add" onclick="havenShowFileForm('${dateStr}')" title="File leave for this date">+</div>`;
+        if (userAlreadyFiled) {
+          html += `<div class="haven-cal-add haven-cal-add--filed" title="You already have a leave filed for this date">&#10003;</div>`;
+        } else {
+          html += `<div class="haven-cal-add" onclick="havenShowFileForm('${dateStr}')" title="File leave for this date">+</div>`;
+        }
       }
 
       html += '</div>';
@@ -600,6 +606,11 @@ function havenShowDayLeaves(dateStr) {
 function havenShowFileForm(prefillDate) {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) { showToast('Please log in first', 'error'); return; }
+  // Duplicate check: prevent filing on a date already filed
+  if (prefillDate && HAVEN.leaves.some(l => l.ohr_id === user.ohr_id && l.start_date === prefillDate && l.status !== 'Cancelled')) {
+    showToast('You already have a leave filed for ' + prefillDate + '. Cancel the existing one first if you need to refile.', 'error');
+    return;
+  }
   const role = havenGetRole();
   const formBody = document.getElementById('haven-form-body');
   const formTitle = document.getElementById('haven-form-title');
