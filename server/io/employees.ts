@@ -102,6 +102,21 @@ router.patch("/employees/:ohr_id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "No fields to update" });
     }
 
+    // ── Dropdown field validation ─────────────────────────────────────
+    const { DROPDOWN_VALID_VALUES } = await import("./lookup.js");
+    const rejections: string[] = [];
+    for (const [field, value] of Object.entries(updates)) {
+      const allowed = DROPDOWN_VALID_VALUES[field];
+      if (!allowed || allowed === 'dynamic') continue; // skip dynamic or non-dropdown fields
+      if (value === null || value === '') continue; // allow clearing
+      if (!allowed.includes(String(value))) {
+        rejections.push(`${field}: "${value}" is not a valid option`);
+      }
+    }
+    if (rejections.length > 0) {
+      return res.status(400).json({ error: "Invalid dropdown values", details: rejections });
+    }
+
     // Fetch current state for audit diff
     const [before] = await db.select().from(ioEmployees).where(eq(ioEmployees.ohr_id, ohr_id));
 

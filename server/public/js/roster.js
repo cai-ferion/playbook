@@ -751,21 +751,131 @@ window.rosterToggleInlineDetail = function(ohrId) {
   rosterLoadInlineAuditTrailFor(ohrId);
 };
 
-// Click-to-edit: convert value display to input
+// ===== Dropdown Definitions for Regimen Inline Editing =====
+const ROSTER_DROPDOWN_OPTIONS = {
+  sex: ['M', 'F'],
+  employement_status: ['Active', 'Inactive', 'Exit'],
+  actual_role: ['Agent', 'Operational SME', 'Quality & Policy Expert', 'Team Lead', 'Trainer', 'Manager'],
+  shift_time: ['Mid-Shift', 'GY Shift'],
+  work_off: ['Sun - Mon', 'Mon - Tue', 'Tue - Wed', 'Wed - Thu', 'Thu - Fri', 'Fri - Sat', 'Sat - Sun'],
+  platform: ['Facebook', 'Instagram', 'Not Applicable'],
+  department: ['Ops', 'QTP'],
+};
+
+// Fields that use searchable autocomplete (handled separately)
+const ROSTER_AUTOCOMPLETE_FIELDS = ['barangay', 'supervisor_name'];
+// Fields that use multi-select (handled separately)
+const ROSTER_MULTISELECT_FIELDS = ['complete_planning_group'];
+// Fields that use dynamic single-select (fetched from API)
+const ROSTER_DYNAMIC_SELECT_FIELDS = ['planning_group'];
+// Fields where value is auto-filled and read-only when barangay is set
+const ROSTER_AUTOFILL_READONLY = ['city', 'province'];
+
+// Shared: commit edit value and revert to display div
+function rosterCommitFieldEdit(el, ohrId, field, newVal) {
+  const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
+  if (!emp) return;
+  const origVal = emp[field] != null ? String(emp[field]).trim() : '';
+
+  if (!ROSTER._pendingEdits[ohrId]) ROSTER._pendingEdits[ohrId] = {};
+  if (newVal !== origVal) {
+    ROSTER._pendingEdits[ohrId][field] = newVal;
+  } else {
+    delete ROSTER._pendingEdits[ohrId][field];
+    if (Object.keys(ROSTER._pendingEdits[ohrId]).length === 0) delete ROSTER._pendingEdits[ohrId];
+  }
+
+  const indicator = document.getElementById('roster-unsaved-' + ohrId);
+  if (indicator) {
+    const hasPending = ROSTER._pendingEdits[ohrId] && Object.keys(ROSTER._pendingEdits[ohrId]).length > 0;
+    indicator.style.display = hasPending ? '' : 'none';
+  }
+
+  const div = document.createElement('div');
+  div.className = 'regimen-field-value editable' + (newVal !== origVal ? ' editing' : '');
+  div.setAttribute('data-field', field);
+  div.setAttribute('data-ohr', ohrId);
+  div.setAttribute('onclick', 'rosterStartFieldEdit(this)');
+  div.setAttribute('title', 'Click to edit');
+  div.textContent = newVal || '\u2014';
+  if (newVal !== origVal) {
+    div.style.borderColor = 'var(--warning)';
+    div.style.background = 'rgba(217, 119, 6, 0.06)';
+  }
+  el.replaceWith(div);
+}
+
+// Click-to-edit: convert value display to appropriate control
 window.rosterStartFieldEdit = function(el) {
   if (!el || el.classList.contains('editing')) return;
-  event.stopPropagation();
+  if (event) event.stopPropagation();
 
   const field = el.getAttribute('data-field');
   const ohrId = el.getAttribute('data-ohr');
   const emp = ROSTER.employees.find(e => e.ohr_id === ohrId);
   if (!emp) return;
 
-  // Get current value (from pending edits or original)
   const pending = ROSTER._pendingEdits[ohrId] || {};
   const currentVal = pending[field] !== undefined ? pending[field] : (emp[field] != null ? String(emp[field]) : '');
 
-  // Replace with input
+  // ── Auto-fill readonly fields (city, province) ──
+  if (ROSTER_AUTOFILL_READONLY.includes(field)) {
+    showToast && showToast('Change Barangay to update ' + field.charAt(0).toUpperCase() + field.slice(1), 'info');
+    return;
+  }
+
+  // ── Simple dropdown fields ──
+  if (ROSTER_DROPDOWN_OPTIONS[field]) {
+    const options = ROSTER_DROPDOWN_OPTIONS[field];
+    const select = document.createElement('select');
+    select.className = 'regimen-field-input regimen-field-select';
+    select.setAttribute('data-field', field);
+    select.setAttribute('data-ohr', ohrId);
+    // Add empty option
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = '— Select —';
+    select.appendChild(emptyOpt);
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt;
+      o.textContent = opt;
+      if (opt === currentVal) o.selected = true;
+      select.appendChild(o);
+    });
+    el.replaceWith(select);
+    select.focus();
+    select.addEventListener('change', function() {
+      rosterCommitFieldEdit(select, ohrId, field, select.value.trim());
+    });
+    select.addEventListener('blur', function() {
+      // If still a select (not yet committed via change), commit current value
+      if (select.parentNode) {
+        rosterCommitFieldEdit(select, ohrId, field, select.value.trim());
+      }
+    });
+    return;
+  }
+
+  // ── Dynamic single-select (Planning Group) ──
+  if (ROSTER_DYNAMIC_SELECT_FIELDS.includes(field)) {
+    rosterStartDynamicSelect(el, ohrId, field, currentVal);
+    return;
+  }
+
+  // ── Searchable autocomplete (Barangay, Supervisor) ──
+  if (ROSTER_AUTOCOMPLETE_FIELDS.includes(field)) {
+    rosterStartAutocomplete(el, ohrId, field, currentVal);
+    return;
+  }
+
+  // ── Multi-select (Related PG) ──
+  if (ROSTER_MULTISELECT_FIELDS.includes(field)) {
+    rosterStartMultiSelect(el, ohrId, field, currentVal);
+    return;
+  }
+
+  // ── Default: free-text input (for all other fields) ──
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'regimen-field-input';
@@ -777,53 +887,391 @@ window.rosterStartFieldEdit = function(el) {
   input.focus();
   input.select();
 
-  // On blur or Enter, save value and revert to display
   const finishEdit = function() {
-    const newVal = input.value.trim();
-    const origVal = emp[field] != null ? String(emp[field]).trim() : '';
-
-    // Track pending edit
-    if (!ROSTER._pendingEdits[ohrId]) ROSTER._pendingEdits[ohrId] = {};
-    if (newVal !== origVal) {
-      ROSTER._pendingEdits[ohrId][field] = newVal;
-    } else {
-      delete ROSTER._pendingEdits[ohrId][field];
-      if (Object.keys(ROSTER._pendingEdits[ohrId]).length === 0) delete ROSTER._pendingEdits[ohrId];
-    }
-
-    // Show unsaved indicator
-    const indicator = document.getElementById('roster-unsaved-' + ohrId);
-    if (indicator) {
-      const hasPending = ROSTER._pendingEdits[ohrId] && Object.keys(ROSTER._pendingEdits[ohrId]).length > 0;
-      indicator.style.display = hasPending ? '' : 'none';
-    }
-
-    // Revert to display div
-    const div = document.createElement('div');
-    div.className = 'regimen-field-value editable' + (newVal !== origVal ? ' editing' : '');
-    div.setAttribute('data-field', field);
-    div.setAttribute('data-ohr', ohrId);
-    div.setAttribute('onclick', 'rosterStartFieldEdit(this)');
-    div.setAttribute('title', 'Click to edit');
-    div.textContent = newVal || '\u2014';
-    if (newVal !== origVal) {
-      div.style.borderColor = 'var(--warning)';
-      div.style.background = 'rgba(217, 119, 6, 0.06)';
-    }
-    input.replaceWith(div);
+    rosterCommitFieldEdit(input, ohrId, field, input.value.trim());
   };
 
   input.addEventListener('blur', finishEdit);
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
     if (e.key === 'Escape') {
-      // Revert without saving
       const origVal = emp[field] != null ? String(emp[field]).trim() : '';
       input.value = origVal;
       input.blur();
     }
   });
 };
+
+// ── Placeholder stubs for Phase 4 & 5 (will be implemented next) ──
+// Cache for dynamic options
+let _cachedPlanningGroups = null;
+let _cachedTeamLeads = null;
+
+function rosterStartDynamicSelect(el, ohrId, field, currentVal) {
+  // Fetch planning groups and render as a select
+  const select = document.createElement('select');
+  select.className = 'regimen-field-input regimen-field-select';
+  select.setAttribute('data-field', field);
+  select.setAttribute('data-ohr', ohrId);
+  // Loading state
+  const loadOpt = document.createElement('option');
+  loadOpt.textContent = 'Loading...';
+  select.appendChild(loadOpt);
+  el.replaceWith(select);
+
+  const populateSelect = (options) => {
+    select.innerHTML = '';
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = '\u2014 Select \u2014';
+    select.appendChild(emptyOpt);
+    options.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt;
+      o.textContent = opt;
+      if (opt === currentVal) o.selected = true;
+      select.appendChild(o);
+    });
+    select.focus();
+  };
+
+  if (_cachedPlanningGroups) {
+    populateSelect(_cachedPlanningGroups);
+  } else {
+    fetch('/api/io/lookup/planning-groups')
+      .then(r => r.json())
+      .then(data => {
+        _cachedPlanningGroups = data.results || [];
+        populateSelect(_cachedPlanningGroups);
+      })
+      .catch(() => {
+        select.innerHTML = '<option>Error loading</option>';
+      });
+  }
+
+  select.addEventListener('change', function() {
+    rosterCommitFieldEdit(select, ohrId, field, select.value.trim());
+  });
+  select.addEventListener('blur', function() {
+    if (select.parentNode) {
+      rosterCommitFieldEdit(select, ohrId, field, select.value.trim());
+    }
+  });
+}
+
+// Debounce helper
+let _acDebounceTimer = null;
+function rosterStartAutocomplete(el, ohrId, field, currentVal) {
+  if (field === 'barangay') {
+    rosterStartBarangayAutocomplete(el, ohrId, currentVal);
+  } else if (field === 'supervisor_name') {
+    rosterStartSupervisorAutocomplete(el, ohrId, currentVal);
+  }
+}
+
+// ===== Barangay Autocomplete with City/Province auto-fill =====
+function rosterStartBarangayAutocomplete(el, ohrId, currentVal) {
+  const wrap = document.createElement('div');
+  wrap.className = 'regimen-autocomplete-wrap';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'regimen-field-input';
+  input.value = currentVal;
+  input.placeholder = 'Type barangay name...';
+  input.setAttribute('data-field', 'barangay');
+  input.setAttribute('data-ohr', ohrId);
+  const list = document.createElement('div');
+  list.className = 'regimen-autocomplete-list';
+  list.style.display = 'none';
+  wrap.appendChild(input);
+  wrap.appendChild(list);
+  el.replaceWith(wrap);
+  input.focus();
+
+  let activeIdx = -1;
+  let results = [];
+
+  function renderResults(data) {
+    results = data;
+    activeIdx = -1;
+    if (!data.length) { list.style.display = 'none'; return; }
+    list.innerHTML = data.map((r, i) =>
+      `<div class="regimen-autocomplete-item" data-idx="${i}"><span class="ac-brgy">${r.barangay}</span><br><span class="ac-loc">${r.city}, ${r.province}</span></div>`
+    ).join('');
+    list.style.display = '';
+    // Click handler
+    list.querySelectorAll('.regimen-autocomplete-item').forEach(item => {
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        selectResult(parseInt(item.getAttribute('data-idx')));
+      });
+    });
+  }
+
+  function selectResult(idx) {
+    const r = results[idx];
+    if (!r) return;
+    input.value = r.barangay;
+    list.style.display = 'none';
+    // Commit barangay
+    rosterCommitFieldEdit(wrap, ohrId, 'barangay', r.barangay);
+    // Auto-fill city and province
+    if (!ROSTER._pendingEdits[ohrId]) ROSTER._pendingEdits[ohrId] = {};
+    ROSTER._pendingEdits[ohrId]['city'] = r.city;
+    ROSTER._pendingEdits[ohrId]['province'] = r.province;
+    // Update city/province display elements if visible
+    const cityEl = document.querySelector(`[data-field="city"][data-ohr="${ohrId}"]`);
+    if (cityEl) {
+      cityEl.textContent = r.city;
+      cityEl.style.borderColor = 'var(--warning)';
+      cityEl.style.background = 'rgba(217, 119, 6, 0.06)';
+    }
+    const provEl = document.querySelector(`[data-field="province"][data-ohr="${ohrId}"]`);
+    if (provEl) {
+      provEl.textContent = r.province;
+      provEl.style.borderColor = 'var(--warning)';
+      provEl.style.background = 'rgba(217, 119, 6, 0.06)';
+    }
+    // Show unsaved indicator
+    const indicator = document.getElementById('roster-unsaved-' + ohrId);
+    if (indicator) indicator.style.display = '';
+  }
+
+  function fetchBarangays(q) {
+    if (!q || q.length < 2) { list.style.display = 'none'; return; }
+    fetch('/api/io/lookup/barangays?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => renderResults(data.results || []))
+      .catch(() => { list.style.display = 'none'; });
+  }
+
+  input.addEventListener('input', function() {
+    clearTimeout(_acDebounceTimer);
+    _acDebounceTimer = setTimeout(() => fetchBarangays(input.value.trim()), 250);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (activeIdx < results.length - 1) activeIdx++;
+      highlightItem();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (activeIdx > 0) activeIdx--;
+      highlightItem();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIdx >= 0 && results[activeIdx]) {
+        selectResult(activeIdx);
+      } else {
+        input.blur();
+      }
+    } else if (e.key === 'Escape') {
+      list.style.display = 'none';
+      const emp = ROSTER.employees.find(e2 => e2.ohr_id === ohrId);
+      input.value = emp ? (emp.barangay || '') : '';
+      input.blur();
+    }
+  });
+
+  function highlightItem() {
+    list.querySelectorAll('.regimen-autocomplete-item').forEach((item, i) => {
+      item.classList.toggle('active', i === activeIdx);
+    });
+    // Scroll into view
+    const active = list.querySelector('.active');
+    if (active) active.scrollIntoView({ block: 'nearest' });
+  }
+
+  input.addEventListener('blur', function() {
+    setTimeout(() => {
+      list.style.display = 'none';
+      // If user typed something but didn't select, commit raw text
+      if (wrap.parentNode) {
+        rosterCommitFieldEdit(wrap, ohrId, 'barangay', input.value.trim());
+      }
+    }, 200);
+  });
+}
+
+function rosterStartMultiSelect(el, ohrId, field, currentVal) {
+  // Parse current comma-separated values
+  const selectedSet = new Set(
+    currentVal ? currentVal.split(',').map(s => s.trim()).filter(Boolean) : []
+  );
+
+  const wrap = document.createElement('div');
+  wrap.className = 'regimen-multiselect-wrap';
+  const display = document.createElement('input');
+  display.type = 'text';
+  display.className = 'regimen-field-input';
+  display.value = currentVal;
+  display.readOnly = true;
+  display.placeholder = 'Click to select...';
+  display.style.cursor = 'pointer';
+  const dropdown = document.createElement('div');
+  dropdown.className = 'regimen-multiselect-dropdown';
+  dropdown.style.display = 'none';
+  wrap.appendChild(display);
+  wrap.appendChild(dropdown);
+  el.replaceWith(wrap);
+
+  const populateDropdown = (options) => {
+    dropdown.innerHTML = '';
+    options.forEach(opt => {
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = opt;
+      cb.checked = selectedSet.has(opt);
+      cb.addEventListener('change', function() {
+        if (cb.checked) selectedSet.add(opt);
+        else selectedSet.delete(opt);
+        display.value = Array.from(selectedSet).join(', ');
+      });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + opt));
+      dropdown.appendChild(label);
+    });
+    // Done button
+    const doneBtn = document.createElement('button');
+    doneBtn.className = 'regimen-multiselect-done';
+    doneBtn.textContent = 'Done';
+    doneBtn.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      const finalVal = Array.from(selectedSet).join(',');
+      dropdown.style.display = 'none';
+      rosterCommitFieldEdit(wrap, ohrId, field, finalVal);
+    });
+    dropdown.appendChild(doneBtn);
+    dropdown.style.display = '';
+  };
+
+  display.addEventListener('click', function() {
+    if (dropdown.style.display === 'none' || !dropdown.innerHTML) {
+      if (_cachedPlanningGroups) {
+        populateDropdown(_cachedPlanningGroups);
+      } else {
+        fetch('/api/io/lookup/planning-groups')
+          .then(r => r.json())
+          .then(data => {
+            _cachedPlanningGroups = data.results || [];
+            populateDropdown(_cachedPlanningGroups);
+          })
+          .catch(() => { dropdown.innerHTML = '<div style="padding:8px">Error loading</div>'; dropdown.style.display = ''; });
+      }
+    } else {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Close on outside click
+  const closeHandler = function(e) {
+    if (!wrap.contains(e.target)) {
+      dropdown.style.display = 'none';
+      document.removeEventListener('mousedown', closeHandler);
+      // Commit
+      const finalVal = Array.from(selectedSet).join(',');
+      if (wrap.parentNode) {
+        rosterCommitFieldEdit(wrap, ohrId, field, finalVal);
+      }
+    }
+  };
+  setTimeout(() => document.addEventListener('mousedown', closeHandler), 100);
+}
+
+// ===== Supervisor Autocomplete (Team Leads) =====
+function rosterStartSupervisorAutocomplete(el, ohrId, currentVal) {
+  const wrap = document.createElement('div');
+  wrap.className = 'regimen-autocomplete-wrap';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'regimen-field-input';
+  input.value = currentVal;
+  input.placeholder = 'Type supervisor name...';
+  input.setAttribute('data-field', 'supervisor_name');
+  input.setAttribute('data-ohr', ohrId);
+  const list = document.createElement('div');
+  list.className = 'regimen-autocomplete-list';
+  list.style.display = 'none';
+  wrap.appendChild(input);
+  wrap.appendChild(list);
+  el.replaceWith(wrap);
+  input.focus();
+
+  let activeIdx = -1;
+  let results = [];
+
+  function loadTeamLeads() {
+    if (_cachedTeamLeads) return Promise.resolve(_cachedTeamLeads);
+    return fetch('/api/io/lookup/team-leads')
+      .then(r => r.json())
+      .then(data => { _cachedTeamLeads = data.results || []; return _cachedTeamLeads; });
+  }
+
+  function filterAndRender(q) {
+    const lower = q.toLowerCase();
+    const filtered = results.filter(tl => tl.full_name.toLowerCase().includes(lower)).slice(0, 15);
+    if (!filtered.length) { list.style.display = 'none'; return; }
+    list.innerHTML = filtered.map((tl, i) =>
+      `<div class="regimen-autocomplete-item" data-idx="${i}"><span class="ac-brgy">${tl.full_name}</span></div>`
+    ).join('');
+    list.style.display = '';
+    list.querySelectorAll('.regimen-autocomplete-item').forEach(item => {
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        const idx = parseInt(item.getAttribute('data-idx'));
+        const selected = filtered[idx];
+        if (selected) {
+          input.value = selected.full_name;
+          list.style.display = 'none';
+          rosterCommitFieldEdit(wrap, ohrId, 'supervisor_name', selected.full_name);
+        }
+      });
+    });
+  }
+
+  loadTeamLeads().then(tls => {
+    results = tls;
+    if (input.value) filterAndRender(input.value);
+  });
+
+  input.addEventListener('input', function() {
+    const q = input.value.trim();
+    if (q.length < 1) { list.style.display = 'none'; return; }
+    filterAndRender(q);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = list.querySelectorAll('.regimen-autocomplete-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (activeIdx < items.length - 1) activeIdx++;
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (activeIdx > 0) activeIdx--;
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIdx));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const active = list.querySelector('.active');
+      if (active) active.dispatchEvent(new MouseEvent('mousedown'));
+      else input.blur();
+    } else if (e.key === 'Escape') {
+      list.style.display = 'none';
+      input.blur();
+    }
+  });
+
+  input.addEventListener('blur', function() {
+    setTimeout(() => {
+      list.style.display = 'none';
+      if (wrap.parentNode) {
+        rosterCommitFieldEdit(wrap, ohrId, 'supervisor_name', input.value.trim());
+      }
+    }, 200);
+  });
+}
 
 // Save from inline detail
 window.rosterSaveInlineDetail = async function(ohrId) {

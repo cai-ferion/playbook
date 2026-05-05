@@ -4041,3 +4041,43 @@
 - [x] Add backend validation: reject leave filing if employee already has a leave on the same date (excludes Cancelled)
 - [x] Add frontend indication: checkmark icon on dates with existing leave, + button hidden
 - [x] Show clear error message when duplicate is attempted (both frontend toast and backend 400)
+
+## Regimen Inline Editing Overhaul — Precise Dropdowns
+
+### Phase 1: Barangay Lookup
+- [x] Source comprehensive Philippine barangay-city-province dataset (42,011 barangays from April 2026 PSGC)
+- [x] Create backend endpoint GET /api/io/lookup/barangays?q=<search> (searchable, returns top 20 matches with city+province)
+- [x] Store dataset as static JSON served by backend (server/data/ph-barangays.json)
+
+### Phase 2: Dynamic Dropdown Endpoints + Backend Validation
+- [x] GET /api/io/lookup/team-leads — all employees with actual_role='Team Lead' (regardless of status)
+- [x] GET /api/io/lookup/planning-groups — all distinct planning_group values from io_employees
+- [x] Add backend validation on employee PATCH: reject values not in allowed sets for dropdown fields
+
+### Phase 3: Simple Dropdown Fields (frontend)
+- [x] Sex: dropdown M / F
+- [x] Status (employement_status): dropdown Active / Inactive / Exit
+- [x] Role (actual_role): dropdown Agent / Operational SME / Quality & Policy Expert / Team Lead / Trainer / Manager
+- [x] Shift (shift_time): dropdown Mid-Shift / GY Shift
+- [x] Work Off: dropdown Sun-Mon / Mon-Tue / Tue-Wed / Wed-Thu / Thu-Fri / Fri-Sat / Sat-Sun
+- [x] Platform: dropdown Facebook / Instagram / Not Applicable
+- [x] Department: dropdown Ops / QTP
+
+### Phase 4: Searchable Autocomplete — Barangay
+- [x] Searchable autocomplete input for Barangay (type to filter, debounced API call)
+- [x] On Barangay selection, auto-fill City and Province as read-only
+- [x] City and Province fields become read-only when Barangay is set (must change Barangay to update)
+
+### Phase 5: Searchable Supervisor + Multi-select Related PG
+- [x] Supervisor: searchable dropdown populated from /api/io/lookup/team-leads
+- [x] Planning Group: dropdown populated from /api/io/lookup/planning-groups
+- [x] Related PG (complete_planning_group): multi-select checkbox dropdown from same PG list
+
+### Phase 6: Data Correction
+- [x] Update sex column for 74 employees corrected (419 already correct, 0 not found)
+- [x] Flag 7 employees with null gender for manual review (listed below)
+- [x] Replace 107 blank/null platform values with 'Not Applicable' in io_employees
+
+### Phase 7: Testing & Delivery
+- [x] Run full test suite (1860 tests pass), TypeScript clean
+- [x] Push to GitHub, save checkpoint

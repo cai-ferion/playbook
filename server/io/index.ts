@@ -134,6 +134,10 @@ ioRouter.use("/shift-extensions", shiftExtensionsRouter);
 import performanceRouter from "./performance.js";
 ioRouter.use("/performance", performanceRouter);
 
+// ── Lookup: static dropdown data for Regimen inline editing ──────────
+import lookupRouter from "./lookup.js";
+ioRouter.use(lookupRouter);
+
 // ── SSE Real-Time Sync — event stream + presence ─────────────────────
 import sseRouter from "./sse.js";
 ioRouter.use(sseRouter);
