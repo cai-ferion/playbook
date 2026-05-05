@@ -43,6 +43,7 @@ router.get("/employees/slim", async (req: Request, res: Response) => {
       shift_time: ioEmployees.shift_time,
       srt_status: ioEmployees.srt_status,
       department: ioEmployees.department,
+      floor: ioEmployees.floor,
       sex: ioEmployees.sex,
     }).from(ioEmployees).orderBy(asc(ioEmployees.ohr_id)).limit(3000);
     _slimCache = rows;

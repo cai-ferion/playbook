@@ -134,6 +134,7 @@ export const DROPDOWN_VALID_VALUES: Record<string, string[] | 'dynamic'> = {
   platform: ['Facebook', 'Instagram', 'Not Applicable'],
   department: ['Ops', 'QTP'],
   locker_floor: Array.from({length: 30}, (_, i) => (i + 1) + (i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th') + ' Floor'),
+  floor: ['27', '28'],
   // These are validated dynamically against DB values:
   supervisor_name: 'dynamic',
   planning_group: 'dynamic',

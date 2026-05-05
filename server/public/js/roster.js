@@ -57,6 +57,7 @@ const ALL_COLUMNS = [
   { key: 'exit_date', label: 'Exit Date', group: 'attrition', isDate: true },
   { key: 'exit_reason', label: 'Exit Reason', group: 'attrition' },
   { key: 'department', label: 'Department', group: 'role' },
+  { key: 'floor', label: 'Floor', group: 'role' },
   { key: 'sex', label: 'Sex', group: 'identity', ownerOnly: true }
 ];
 
@@ -66,7 +67,7 @@ const LIMITED_COLUMNS = [
   'employement_status','actual_role','supervisor_name','shift_time','work_off',
   'planning_group','complete_planning_group','srt_status','platform',
   'srt_id','workday_id','meta_email','hire_date','regular_date',
-  'meta_onboarding_date','go_live_date','department','dob'
+  'meta_onboarding_date','go_live_date','department','floor','dob'
 ];
 
 // Date columns for date-range filter type
@@ -760,6 +761,7 @@ const ROSTER_DROPDOWN_OPTIONS = {
   work_off: ['Sun - Mon', 'Mon - Tue', 'Tue - Wed', 'Wed - Thu', 'Thu - Fri', 'Fri - Sat', 'Sat - Sun'],
   platform: ['Facebook', 'Instagram', 'Not Applicable'],
   department: ['Ops', 'QTP'],
+  floor: ['27', '28'],
   locker_floor: Array.from({length: 30}, (_, i) => (i + 1) + (i === 0 ? 'st' : i === 1 ? 'nd' : i === 2 ? 'rd' : 'th') + ' Floor'),
 };
 // Date fields that should use a date picker

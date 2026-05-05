@@ -70,6 +70,7 @@ export const ioEmployees = mysqlTable("io_employees", {
   exit_date: varchar("exit_date", { length: 30 }),
   exit_reason: varchar("exit_reason", { length: 255 }),
   department: varchar("department", { length: 128 }),
+  floor: varchar("floor", { length: 10 }),
   sex: varchar("sex", { length: 2 }),
   version: int("version").notNull().default(1),
 });
