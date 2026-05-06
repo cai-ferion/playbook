@@ -4091,3 +4091,5 @@
 - [x] Add Floor filter pill to Regimen filter bar
 - [x] Add Floor filter pill to Anchor Dashboard
 - [x] Fix Haven leave approval error: 'Invalid input: expected number, received string' when FLM approves
+- [x] Fix Tardiness Validator: remove duplicate date×OHR entries and add unique constraint
+- [x] Fix Tardiness Validator: bulk valid/invalid NaN ID error

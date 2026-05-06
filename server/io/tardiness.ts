@@ -307,17 +307,10 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     const weeksResult: any = await db.execute(sql.raw(
       `SELECT DISTINCT week_ending FROM io_tardiness WHERE week_ending IS NOT NULL AND week_ending != '' ORDER BY week_ending`
     ));
-    // Sort by actual date descending (values are M/D/YYYY strings)
+    // Sort by date descending (ISO YYYY-MM-DD format)
     const weeks = (Array.isArray(weeksResult[0]) ? weeksResult[0] : weeksResult)
       .map((r: any) => r.week_ending)
-      .sort((a: string, b: string) => {
-        const parseWE = (s: string) => {
-          const parts = s.split('/');
-          if (parts.length === 3) return new Date(+parts[2], +parts[0] - 1, +parts[1]).getTime();
-          return new Date(s).getTime();
-        };
-        return parseWE(b) - parseWE(a); // descending
-      });
+      .sort((a: string, b: string) => b.localeCompare(a)); // ISO strings sort lexicographically
 
     // Planning groups: use live data from io_employees to exclude stale/renamed groups
     const pgsResult: any = await db.execute(sql.raw(
@@ -350,6 +343,39 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     res.json({ items: data, is_admin: isAdmin, filters, stats });
   } catch (err: any) {
     console.error("[IO API] tardiness GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// PATCH /tardiness/bulk-validate — bulk validation
+// ============================================================
+router.patch("/tardiness/bulk-validate", validate(tardinessBulkValidateSchema), async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    const actorOhr = String(req.headers["x-actor-ohr"] || "");
+    const actorName = String(req.headers["x-actor-name"] || "");
+    const { ids, validation_status, remarks } = req.body;
+
+    const now = new Date().toISOString();
+    const idList = ids.map((i: any) => parseInt(i, 10)).filter((i: number) => !isNaN(i));
+
+    if (idList.length === 0) {
+      return res.status(400).json({ error: "No valid IDs provided" });
+    }
+
+    // Only update items that are still Pending
+    const result: any = await db.execute(
+      sql.raw(`UPDATE io_tardiness SET validation_status = '${validation_status}', validated_by = '${actorName.replace(/'/g, "''")}', validated_by_ohr = '${actorOhr}', validated_at = '${now}', remarks = ${remarks ? `'${String(remarks).replace(/'/g, "''")}' ` : 'NULL'} WHERE id IN (${idList.join(",")}) AND validation_status = 'Pending'`)
+    );
+
+    const info = Array.isArray(result[0]) ? result[0] : result;
+    emitChange(req, "tardiness", "bulk_update", { count: idList.length });
+    res.json({ success: true, updated: info.affectedRows || idList.length, total: idList.length });
+  } catch (err: any) {
+    console.error("[IO API] tardiness bulk-validate error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -404,35 +430,6 @@ router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Requ
     res.json({ success: true, action: "validated", status: validation_status });
   } catch (err: any) {
     console.error("[IO API] tardiness PATCH error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ============================================================
-// PATCH /tardiness/bulk-validate — bulk validation
-// ============================================================
-router.patch("/tardiness/bulk-validate", validate(tardinessBulkValidateSchema), async (req: Request, res: Response) => {
-  try {
-    const db = await getDb();
-    if (!db) return res.status(500).json({ error: "DB unavailable" });
-
-    const actorOhr = String(req.headers["x-actor-ohr"] || "");
-    const actorName = String(req.headers["x-actor-name"] || "");
-    const { ids, validation_status, remarks } = req.body;
-
-    const now = new Date().toISOString();
-    const idList = ids.map((i: any) => parseInt(i, 10)).filter((i: number) => !isNaN(i));
-
-    // Only update items that are still Pending
-    const result: any = await db.execute(
-      sql.raw(`UPDATE io_tardiness SET validation_status = '${validation_status}', validated_by = '${actorName.replace(/'/g, "''")}', validated_by_ohr = '${actorOhr}', validated_at = '${now}', remarks = ${remarks ? `'${String(remarks).replace(/'/g, "''")}'` : 'NULL'} WHERE id IN (${idList.join(",")}) AND validation_status = 'Pending'`)
-    );
-
-    const info = Array.isArray(result[0]) ? result[0] : result;
-    emitChange(req, "tardiness", "bulk_update", { count: idList.length });
-    res.json({ success: true, updated: info.affectedRows || idList.length, total: idList.length });
-  } catch (err: any) {
-    console.error("[IO API] tardiness bulk-validate error:", err);
     res.status(500).json({ error: err.message });
   }
 });

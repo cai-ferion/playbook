@@ -244,8 +244,15 @@ async function tardLoadData() {
     if (weSelect && weSelect.options.length <= 1 && data.filters) {
       if (data.filters.weeks) {
         weSelect.innerHTML = '<option value="">All Weeks</option>' + data.filters.weeks.map(w => {
-          const parts = w.split('/');
-          const display = parts.length === 3 ? `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}` : w;
+          // Handle both ISO (YYYY-MM-DD) and M/D/YYYY formats for display
+          let display = w;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(w)) {
+            const [y, m, d] = w.split('-');
+            display = `${m}/${d}/${y}`;
+          } else {
+            const parts = w.split('/');
+            if (parts.length === 3) display = `${parts[0].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[2]}`;
+          }
           return `<option value="${w}">${display}</option>`;
         }).join("");
       }
