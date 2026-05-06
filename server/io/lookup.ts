@@ -6,7 +6,7 @@
  *   GET /lookup/team-leads            — all Team Leads from io_employees
  *   GET /lookup/planning-groups       — all distinct planning_group values
  */
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -44,7 +44,7 @@ const BARANGAY_INDEX = BARANGAYS.map((entry) => ({
  * Returns top 20 matches. Searches barangay name first, then city.
  * Response: { results: [{ barangay, city, province }] }
  */
-router.get("/lookup/barangays", (req, res) => {
+router.get("/lookup/barangays", (req: Request, res: Response) => {
   const q = String(req.query.q || "").trim().toLowerCase();
   if (!q || q.length < 2) {
     return res.json({ results: [] });
@@ -78,7 +78,7 @@ router.get("/lookup/barangays", (req, res) => {
  * Returns all employees with actual_role='Team Lead' (any status).
  * Response: { results: [{ ohr_id, full_name }] }
  */
-router.get("/lookup/team-leads", async (req, res) => {
+router.get("/lookup/team-leads", async (req: Request, res: Response) => {
   try {
     const { getDb } = await import("../db.js");
     const db = await getDb();
@@ -100,7 +100,7 @@ router.get("/lookup/team-leads", async (req, res) => {
  * Returns all distinct non-null planning_group values from io_employees.
  * Response: { results: string[] }
  */
-router.get("/lookup/planning-groups", async (req, res) => {
+router.get("/lookup/planning-groups", async (req: Request, res: Response) => {
   try {
     const { getDb } = await import("../db.js");
     const db = await getDb();

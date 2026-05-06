@@ -2,7 +2,7 @@
  * Performance Dashboard — REST API Routes
  * Mount at /api/io/performance
  */
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import {
   getDashboardData,
   getKpiForDateRange,
@@ -61,7 +61,7 @@ function normalizeShiftTime(raw: string | null): string {
 }
 
 // GET /data — Full dashboard data
-router.get("/data", async (_req, res) => {
+router.get("/data", async (_req: Request, res: Response) => {
   try {
     const data = await getDashboardData();
     res.json(data);
@@ -72,7 +72,7 @@ router.get("/data", async (_req, res) => {
 });
 
 // GET /kpi — KPI aggregation from raw daily data
-router.get("/kpi", async (req, res) => {
+router.get("/kpi", async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, ohrList } = req.query;
     if (!startDate || !endDate) {
@@ -88,7 +88,7 @@ router.get("/kpi", async (req, res) => {
 });
 
 // GET /sync-history — Recent sync events
-router.get("/sync-history", async (_req, res) => {
+router.get("/sync-history", async (_req: Request, res: Response) => {
   try {
     const history = await getSyncHistory();
     res.json(history);
@@ -98,7 +98,7 @@ router.get("/sync-history", async (_req, res) => {
 });
 
 // GET /sync-latest — Most recent completed sync
-router.get("/sync-latest", async (_req, res) => {
+router.get("/sync-latest", async (_req: Request, res: Response) => {
   try {
     const latest = await getLatestSync();
     res.json(latest);
@@ -108,7 +108,7 @@ router.get("/sync-latest", async (_req, res) => {
 });
 
 // GET /sync-status/:syncId — Poll sync status
-router.get("/sync-status/:syncId", async (req, res) => {
+router.get("/sync-status/:syncId", async (req: Request, res: Response) => {
   try {
     const syncId = parseInt(req.params.syncId);
     if (isNaN(syncId)) return res.status(400).json({ error: "Invalid syncId" });
@@ -120,7 +120,7 @@ router.get("/sync-status/:syncId", async (req, res) => {
 });
 
 // GET /source-file — Stored source file info
-router.get("/source-file", async (_req, res) => {
+router.get("/source-file", async (_req: Request, res: Response) => {
   try {
     const file = await getSourceFile();
     res.json(file || { exists: false });
@@ -130,7 +130,7 @@ router.get("/source-file", async (_req, res) => {
 });
 
 // POST /upload — Upload .xlsb file (base64 body)
-router.post("/upload", async (req, res) => {
+router.post("/upload", async (req: Request, res: Response) => {
   try {
     const { fileData, fileName, syncedBy, syncedByName } = req.body;
     if (!fileData || !fileName) {
@@ -155,7 +155,7 @@ router.post("/upload", async (req, res) => {
 });
 
 // POST /resync — Re-process stored file
-router.post("/resync", async (req, res) => {
+router.post("/resync", async (req: Request, res: Response) => {
   try {
     const { syncedBy, syncedByName } = req.body;
     const sourceFile = await getSourceFile();
