@@ -3,6 +3,7 @@
   "version": 2,
   "installCommand": "pnpm install",
   "buildCommand": "pnpm run build:vercel",
+  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/api/site",
@@ -13,6 +14,10 @@
       "destination": "/api/site/index.html"
     },
     {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
@@ -21,30 +26,18 @@
     {
       "source": "/api/site/(.*\\.(?:js|css))",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=604800, immutable"
-        }
+        { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
       ]
     },
     {
       "source": "/api/site/index.html",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
       ]
     }
   ],
   "crons": [
-    {
-      "path": "/api/cron/roster-sync",
-      "schedule": "0 18 * * *"
-    },
-    {
-      "path": "/api/cron/attendance-sync",
-      "schedule": "0 10 * * *"
-    }
+    { "path": "/api/cron/roster-sync", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/attendance-sync", "schedule": "0 10 * * *" }
   ]
 }
