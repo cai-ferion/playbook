@@ -262,17 +262,31 @@ router.get("/tardiness", async (req: Request, res: Response) => {
 
     const actorOhr = String(req.headers["x-actor-ohr"] || "");
     const actorName = String(req.headers["x-actor-name"] || "");
+    const actorRole = String(req.headers["x-actor-role"] || "");
     const isAdmin = ADMIN_OHRS.includes(actorOhr);
+    const isManager = actorRole === 'Manager';
 
     const { week_ending, planning_group, status, search, scope, supervisor, shift_type } = req.query;
 
     let conditions: string[] = [];
     let params: any[] = [];
 
-    // Team scoping: when scope=team, restrict to TL's direct reports via live employee data
-    if (scope === "team" && actorName) {
+    // Server-side role scoping: enforce data visibility regardless of frontend params
+    // Admins and Managers see all; TLs see own + direct reports; Agents see own only
+    if (!isAdmin && !isManager && actorOhr) {
+      if (actorRole === 'Team Lead') {
+        // TL: show tardiness for their direct reports (and own if applicable)
+        conditions.push("e.supervisor_name = (SELECT full_name FROM io_employees WHERE ohr_id = ? LIMIT 1)");
+        params.push(actorOhr);
+      } else {
+        // Agent / QPE / SME / Trainer: own tardiness only
+        conditions.push("t.ohr_id = ?");
+        params.push(actorOhr);
+      }
+    } else if (scope === "team" && actorName) {
+      // Legacy team scoping for admins/managers who explicitly request it
       conditions.push("e.supervisor_name LIKE ?");
-      params.push(`%${actorName.split(",")[0]}%`); // Match by last name
+      params.push(`%${actorName.split(",")[0]}%`);
     }
 
     if (week_ending) { conditions.push("t.week_ending = ?"); params.push(String(week_ending)); }

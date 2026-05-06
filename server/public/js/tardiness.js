@@ -231,6 +231,7 @@ async function tardLoadData() {
       headers: {
         "x-actor-ohr": _cu()?.ohr_id || "",
         "x-actor-name": _cu()?.full_name || "",
+        "x-actor-role": _cu()?.actual_role || "",
       },
     });
     const data = await resp.json();
