@@ -6,7 +6,8 @@ import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
 import { ioLeaves, ioNotifications, ioEmployees, ioLeavePeriods } from "../../drizzle/schema.js";
 import { isAdminOhr } from "./shared.js";
-import { eq, and, gte, lte, sql, desc, or, count, not } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, or, count, not, inArray } from "drizzle-orm";
+import { ADMIN_OHRS } from "../config.js";
 import { validate, leaveCreateSchema, leavesBulkActionSchema, leaveCancelSchema } from "./validation.js";
 import { emitChange } from "./emit-change.js";
 import { optimisticUpdate, sendConflict, getClientVersion } from "./optimistic-lock.js";
@@ -42,13 +43,15 @@ export function getEarliestFilingDate(now: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-// GET /api/io/leaves - list leaves with filters
+// GET /api/io/leaves - list leaves with filters (server-side role scoping)
 router.get("/leaves", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
 
     const { leave_id, status, ohr_id, supervisor, month, limit } = req.query;
+    const actorOhr = String(req.headers["x-actor-ohr"] || "");
+    const actorRole = String(req.headers["x-actor-role"] || "");
 
     if (leave_id) {
       const rows = await db.select().from(ioLeaves).where(eq(ioLeaves.leave_id, String(leave_id)));
@@ -60,6 +63,25 @@ router.get("/leaves", async (req: Request, res: Response) => {
     if (ohr_id) conditions.push(eq(ioLeaves.ohr_id, String(ohr_id)));
     if (supervisor) conditions.push(eq(ioLeaves.supervisor, String(supervisor)));
     if (month) conditions.push(sql`${ioLeaves.start_date} LIKE ${String(month) + '%'}`);
+
+    // Server-side role scoping: restrict data based on actor's role
+    // Admins and Managers see all; TLs see own + direct reports; Agents see own only
+    const isAdmin = ADMIN_OHRS.includes(actorOhr);
+    const isManager = actorRole === 'Manager';
+    if (!isAdmin && !isManager && actorOhr) {
+      if (actorRole === 'Team Lead') {
+        // TL: own leaves + leaves of their direct reports
+        const empRows = await db.select({ ohr_id: ioEmployees.ohr_id })
+          .from(ioEmployees)
+          .where(sql`${ioEmployees.supervisor_name} = (SELECT full_name FROM io_employees WHERE ohr_id = ${actorOhr} LIMIT 1)`);
+        const teamOhrs = empRows.map(e => e.ohr_id).filter(Boolean);
+        teamOhrs.push(actorOhr); // Include TL's own leaves
+        conditions.push(inArray(ioLeaves.ohr_id, teamOhrs));
+      } else {
+        // Agent / QPE / SME / Trainer without manager role: own leaves only
+        conditions.push(eq(ioLeaves.ohr_id, actorOhr));
+      }
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const lim = limit ? Number(limit) : 2000;

@@ -50,8 +50,14 @@ async function havenLoadEmployees() {
 
 async function havenLoadLeaves() {
   try {
+    const user = typeof currentUser !== 'undefined' ? currentUser : null;
+    const headers = {};
+    if (user) {
+      headers['x-actor-ohr'] = user.ohr_id || '';
+      headers['x-actor-role'] = user.actual_role || '';
+    }
     const url = `${IO_API_BASE}/leaves?limit=5000`;
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     HAVEN.leaves = await res.json();
   } catch (e) {
     console.error('[Haven] loadLeaves error:', e);
