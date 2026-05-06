@@ -20,11 +20,11 @@ import cron from "node-cron";
 import fs from "fs";
 import { execSync } from "child_process";
 
-// Lazy-loaded googleapis — 200MB package, ~1.4s import time.
-let _sheetsModule: typeof import("googleapis") | null = null;
+// Lazy-loaded @googleapis/sheets — lightweight replacement for full googleapis (746KB vs 196MB).
+let _sheetsModule: typeof import("@googleapis/sheets") | null = null;
 async function getGoogleapis() {
   if (!_sheetsModule) {
-    _sheetsModule = await import("googleapis");
+    _sheetsModule = await import("@googleapis/sheets");
   }
   return _sheetsModule;
 }
@@ -161,10 +161,10 @@ async function getSheetsClient() {
     return null;
   }
   console.log(`[SYNC] Using token from ${resolved.source} (${resolved.token.length} chars)`);
-  const { google } = await getGoogleapis();
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: resolved.token });
-  return google.sheets({ version: "v4", auth });
+  const { auth, sheets } = await getGoogleapis();
+  const oauth2Client = new auth.OAuth2();
+  oauth2Client.setCredentials({ access_token: resolved.token });
+  return sheets({ version: "v4", auth: oauth2Client });
 }
 
 // ── DB row → sheet row conversion ────────────────────────────────────────────

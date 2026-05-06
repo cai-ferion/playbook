@@ -16,11 +16,11 @@ import { getDb } from "./db.js";
 import { ioSyncLog, ioEmployees } from "../drizzle/schema.js";
 import { asc } from "drizzle-orm";
 
-// Lazy-loaded googleapis — only loaded when sync actually runs
-let _sheetsModule: typeof import("googleapis") | null = null;
+// Lazy-loaded @googleapis/sheets — lightweight replacement for full googleapis
+let _sheetsModule: typeof import("@googleapis/sheets") | null = null;
 async function getGoogleapis() {
   if (!_sheetsModule) {
-    _sheetsModule = await import("googleapis");
+    _sheetsModule = await import("@googleapis/sheets");
   }
   return _sheetsModule;
 }
@@ -111,14 +111,14 @@ function getRosterGwsToken(): string | null {
 }
 
 async function getSheetsClient() {
-  const { google } = await getGoogleapis();
+  const { auth, sheets } = await getGoogleapis();
   const token = getRosterGwsToken();
   if (!token) {
     throw new Error("No GWS token available");
   }
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: token });
-  return google.sheets({ version: "v4", auth });
+  const oauth2Client = new auth.OAuth2();
+  oauth2Client.setCredentials({ access_token: token });
+  return sheets({ version: "v4", auth: oauth2Client });
 }
 
 // ── Column mapping: DB row → sheet row ───────────────────────────────────────

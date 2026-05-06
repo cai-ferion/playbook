@@ -4095,3 +4095,4 @@
 - [x] Fix Tardiness Validator: bulk valid/invalid NaN ID error
 - [x] Fix Haven leave visibility: TLs should only see their direct reports' leaves, not all agents (server-side scoping added)
 - [x] Add server-side role scoping to Tardiness Validator GET endpoint (enforce TL/Agent restrictions server-side)
+- [ ] Prepare repo for Vercel deployment (vercel.json, serverless adapter, build config)
