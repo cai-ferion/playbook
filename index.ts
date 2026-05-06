@@ -20,7 +20,7 @@ import { appRouter } from "./server/routers.js";
 import { createContext } from "./server/_core/context.js";
 import { registerModularIORoutes } from "./server/io/index.js";
 import { registerIOBackupRoutes } from "./server/io-backup.js";
-import { requireAuth } from "./server/middleware/requireAuth.js";
+// requireAuth is used by tRPC context (server/_core/context.ts), not directly here
 import { refreshAdminOhrs } from "./server/config.js";
 import { corsMiddleware } from "./server/middleware/cors.js";
 import { rateLimitMiddleware } from "./server/middleware/rate-limit.js";
@@ -36,8 +36,8 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(compression({ level: 6, threshold: 1024 }));
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
 app.use(corsMiddleware);
 app.use(rateLimitMiddleware);
 app.use(observabilityMiddleware);
@@ -61,8 +61,11 @@ app.post("/api/client-errors", (req, res) => {
   res.status(204).end();
 });
 
-// ── Protected IO routes ──────────────────────────────────────────────────────
-app.use("/api/io", requireAuth);
+// ── IO routes ───────────────────────────────────────────────────────────────
+// NOTE: No blanket requireAuth here. The static site uses OHR-based login
+// (x-actor-ohr header), NOT JWT sessions. Individual route handlers in
+// server/io/ modules use requireActor middleware for write operations.
+// JWT requireAuth is only for the tRPC/React (Compass) layer.
 
 // SSE endpoint (not supported in serverless) — must be registered BEFORE
 // registerModularIORoutes which also registers an /events handler.

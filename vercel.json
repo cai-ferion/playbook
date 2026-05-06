@@ -9,6 +9,10 @@
       "destination": "/api/site/index.html"
     },
     {
+      "source": "/api/site/",
+      "destination": "/api/site/index.html"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

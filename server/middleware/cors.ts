@@ -40,6 +40,10 @@ function getEnvOrigins(): string[] {
 // Manus sandbox preview URLs follow a pattern: https://<port>-<id>.sg1.manus.computer
 const MANUS_SANDBOX_PATTERN = /^https:\/\/\d+-[a-z0-9]+-[a-f0-9]+\.sg1\.manus\.computer$/;
 
+// Vercel deployment patterns (production + preview deployments)
+const VERCEL_PROD_PATTERN = /^https:\/\/[a-z0-9-]+\.vercel\.app$/;
+const VERCEL_PREVIEW_PATTERN = /^https:\/\/[a-z0-9-]+-[a-z0-9]+-[a-z0-9]+\.vercel\.app$/;
+
 /**
  * Build the full allowlist at module load time.
  * In production, dev origins are excluded.
@@ -90,6 +94,11 @@ function isOriginAllowed(origin: string): boolean {
 
   // Allow Manus sandbox preview URLs in non-production
   if (process.env.NODE_ENV !== "production" && MANUS_SANDBOX_PATTERN.test(origin)) {
+    return true;
+  }
+
+  // Allow all Vercel domains (production + preview deployments)
+  if (VERCEL_PROD_PATTERN.test(origin) || VERCEL_PREVIEW_PATTERN.test(origin)) {
     return true;
   }
 
