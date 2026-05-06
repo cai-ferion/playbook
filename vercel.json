@@ -3,15 +3,10 @@
   "version": 2,
   "installCommand": "pnpm install",
   "buildCommand": "pnpm run build:vercel",
-  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/api/site",
       "destination": "/api/site/index.html"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/"
     },
     {
       "source": "/((?!api/).*)",
