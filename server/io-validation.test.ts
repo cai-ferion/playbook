@@ -232,7 +232,7 @@ describe("leaveCreateSchema", () => {
 describe("leavesBulkActionSchema", () => {
   it("accepts valid approve payload", () => {
     const result = leavesBulkActionSchema.safeParse({
-      leave_ids: [1, 2, 3],
+      leave_ids: ["LV-1777643694240-5E7X", "LV-1777645057625-47VB", "LV-MOMZ1Z7B"],
       action: "approve",
       tier: "tl",
       reviewer_name: "TL Arvin",
@@ -242,7 +242,7 @@ describe("leavesBulkActionSchema", () => {
 
   it("accepts valid reject payload with reason", () => {
     const result = leavesBulkActionSchema.safeParse({
-      leave_ids: [5],
+      leave_ids: ["LV-1777645084141-P4GJ"],
       action: "reject",
       tier: "om",
       rejection_reason: "Insufficient staffing",
@@ -261,7 +261,7 @@ describe("leavesBulkActionSchema", () => {
 
   it("rejects invalid action value", () => {
     const result = leavesBulkActionSchema.safeParse({
-      leave_ids: [1],
+      leave_ids: ["LV-123"],
       action: "cancel",
       tier: "tl",
     });
@@ -270,16 +270,16 @@ describe("leavesBulkActionSchema", () => {
 
   it("rejects invalid tier value", () => {
     const result = leavesBulkActionSchema.safeParse({
-      leave_ids: [1],
+      leave_ids: ["LV-123"],
       action: "approve",
       tier: "admin",
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects non-integer leave_ids", () => {
+  it("rejects empty string leave_ids", () => {
     const result = leavesBulkActionSchema.safeParse({
-      leave_ids: ["abc"],
+      leave_ids: [""],
       action: "approve",
       tier: "tl",
     });
@@ -288,7 +288,7 @@ describe("leavesBulkActionSchema", () => {
 
   it("rejects extra unknown fields (strict mode)", () => {
     const result = leavesBulkActionSchema.safeParse({
-      leave_ids: [1],
+      leave_ids: ["LV-123"],
       action: "approve",
       tier: "tl",
       hacker_field: "injection",

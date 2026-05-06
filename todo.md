@@ -4090,3 +4090,4 @@
 - [x] Add 'floor' column to io_employees (27th for RECALL_MEASUREMENT_CTR in Related PG, 28th for rest)
 - [x] Add Floor filter pill to Regimen filter bar
 - [x] Add Floor filter pill to Anchor Dashboard
+- [x] Fix Haven leave approval error: 'Invalid input: expected number, received string' when FLM approves

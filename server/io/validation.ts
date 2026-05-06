@@ -225,7 +225,7 @@ export const leaveCreateSchema = z.object({
 
 /** POST /api/io/leaves/bulk-action — approve/reject multiple leaves */
 export const leavesBulkActionSchema = z.object({
-  leave_ids: z.array(z.number().int().positive()).min(1, "leave_ids array must not be empty"),
+  leave_ids: z.array(z.string().min(1)).min(1, "leave_ids array must not be empty"),
   action: z.enum(["approve", "reject"], {
     error: "action must be 'approve' or 'reject'",
   }),
