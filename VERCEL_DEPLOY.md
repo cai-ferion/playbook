@@ -9,7 +9,7 @@ The Vercel deployment adapts the existing Express + React application into a ser
 │                    Vercel Edge Network                    │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
-│  CDN (public/)                Serverless Function (api/) │
+│  CDN (public/)                Serverless Function (index.ts) │
 │  ├── index.html (React SPA)  └── index.ts (Express)     │
 │  ├── assets/ (Vite chunks)       ├── /api/trpc/*        │
 │  └── api/site/ (static site)     ├── /api/io/*          │
@@ -74,7 +74,7 @@ Click **Deploy** in Vercel. The build process:
    - Builds React SPA with Vite → `public/`
    - Copies static site → `public/api/site/`
    - Generates cache manifest with content hashes
-3. Vercel bundles `api/index.ts` as a serverless function
+3. Vercel bundles `index.ts` as a serverless function
 
 ### 4. Verify Deployment
 
@@ -130,7 +130,6 @@ Configured in `vercel.json`:
 ## File Structure (Vercel-specific)
 
 ```
-api/
   index.ts              ← Serverless function entry point
 vercel.json             ← Routing, crons, function config
 scripts/

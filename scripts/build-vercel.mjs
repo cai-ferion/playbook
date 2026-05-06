@@ -15,7 +15,7 @@
  *         cache-manifest.json ← Pre-computed file hashes
  *
  * Vercel serves public/ as static CDN assets.
- * The api/index.ts file is bundled by Vercel as a serverless function.
+ * The index.ts file is bundled by Vercel as a serverless function.
  *
  * IMPORTANT: express.static() is ignored on Vercel.
  * Static site files go in public/api/site/ so Vercel CDN serves them
@@ -173,9 +173,9 @@ console.log("  public/index.html              → React SPA");
 console.log("  public/assets/                 → Vite JS/CSS chunks");
 console.log("  public/api/site/               → Static site (Playbook desktop)");
 console.log("  public/api/site/cache-manifest.json");
-console.log("  api/index.ts                   → Serverless function (bundled by Vercel)");
+console.log("  index.ts                   → Serverless function (bundled by Vercel)");
 console.log("");
 console.log("Vercel routing:");
 console.log("  /api/site/*  → CDN (public/api/site/*)");
-console.log("  /api/*       → Serverless function (api/index.ts)");
+console.log("  /api/*       → Serverless function (index.ts)");
 console.log("  /*           → SPA fallback (public/index.html)");

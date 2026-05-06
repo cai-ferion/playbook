@@ -15,22 +15,22 @@
 import express from "express";
 import compression from "compression";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "../server/_core/oauth.js";
-import { appRouter } from "../server/routers.js";
-import { createContext } from "../server/_core/context.js";
-import { registerModularIORoutes } from "../server/io/index.js";
-import { registerIOBackupRoutes } from "../server/io-backup.js";
-import { requireAuth } from "../server/middleware/requireAuth.js";
-import { refreshAdminOhrs } from "../server/config.js";
-import { corsMiddleware } from "../server/middleware/cors.js";
-import { rateLimitMiddleware } from "../server/middleware/rate-limit.js";
+import { registerOAuthRoutes } from "./server/_core/oauth.js";
+import { appRouter } from "./server/routers.js";
+import { createContext } from "./server/_core/context.js";
+import { registerModularIORoutes } from "./server/io/index.js";
+import { registerIOBackupRoutes } from "./server/io-backup.js";
+import { requireAuth } from "./server/middleware/requireAuth.js";
+import { refreshAdminOhrs } from "./server/config.js";
+import { corsMiddleware } from "./server/middleware/cors.js";
+import { rateLimitMiddleware } from "./server/middleware/rate-limit.js";
 import {
   observabilityMiddleware,
   getObservabilityMetrics,
   recordClientError,
   getClientErrors,
-} from "../server/middleware/observability.js";
-import type { ClientErrorReport } from "../server/middleware/observability.js";
+} from "./server/middleware/observability.js";
+import type { ClientErrorReport } from "./server/middleware/observability.js";
 
 const app = express();
 
@@ -91,7 +91,7 @@ registerIOBackupRoutes(app);
 // The cron.schedule() calls inside registerAutoMailer are harmless no-ops in
 // serverless (they schedule but never fire since the process exits).
 // The HTTP POST endpoints it registers ARE useful for Vercel Cron triggers.
-import("../server/auto-mailer.js")
+import("./server/auto-mailer.js")
   .then(({ registerAutoMailer }) => {
     registerAutoMailer(app);
   })
@@ -104,8 +104,8 @@ app.post("/api/io/sync-roster", async (req, res) => {
   const actorOhr = req.headers["x-actor-ohr"] as string;
   if (!actorOhr) return res.status(403).json({ error: "Forbidden" });
   try {
-    const { getDb } = await import("../server/db.js");
-    const { ioPermissions } = await import("../drizzle/schema.js");
+    const { getDb } = await import("./server/db.js");
+    const { ioPermissions } = await import("./drizzle/schema.js");
     const { eq, and } = await import("drizzle-orm");
     const db = await getDb();
     if (db) {
@@ -121,7 +121,7 @@ app.post("/api/io/sync-roster", async (req, res) => {
       if (!perm || !perm.granted)
         return res.status(403).json({ error: "Permission denied" });
     }
-    const { runRosterSync } = await import("../server/roster-sync.js");
+    const { runRosterSync } = await import("./server/roster-sync.js");
     const result = await runRosterSync("manual");
     res.json(result);
   } catch (e: any) {
@@ -133,7 +133,7 @@ app.post("/api/io/sync-attendance", async (req, res) => {
   const actorOhr = req.headers["x-actor-ohr"] as string;
   if (!actorOhr) return res.status(403).json({ error: "Forbidden" });
   try {
-    const { runAttendanceSync } = await import("../server/gsheets-sync.js");
+    const { runAttendanceSync } = await import("./server/gsheets-sync.js");
     const result = await runAttendanceSync(`manual (${actorOhr})`);
     res.json(result);
   } catch (e: any) {
@@ -153,7 +153,7 @@ app.get("/api/cron/roster-sync", async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   try {
-    const { runRosterSync } = await import("../server/roster-sync.js");
+    const { runRosterSync } = await import("./server/roster-sync.js");
     const result = await runRosterSync("cron");
     res.json({ success: true, result });
   } catch (err: any) {
@@ -170,7 +170,7 @@ app.get("/api/cron/attendance-sync", async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   try {
-    const { runAttendanceSync } = await import("../server/gsheets-sync.js");
+    const { runAttendanceSync } = await import("./server/gsheets-sync.js");
     const result = await runAttendanceSync("vercel-cron");
     res.json({ success: true, result });
   } catch (err: any) {
