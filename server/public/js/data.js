@@ -530,7 +530,9 @@ let employeeLookup = {};
 async function loadEmployeeLookup() {
   // Use slim endpoint — 8 fields instead of 41, ~60% smaller payload
   const resp = await fetch(`${IO_API_BASE}/employees/slim`);
+  if (!resp.ok) throw new Error(`Employee lookup failed: ${resp.status}`);
   const allEmployees = await resp.json();
+  if (!Array.isArray(allEmployees)) throw new Error('Employee lookup returned unexpected response');
   employeeLookup = {};
   for (const emp of allEmployees) {
     employeeLookup[emp.ohr_id] = emp;
