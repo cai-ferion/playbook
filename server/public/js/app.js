@@ -414,9 +414,9 @@ async function loginAsEmployee(emp) {
     fetch('/api/io/config/admin-ohrs')
       .then(r => r.json()).catch(() => ({ admin_ohrs: ['740045023', '740044909'], owner_ohr: '740045023' })),
     // 3. Employee lookup (slim)
-    loadEmployeeLookup(),
+    loadEmployeeLookup().catch(err => { throw new Error('Failed to load employee data: ' + err.message); }),
     // 4. Today's attendance
-    fetchRecordsDirect(today, today)
+    fetchRecordsDirect(today, today).catch(err => { throw new Error('Failed to load attendance data: ' + err.message); })
   ]);
 
   // Apply permissions
@@ -567,7 +567,8 @@ async function handleLogin() {
 
     await loginAsEmployee(emp);
   } catch (err) {
-    errorEl.textContent = 'Network error. Please try again.';
+    console.error('[Login] Error during login:', err);
+    errorEl.textContent = (err && err.message) ? err.message : 'Network error. Please try again.';
     setLoginLoading(false);
   }
 }

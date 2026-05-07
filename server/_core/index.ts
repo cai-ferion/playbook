@@ -13,7 +13,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerModularIORoutes } from "../io/index.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
-import { requireAuth } from "../middleware/requireAuth.js";
+// requireAuth is used by tRPC context (context.ts), not directly here
 import { registerAutoMailer } from "../auto-mailer.js";
 
 import { initAttendanceSyncCron, runAttendanceSync } from "../gsheets-sync.js";
@@ -64,9 +64,10 @@ async function startServer() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
 
-  // IO Operations API routes — all protected by session auth
-  app.use('/api/io', requireAuth);
-  // All 20 domain modules served via single barrel router
+  // IO routes — no blanket requireAuth here.
+  // The static site uses OHR-based login (x-actor-ohr header), NOT JWT sessions.
+  // Individual route handlers use requireActor middleware for write operations.
+  // JWT requireAuth is only for the tRPC/React (Compass) layer.
   registerModularIORoutes(app);
   registerIOBackupRoutes(app);
 
