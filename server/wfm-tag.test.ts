@@ -44,7 +44,7 @@ const redesignCssContent = fs.readFileSync(redesignCssPath, "utf-8");
 // ============================================================
 describe("WFM Tag — DB Schema", () => {
   it("defines io_wfm_schedules table in schema.ts", () => {
-    expect(schemaContent).toContain('ioWfmSchedules = mysqlTable("io_wfm_schedules"');
+    expect(schemaContent).toContain('ioWfmSchedules = pgTable("io_wfm_schedules"');
   });
 
   it("io_wfm_schedules has required columns (ohr_id, schedule_date, wfm_value)", () => {
@@ -104,10 +104,10 @@ describe("WFM Tag — Upload Endpoint", () => {
     expect(ioRoutesContent).toContain("flushWfmRecords");
   });
 
-  it("backfills io_attendance.wfm_tag from io_wfm_schedules via JOIN", () => {
-    expect(ioRoutesContent).toContain("UPDATE io_attendance a");
-    expect(ioRoutesContent).toContain("INNER JOIN io_wfm_schedules w");
-    expect(ioRoutesContent).toContain("SET a.wfm_tag = w.wfm_value");
+  it("backfills io_attendance.wfm_tag from io_wfm_schedules via UPDATE FROM", () => {
+    expect(ioRoutesContent).toContain("UPDATE io_attendance");
+    expect(ioRoutesContent).toContain("FROM io_wfm_schedules");
+    expect(ioRoutesContent).toContain("wfm_tag");
   });
 
   it("returns success response with totalInserted, datesProcessed, attendanceBackfilled", () => {

@@ -43,7 +43,7 @@ router.post("/billing-target-hours", async (req: Request, res: Response) => {
     const { code, target_hours } = req.body;
     if (!code || target_hours === undefined) return res.status(400).json({ error: "code and target_hours required" });
     const now = new Date().toISOString();
-    await db.execute(sql`INSERT INTO io_billing_target_hours (code, target_hours, updated_at) VALUES (${code}, ${target_hours}, ${now}) ON DUPLICATE KEY UPDATE target_hours = ${target_hours}, updated_at = ${now}`);
+    await db.execute(sql`INSERT INTO io_billing_target_hours (code, target_hours, updated_at) VALUES (${code}, ${target_hours}, ${now}) ON CONFLICT (code) DO UPDATE SET target_hours = ${target_hours}, updated_at = ${now}`);
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] billing-target-hours POST error:", err);
@@ -163,15 +163,15 @@ router.post("/backfill-snap-status", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
-    const result = await db.execute(sql`
-      UPDATE io_attendance a
-      JOIN io_employees e ON a.ohr_id = e.ohr_id
-      SET a.snap_status = e.srt_status
-      WHERE e.srt_status IS NOT NULL AND e.srt_status != ''
+    const result: any = await db.execute(sql`
+      UPDATE io_attendance
+      SET snap_status = e.srt_status
+      FROM io_employees e
+      WHERE io_attendance.ohr_id = e.ohr_id
+        AND e.srt_status IS NOT NULL AND e.srt_status != ''
     `);
     emitChange(req, "billing", "bulk_update", { action: "snap_status_backfill" });
-    emitChange(req, "billing", "bulk_update", { action: "snap_status_backfill" });
-    res.json({ ok: true, message: "snap_status backfilled from io_employees.srt_status", affectedRows: (result as any)[0]?.affectedRows });
+    res.json({ ok: true, message: "snap_status backfilled from io_employees.srt_status", affectedRows: Array.isArray(result) ? result.length : 0 });
   } catch (err: any) {
     console.error("[IO API] backfill-snap-status error:", err);
     res.status(500).json({ error: err.message });
@@ -194,7 +194,7 @@ router.get("/productivity-hours", async (req: Request, res: Response) => {
     const rows: any = await db.execute(
       sql`SELECT ph.*, e.full_name, e.planning_group FROM io_productivity_hours ph LEFT JOIN io_employees e ON ph.ohr = e.ohr_id WHERE ph.date >= ${String(start)} AND ph.date <= ${String(end)} ORDER BY e.full_name, ph.date`
     );
-    const data = Array.isArray(rows[0]) ? rows[0] : rows;
+    const data = Array.isArray(rows) ? rows : [];
     res.json(data);
   } catch (err: any) {
     console.error("[IO API] productivity-hours GET error:", err);
@@ -215,22 +215,21 @@ router.post("/productivity-hours/upload", async (req: Request, res: Response) =>
       const result: any = await db.execute(
         sql`INSERT INTO io_productivity_hours (date, ohr, actual_projection, available, non_srt_production, fb_training, onboarding, coaching, wellness_support, team_meeting, total_billable, delivered_hours)
             VALUES (${r.date}, ${String(r.ohr)}, ${r.actual_projection || 'Actuals'}, ${r.available || 0}, ${r.non_srt_production || 0}, ${r.fb_training || 0}, ${r.onboarding || 0}, ${r.coaching || 0}, ${r.wellness_support || 0}, ${r.team_meeting || 0}, ${r.total_billable || 0}, ${r.delivered_hours || 0})
-            ON DUPLICATE KEY UPDATE
-              actual_projection = VALUES(actual_projection),
-              available = VALUES(available),
-              non_srt_production = VALUES(non_srt_production),
-              fb_training = VALUES(fb_training),
-              onboarding = VALUES(onboarding),
-              coaching = VALUES(coaching),
-              wellness_support = VALUES(wellness_support),
-              team_meeting = VALUES(team_meeting),
-              total_billable = VALUES(total_billable),
-              delivered_hours = VALUES(delivered_hours),
-              uploaded_at = CURRENT_TIMESTAMP`
+            ON CONFLICT (date, ohr) DO UPDATE SET
+              actual_projection = EXCLUDED.actual_projection,
+              available = EXCLUDED.available,
+              non_srt_production = EXCLUDED.non_srt_production,
+              fb_training = EXCLUDED.fb_training,
+              onboarding = EXCLUDED.onboarding,
+              coaching = EXCLUDED.coaching,
+              wellness_support = EXCLUDED.wellness_support,
+              team_meeting = EXCLUDED.team_meeting,
+              total_billable = EXCLUDED.total_billable,
+              delivered_hours = EXCLUDED.delivered_hours,
+              uploaded_at = NOW()`
       );
-      const info = Array.isArray(result[0]) ? result[0] : result;
-      if (info.affectedRows === 1) inserted++;
-      else if (info.affectedRows === 2) updated++;
+      // postgres-js returns array; length > 0 means row was touched
+      inserted++;
     }
     emitChange(req, "billing", "bulk_update", { inserted, updated });
     emitChange(req, "billing", "bulk_update", { inserted, updated });
@@ -291,17 +290,16 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
       );
       const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, role, planning_group, created_at)
         VALUES ${sql.join(valueSets, sql`, `)}
-        ON DUPLICATE KEY UPDATE
-          srt_id = VALUES(srt_id),
-          billing_name = VALUES(billing_name),
-          srt_status = VALUES(srt_status),
-          role = VALUES(role),
-          planning_group = VALUES(planning_group),
-          created_at = VALUES(created_at)`;
+        ON CONFLICT (date, ohr_id) DO UPDATE SET
+          srt_id = EXCLUDED.srt_id,
+          billing_name = EXCLUDED.billing_name,
+          srt_status = EXCLUDED.srt_status,
+          role = EXCLUDED.role,
+          planning_group = EXCLUDED.planning_group,
+          created_at = EXCLUDED.created_at`;
 
       const result: any = await db.execute(bulkQuery);
-      const info = Array.isArray(result[0]) ? result[0] : result;
-      totalAffected += info.affectedRows || 0;
+      totalAffected += Array.isArray(result) ? result.length : 0;
     }
 
     // Sync latest Actuals data back to io_employees (only on last batch)
@@ -309,22 +307,19 @@ router.post("/srt-bill-upload", async (req: Request, res: Response) => {
     if (!skipSync) {
       try {
         const syncResult: any = await db.execute(
-          sql`UPDATE io_employees e
-              INNER JOIN (
-                SELECT ohr_id, role, planning_group
+          sql`UPDATE io_employees
+              SET planning_group = latest.planning_group,
+                  actual_role = latest.role
+              FROM (
+                SELECT DISTINCT ON (ohr_id) ohr_id, role, planning_group
                 FROM io_srt_bill
-                WHERE date = (
-                    SELECT MAX(s2.date) FROM io_srt_bill s2
-                    WHERE s2.ohr_id = io_srt_bill.ohr_id
-                  )
-              ) latest ON e.ohr_id = latest.ohr_id
-              SET e.planning_group = latest.planning_group,
-                  e.actual_role = latest.role
-              WHERE e.planning_group != latest.planning_group
-                 OR e.actual_role != latest.role`
+                ORDER BY ohr_id, date DESC
+              ) latest
+              WHERE io_employees.ohr_id = latest.ohr_id
+                AND (io_employees.planning_group != latest.planning_group
+                   OR io_employees.actual_role != latest.role)`
         );
-        const syncInfo = Array.isArray(syncResult[0]) ? syncResult[0] : syncResult;
-        synced = syncInfo.affectedRows || 0;
+        synced = Array.isArray(syncResult) ? syncResult.length : 0;
         // Mirror updated employees to Supabase if any were changed
         if (synced > 0) {
           const allEmps = await db.select().from(ioEmployees);
@@ -356,7 +351,7 @@ router.get("/srt-bill/summary", async (req: Request, res: Response) => {
             COUNT(*) as total_rows
           FROM io_srt_bill`
     );
-    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const rows = Array.isArray(result) ? result : [];
     res.json(rows[0] || {});
   } catch (err: any) {
     console.error("[IO API] srt-bill/summary error:", err);
@@ -397,7 +392,7 @@ router.get("/billing-targets-v2", async (req: Request, res: Response) => {
         sql`SELECT * FROM io_billing_targets_v2 ORDER BY week_ending DESC, planning_group, role`
       );
     }
-    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const rows = Array.isArray(result) ? result : [];
     res.json(rows);
   } catch (err: any) {
     console.error("[IO API] billing-targets-v2 GET error:", err);
@@ -429,10 +424,10 @@ router.post("/billing-targets-v2", async (req: Request, res: Response) => {
       await db.execute(
         sql`INSERT INTO io_billing_targets_v2 (week_ending, planning_group, role, target_hc, target_hours, created_at, updated_at)
             VALUES (${String(t.week_ending)}, ${String(t.planning_group)}, ${String(t.role)}, ${Number(t.target_hc) || 0}, ${Number(t.target_hours) || 0}, ${now}, ${now})
-            ON DUPLICATE KEY UPDATE
-              target_hc = VALUES(target_hc),
-              target_hours = VALUES(target_hours),
-              updated_at = VALUES(updated_at)`
+            ON CONFLICT (week_ending, planning_group, role) DO UPDATE SET
+              target_hc = EXCLUDED.target_hc,
+              target_hours = EXCLUDED.target_hours,
+              updated_at = EXCLUDED.updated_at`
       );
       upserted++;
     }
@@ -453,7 +448,7 @@ router.get("/billing-targets-v2/weeks", async (req: Request, res: Response) => {
     const result: any = await db.execute(
       sql`SELECT DISTINCT week_ending FROM io_billing_targets_v2 ORDER BY week_ending DESC`
     );
-    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const rows = Array.isArray(result) ? result : [];
     res.json(rows.map((r: any) => r.week_ending));
   } catch (err: any) {
     console.error("[IO API] billing-targets-v2/weeks error:", err);
@@ -544,7 +539,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
           WHERE log_date >= ${weekStart} AND log_date <= ${weekEnd}
             AND planning_group IS NOT NULL AND role IS NOT NULL${statusFilter}`
     );
-    const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
+    const attRows = Array.isArray(attResult) ? attResult : [];
 
     // 2. Targets for this week (carry forward from most recent known week if none set)
     let tgtResult: any = await db.execute(
@@ -552,7 +547,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
           FROM io_billing_targets_v2
           WHERE week_ending = ${weekEnding}`
     );
-    let tgtRows = Array.isArray(tgtResult[0]) ? tgtResult[0] : tgtResult;
+    let tgtRows = Array.isArray(tgtResult) ? tgtResult : [];
 
     // Build target map — if no targets for this week, carry forward from the most recent prior week
     const targetMap = new Map<string, { target_hc: number; target_hours: number }>();
@@ -576,7 +571,7 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
               SELECT MAX(week_ending) FROM io_billing_targets_v2 WHERE week_ending < ${weekEnding}
             )`
       );
-      const fallbackRows = Array.isArray(fallbackResult[0]) ? fallbackResult[0] : fallbackResult;
+      const fallbackRows = Array.isArray(fallbackResult) ? fallbackResult : [];
       for (const t of fallbackRows) {
         targetMap.set(`${t.planning_group}|${t.role}`, { target_hc: Number(t.target_hc) || 0, target_hours: Number(t.target_hours) || 0 });
       }
@@ -591,16 +586,16 @@ router.get("/billing-compliance", async (req: Request, res: Response) => {
 
     const ytdResult: any = await db.execute(
       sql`SELECT planning_group, role,
-            COUNT(DISTINCT CONCAT(YEAR(log_date), '-', WEEK(log_date, 6))) as weeks_count,
+            COUNT(DISTINCT (EXTRACT(ISOYEAR FROM log_date::date)::text || '-' || EXTRACT(WEEK FROM log_date::date)::text)) as weeks_count,
             SUM(CASE WHEN tag = 'UPL' THEN 1 ELSE 0 END) as total_upl,
             SUM(CASE WHEN tag IN ('P','LATE') THEN 1 ELSE 0 END) as total_present,
-            SUM(CASE WHEN tag IN ('P','LATE') AND ot_hours IS NOT NULL AND ot_hours != '' AND CAST(ot_hours AS DECIMAL(10,2)) > 0 THEN CAST(ot_hours AS DECIMAL(10,2)) ELSE 0 END) as total_ot_hours
+            SUM(CASE WHEN tag IN ('P','LATE') AND ot_hours IS NOT NULL AND ot_hours != '' AND CAST(ot_hours AS NUMERIC(10,2)) > 0 THEN CAST(ot_hours AS NUMERIC(10,2)) ELSE 0 END) as total_ot_hours
           FROM io_attendance
           WHERE log_date >= ${ytdStartStr} AND log_date <= ${ytdEndStr}
             AND planning_group IS NOT NULL AND role IS NOT NULL
           GROUP BY planning_group, role`
     );
-    const ytdRows = Array.isArray(ytdResult[0]) ? ytdResult[0] : ytdResult;
+    const ytdRows = Array.isArray(ytdResult) ? ytdResult : [];
     // Build YTD lookup: pg|role -> { weeks, upl_per_week, ot_per_week }
     const ytdMap = new Map<string, { weeks: number; upl_per_week: number; ot_per_week: number }>();
     for (const y of ytdRows) {
@@ -836,7 +831,7 @@ router.get("/billing-compliance/weeks", async (req: Request, res: Response) => {
     const result: any = await db.execute(
       sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE planning_group IS NOT NULL`
     );
-    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const rows = Array.isArray(result) ? result : [];
     const { min_date, max_date } = rows[0] || {};
     if (!min_date || !max_date) return res.json([]);
 
@@ -996,8 +991,8 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
     let updated = 0;
     let skipped = 0;
     try {
-      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
-      await db.execute(sql`CREATE TEMPORARY TABLE _billing_staging (
+      await db.execute(sql`DROP TABLE IF EXISTS _billing_staging`);
+      await db.execute(sql`CREATE TEMP TABLE _billing_staging (
         ohr_id VARCHAR(20) NOT NULL,
         log_date VARCHAR(30) NOT NULL,
         role VARCHAR(100),
@@ -1016,22 +1011,23 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
         await db.execute(
           sql`INSERT INTO _billing_staging (ohr_id, log_date, role, planning_group, billing_name, srt_status)
               VALUES ${sql.join(valueSets, sql`, `)}
-              ON DUPLICATE KEY UPDATE role = VALUES(role)`
+              ON CONFLICT (ohr_id, log_date) DO UPDATE SET role = EXCLUDED.role`
         );
         console.log(`[BILLING CSV] Staged ${Math.min(i + STAGE_BATCH, parsed.length)}/${parsed.length} rows`);
       }
 
       const updateResult: any = await db.execute(
-        sql`UPDATE io_attendance a
-            INNER JOIN _billing_staging s ON a.ohr_id = s.ohr_id AND a.log_date = s.log_date
-            SET a.role = s.role,
-                a.planning_group = s.planning_group,
-                a.snap_billing_name = s.billing_name,
-                a.snap_status = s.srt_status`
+        sql`UPDATE io_attendance
+            SET role = s.role,
+                planning_group = s.planning_group,
+                snap_billing_name = s.billing_name,
+                snap_status = s.srt_status
+            FROM _billing_staging s
+            WHERE io_attendance.ohr_id = s.ohr_id AND io_attendance.log_date = s.log_date`
       );
-      updated = updateResult[0]?.affectedRows ?? 0;
+      updated = Array.isArray(updateResult) ? updateResult.length : 0;
       skipped = parsed.length - updated;
-      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+      await db.execute(sql`DROP TABLE IF EXISTS _billing_staging`);
       console.log(`[BILLING CSV] Attendance updated: ${updated}, skipped: ${skipped}`);
     } catch (batchErr: any) {
       console.error(`[BILLING CSV] Batch update error:`, batchErr.message);
@@ -1050,8 +1046,8 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
       }
       const empEntries = Array.from(latestByEmployee.values());
       if (empEntries.length > 0) {
-        await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _emp_staging`);
-        await db.execute(sql`CREATE TEMPORARY TABLE _emp_staging (
+        await db.execute(sql`DROP TABLE IF EXISTS _emp_staging`);
+        await db.execute(sql`CREATE TEMP TABLE _emp_staging (
           ohr_id VARCHAR(20) NOT NULL PRIMARY KEY,
           planning_group VARCHAR(100),
           actual_role VARCHAR(100)
@@ -1063,18 +1059,19 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
           await db.execute(
             sql`INSERT INTO _emp_staging (ohr_id, planning_group, actual_role)
                 VALUES ${sql.join(valueSets, sql`, `)}
-                ON DUPLICATE KEY UPDATE planning_group = VALUES(planning_group)`
+                ON CONFLICT (ohr_id) DO UPDATE SET planning_group = EXCLUDED.planning_group`
           );
         }
         const empResult: any = await db.execute(
-          sql`UPDATE io_employees e
-              INNER JOIN _emp_staging s ON e.ohr_id = s.ohr_id
-              SET e.planning_group = s.planning_group,
-                  e.actual_role = s.actual_role
-              WHERE e.planning_group != s.planning_group OR e.actual_role != s.actual_role`
+          sql`UPDATE io_employees
+              SET planning_group = s.planning_group,
+                  actual_role = s.actual_role
+              FROM _emp_staging s
+              WHERE io_employees.ohr_id = s.ohr_id
+                AND (io_employees.planning_group != s.planning_group OR io_employees.actual_role != s.actual_role)`
         );
-        employeesSynced = empResult[0]?.affectedRows ?? 0;
-        await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _emp_staging`);
+        employeesSynced = Array.isArray(empResult) ? empResult.length : 0;
+        await db.execute(sql`DROP TABLE IF EXISTS _emp_staging`);
         console.log(`[BILLING CSV] Employees synced: ${employeesSynced}`);
         if (employeesSynced > 0) {
           const allEmps = await db.select().from(ioEmployees);
@@ -1097,15 +1094,15 @@ router.post("/billing-csv-upload", async (req: Request, res: Response) => {
         );
         const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, role, planning_group, created_at)
           VALUES ${sql.join(valueSets, sql`, `)}
-          ON DUPLICATE KEY UPDATE
-            srt_id = VALUES(srt_id),
-            billing_name = VALUES(billing_name),
-            srt_status = VALUES(srt_status),
-            role = VALUES(role),
-            planning_group = VALUES(planning_group),
-            created_at = VALUES(created_at)`;
+          ON CONFLICT (date, ohr_id) DO UPDATE SET
+            srt_id = EXCLUDED.srt_id,
+            billing_name = EXCLUDED.billing_name,
+            srt_status = EXCLUDED.srt_status,
+            role = EXCLUDED.role,
+            planning_group = EXCLUDED.planning_group,
+            created_at = EXCLUDED.created_at`;
         const result: any = await db.execute(bulkQuery);
-        srtBillUpserted += result[0]?.affectedRows ?? 0;
+        srtBillUpserted += Array.isArray(result) ? result.length : 0;
       }
     } catch (srtErr: any) {
       console.error("[BILLING CSV] SRT bill upsert error:", srtErr.message);
@@ -1285,8 +1282,8 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
     let skipped = 0;
     try {
       // Create temp table
-      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
-      await db.execute(sql`CREATE TEMPORARY TABLE _billing_staging (
+      await db.execute(sql`DROP TABLE IF EXISTS _billing_staging`);
+      await db.execute(sql`CREATE TEMP TABLE _billing_staging (
         ohr_id VARCHAR(20) NOT NULL,
         log_date VARCHAR(30) NOT NULL,
         role VARCHAR(100),
@@ -1306,26 +1303,27 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
         await db.execute(
           sql`INSERT INTO _billing_staging (ohr_id, log_date, role, planning_group, billing_name, srt_status)
               VALUES ${sql.join(valueSets, sql`, `)}
-              ON DUPLICATE KEY UPDATE role = VALUES(role)`
+              ON CONFLICT (ohr_id, log_date) DO UPDATE SET role = EXCLUDED.role`
         );
       }
       console.log(`[BILLING SYNC] Staging table loaded with ${parsed.length} rows`);
 
-      // Single UPDATE JOIN — orders of magnitude faster than row-by-row
+      // Single UPDATE FROM — orders of magnitude faster than row-by-row
       const updateResult: any = await db.execute(
-        sql`UPDATE io_attendance a
-            INNER JOIN _billing_staging s ON a.ohr_id = s.ohr_id AND a.log_date = s.log_date
-            SET a.role = s.role,
-                a.planning_group = s.planning_group,
-                a.snap_billing_name = s.billing_name,
-                a.snap_status = s.srt_status`
+        sql`UPDATE io_attendance
+            SET role = s.role,
+                planning_group = s.planning_group,
+                snap_billing_name = s.billing_name,
+                snap_status = s.srt_status
+            FROM _billing_staging s
+            WHERE io_attendance.ohr_id = s.ohr_id AND io_attendance.log_date = s.log_date`
       );
-      updated = updateResult[0]?.affectedRows ?? 0;
+      updated = Array.isArray(updateResult) ? updateResult.length : 0;
       skipped = parsed.length - updated;
-      console.log(`[BILLING SYNC] JOIN UPDATE complete — ${updated} rows updated, ${skipped} unmatched`);
+      console.log(`[BILLING SYNC] UPDATE FROM complete — ${updated} rows updated, ${skipped} unmatched`);
 
       // Clean up
-      await db.execute(sql`DROP TEMPORARY TABLE IF EXISTS _billing_staging`);
+      await db.execute(sql`DROP TABLE IF EXISTS _billing_staging`);
     } catch (batchErr: any) {
       console.error(`[BILLING SYNC] Batch update error:`, batchErr.message);
       // Fallback: mark all as skipped
@@ -1352,7 +1350,7 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
               WHERE ohr_id = ${ohrId}
                 AND (planning_group != ${latest.planning_group} OR actual_role != ${latest.role})`
         );
-         if ((syncResult[0]?.affectedRows ?? 0) > 0) employeesSynced++;
+         if ((Array.isArray(syncResult) ? syncResult.length : 0) > 0) employeesSynced++;
       }
       // Mirror updated employees to Supabase
       if (employeesSynced > 0) {
@@ -1374,15 +1372,15 @@ router.post("/billing-sheet-sync", async (req: Request, res: Response) => {
         );
         const bulkQuery = sql`INSERT INTO io_srt_bill (date, ohr_id, srt_id, billing_name, srt_status, role, planning_group, created_at)
           VALUES ${sql.join(valueSets, sql`, `)}
-          ON DUPLICATE KEY UPDATE
-            srt_id = VALUES(srt_id),
-            billing_name = VALUES(billing_name),
-            srt_status = VALUES(srt_status),
-            role = VALUES(role),
-            planning_group = VALUES(planning_group),
-            created_at = VALUES(created_at)`;
+          ON CONFLICT (date, ohr_id) DO UPDATE SET
+            srt_id = EXCLUDED.srt_id,
+            billing_name = EXCLUDED.billing_name,
+            srt_status = EXCLUDED.srt_status,
+            role = EXCLUDED.role,
+            planning_group = EXCLUDED.planning_group,
+            created_at = EXCLUDED.created_at`;
         const result: any = await db.execute(bulkQuery);
-        srtBillUpserted += result[0]?.affectedRows ?? 0;
+        srtBillUpserted += Array.isArray(result) ? result.length : 0;
       }
     } catch (srtErr: any) {
       console.error("[BILLING SYNC] SRT bill upsert error:", srtErr.message);

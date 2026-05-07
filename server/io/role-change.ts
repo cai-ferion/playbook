@@ -89,7 +89,7 @@ router.get("/deficit-analysis", async (req: Request, res: Response) => {
           WHERE log_date >= ${weekStart} AND log_date <= ${weekEnd}
             AND planning_group IS NOT NULL AND role IS NOT NULL`
     );
-    const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
+    const attRows = Array.isArray(attResult) ? attResult : [];
 
     // Targets — carry forward if none for this week
     let tgtResult: any = await db.execute(
@@ -97,7 +97,7 @@ router.get("/deficit-analysis", async (req: Request, res: Response) => {
           FROM io_billing_targets_v2
           WHERE week_ending = ${weekEnding}`
     );
-    let tgtRows = Array.isArray(tgtResult[0]) ? tgtResult[0] : tgtResult;
+    let tgtRows = Array.isArray(tgtResult) ? tgtResult : [];
     const targetMap = new Map<string, { target_hc: number; target_hours: number }>();
     for (const t of tgtRows) {
       targetMap.set(`${t.planning_group}|${t.role}`, {
@@ -117,7 +117,7 @@ router.get("/deficit-analysis", async (req: Request, res: Response) => {
               SELECT MAX(week_ending) FROM io_billing_targets_v2 WHERE week_ending < ${weekEnding}
             )`
       );
-      const fallbackRows = Array.isArray(fallbackResult[0]) ? fallbackResult[0] : fallbackResult;
+      const fallbackRows = Array.isArray(fallbackResult) ? fallbackResult : [];
       for (const t of fallbackRows) {
         targetMap.set(`${t.planning_group}|${t.role}`, {
           target_hc: Number(t.target_hc) || 0,
@@ -230,7 +230,7 @@ router.get("/available-staff", async (req: Request, res: Response) => {
             AND employement_status = 'Active'
           ORDER BY actual_role, full_name`
     );
-    const staffRows = Array.isArray(staffResult[0]) ? staffResult[0] : staffResult;
+    const staffRows = Array.isArray(staffResult) ? staffResult : [];
 
     if (staffRows.length === 0) {
       return res.json({ staff: [] });
@@ -245,7 +245,7 @@ router.get("/available-staff", async (req: Request, res: Response) => {
           WHERE ohr_id IN (${sql.join(staffOhrs.map((o: string) => sql`${o}`), sql`, `)})
             AND log_date >= ${dateFrom} AND log_date <= ${dateTo}`
     );
-    const attRows = Array.isArray(attResult[0]) ? attResult[0] : attResult;
+    const attRows = Array.isArray(attResult) ? attResult : [];
 
     // Build per-OHR attendance map
     const attMap = new Map<string, any[]>();
@@ -261,7 +261,7 @@ router.get("/available-staff", async (req: Request, res: Response) => {
           WHERE ohr_id IN (${sql.join(staffOhrs.map((o: string) => sql`${o}`), sql`, `)})
             AND schedule_date >= ${dateFrom} AND schedule_date <= ${dateTo}`
     );
-    const wfmRows = Array.isArray(wfmResult[0]) ? wfmResult[0] : wfmResult;
+    const wfmRows = Array.isArray(wfmResult) ? wfmResult : [];
     const wfmMap = new Map<string, any[]>();
     for (const w of wfmRows as any[]) {
       if (!wfmMap.has(w.ohr_id)) wfmMap.set(w.ohr_id, []);
@@ -275,7 +275,7 @@ router.get("/available-staff", async (req: Request, res: Response) => {
           WHERE week_ending = ${weekEnding}
             AND ohr_id IN (${sql.join(staffOhrs.map((o: string) => sql`${o}`), sql`, `)})`
     );
-    const existingRows = Array.isArray(existingResult[0]) ? existingResult[0] : existingResult;
+    const existingRows = Array.isArray(existingResult) ? existingResult : [];
     const existingMap = new Map<string, any[]>();
     for (const e of existingRows as any[]) {
       if (!existingMap.has(e.ohr_id)) existingMap.set(e.ohr_id, []);
@@ -388,7 +388,7 @@ router.post("/generate", validate(roleChangeGenerateSchema), async (req: Request
           FROM io_employees
           WHERE ohr_id IN (${sql.join(ohrs.map((o: string) => sql`${o}`), sql`, `)})`
     );
-    const empRows = Array.isArray(empResult[0]) ? empResult[0] : empResult;
+    const empRows = Array.isArray(empResult) ? empResult : [];
     const empMap = new Map<string, any>();
     for (const e of empRows as any[]) {
       empMap.set(e.ohr_id, e);
@@ -428,7 +428,7 @@ router.post("/generate", validate(roleChangeGenerateSchema), async (req: Request
               AND log_date >= ${a.date_from}
               AND log_date <= ${a.date_to}`
       );
-      const rowsUpdated = updateResult[0]?.affectedRows ?? 0;
+      const rowsUpdated = Array.isArray(updateResult) ? updateResult.length : 0;
 
       results.push({
         ohr_id: a.ohr_id,

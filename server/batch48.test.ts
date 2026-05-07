@@ -71,7 +71,7 @@ describe("Batch 48 — Filter fix, Session Goals, CAP system, NTE", () => {
     });
 
     it("has ioCoachingNte table in schema", () => {
-      expect(schema).toContain('ioCoachingNte = mysqlTable("io_coaching_nte"');
+      expect(schema).toContain('ioCoachingNte = pgTable("io_coaching_nte"');
     });
 
     it("NTE schema has all required fields", () => {

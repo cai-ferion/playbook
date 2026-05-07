@@ -1,1 +1,0 @@
-ALTER TABLE `io_attendance` ADD `batch_id` varchar(50);

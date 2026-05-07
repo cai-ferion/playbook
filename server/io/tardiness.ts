@@ -174,7 +174,7 @@ router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Re
         sql`SELECT ohr_id, full_name, supervisor_name, planning_group, actual_role, shift_time, department
             FROM io_employees WHERE ohr_id IN (${sql.raw(ohrList.map(o => `'${o}'`).join(","))})`
       );
-      const empData = Array.isArray(empRows[0]) ? empRows[0] : empRows;
+      const empData = Array.isArray(empRows) ? empRows : [];
       for (const e of empData) empMap.set(e.ohr_id, e);
     }
 
@@ -213,7 +213,7 @@ router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Re
       const existing: any = await db.execute(
         sql`SELECT id FROM io_tardiness WHERE ohr_id = ${ohr} AND date = ${dateNorm} LIMIT 1`
       );
-      const existingRows = Array.isArray(existing[0]) ? existing[0] : existing;
+      const existingRows = Array.isArray(existing) ? existing : [];
       if (existingRows.length > 0) { skipped++; continue; }
 
       // Enrich from io_employees
@@ -312,7 +312,7 @@ router.get("/tardiness", async (req: Request, res: Response) => {
       });
     }
     const result: any = await db.execute(sql.raw(stmt));
-    const data = Array.isArray(result[0]) ? result[0] : result;
+    const data = Array.isArray(result) ? result : [];
 
     // Provide filter metadata for dropdown population (distinct values from full dataset)
     let filters: any = undefined;
@@ -322,7 +322,7 @@ router.get("/tardiness", async (req: Request, res: Response) => {
       `SELECT DISTINCT week_ending FROM io_tardiness WHERE week_ending IS NOT NULL AND week_ending != '' ORDER BY week_ending`
     ));
     // Sort by date descending (ISO YYYY-MM-DD format)
-    const weeks = (Array.isArray(weeksResult[0]) ? weeksResult[0] : weeksResult)
+    const weeks = (Array.isArray(weeksResult) ? weeksResult : [])
       .map((r: any) => r.week_ending)
       .sort((a: string, b: string) => b.localeCompare(a)); // ISO strings sort lexicographically
 
@@ -330,18 +330,18 @@ router.get("/tardiness", async (req: Request, res: Response) => {
     const pgsResult: any = await db.execute(sql.raw(
       `SELECT DISTINCT e.planning_group FROM io_tardiness t LEFT JOIN io_employees e ON t.ohr_id = e.ohr_id WHERE e.planning_group IS NOT NULL AND e.planning_group != '' ORDER BY e.planning_group`
     ));
-    const pgs = (Array.isArray(pgsResult[0]) ? pgsResult[0] : pgsResult).map((r: any) => r.planning_group);
+    const pgs = (Array.isArray(pgsResult) ? pgsResult : []).map((r: any) => r.planning_group);
 
     // Supervisors: use live data from io_employees for progressive cascade
     const supsResult: any = await db.execute(sql.raw(
       `SELECT DISTINCT e.supervisor_name FROM io_tardiness t LEFT JOIN io_employees e ON t.ohr_id = e.ohr_id WHERE e.supervisor_name IS NOT NULL AND e.supervisor_name != '' ORDER BY e.supervisor_name`
     ));
-    const sups = (Array.isArray(supsResult[0]) ? supsResult[0] : supsResult).map((r: any) => r.supervisor_name);
+    const sups = (Array.isArray(supsResult) ? supsResult : []).map((r: any) => r.supervisor_name);
 
     const shiftTypesResult: any = await db.execute(sql.raw(
       `SELECT DISTINCT shift_type FROM io_tardiness WHERE shift_type IS NOT NULL AND shift_type != '' ORDER BY shift_type`
     ));
-    const shiftTypes = (Array.isArray(shiftTypesResult[0]) ? shiftTypesResult[0] : shiftTypesResult).map((r: any) => r.shift_type);
+    const shiftTypes = (Array.isArray(shiftTypesResult) ? shiftTypesResult : []).map((r: any) => r.shift_type);
 
     filters = { weeks, planning_groups: pgs, supervisors: sups, shift_types: shiftTypes };
 
@@ -385,9 +385,9 @@ router.patch("/tardiness/bulk-validate", validate(tardinessBulkValidateSchema), 
       sql.raw(`UPDATE io_tardiness SET validation_status = '${validation_status}', validated_by = '${actorName.replace(/'/g, "''")}', validated_by_ohr = '${actorOhr}', validated_at = '${now}', remarks = ${remarks ? `'${String(remarks).replace(/'/g, "''")}' ` : 'NULL'} WHERE id IN (${idList.join(",")}) AND validation_status = 'Pending'`)
     );
 
-    const info = Array.isArray(result[0]) ? result[0] : result;
+    const rowCount = Array.isArray(result) ? result.length : 0;
     emitChange(req, "tardiness", "bulk_update", { count: idList.length });
-    res.json({ success: true, updated: info.affectedRows || idList.length, total: idList.length });
+    res.json({ success: true, updated: rowCount || idList.length, total: idList.length });
   } catch (err: any) {
     console.error("[IO API] tardiness bulk-validate error:", err);
     res.status(500).json({ error: err.message });
@@ -410,7 +410,7 @@ router.patch("/tardiness/:id", validate(tardinessUpdateSchema), async (req: Requ
 
     // Check current state
     const existing: any = await db.execute(sql`SELECT * FROM io_tardiness WHERE id = ${id}`);
-    const rows = Array.isArray(existing[0]) ? existing[0] : existing;
+    const rows = Array.isArray(existing) ? existing : [];
     if (rows.length === 0) return res.status(404).json({ error: "Item not found" });
 
     const item = rows[0];
@@ -470,7 +470,7 @@ router.get("/tardiness/export", async (req: Request, res: Response) => {
     const result: any = await db.execute(sql.raw(
       `SELECT ohr_id, employee_name, supervisor_name, planning_group, actual_role, date, roster_login, roster_logout, actual_login, actual_logout, tardiness_minutes, shift_type, week_ending, validation_status, validated_by, validated_at, remarks FROM io_tardiness ${whereClause} ORDER BY week_ending DESC, date DESC, employee_name ASC`
     ));
-    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const rows = Array.isArray(result) ? result : [];
 
     const csv = toCSV(rows);
     res.setHeader("Content-Type", "text/csv");

@@ -280,7 +280,7 @@ describe('Role Change Email Automation', () => {
     const schema = readFileSync(join(__dirname, '..', 'drizzle', 'schema.ts'), 'utf-8');
 
     it('defines ioRoleChanges table', () => {
-      expect(schema).toContain('export const ioRoleChanges = mysqlTable("io_role_changes"');
+      expect(schema).toContain('export const ioRoleChanges = pgTable("io_role_changes"');
     });
 
     it('has required columns', () => {

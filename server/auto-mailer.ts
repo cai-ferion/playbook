@@ -7,7 +7,8 @@
 
 import { Express } from "express";
 import cron from "node-cron";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { eq, and, inArray, sql, gte, lte, asc, ne, isNotNull } from "drizzle-orm";
 import { ioAttendance, ioEmployees, ioNotifications, ioLeaves, ioAuditLog, ioCoaching, ioCorrectiveActions, ioInsights } from "../drizzle/schema";
 import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "./config.js";
@@ -183,14 +184,15 @@ async function sendUplLateNotifications(db: ReturnType<typeof drizzle>): Promise
 // OT Forfeiture Cascade — REMOVED (OT mechanism removed)
 
 export function registerAutoMailer(app: Express): void {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.SUPABASE_URL || process.env.DATABASE_URL;
 
   if (!dbUrl) {
     console.warn("[AutoNotifier] DATABASE_URL not set. Auto-notifier disabled.");
     return;
   }
 
-  const db = drizzle(dbUrl);
+  const client = postgres(dbUrl, { prepare: false });
+  const db = drizzle(client);
 
   // Schedule: 2:30 AM PHT = 18:30 UTC (previous day)
   cron.schedule("30 18 * * *", async () => {

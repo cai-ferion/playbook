@@ -1,1 +1,0 @@
-ALTER TABLE `io_attendance` ADD `actual_vs_projection` varchar(20);

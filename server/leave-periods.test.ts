@@ -18,13 +18,13 @@ const indexHtml = readFileSync(join(ROOT, "server/public/index.html"), "utf-8");
 // ============================================================
 describe("Schema — io_leave_periods table", () => {
   it("defines ioLeavePeriods table in schema.ts", () => {
-    expect(schemaTs).toContain('export const ioLeavePeriods = mysqlTable("io_leave_periods"');
+    expect(schemaTs).toContain('export const ioLeavePeriods = pgTable("io_leave_periods"');
   });
   it("has month column (int, notNull)", () => {
-    expect(schemaTs).toContain('month: int("month").notNull()');
+    expect(schemaTs).toContain('month: integer("month").notNull()');
   });
   it("has year column (int, notNull)", () => {
-    expect(schemaTs).toContain('year: int("year").notNull()');
+    expect(schemaTs).toContain('year: integer("year").notNull()');
   });
   it("has start_week_ending column (varchar)", () => {
     expect(schemaTs).toContain('start_week_ending: varchar("start_week_ending"');

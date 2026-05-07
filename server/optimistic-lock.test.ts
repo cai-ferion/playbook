@@ -96,7 +96,7 @@ describe("optimisticUpdate", () => {
     const mockDb = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(() => [{ affectedRows: 1 }]),
+          where: vi.fn(() => [{ id: "rec-1" }]),
         })),
       })),
     };
@@ -113,7 +113,7 @@ describe("optimisticUpdate", () => {
     const mockDb = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(() => [{ affectedRows: 0 }]),
+          where: vi.fn(() => []),
         })),
       })),
       select: vi.fn(() => ({
@@ -136,7 +136,7 @@ describe("optimisticUpdate", () => {
     const mockDb = {
       update: vi.fn(() => ({
         set: vi.fn(() => ({
-          where: vi.fn(() => [{ affectedRows: 0 }]),
+          where: vi.fn(() => []),
         })),
       })),
       select: vi.fn(() => ({
@@ -161,7 +161,7 @@ describe("optimisticUpdate", () => {
       update: vi.fn(() => ({
         set: vi.fn((data: any) => {
           capturedSet = data;
-          return { where: vi.fn(() => [{ affectedRows: 1 }]) };
+          return { where: vi.fn(() => [{ id: "rec-1" }]) };
         }),
       })),
     };
@@ -179,7 +179,7 @@ describe("optimisticUpdate", () => {
       update: vi.fn(() => ({
         set: vi.fn((data: any) => {
           capturedSet = data;
-          return { where: vi.fn(() => [{ affectedRows: 1 }]) };
+          return { where: vi.fn(() => [{ id: "rec-1" }]) };
         }),
       })),
     };

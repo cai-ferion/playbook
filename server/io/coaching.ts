@@ -131,8 +131,8 @@ router.post("/coaching", validate(coachingCreateSchema), async (req: Request, re
       }
     }
 
-    const result = await db.insert(ioCoaching).values(values);
-    const insertId = (result as any)[0]?.insertId;
+    const result = await db.insert(ioCoaching).values(values).returning({ id: ioCoaching.id });
+    const insertId = result[0]?.id;
     emitChange(req, "coaching", "record_created", { id: insertId, coaching_id });
     res.json({ ok: true, id: insertId, coaching_id });
   } catch (err: any) {
