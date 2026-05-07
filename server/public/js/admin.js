@@ -784,13 +784,21 @@ async function adminOverrideRevoke(id) {
   }
 }
 
-// Auto-init when leave-overrides section is toggled open
+// Auto-init leave-overrides: pre-populate employee dropdown on page load
 (function() {
+  // Pre-populate employee dropdown immediately when admin page loads
+  setTimeout(() => {
+    if (typeof isAdmin === 'function' && isAdmin()) {
+      adminOverrideInit();
+    }
+  }, 2500);
+
+  // Also ensure data refreshes when section is toggled open
   const origToggle = window.adminToggleSection;
   window.adminToggleSection = function(sectionId) {
     if (origToggle) origToggle(sectionId);
     if (sectionId === 'leave-overrides') {
-      setTimeout(() => adminOverrideInit(), 100);
+      setTimeout(() => adminOverrideLoadList(), 100);
     }
   };
 })();

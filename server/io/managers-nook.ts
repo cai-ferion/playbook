@@ -78,25 +78,28 @@ router.get("/scorecard", async (req: Request, res: Response) => {
       agentCountMap[row.supervisor_name] = Number(row.agent_count) || 0;
     }
 
-    // ── 3. Valid tardiness count per supervisor per month ──
-    // io_tardiness.date is YYYY-MM-DD, supervisor_name is the supervisor
+    // ── 3. Tardiness counts per supervisor per month (valid + total) ──
+    // io_tardiness.date is YYYY-MM-DD (varchar), supervisor_name is the supervisor
     const tardinessRows = await db.execute(sql`
       SELECT supervisor_name,
              SUBSTRING(date, 1, 7) as month,
-             COUNT(*) as valid_count
+             COUNT(*) as total_count,
+             SUM(CASE WHEN validation_status = 'Valid' THEN 1 ELSE 0 END) as valid_count
       FROM io_tardiness
-      WHERE validation_status = 'Valid'
-        AND SUBSTRING(date, 1, 7) >= ${oldestMonth}
+      WHERE SUBSTRING(date, 1, 7) >= ${oldestMonth}
         AND SUBSTRING(date, 1, 7) <= ${newestMonth}
       GROUP BY supervisor_name, SUBSTRING(date, 1, 7)
     `);
-    // Map: supervisor -> month -> count
-    const tardinessMap: Record<string, Record<string, number>> = {};
+    // Map: supervisor -> month -> { valid, total }
+    const tardinessMap: Record<string, Record<string, { valid: number; total: number }>> = {};
     for (const row of tardinessRows as any[]) {
       const sup = row.supervisor_name;
       const m = row.month;
       if (!tardinessMap[sup]) tardinessMap[sup] = {};
-      tardinessMap[sup][m] = Number(row.valid_count) || 0;
+      tardinessMap[sup][m] = {
+        valid: Number(row.valid_count) || 0,
+        total: Number(row.total_count) || 0,
+      };
     }
 
     // ── 4. Coaching coverage per supervisor per month ──
@@ -244,7 +247,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         const coveragePct = totalAgents > 0 ? Math.min(100, Math.round((actualCoached / totalAgents) * 100)) : 0;
 
         months[m] = {
-          tardiness: tardinessMap[sup]?.[m] || 0,
+          tardiness: tardinessMap[sup]?.[m] || { valid: 0, total: 0 },
           coaching: {
             unique_agents_coached: actualCoached,
             total_sessions: coaching.total,

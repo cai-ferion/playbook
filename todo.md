@@ -4110,3 +4110,6 @@
 - [ ] Create API endpoints for managing leave overrides (GET, POST, DELETE)
 - [ ] Build Admin Tools UI panel for granting leave filing extensions
 - [ ] Integrate override check into Haven leave filing window logic
+- [x] Managers Nook: make visible to Team Leads (full scorecard, same as Managers)
+- [x] Managers Nook: Valid Tardiness column show fraction "Valid/Total" instead of just count
+- [x] Admin Tools Grant Extension: pre-populate employee dropdown on page load (no lazy-loading)
