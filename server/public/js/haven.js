@@ -180,7 +180,7 @@ async function havenCheckLeaveOverride() {
   try {
     const user = typeof currentUser !== 'undefined' ? currentUser : null;
     if (!user || !user.ohr_id) return;
-    const resp = await fetch(`${IO_API_BASE}/leave-overrides/check/${user.ohr_id}`, { headers: ioHeaders() });
+    const resp = await fetch(`${IO_API_BASE}/leave-overrides/check/${user.ohr_id}`);
     if (resp.ok) {
       const data = await resp.json();
       if (data.hasOverride) {
@@ -1350,7 +1350,12 @@ async function havenToggleOverride(e) {
   try {
     const resp = await fetch(`${IO_API_BASE}/leave-overrides/toggle`, {
       method: 'POST',
-      headers: { ...ioHeaders(), 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-actor-ohr': user.ohr_id || '',
+        'x-actor-role': user.actual_role || '',
+        'x-actor-name': user.full_name || ''
+      },
       body: JSON.stringify({ ohr_id: user.ohr_id, enabled })
     });
     if (!resp.ok) {
