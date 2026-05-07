@@ -324,7 +324,8 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
     for (let i = 0; i < 7; i++) {
       const cellDate = havenAddDays(currentSaturday, i);
       const dateStr = havenFormatDate(cellDate);
-      const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr);
+      const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr)
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
       const isToday = dateStr === todayStr;
       const isWeekend = (i === 0 || i === 1); // Sat, Sun (first two columns)
 
@@ -341,15 +342,14 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
         : `${dayNum}`;
       html += `<div class="haven-cal-day-num">${dayLabel}</div>`;
 
-      // Leave tabs
+      // Leave tabs — show ALL leaves (no truncation), sorted by filing date
       if (dayLeaves.length > 0) {
         html += '<div class="haven-cal-events">';
-        const maxShow = 3;
         // Pre-compute "my team" OHRs for managers (not admin) to show indicator
         const _isOMRole = role === 'om';
         const _isAdminUser = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
         const _myTeamForIndicator = (_isOMRole && !_isAdminUser) ? havenGetMyTeamOhrs() : [];
-        for (let j = 0; j < Math.min(dayLeaves.length, maxShow); j++) {
+        for (let j = 0; j < dayLeaves.length; j++) {
           const lv = dayLeaves[j];
           const statusClass = havenStatusClass(lv.status);
           const displayName = role === 'agent'
@@ -361,9 +361,6 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
           html += `<div class="haven-cal-tab ${statusClass}" onclick="havenShowLeaveDetail('${escapeHtml(lv.leave_id)}')" title="${escapeHtml(lv.full_name || '')} — ${escapeHtml(lv.status || '')}">
             ${myTeamBadge}<span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
           </div>`;
-        }
-        if (dayLeaves.length > maxShow) {
-          html += `<div class="haven-cal-more" onclick="havenShowDayLeaves('${dateStr}')">+${dayLeaves.length - maxShow} more</div>`;
         }
         html += '</div>';
       }

@@ -424,7 +424,8 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
     const weekStartStr = weekStart.toISOString().slice(0, 10);
     const weekEndStr = weekEnd.toISOString().slice(0, 10);
 
-    // 4. Count approved leaves for same combo in that week
+    // 4. Count ONLY Approved leaves for same combo in that week
+    // Pending leaves are excluded to avoid inflating the forecast
     const leaveRows = await db.select({
       leave_id: ioLeaves.leave_id,
       ohr_id: ioLeaves.ohr_id,
@@ -434,7 +435,7 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
     }).from(ioLeaves)
       .innerJoin(ioEmployees, eq(ioLeaves.ohr_id, ioEmployees.ohr_id))
       .where(and(
-        or(eq(ioLeaves.status, 'Approved'), eq(ioLeaves.status, 'Pending OM')),
+        eq(ioLeaves.status, 'Approved'),
         gte(ioLeaves.start_date, weekStartStr),
         lte(ioLeaves.start_date, weekEndStr),
         eq(ioEmployees.actual_role, actual_role),

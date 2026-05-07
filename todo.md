@@ -4116,3 +4116,6 @@
 - [x] Replace Grant Extension admin section with simple admin-only checkbox next to File Leave button
 - [x] Simplify backend: permanent boolean filing_override flag per employee (no deadline/reason)
 - [x] Remove Leave Overrides admin section from Admin Tools HTML and JS
+- [x] Haven: Shrinkage forecast only count Approved leaves (not Pending TL/OM)
+- [x] Haven: Sort leaves by filing date (first filed at top)
+- [x] Haven: Remove +N more truncation, show all leaves expanded in date cells
