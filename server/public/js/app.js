@@ -543,6 +543,11 @@ async function handleLogin() {
     const empResp = await fetch(
       `${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`
     );
+    if (!empResp.ok) {
+      errorEl.textContent = 'Server error during login. Please try again.';
+      setLoginLoading(false);
+      return;
+    }
     const empData = await empResp.json();
 
     if (!Array.isArray(empData) || empData.length === 0) {
