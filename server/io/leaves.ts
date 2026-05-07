@@ -563,45 +563,41 @@ router.delete("/leave-periods/:id", async (req: Request, res: Response) => {
   }
 });
 
-// ─── Leave Filing Overrides (Admin) ──────────────────────────────────────────
+// ─── Global Filing Extension (Admin) ──────────────────────────────────────────
+// When active, ALL employees can file leaves outside the normal 1st-7th window.
 
-// GET /api/io/leave-overrides/check/:ohr - check if an employee has filing_override enabled
-router.get("/leave-overrides/check/:ohr", async (req: Request, res: Response) => {
+// GET /api/io/filing-extension/status - check if global filing extension is active
+router.get("/filing-extension/status", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
-    const ohr = req.params.ohr;
-    const rows = await db.select({ filing_override: ioEmployees.filing_override })
-      .from(ioEmployees)
-      .where(eq(ioEmployees.ohr_id, ohr))
-      .limit(1);
-    const hasOverride = rows.length > 0 && rows[0].filing_override === 1;
-    res.json({ hasOverride });
+    const rows = await db.execute(sql`SELECT value FROM io_settings WHERE key = 'filing_extension_active' LIMIT 1`);
+    const isActive = rows.length > 0 && rows[0].value === '1';
+    res.json({ active: isActive });
   } catch (err: any) {
-    console.error("[IO API] leave-overrides check error:", err);
+    console.error("[IO API] filing-extension status error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/io/leave-overrides/toggle - toggle filing_override for an employee (admin-only)
-router.post("/leave-overrides/toggle", async (req: Request, res: Response) => {
+// POST /api/io/filing-extension/toggle - toggle global filing extension (admin-only)
+router.post("/filing-extension/toggle", async (req: Request, res: Response) => {
   try {
     const actorOhr = req.headers["x-actor-ohr"] as string || '';
     if (!isAdminOhr(actorOhr)) {
-      return res.status(403).json({ error: "Only admins can toggle filing overrides" });
+      return res.status(403).json({ error: "Only admins can toggle the filing extension" });
     }
-    const { ohr_id, enabled } = req.body;
-    if (!ohr_id || typeof enabled !== 'boolean') {
-      return res.status(400).json({ error: "ohr_id (string) and enabled (boolean) are required" });
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: "enabled (boolean) is required" });
     }
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
-    await db.update(ioEmployees)
-      .set({ filing_override: enabled ? 1 : 0 })
-      .where(eq(ioEmployees.ohr_id, ohr_id));
-    res.json({ ok: true, ohr_id, filing_override: enabled ? 1 : 0 });
+    const now = new Date().toISOString();
+    await db.execute(sql`UPDATE io_settings SET value = ${enabled ? '1' : '0'}, updated_at = ${now}, updated_by = ${actorOhr} WHERE key = 'filing_extension_active'`);
+    res.json({ ok: true, active: enabled });
   } catch (err: any) {
-    console.error("[IO API] leave-overrides toggle error:", err);
+    console.error("[IO API] filing-extension toggle error:", err);
     res.status(500).json({ error: err.message });
   }
 });

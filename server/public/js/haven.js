@@ -163,8 +163,8 @@ function havenIsFilingWindowOpen() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
   const day = now.getDate();
   if (day >= 1 && day <= 7) return true;
-  // Check if the current user has an active admin-granted override
-  if (HAVEN._hasLeaveOverride) return true;
+  // Check if the global filing extension is active (admin-toggled for all employees)
+  if (HAVEN._filingExtensionActive) return true;
   return false;
 }
 function havenIsNormalWindow() {
@@ -174,21 +174,19 @@ function havenIsNormalWindow() {
   return day >= 1 && day <= 7;
 }
 
-async function havenCheckLeaveOverride() {
-  // Check if the current user has a permanent filing override (admin-toggled)
-  HAVEN._hasLeaveOverride = false;
+async function havenCheckFilingExtension() {
+  // Check if the global filing extension is active (applies to all employees)
+  HAVEN._filingExtensionActive = false;
   try {
-    const user = typeof currentUser !== 'undefined' ? currentUser : null;
-    if (!user || !user.ohr_id) return;
-    const resp = await fetch(`${IO_API_BASE}/leave-overrides/check/${user.ohr_id}`);
+    const resp = await fetch(`${IO_API_BASE}/filing-extension/status`);
     if (resp.ok) {
       const data = await resp.json();
-      if (data.hasOverride) {
-        HAVEN._hasLeaveOverride = true;
+      if (data.active) {
+        HAVEN._filingExtensionActive = true;
       }
     }
   } catch (err) {
-    console.warn('[Haven] Override check failed:', err);
+    console.warn('[Haven] Filing extension check failed:', err);
   }
 }
 
@@ -243,15 +241,15 @@ async function havenRenderContinuous() {
   havenUpdateMonthLabel();
 
   // Scroll to today's week
-  // Check for leave filing override before showing/hiding button
-  await havenCheckLeaveOverride();
+  // Check global filing extension before showing/hiding button
+  await havenCheckFilingExtension();
   // Show/hide File Leave button based on filing window
   const fileBtn = document.getElementById('haven-file-btn');
   if (fileBtn) {
     if (havenIsFilingWindowOpen()) {
       fileBtn.style.display = '';
-      if (HAVEN._hasLeaveOverride && !havenIsNormalWindow()) {
-        fileBtn.title = 'Filing override enabled — can file anytime';
+      if (HAVEN._filingExtensionActive && !havenIsNormalWindow()) {
+        fileBtn.title = 'Filing window extended by admin';
       }
     } else {
       fileBtn.style.display = 'none';
@@ -1301,8 +1299,7 @@ window.havenCheckPeriodStatus = havenCheckPeriodStatus;
 // ─── Admin Override Checkbox (next to File Leave button) ──────────────────────
 /**
  * Renders a checkbox next to the File Leave button, visible only to admins.
- * When checked, the currently viewed agent can file leaves outside the 1st-7th window.
- * The checkbox reflects the current user's filing_override flag.
+ * When checked, ALL employees can file leaves outside the 1st-7th window (global extension).
  */
 function havenRenderOverrideCheckbox() {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
@@ -1315,37 +1312,38 @@ function havenRenderOverrideCheckbox() {
 
   if (!isAdmin) return;
 
-  // Insert checkbox next to the File Leave button
-  const fileBtn = document.getElementById('haven-file-btn');
-  if (!fileBtn || !fileBtn.parentElement) return;
+  // Insert checkbox in the header-right area (always visible to admins regardless of filing window)
+  const headerRight = document.querySelector('.haven-header-right');
+  if (!headerRight) return;
 
   const wrap = document.createElement('label');
   wrap.id = 'haven-override-checkbox-wrap';
-  wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;margin-left:12px;user-select:none;';
-  wrap.title = 'Allow this user to file leaves outside the 1st-7th window (permanent until unchecked)';
+  wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;margin-right:12px;user-select:none;';
+  wrap.title = 'Extend the filing window for ALL employees this month (stays on until unchecked)';
 
   const cb = document.createElement('input');
   cb.type = 'checkbox';
   cb.id = 'haven-override-checkbox';
-  cb.checked = !!HAVEN._hasLeaveOverride;
+  cb.checked = !!HAVEN._filingExtensionActive;
   cb.style.cssText = 'accent-color:var(--accent-primary);cursor:pointer;';
-  cb.addEventListener('change', havenToggleOverride);
+  cb.addEventListener('change', havenToggleFilingExtension);
 
   const label = document.createElement('span');
-  label.textContent = 'Allow filing anytime';
+  label.textContent = 'Extend filing window';
 
   wrap.appendChild(cb);
   wrap.appendChild(label);
-  fileBtn.parentElement.insertBefore(wrap, fileBtn.nextSibling);
+  // Insert at the beginning of header-right so it appears before the File Leave button
+  headerRight.insertBefore(wrap, headerRight.firstChild);
 }
 
-async function havenToggleOverride(e) {
+async function havenToggleFilingExtension(e) {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) return;
   const enabled = e.target.checked;
 
   try {
-    const resp = await fetch(`${IO_API_BASE}/leave-overrides/toggle`, {
+    const resp = await fetch(`${IO_API_BASE}/filing-extension/toggle`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1353,29 +1351,31 @@ async function havenToggleOverride(e) {
         'x-actor-role': user.actual_role || '',
         'x-actor-name': user.full_name || ''
       },
-      body: JSON.stringify({ ohr_id: user.ohr_id, enabled })
+      body: JSON.stringify({ enabled })
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      showToast(err.error || 'Failed to toggle override', 'error');
+      showToast(err.error || 'Failed to toggle filing extension', 'error');
       e.target.checked = !enabled; // revert
       return;
     }
-    HAVEN._hasLeaveOverride = enabled;
+    HAVEN._filingExtensionActive = enabled;
     // Re-evaluate File Leave button visibility
     const fileBtn = document.getElementById('haven-file-btn');
     if (fileBtn) {
       if (havenIsFilingWindowOpen()) {
         fileBtn.style.display = '';
-        fileBtn.title = enabled && !havenIsNormalWindow() ? 'Filing override enabled — can file anytime' : '';
+        fileBtn.title = enabled && !havenIsNormalWindow() ? 'Filing window extended by admin' : '';
       } else {
         fileBtn.style.display = 'none';
       }
     }
-    showToast(enabled ? 'Filing override enabled — can file leaves anytime' : 'Filing override removed — normal window rules apply', 'success');
+    // Re-render calendar to show/hide inline + buttons for all dates
+    havenRenderCalendar();
+    showToast(enabled ? 'Filing window extended — all employees can now file leaves' : 'Filing extension removed — normal 1st-7th window rules apply', 'success');
   } catch (err) {
-    console.error('[Haven] Toggle override error:', err);
-    showToast('Network error toggling override', 'error');
+    console.error('[Haven] Toggle filing extension error:', err);
+    showToast('Network error toggling filing extension', 'error');
     e.target.checked = !enabled; // revert
   }
 }

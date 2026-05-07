@@ -4119,3 +4119,6 @@
 - [x] Haven: Shrinkage forecast only count Approved leaves (not Pending TL/OM)
 - [x] Haven: Sort leaves by filing date (first filed at top)
 - [x] Haven: Remove +N more truncation, show all leaves expanded in date cells
+- [x] Rework filing override: change from per-employee to global admin toggle
+- [x] Backend: store global filing_extension_active flag in io_settings table
+- [x] Frontend: checkbox checks/sets global flag, all users read it
