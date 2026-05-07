@@ -4113,3 +4113,6 @@
 - [x] Managers Nook: make visible to Team Leads (full scorecard, same as Managers)
 - [x] Managers Nook: Valid Tardiness column show fraction "Valid/Total" instead of just count
 - [x] Admin Tools Grant Extension: pre-populate employee dropdown on page load (no lazy-loading)
+- [x] Replace Grant Extension admin section with simple admin-only checkbox next to File Leave button
+- [x] Simplify backend: permanent boolean filing_override flag per employee (no deadline/reason)
+- [x] Remove Leave Overrides admin section from Admin Tools HTML and JS

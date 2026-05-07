@@ -175,9 +175,8 @@ function havenIsNormalWindow() {
 }
 
 async function havenCheckLeaveOverride() {
-  // Check if the current user has an active leave filing override
+  // Check if the current user has a permanent filing override (admin-toggled)
   HAVEN._hasLeaveOverride = false;
-  HAVEN._overrideDeadline = null;
   try {
     const user = typeof currentUser !== 'undefined' ? currentUser : null;
     if (!user || !user.ohr_id) return;
@@ -186,7 +185,6 @@ async function havenCheckLeaveOverride() {
       const data = await resp.json();
       if (data.hasOverride) {
         HAVEN._hasLeaveOverride = true;
-        HAVEN._overrideDeadline = data.deadline;
       }
     }
   } catch (err) {
@@ -253,7 +251,7 @@ async function havenRenderContinuous() {
     if (havenIsFilingWindowOpen()) {
       fileBtn.style.display = '';
       if (HAVEN._hasLeaveOverride && !havenIsNormalWindow()) {
-        fileBtn.title = 'Filing extension granted until ' + new Date(HAVEN._overrideDeadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        fileBtn.title = 'Filing override enabled — can file anytime';
       }
     } else {
       fileBtn.style.display = 'none';
@@ -269,6 +267,8 @@ async function havenRenderContinuous() {
       configBtn.style.display = 'none';
     }
   }
+  // Show/hide the admin override checkbox next to File Leave button
+  havenRenderOverrideCheckbox();
   requestAnimationFrame(() => {
     const todayCell = scrollEl.querySelector(`[data-date="${havenGetTodayPHT()}"]`);
     if (todayCell) {
@@ -1299,3 +1299,81 @@ async function havenCheckPeriodStatus() {
   }
 }
 window.havenCheckPeriodStatus = havenCheckPeriodStatus;
+
+
+// ─── Admin Override Checkbox (next to File Leave button) ──────────────────────
+/**
+ * Renders a checkbox next to the File Leave button, visible only to admins.
+ * When checked, the currently viewed agent can file leaves outside the 1st-7th window.
+ * The checkbox reflects the current user's filing_override flag.
+ */
+function havenRenderOverrideCheckbox() {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return;
+  const isAdmin = (window.ADMIN_OHRS || []).includes(user.ohr_id);
+
+  // Remove existing checkbox if present
+  const existing = document.getElementById('haven-override-checkbox-wrap');
+  if (existing) existing.remove();
+
+  if (!isAdmin) return;
+
+  // Insert checkbox next to the File Leave button
+  const fileBtn = document.getElementById('haven-file-btn');
+  if (!fileBtn || !fileBtn.parentElement) return;
+
+  const wrap = document.createElement('label');
+  wrap.id = 'haven-override-checkbox-wrap';
+  wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;margin-left:12px;user-select:none;';
+  wrap.title = 'Allow this user to file leaves outside the 1st-7th window (permanent until unchecked)';
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.id = 'haven-override-checkbox';
+  cb.checked = !!HAVEN._hasLeaveOverride;
+  cb.style.cssText = 'accent-color:var(--accent-primary);cursor:pointer;';
+  cb.addEventListener('change', havenToggleOverride);
+
+  const label = document.createElement('span');
+  label.textContent = 'Allow filing anytime';
+
+  wrap.appendChild(cb);
+  wrap.appendChild(label);
+  fileBtn.parentElement.insertBefore(wrap, fileBtn.nextSibling);
+}
+
+async function havenToggleOverride(e) {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return;
+  const enabled = e.target.checked;
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/leave-overrides/toggle`, {
+      method: 'POST',
+      headers: { ...ioHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ohr_id: user.ohr_id, enabled })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showToast(err.error || 'Failed to toggle override', 'error');
+      e.target.checked = !enabled; // revert
+      return;
+    }
+    HAVEN._hasLeaveOverride = enabled;
+    // Re-evaluate File Leave button visibility
+    const fileBtn = document.getElementById('haven-file-btn');
+    if (fileBtn) {
+      if (havenIsFilingWindowOpen()) {
+        fileBtn.style.display = '';
+        fileBtn.title = enabled && !havenIsNormalWindow() ? 'Filing override enabled — can file anytime' : '';
+      } else {
+        fileBtn.style.display = 'none';
+      }
+    }
+    showToast(enabled ? 'Filing override enabled — can file leaves anytime' : 'Filing override removed — normal window rules apply', 'success');
+  } catch (err) {
+    console.error('[Haven] Toggle override error:', err);
+    showToast('Network error toggling override', 'error');
+    e.target.checked = !enabled; // revert
+  }
+}

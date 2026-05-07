@@ -78,6 +78,7 @@ export const ioEmployees = pgTable("io_employees", {
   floor: varchar("floor", { length: 10 }),
   sex: varchar("sex", { length: 2 }),
   version: integer("version").notNull().default(1),
+  filing_override: integer("filing_override").default(0), // 1=can file leaves anytime, 0=normal window rules
 });
 export type IoEmployee = typeof ioEmployees.$inferSelect;
 export type InsertIoEmployee = typeof ioEmployees.$inferInsert;
