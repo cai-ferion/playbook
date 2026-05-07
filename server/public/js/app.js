@@ -555,7 +555,13 @@ async function handleLogin() {
       `${IO_API_BASE}/employees?ohr_id=${ohr}&limit=1`
     );
     if (!empResp.ok) {
-      errorEl.textContent = 'Server error during login. Please try again.';
+      let serverMsg = `HTTP ${empResp.status}`;
+      try {
+        const errBody = await empResp.json();
+        if (errBody && errBody.error) serverMsg = errBody.error;
+      } catch (_) {}
+      errorEl.textContent = `Login failed: ${serverMsg}`;
+      console.error('[Login] Employee lookup failed:', empResp.status, serverMsg);
       setLoginLoading(false);
       return;
     }
