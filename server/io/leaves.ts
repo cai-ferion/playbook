@@ -583,7 +583,9 @@ router.get("/filing-extension/status", async (req: Request, res: Response) => {
 // POST /api/io/filing-extension/toggle - toggle global filing extension (admin-only)
 router.post("/filing-extension/toggle", async (req: Request, res: Response) => {
   try {
-    const actorOhr = req.headers["x-actor-ohr"] as string || '';
+    // Use x-actor-ohr header first, fall back to req.user from session auth
+    const actorOhr = (req.headers["x-actor-ohr"] as string) || (req.user as any)?.ohrId || (req.user as any)?.ohr_id || '';
+    console.log("[IO API] filing-extension toggle: actorOhr=", actorOhr, "isAdmin=", isAdminOhr(actorOhr));
     if (!isAdminOhr(actorOhr)) {
       return res.status(403).json({ error: "Only admins can toggle the filing extension" });
     }
@@ -595,6 +597,7 @@ router.post("/filing-extension/toggle", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "Database not available" });
     const now = new Date().toISOString();
     await db.execute(sql`UPDATE io_settings SET value = ${enabled ? '1' : '0'}, updated_at = ${now}, updated_by = ${actorOhr} WHERE key = 'filing_extension_active'`);
+    console.log("[IO API] filing-extension toggled to:", enabled, "by:", actorOhr);
     res.json({ ok: true, active: enabled });
   } catch (err: any) {
     console.error("[IO API] filing-extension toggle error:", err);

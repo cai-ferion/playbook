@@ -1345,17 +1345,13 @@ async function havenToggleFilingExtension(e) {
   try {
     const resp = await fetch(`${IO_API_BASE}/filing-extension/toggle`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-actor-ohr': user.ohr_id || '',
-        'x-actor-role': user.actual_role || '',
-        'x-actor-name': user.full_name || ''
-      },
+      headers: { 'Content-Type': 'application/json', 'x-actor-ohr': user.ohr_id || '' },
+      credentials: 'same-origin',
       body: JSON.stringify({ enabled })
     });
+    const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      showToast(err.error || 'Failed to toggle filing extension', 'error');
+      showToast(data.error || 'Failed to toggle filing extension', 'error');
       e.target.checked = !enabled; // revert
       return;
     }
@@ -1371,11 +1367,11 @@ async function havenToggleFilingExtension(e) {
       }
     }
     // Re-render calendar to show/hide inline + buttons for all dates
-    havenRenderCalendar();
+    try { havenRenderCalendar(); } catch (renderErr) { console.warn('[Haven] Calendar re-render failed:', renderErr); }
     showToast(enabled ? 'Filing window extended — all employees can now file leaves' : 'Filing extension removed — normal 1st-7th window rules apply', 'success');
   } catch (err) {
     console.error('[Haven] Toggle filing extension error:', err);
-    showToast('Network error toggling filing extension', 'error');
+    showToast('Network error toggling filing extension: ' + (err.message || err), 'error');
     e.target.checked = !enabled; // revert
   }
 }

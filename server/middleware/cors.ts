@@ -77,6 +77,7 @@ const ALLOWED_HEADERS = [
   "Authorization",
   "x-actor-ohr",
   "x-actor-name",
+  "x-actor-role",
   "x-client-version",
 ].join(", ");
 
