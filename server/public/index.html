@@ -1179,6 +1179,57 @@
             </div>
           </div>
 
+          <!-- ─── SECTION: Leave Filing Overrides ───────────────────── -->
+          <div class="admin-section" id="admin-section-leave-overrides">
+            <div class="admin-section-header" onclick="adminToggleSection('leave-overrides')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg>
+                <span>Leave Filing Overrides</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Grant specific employees an extension to file leaves outside the normal 1st–7th window.</p>
+              <!-- Add Override Form -->
+              <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
+                <div style="flex:1;min-width:180px;">
+                  <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;">Employee</label>
+                  <select class="form-input form-input-sm" id="admin-override-employee" style="font-size:12px;width:100%;">
+                    <option value="">Select employee...</option>
+                  </select>
+                </div>
+                <div style="min-width:160px;">
+                  <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;">Extension Deadline</label>
+                  <input type="datetime-local" class="form-input form-input-sm" id="admin-override-deadline" style="font-size:12px;">
+                </div>
+                <div style="flex:1;min-width:150px;">
+                  <label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;">Reason (optional)</label>
+                  <input type="text" class="form-input form-input-sm" id="admin-override-reason" placeholder="e.g. Late submission approved" style="font-size:12px;width:100%;">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="adminOverrideGrant()" style="white-space:nowrap;">Grant Extension</button>
+              </div>
+              <!-- Active Overrides Table -->
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>OHR</th>
+                      <th>Deadline</th>
+                      <th>Reason</th>
+                      <th>Granted By</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-override-table-body">
+                    <tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Loading...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div><!-- /admin-hub -->
       </div>
 

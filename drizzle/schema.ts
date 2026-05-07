@@ -864,3 +864,20 @@ export const ioAdminOhrs = pgTable("io_admin_ohrs", {
 });
 export type IoAdminOhr = typeof ioAdminOhrs.$inferSelect;
 export type InsertIoAdminOhr = typeof ioAdminOhrs.$inferInsert;
+
+// ─── Leave Filing Overrides ──────────────────────────────────────────────────
+// Admin-granted extensions that allow specific employees to file leaves outside
+// the normal 1st-7th window.
+export const ioLeaveOverrides = pgTable("io_leave_overrides", {
+  id: serial("id").primaryKey(),
+  ohr_id: varchar("ohr_id", { length: 20 }).notNull(),
+  employee_name: varchar("employee_name", { length: 255 }),
+  deadline: varchar("deadline", { length: 64 }).notNull(), // ISO datetime: extended filing deadline
+  reason: text("reason"),
+  created_by: varchar("created_by", { length: 255 }),
+  created_by_ohr: varchar("created_by_ohr", { length: 20 }),
+  created_at: varchar("created_at", { length: 64 }),
+  is_active: integer("is_active").default(1), // 1=active, 0=expired/revoked
+});
+export type IoLeaveOverride = typeof ioLeaveOverrides.$inferSelect;
+export type InsertIoLeaveOverride = typeof ioLeaveOverrides.$inferInsert;

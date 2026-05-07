@@ -4103,3 +4103,10 @@
 - [ ] Bug: Managers Nook displaying incorrect Valid Tardiness count
 - [x] Bug: Managers Nook not showing anything after Supabase migration (SUBSTRING/!= '' on DATE columns → TO_CHAR)
 - [x] Transfer all agents under Rosales, Jenifer to Bernal, John Henry (17 agents moved to Bernal, John Henry De Leon)
+
+## Admin Tools — Leave Filing Override
+
+- [ ] Create io_leave_overrides table (employee OHR, extension deadline, reason, created_by)
+- [ ] Create API endpoints for managing leave overrides (GET, POST, DELETE)
+- [ ] Build Admin Tools UI panel for granting leave filing extensions
+- [ ] Integrate override check into Haven leave filing window logic

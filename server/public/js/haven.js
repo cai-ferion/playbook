@@ -29,7 +29,7 @@ async function initHaven() {
     await havenLoadEmployees();
     await havenLoadLeaves();
     await havenLoadPeriodConfig();
-    havenRenderContinuous();
+    await havenRenderContinuous();
   } catch (e) {
     console.error('[Haven] init error:', e);
   } finally {
@@ -163,9 +163,37 @@ function havenIsFilingWindowOpen() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
   const day = now.getDate();
   if (day >= 1 && day <= 7) return true;
-  // On the 7th, it's open until 11:59 PM — since day<=7 covers this, we're good
+  // Check if the current user has an active admin-granted override
+  if (HAVEN._hasLeaveOverride) return true;
   return false;
 }
+function havenIsNormalWindow() {
+  // Returns true if we're within the normal 1st-7th filing window (no override needed)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const day = now.getDate();
+  return day >= 1 && day <= 7;
+}
+
+async function havenCheckLeaveOverride() {
+  // Check if the current user has an active leave filing override
+  HAVEN._hasLeaveOverride = false;
+  HAVEN._overrideDeadline = null;
+  try {
+    const user = typeof currentUser !== 'undefined' ? currentUser : null;
+    if (!user || !user.ohr_id) return;
+    const resp = await fetch(`${IO_API_BASE}/leave-overrides/check/${user.ohr_id}`, { headers: ioHeaders() });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.hasOverride) {
+        HAVEN._hasLeaveOverride = true;
+        HAVEN._overrideDeadline = data.deadline;
+      }
+    }
+  } catch (err) {
+    console.warn('[Haven] Override check failed:', err);
+  }
+}
+
 function havenGetMinLeaveDate() {
   // If admin has configured a period for the current month, use that as the minimum
   if (HAVEN._periodMinDate) return HAVEN._periodMinDate;
@@ -195,7 +223,7 @@ function havenGetMinLeaveDate() {
 
 
 // ─── Continuous Calendar Rendering ─────────────────────────────────────────────
-function havenRenderContinuous() {
+async function havenRenderContinuous() {
   const scrollEl = document.getElementById('haven-weeks-scroll');
   if (!scrollEl) return;
 
@@ -217,11 +245,16 @@ function havenRenderContinuous() {
   havenUpdateMonthLabel();
 
   // Scroll to today's week
+  // Check for leave filing override before showing/hiding button
+  await havenCheckLeaveOverride();
   // Show/hide File Leave button based on filing window
   const fileBtn = document.getElementById('haven-file-btn');
   if (fileBtn) {
     if (havenIsFilingWindowOpen()) {
       fileBtn.style.display = '';
+      if (HAVEN._hasLeaveOverride && !havenIsNormalWindow()) {
+        fileBtn.title = 'Filing extension granted until ' + new Date(HAVEN._overrideDeadline).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
     } else {
       fileBtn.style.display = 'none';
     }
@@ -338,7 +371,7 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
       // Add button for filing leave (agents + TLs, eligible dates only)
       // Check if current user already has a non-cancelled leave on this date
       const userAlreadyFiled = user && dayLeaves.some(l => l.ohr_id === user.ohr_id && l.status !== 'Cancelled');
-      if ((role === 'agent' || role === 'tl') && dateStr >= minLeaveDate) {
+      if ((role === 'agent' || role === 'tl') && dateStr >= minLeaveDate && havenIsFilingWindowOpen()) {
         if (userAlreadyFiled) {
           html += `<div class="haven-cal-add haven-cal-add--filed" title="You already have a leave filed for this date">&#10003;</div>`;
         } else {

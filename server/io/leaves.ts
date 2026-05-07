@@ -4,7 +4,7 @@
  */
 import { Router, Request, Response } from "express";
 import { getDb } from "../db.js";
-import { ioLeaves, ioNotifications, ioEmployees, ioLeavePeriods } from "../../drizzle/schema.js";
+import { ioLeaves, ioNotifications, ioEmployees, ioLeavePeriods, ioLeaveOverrides } from "../../drizzle/schema.js";
 import { isAdminOhr } from "./shared.js";
 import { eq, and, gte, lte, sql, desc, or, count, not, inArray } from "drizzle-orm";
 import { ADMIN_OHRS } from "../config.js";
@@ -558,6 +558,97 @@ router.delete("/leave-periods/:id", async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leave-periods DELETE error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Leave Filing Overrides (Admin) ──────────────────────────────────────────
+
+// GET /api/io/leave-overrides - list all overrides (admin-only)
+router.get("/leave-overrides", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = req.headers["x-actor-ohr"] as string || '';
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can view leave overrides" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const rows = await db.select().from(ioLeaveOverrides).orderBy(desc(ioLeaveOverrides.id));
+    res.json(rows);
+  } catch (err: any) {
+    console.error("[IO API] leave-overrides GET error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/io/leave-overrides/check/:ohr - check if an employee has an active override
+router.get("/leave-overrides/check/:ohr", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const ohr = req.params.ohr;
+    const rows = await db.select().from(ioLeaveOverrides)
+      .where(and(eq(ioLeaveOverrides.ohr_id, ohr), eq(ioLeaveOverrides.is_active, 1)));
+    // Check if any override is still within deadline
+    const nowMNL = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const active = rows.find(r => new Date(r.deadline) > nowMNL);
+    if (active) {
+      res.json({ hasOverride: true, deadline: active.deadline, reason: active.reason });
+    } else {
+      res.json({ hasOverride: false });
+    }
+  } catch (err: any) {
+    console.error("[IO API] leave-overrides check error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/leave-overrides - create a new override (admin-only)
+router.post("/leave-overrides", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = req.headers["x-actor-ohr"] as string || '';
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can create leave overrides" });
+    }
+    const { ohr_id, employee_name, deadline, reason } = req.body;
+    if (!ohr_id || !deadline) {
+      return res.status(400).json({ error: "ohr_id and deadline are required" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const now = new Date().toISOString();
+    await db.insert(ioLeaveOverrides).values({
+      ohr_id,
+      employee_name: employee_name || null,
+      deadline,
+      reason: reason || null,
+      created_by: req.headers["x-actor-name"] as string || actorOhr,
+      created_by_ohr: actorOhr,
+      created_at: now,
+      is_active: 1,
+    });
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] leave-overrides POST error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/io/leave-overrides/:id - revoke an override (admin-only)
+router.delete("/leave-overrides/:id", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = req.headers["x-actor-ohr"] as string || '';
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can revoke leave overrides" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    await db.update(ioLeaveOverrides)
+      .set({ is_active: 0 })
+      .where(eq(ioLeaveOverrides.id, Number(req.params.id)));
+    res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[IO API] leave-overrides DELETE error:", err);
     res.status(500).json({ error: err.message });
   }
 });
