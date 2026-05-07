@@ -14,10 +14,10 @@ import {
   updateSyncRecord,
   upsertSourceFile,
   syncDashboardData,
-} from "../performanceDb";
-import { parseMainMetrics } from "../performanceParser";
-import { storagePut } from "../storage";
-import { getDb } from "../db";
+} from "../performanceDb.js";
+import { parseMainMetrics } from "../performanceParser.js";
+import { storagePut } from "../storage.js";
+import { getDb } from "../db.js";
 import { sql } from "drizzle-orm";
 import { emitChange } from "./emit-change.js";
 

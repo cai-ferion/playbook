@@ -2,7 +2,7 @@
  * Performance Dashboard — Database Helpers
  * CRUD operations for performance dashboard data using raw SQL via the db connection.
  */
-import { getDb } from "./db";
+import { getDb } from "./db.js";
 import { sql } from "drizzle-orm";
 
 async function db() {

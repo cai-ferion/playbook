@@ -4,10 +4,10 @@
  * Coaching CRUD, QA Dispute 6-level escalation, Acknowledgement workflow.
  * All queries are server-paginated and role-scoped.
  */
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getDb } from "../db";
+import { getDb } from "../db.js";
 import {
   compassCoachingLogs,
   compassDisputeEvents,
@@ -15,7 +15,7 @@ import {
   ioEmployees,
   ioCoachingRca,
   ioCoachingZtp,
-} from "../../drizzle/schema";
+} from "../../drizzle/schema.js";
 import { eq, and, or, inArray, like, desc, asc, sql, gte, lte, count } from "drizzle-orm";
 import crypto from "crypto";
 import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "../config.js";

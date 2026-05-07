@@ -10,7 +10,7 @@ import cron from "node-cron";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { eq, and, inArray, sql, gte, lte, asc, ne, isNotNull } from "drizzle-orm";
-import { ioAttendance, ioEmployees, ioNotifications, ioLeaves, ioAuditLog, ioCoaching, ioCorrectiveActions, ioInsights } from "../drizzle/schema";
+import { ioAttendance, ioEmployees, ioNotifications, ioLeaves, ioAuditLog, ioCoaching, ioCorrectiveActions, ioInsights } from "../drizzle/schema.js";
 import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "./config.js";
 
 // Philippine Time is UTC+8

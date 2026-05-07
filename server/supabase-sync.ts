@@ -8,7 +8,7 @@
  * but never block the primary DB write — Supabase is a secondary mirror.
  */
 
-import { ENV } from "./_core/env";
+import { ENV } from "./_core/env.js";
 
 // ── Config ──────────────────────────────────────────────────────────────────
 

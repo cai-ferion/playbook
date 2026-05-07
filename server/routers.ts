@@ -1,10 +1,10 @@
-import { COOKIE_NAME } from "../shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
-import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
-import { compassRouter } from "./routers/compass";
-import { caCasesRouter } from "./routers/ca-cases";
-import { aiAssistantRouter } from "./routers/ai-assistant";
+import { COOKIE_NAME } from "../shared/const.js";
+import { getSessionCookieOptions } from "./_core/cookies.js";
+import { systemRouter } from "./_core/systemRouter.js";
+import { publicProcedure, router } from "./_core/trpc.js";
+import { compassRouter } from "./routers/compass.js";
+import { caCasesRouter } from "./routers/ca-cases.js";
+import { aiAssistantRouter } from "./routers/ai-assistant.js";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly

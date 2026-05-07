@@ -6,9 +6,9 @@
  * The coach makes the final call — this is advisory only.
  */
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
-import { invokeLLM } from "../_core/llm";
-import { getDb } from "../db";
+import { router, protectedProcedure } from "../_core/trpc.js";
+import { invokeLLM } from "../_core/llm.js";
+import { getDb } from "../db.js";
 import {
   compassCoachingLogs,
   compassCaCases,
@@ -16,7 +16,7 @@ import {
   compassViolationCatalog,
   ioAttendance,
   ioEmployees,
-} from "../../drizzle/schema";
+} from "../../drizzle/schema.js";
 import { eq, desc, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 

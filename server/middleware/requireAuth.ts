@@ -5,7 +5,7 @@
  */
 import { Request, Response, NextFunction } from "express";
 import { sdk } from "../_core/sdk.js";
-import type { User } from "../../drizzle/schema";
+import type { User } from "../../drizzle/schema.js";
 
 // Extend Express Request to include user
 declare global {

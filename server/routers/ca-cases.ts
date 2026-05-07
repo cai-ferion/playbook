@@ -5,10 +5,10 @@
  * Server-enforced state machine, attendance violation aggregation, DOCX generation, AI advisory.
  * All queries are role-scoped via the same visibility middleware as coaching.
  */
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { getDb } from "../db";
+import { getDb } from "../db.js";
 import {
   compassCaCases,
   compassCaTimeline,
@@ -16,9 +16,9 @@ import {
   compassViolationCatalog,
   ioEmployees,
   ioAttendance,
-} from "../../drizzle/schema";
+} from "../../drizzle/schema.js";
 import { eq, and, or, inArray, like, desc, asc, sql, gte, lte, count } from "drizzle-orm";
-import { storagePut } from "../storage";
+import { storagePut } from "../storage.js";
 import crypto from "crypto";
 import { OWNER_OHR as ADMIN_OHR, ADMIN_OHRS } from "../config.js";
 

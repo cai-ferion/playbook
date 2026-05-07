@@ -7,10 +7,10 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { registerOAuthRoutes } from "./oauth";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
+import { registerOAuthRoutes } from "./oauth.js";
+import { appRouter } from "../routers.js";
+import { createContext } from "./context.js";
+import { serveStatic, setupVite } from "./vite.js";
 import { registerModularIORoutes } from "../io/index.js";
 import { registerIOBackupRoutes } from "../io-backup.js";
 // requireAuth is used by tRPC context (context.ts), not directly here

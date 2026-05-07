@@ -1,68 +1,35 @@
-/**
- * Vercel Serverless Entry Point
- *
- * Uses dynamic imports for all local modules so that any ERR_MODULE_NOT_FOUND
- * error is caught, logged with the full message, and returned from /api/health
- * instead of crashing the entire function silently.
- *
- * Once the broken import is identified and fixed, these can be reverted to
- * static imports.
- */
 import express from "express";
 import compression from "compression";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { registerOAuthRoutes } from "../server/_core/oauth.js";
+import { appRouter } from "../server/routers.js";
+import { createContext } from "../server/_core/context.js";
+import { registerModularIORoutes } from "../server/io/index.js";
+import { registerIOBackupRoutes } from "../server/io-backup.js";
+import { refreshAdminOhrs } from "../server/config.js";
+import { corsMiddleware } from "../server/middleware/cors.js";
+import { rateLimitMiddleware } from "../server/middleware/rate-limit.js";
+import {
+  observabilityMiddleware,
+  getObservabilityMetrics,
+  getClientErrors,
+  recordClientError,
+} from "../server/middleware/observability.js";
 import type { ClientErrorReport } from "../server/middleware/observability.js";
 
 const app = express();
-
-// ── Diagnostic import loader ──────────────────────────────────────────────────
-const _importErrors: { module: string; error: string }[] = [];
-
-async function safeImport<T>(name: string, specifier: string): Promise<T | null> {
-  try {
-    return (await import(specifier)) as T;
-  } catch (e: any) {
-    const msg = String(e?.stack || e?.message || e).slice(0, 2000);
-    _importErrors.push({ module: name, error: msg });
-    console.error(`[IMPORT_FAIL] ${name}: ${msg}`);
-    return null;
-  }
-}
-
-// Load all local modules dynamically
-const [
-  oauthMod,
-  routersMod,
-  contextMod,
-  ioMod,
-  ioBackupMod,
-  configMod,
-  corsMod,
-  rateLimitMod,
-  observabilityMod,
-] = await Promise.all([
-  safeImport<typeof import("../server/_core/oauth.js")>("oauth", "../server/_core/oauth.js"),
-  safeImport<typeof import("../server/routers.js")>("routers", "../server/routers.js"),
-  safeImport<typeof import("../server/_core/context.js")>("context", "../server/_core/context.js"),
-  safeImport<typeof import("../server/io/index.js")>("io/index", "../server/io/index.js"),
-  safeImport<typeof import("../server/io-backup.js")>("io-backup", "../server/io-backup.js"),
-  safeImport<typeof import("../server/config.js")>("config", "../server/config.js"),
-  safeImport<typeof import("../server/middleware/cors.js")>("cors", "../server/middleware/cors.js"),
-  safeImport<typeof import("../server/middleware/rate-limit.js")>("rate-limit", "../server/middleware/rate-limit.js"),
-  safeImport<typeof import("../server/middleware/observability.js")>("observability", "../server/middleware/observability.js"),
-]);
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(compression({ level: 6, threshold: 1024 }));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
-if (corsMod?.corsMiddleware) app.use(corsMod.corsMiddleware);
-if (rateLimitMod?.rateLimitMiddleware) app.use(rateLimitMod.rateLimitMiddleware);
-if (observabilityMod?.observabilityMiddleware) app.use(observabilityMod.observabilityMiddleware);
+app.use(corsMiddleware);
+app.use(rateLimitMiddleware);
+app.use(observabilityMiddleware);
 
 // ── OAuth routes (public) ────────────────────────────────────────────────────
-if (oauthMod?.registerOAuthRoutes) oauthMod.registerOAuthRoutes(app);
+registerOAuthRoutes(app);
 
 // ── Client error reporting (public) ──────────────────────────────────────────
 app.post("/api/client-errors", (req, res) => {
@@ -74,7 +41,7 @@ app.post("/api/client-errors", (req, res) => {
   report.actor =
     report.actor || (req.headers["x-actor-ohr"] as string) || "anonymous";
   report.timestamp = report.timestamp || Date.now();
-  if (observabilityMod?.recordClientError) observabilityMod.recordClientError(report);
+  recordClientError(report);
   res.status(204).end();
 });
 
@@ -88,22 +55,15 @@ app.get("/api/io/events", (_req, res) => {
 });
 
 app.get("/api/io/observability", (_req, res) => {
-  if (observabilityMod?.getObservabilityMetrics) {
-    res.json(observabilityMod.getObservabilityMetrics());
-  } else {
-    res.status(503).json({ error: "Observability module not loaded" });
-  }
-});
-app.get("/api/io/client-errors", (_req, res) => {
-  if (observabilityMod?.getClientErrors) {
-    res.json(observabilityMod.getClientErrors());
-  } else {
-    res.status(503).json({ error: "Observability module not loaded" });
-  }
+  res.json(getObservabilityMetrics());
 });
 
-if (ioMod?.registerModularIORoutes) ioMod.registerModularIORoutes(app);
-if (ioBackupMod?.registerIOBackupRoutes) ioBackupMod.registerIOBackupRoutes(app);
+app.get("/api/io/client-errors", (_req, res) => {
+  res.json(getClientErrors());
+});
+
+registerModularIORoutes(app);
+registerIOBackupRoutes(app);
 
 // ── Auto-mailer HTTP endpoints ───────────────────────────────────────────────
 import("../server/auto-mailer.js")
@@ -208,28 +168,23 @@ app.get("/api/cron/notifications", async (req, res) => {
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({
-    status: _importErrors.length === 0 ? "ok" : "degraded",
+    status: "ok",
     timestamp: Date.now(),
     platform: "vercel",
-    importErrors: _importErrors,
   });
 });
 
 // ── tRPC ─────────────────────────────────────────────────────────────────────
-if (routersMod?.appRouter && contextMod?.createContext) {
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: routersMod.appRouter,
-      createContext: contextMod.createContext,
-    })
-  );
-}
+app.use(
+  "/api/trpc",
+  createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
 
 // ── Initialize admin OHRs on cold start ──────────────────────────────────────
-if (configMod?.refreshAdminOhrs) {
-  configMod.refreshAdminOhrs().catch(console.error);
-}
+refreshAdminOhrs().catch(console.error);
 
 // ── Global JSON error handler ────────────────────────────────────────────────
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
