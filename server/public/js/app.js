@@ -492,10 +492,21 @@ async function loginAsEmployee(emp) {
   setTimeout(preloadModules, 50);
 }
 
+function setLoginLoading(loading) {
+  const btn = document.getElementById('login-submit-btn');
+  if (!btn) return;
+  btn.disabled = loading;
+  const text = btn.querySelector('.btn-text');
+  const spinner = btn.querySelector('.btn-spinner');
+  if (text) text.style.display = loading ? 'none' : '';
+  if (spinner) spinner.style.display = loading ? '' : 'none';
+}
+
 async function handleLogin() {
   const ohr = document.getElementById('login-ohr').value.trim();
   const errorEl = document.getElementById('login-error');
   errorEl.textContent = '';
+  setLoginLoading(true);
 
   if (!ohr) { errorEl.textContent = 'Please enter your OHR ID.'; return; }
 
@@ -552,6 +563,7 @@ async function handleLogin() {
 
     if (!Array.isArray(empData) || empData.length === 0) {
       errorEl.textContent = 'OHR ID not found. Please check and try again.';
+      setLoginLoading(false);
       return;
     }
 
@@ -560,12 +572,14 @@ async function handleLogin() {
     // Only Active and Onboarding employees can access the platform
     if (emp.employement_status !== 'Active' && emp.employement_status !== 'Onboarding') {
       errorEl.textContent = 'Access denied. Only active employees can access the platform.';
+      setLoginLoading(false);
       return;
     }
 
     // Onboarding gate: redirect to profile completion form
     if (emp.employement_status === 'Onboarding' || !emp.full_name || !emp.last_name || !emp.given_name) {
       window._onboardOhr = ohr;
+      setLoginLoading(false);
       showAuthForm('onboarding');
       return;
     }
