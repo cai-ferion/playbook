@@ -95,16 +95,23 @@ function havenGetRole() {
 function havenGetMyAgentOhrs() {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) return [];
+  // Look up the TL's own record in io_employees by ohr_id to get the canonical full_name
+  // (users.name is "First Last" but io_employees.supervisor_name is "Last, First Middle")
+  const myEmpRecord = HAVEN.employees.find(e => e.ohr_id === user.ohr_id);
+  const supervisorKey = myEmpRecord ? myEmpRecord.full_name : user.full_name;
   return HAVEN.employees
-    .filter(e => e.supervisor_name === user.full_name)
+    .filter(e => e.supervisor_name === supervisorKey)
     .map(e => e.ohr_id);
 }
 // Get all OHRs under a manager (direct reports + agents under their TLs)
 function havenGetMyTeamOhrs() {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) return [];
+  // Look up the manager's own record in io_employees by ohr_id to get the canonical full_name
+  const myEmpRecord = HAVEN.employees.find(e => e.ohr_id === user.ohr_id);
+  const managerKey = myEmpRecord ? myEmpRecord.full_name : user.full_name;
   // Direct reports to this manager
-  const directReports = HAVEN.employees.filter(e => e.supervisor_name === user.full_name);
+  const directReports = HAVEN.employees.filter(e => e.supervisor_name === managerKey);
   const directOhrs = directReports.map(e => e.ohr_id);
   // Find TLs among direct reports, then get their agents
   const myTLs = directReports.filter(e => e.actual_role === 'Team Lead');
