@@ -554,6 +554,7 @@ async function fetchRecordsDirect(startDate, endDate) {
     if (startDate) params.set('log_date_gte', startDate);
     if (endDate) params.set('log_date_lte', endDate);
     const resp = await fetch(`${IO_API_BASE}/attendance?${params}`);
+    if (!resp.ok) break;
     const data = await resp.json();
     if (!Array.isArray(data) || data.length === 0) break;
     allRecords.push(...data);
@@ -604,6 +605,7 @@ async function getAttendanceCount(startDate, endDate) {
   if (startDate) params.set('log_date_gte', startDate);
   if (endDate) params.set('log_date_lte', endDate);
   const resp = await fetch(`${IO_API_BASE}/attendance?${params}`);
+  if (!resp.ok) return 0;
   const data = await resp.json();
   return data.count || 0;
 }
@@ -630,6 +632,7 @@ async function fetchRecordsForRange(startDate, endDate, onProgress) {
     if (endDate) params.set('log_date_lte', endDate);
 
     const resp = await fetch(`${IO_API_BASE}/attendance?${params}`);
+    if (!resp.ok) break;
     const data = await resp.json();
     if (!Array.isArray(data) || data.length === 0) break;
     allRecords.push(...data);
@@ -705,6 +708,7 @@ async function fetchRecords() {
     const pageSize = 1000;
     while (true) {
       const resp = await fetch(`${IO_API_BASE}/attendance?limit=${pageSize}&offset=${offset}`);
+      if (!resp.ok) break;
       const data = await resp.json();
       if (!Array.isArray(data) || data.length === 0) break;
       allRecords.push(...data);
