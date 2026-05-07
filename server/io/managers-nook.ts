@@ -104,7 +104,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     // This prevents transferred/inactive agents from inflating the coached count.
     const coachingRows = await db.execute(sql`
       SELECT c.coachee_sup as supervisor_name,
-             SUBSTRING(c.coaching_date, 1, 7) as month,
+             TO_CHAR(c.coaching_date, 'YYYY-MM') as month,
              COUNT(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END) as unique_agents_coached,
              COUNT(*) as total_sessions
       FROM io_coaching c
@@ -112,11 +112,11 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         ON c.coachee_ohr = e.ohr_id
         AND e.employement_status = 'Active'
         AND e.supervisor_name = c.coachee_sup
-      WHERE SUBSTRING(c.coaching_date, 1, 7) >= ${oldestMonth}
-        AND SUBSTRING(c.coaching_date, 1, 7) <= ${newestMonth}
+      WHERE TO_CHAR(c.coaching_date, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(c.coaching_date, 'YYYY-MM') <= ${newestMonth}
         AND c.coachee_sup IS NOT NULL
         AND c.coachee_sup != ''
-      GROUP BY c.coachee_sup, SUBSTRING(c.coaching_date, 1, 7)
+      GROUP BY c.coachee_sup, TO_CHAR(c.coaching_date, 'YYYY-MM')
     `);
     const coachingMap: Record<string, Record<string, { unique: number; total: number }>> = {};
     for (const row of coachingRows as any[]) {
@@ -132,18 +132,18 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     // ── 4b. Get coached agent OHRs per supervisor per month (only active agents under that sup) ──
     const coachedAgentRows = await db.execute(sql`
       SELECT c.coachee_sup as supervisor_name,
-             SUBSTRING(c.coaching_date, 1, 7) as month,
+             TO_CHAR(c.coaching_date, 'YYYY-MM') as month,
              STRING_AGG(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END, ',') as coached_ohrs
       FROM io_coaching c
       LEFT JOIN io_employees e
         ON c.coachee_ohr = e.ohr_id
         AND e.employement_status = 'Active'
         AND e.supervisor_name = c.coachee_sup
-      WHERE SUBSTRING(c.coaching_date, 1, 7) >= ${oldestMonth}
-        AND SUBSTRING(c.coaching_date, 1, 7) <= ${newestMonth}
+      WHERE TO_CHAR(c.coaching_date, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(c.coaching_date, 'YYYY-MM') <= ${newestMonth}
         AND c.coachee_sup IS NOT NULL
         AND c.coachee_sup != ''
-      GROUP BY c.coachee_sup, SUBSTRING(c.coaching_date, 1, 7)
+      GROUP BY c.coachee_sup, TO_CHAR(c.coaching_date, 'YYYY-MM')
     `);
     const coachedOhrsMap: Record<string, Record<string, Set<string>>> = {};
     for (const row of coachedAgentRows as any[]) {
@@ -171,25 +171,19 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     }
 
     // ── 5. Insights per supervisor per month ──
-    // io_insights.week_ending is stored as MM/DD/YY or M/D/YYYY — parse robustly to YYYY-MM
-    // PostgreSQL: use TO_DATE / TO_CHAR instead of STR_TO_DATE / DATE_FORMAT
-    const dateExpr = sql`CASE
-      WHEN i.week_ending ~ '^\d{2}/\d{2}/\d{2}$' THEN TO_CHAR(TO_DATE(i.week_ending, 'MM/DD/YY'), 'YYYY-MM')
-      WHEN i.week_ending ~ '^\d{1,2}/\d{1,2}/\d{4}$' THEN TO_CHAR(TO_DATE(i.week_ending, 'FMMM/FMDD/YYYY'), 'YYYY-MM')
-      ELSE NULL
-    END`;
+    // io_insights.week_ending is a DATE column in PostgreSQL — use TO_CHAR directly
     const insightRows = await db.execute(sql`
       SELECT COALESCE(e.full_name, i.supervisor) as supervisor,
-             ${dateExpr} as month,
+             TO_CHAR(i.week_ending, 'YYYY-MM') as month,
              COUNT(*) as total_submitted,
              SUM(CASE WHEN i.status = 'Approved' OR i.status = 'Implemented' THEN 1 ELSE 0 END) as total_approved
       FROM io_insights i
       LEFT JOIN io_employees e ON i.supervisor_email = e.meta_email
         AND e.employement_status = 'Active'
       WHERE i.week_ending IS NOT NULL
-        AND i.week_ending != ''
-      GROUP BY COALESCE(e.full_name, i.supervisor), ${dateExpr}
-      HAVING ${dateExpr} IS NOT NULL AND ${dateExpr} >= ${oldestMonth} AND ${dateExpr} <= ${newestMonth}
+      GROUP BY COALESCE(e.full_name, i.supervisor), TO_CHAR(i.week_ending, 'YYYY-MM')
+      HAVING TO_CHAR(i.week_ending, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(i.week_ending, 'YYYY-MM') <= ${newestMonth}
     `);
     const insightsMap: Record<string, Record<string, { submitted: number; approved: number }>> = {};
     for (const row of insightRows as any[]) {
@@ -210,16 +204,16 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     // UPL = tag = 'UPL'
     const shrinkageRows = await db.execute(sql`
       SELECT snap_supervisor as supervisor_name,
-             SUBSTRING(log_date, 1, 7) as month,
+             TO_CHAR(log_date, 'YYYY-MM') as month,
              SUM(CASE WHEN tag IN ('P','LATE','OT','') OR tag IS NULL THEN 1 ELSE 0 END) as present_days,
              SUM(CASE WHEN tag IN ('PL','ML') THEN 1 ELSE 0 END) as pl_days,
              SUM(CASE WHEN tag = 'UPL' THEN 1 ELSE 0 END) as upl_days
       FROM io_attendance
-      WHERE SUBSTRING(log_date, 1, 7) >= ${oldestMonth}
-        AND SUBSTRING(log_date, 1, 7) <= ${newestMonth}
+      WHERE TO_CHAR(log_date, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(log_date, 'YYYY-MM') <= ${newestMonth}
         AND snap_supervisor IS NOT NULL
         AND snap_supervisor != ''
-      GROUP BY snap_supervisor, SUBSTRING(log_date, 1, 7)
+      GROUP BY snap_supervisor, TO_CHAR(log_date, 'YYYY-MM')
     `);
     const shrinkageMap: Record<string, Record<string, { p: number; pl: number; upl: number; pct: number }>> = {};
     for (const row of shrinkageRows as any[]) {
@@ -289,9 +283,9 @@ router.get("/available-months", async (req: Request, res: Response) => {
     if (!db) return res.status(500).json({ error: "DB unavailable" });
 
     const rows = await db.execute(sql`
-      SELECT DISTINCT SUBSTRING(log_date, 1, 7) as month
+      SELECT DISTINCT TO_CHAR(log_date, 'YYYY-MM') as month
       FROM io_attendance
-      WHERE log_date IS NOT NULL AND log_date != ''
+      WHERE log_date IS NOT NULL
       ORDER BY month DESC
       LIMIT 12
     `);

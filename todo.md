@@ -4101,3 +4101,5 @@
 
 - [x] Bug: May Christine Gumban cannot see leave requests filed under her in Haven (audit Brianna Aspera too)
 - [ ] Bug: Managers Nook displaying incorrect Valid Tardiness count
+- [x] Bug: Managers Nook not showing anything after Supabase migration (SUBSTRING/!= '' on DATE columns → TO_CHAR)
+- [x] Transfer all agents under Rosales, Jenifer to Bernal, John Henry (17 agents moved to Bernal, John Henry De Leon)
