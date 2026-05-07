@@ -100,14 +100,15 @@ router.post("/", validate(groupTaskCreateSchema), async (req: Request, res: Resp
     const creatorOhrEsc = created_by_ohr.replace(/'/g, "''");
     const creatorNameEsc = created_by_name ? created_by_name.replace(/'/g, "''") : null;
 
-    const [result] = (await db.execute(sql.raw(`
+    const insertResult: any = await db.execute(sql.raw(`
       INSERT INTO io_group_tasks
         (task_id, title, description, category, planning_groups, departments, roles, excluded_ohrs, due_date, status, created_by_ohr, created_by_name, created_at, updated_at)
       VALUES
         ('${taskId}', '${titleEsc}', ${descEsc ? `'${descEsc}'` : 'NULL'}, ${catEsc ? `'${catEsc}'` : 'NULL'}, ${pgJson ? `'${pgJson}'` : 'NULL'}, ${deptJson ? `'${deptJson}'` : 'NULL'}, ${rolesJson ? `'${rolesJson}'` : 'NULL'}, ${exclJson ? `'${exclJson}'` : 'NULL'}, ${due_date ? `'${due_date}'` : 'NULL'}, 'Active', '${creatorOhrEsc}', ${creatorNameEsc ? `'${creatorNameEsc}'` : 'NULL'}, '${now}', '${now}')
-    `))) as unknown as [any];
+      RETURNING id
+    `));
 
-    const groupTaskId = result.insertId;
+    const groupTaskId = Array.isArray(insertResult) ? insertResult[0]?.id : undefined;
 
     // Resolve and assign employees
     const employees = await resolveTargetEmployees({
@@ -185,7 +186,7 @@ router.get("/", async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
-    const [rows] = (await db.execute(sql.raw(`
+    const listResult: any = await db.execute(sql.raw(`
       SELECT
         gt.*,
         COUNT(ta.id) AS total_assigned,
@@ -196,8 +197,9 @@ router.get("/", async (req: Request, res: Response) => {
       LEFT JOIN io_task_assignments ta ON ta.group_task_id = gt.id
       GROUP BY gt.id
       ORDER BY gt.created_at DESC
-    `))) as unknown as [any[]];
+    `));
 
+    const rows = Array.isArray(listResult) ? listResult : [];
     res.json(rows.map((r: any) => ({
       ...r,
       planning_groups: r.planning_groups ? JSON.parse(r.planning_groups) : null,
@@ -227,7 +229,7 @@ router.get("/my-tasks", async (req: Request, res: Response) => {
     if (!ohr) return res.status(400).json({ error: "ohr query param required" });
 
     const ohrEsc = ohr.replace(/'/g, "''");
-    const [rows] = (await db.execute(sql.raw(`
+    const myTasksResult: any = await db.execute(sql.raw(`
       SELECT
         ta.id AS assignment_id,
         ta.status AS assignment_status,
@@ -253,9 +255,9 @@ router.get("/my-tasks", async (req: Request, res: Response) => {
         gt.due_date IS NULL,
         gt.due_date ASC,
         gt.created_at DESC
-    `))) as unknown as [any[]];
+    `));
 
-    res.json(rows);
+    res.json(Array.isArray(myTasksResult) ? myTasksResult : []);
   } catch (err: any) {
     console.error("[GroupTask] My tasks error:", err);
     res.status(500).json({ error: err.message });
@@ -270,21 +272,22 @@ router.get("/:id", async (req: Request, res: Response) => {
     const taskId = parseInt(req.params.id);
     if (isNaN(taskId)) return res.status(400).json({ error: "Invalid task ID" });
 
-    const [taskRows] = (await db.execute(sql.raw(`
+    const taskRows: any = await db.execute(sql.raw(`
       SELECT * FROM io_group_tasks WHERE id = ${taskId}
-    `))) as unknown as [any[]];
+    `));
 
-    if (taskRows.length === 0) return res.status(404).json({ error: "Task not found" });
+    const taskArr = Array.isArray(taskRows) ? taskRows : [];
+    if (taskArr.length === 0) return res.status(404).json({ error: "Task not found" });
 
-    const task = taskRows[0];
+    const task = taskArr[0];
 
-    const [assignments] = (await db.execute(sql.raw(`
+    const assignments: any = await db.execute(sql.raw(`
       SELECT ta.*, e.supervisor_name, e.planning_group, e.actual_role
       FROM io_task_assignments ta
       LEFT JOIN io_employees e ON e.ohr_id = ta.employee_ohr
       WHERE ta.group_task_id = ${taskId}
       ORDER BY ta.status ASC, ta.employee_name ASC
-    `))) as unknown as [any[]];
+    `));
 
     res.json({
       ...task,
@@ -325,15 +328,15 @@ router.post("/:id/complete", validate(groupTaskCompleteSchema), async (req: Requ
     }
     const attachClause = attachValue ? `, attachment_url = '${attachValue.replace(/'/g, "''")}'` : '';
 
-    const [result] = (await db.execute(sql.raw(`
+    const completeResult: any = await db.execute(sql.raw(`
       UPDATE io_task_assignments
       SET status = 'Completed', completed_at = '${now}'${attachClause}
       WHERE group_task_id = ${groupTaskId}
         AND employee_ohr = '${ohrEsc}'
         AND status = 'Pending'
-    `))) as unknown as [any];
+    `));
 
-    if (result.affectedRows === 0) {
+    if ((Array.isArray(completeResult) ? completeResult.length : 0) === 0) {
       return res.status(404).json({ error: "No pending assignment found" });
     }
 
@@ -359,22 +362,23 @@ router.post("/:id/exclude", validate(groupTaskExcludeSchema), async (req: Reques
     const escaped = ohrs.map((o: string) => `'${o.replace(/'/g, "''")}'`).join(",");
 
     // Mark as Not Applicable instead of deleting (audit trail)
-    const [result] = (await db.execute(sql.raw(`
+    const excludeResult: any = await db.execute(sql.raw(`
       UPDATE io_task_assignments
       SET status = 'Not Applicable'
       WHERE group_task_id = ${groupTaskId}
         AND employee_ohr IN (${escaped})
         AND status = 'Pending'
-    `))) as unknown as [any];
+    `));
 
     // Update the excluded_ohrs list on the group task
-    const [taskRows] = (await db.execute(sql.raw(`
+    const taskRows: any = await db.execute(sql.raw(`
       SELECT excluded_ohrs FROM io_group_tasks WHERE id = ${groupTaskId}
-    `))) as unknown as [any[]];
+    `));
 
     let existing: string[] = [];
-    if (taskRows[0]?.excluded_ohrs) {
-      existing = JSON.parse(taskRows[0].excluded_ohrs);
+    const firstRow = Array.isArray(taskRows) ? taskRows[0] : null;
+    if (firstRow?.excluded_ohrs) {
+      existing = JSON.parse(firstRow.excluded_ohrs);
     }
     const merged = Array.from(new Set([...existing, ...ohrs]));
 
@@ -385,7 +389,7 @@ router.post("/:id/exclude", validate(groupTaskExcludeSchema), async (req: Reques
     `));
 
     emitChange(req, "group-tasks", "record_updated", { id: req.params.id, action: "exclude" });
-    res.json({ success: true, excluded_count: result.affectedRows });
+    res.json({ success: true, excluded_count: Array.isArray(excludeResult) ? excludeResult.length : 0 });
   } catch (err: any) {
     console.error("[GroupTask] Exclude error:", err);
     res.status(500).json({ error: err.message });

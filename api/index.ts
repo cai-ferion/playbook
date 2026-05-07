@@ -218,5 +218,21 @@ app.use(
 // ── Initialize admin OHRs on cold start ──────────────────────────────────────
 refreshAdminOhrs().catch(console.error);
 
+// ── Global JSON error handler ────────────────────────────────────────────────
+// Without this, any unhandled Express error returns HTML, which causes the
+// browser to fail parsing the response and show "Network error" in the UI.
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("[Express] Unhandled error:", err?.message || err);
+  if (res.headersSent) return;
+  res.status(err?.status || 500).json({
+    error: err?.message || "Internal server error",
+  });
+});
+
+// ── 404 handler — JSON, not HTML ────────────────────────────────────────────
+app.use((_req: express.Request, res: express.Response) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
 // ── Export for Vercel ────────────────────────────────────────────────────────
 export default app;

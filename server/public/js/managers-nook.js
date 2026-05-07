@@ -177,8 +177,11 @@ function nookRender() {
         // Trend mode: one cell per month per metric
         const orderedMonths = [...months].reverse(); // oldest first
         const tardCells = orderedMonths.map(m => {
-          const v = sup.months[m]?.tardiness || 0;
-          return `<td style="text-align:center;">${nookColorCell(v, 'tardiness')}</td>`;
+          const t = sup.months[m]?.tardiness || { valid: 0, total: 0 };
+          const valid = typeof t === 'object' ? t.valid : t;
+          const total = typeof t === 'object' ? t.total : 0;
+          const label = `${valid}/${total}`;
+          return `<td style="text-align:center;">${nookColorCell(valid, 'tardiness', label)}</td>`;
         }).join('');
 
         const coachCells = orderedMonths.map(m => {
@@ -209,7 +212,10 @@ function nookRender() {
         // Single month mode
         const m = selectedMonth;
         const md = sup.months[m] || {};
-        const tard = md.tardiness || 0;
+        const tardObj = md.tardiness || { valid: 0, total: 0 };
+        const tardValid = typeof tardObj === 'object' ? tardObj.valid : tardObj;
+        const tardTotal = typeof tardObj === 'object' ? tardObj.total : 0;
+        const tardLabel = `${tardValid}/${tardTotal}`;
         const coach = md.coaching || { coverage_pct: 0, unique_agents_coached: 0, total_agents: 0, missing_agents: [] };
         const ins = md.insights || { submitted: 0, approved: 0 };
         const shrink = md.shrinkage || { pct: 0 };
@@ -221,7 +227,7 @@ function nookRender() {
         return `<tr>
           <td style="position:sticky;left:0;z-index:1;background:var(--bg-primary);font-weight:500;white-space:nowrap;">${sup.supervisor_name}</td>
           <td style="text-align:center;">${sup.total_agents}</td>
-          <td style="text-align:center;">${nookColorCell(tard, 'tardiness')}</td>
+          <td style="text-align:center;">${nookColorCell(tardValid, 'tardiness', tardLabel)}</td>
           <td ${coachClick}>${nookColorCell(coach.coverage_pct, 'coaching', coachLabel)}${missingCount > 0 ? `<br><span style="font-size:10px;color:var(--danger);cursor:pointer;text-decoration:underline;">${missingCount} missing</span>` : ''}</td>
           <td style="text-align:center;">${ins.submitted} / ${ins.approved}</td>
           <td style="text-align:center;">${nookColorCell(shrink.pct, 'shrinkage')}</td>

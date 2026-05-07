@@ -17,9 +17,10 @@ export async function createSyncRecord(data: { syncedBy?: string; syncedByName?:
   const result: any = await (await db()).execute(sql`
     INSERT INTO perf_sync_history (synced_by, synced_by_name, status)
     VALUES (${data.syncedBy || null}, ${data.syncedByName || null}, 'processing')
+    RETURNING id
   `);
-  const rows = Array.isArray(result) ? result[0] : result;
-  return rows.insertId;
+  const rows = Array.isArray(result) ? result : [result];
+  return rows[0]?.id;
 }
 
 export async function updateSyncRecord(
@@ -41,14 +42,14 @@ export async function getSyncHistory(limit = 20) {
   const result: any = await (await db()).execute(sql`
     SELECT * FROM perf_sync_history ORDER BY created_at DESC LIMIT ${limit}
   `);
-  return Array.isArray(result) ? result[0] : result;
+  return Array.isArray(result) ? result : [];
 }
 
 export async function getLatestSync() {
   const result: any = await (await db()).execute(sql`
     SELECT * FROM perf_sync_history WHERE status = 'completed' ORDER BY created_at DESC LIMIT 1
   `);
-  const rows = Array.isArray(result) ? result[0] : result;
+  const rows = Array.isArray(result) ? result : [];
   return rows[0] || null;
 }
 
@@ -56,7 +57,7 @@ export async function getSyncStatus(syncId: number) {
   const result: any = await (await db()).execute(sql`
     SELECT * FROM perf_sync_history WHERE id = ${syncId}
   `);
-  const rows = Array.isArray(result) ? result[0] : result;
+  const rows = Array.isArray(result) ? result : [];
   return rows[0] || null;
 }
 
@@ -72,11 +73,11 @@ export async function upsertSourceFile(data: {
   await (await db()).execute(sql`
     INSERT INTO perf_source_files (file_key, original_name, s3_key, s3_url, file_size, updated_at)
     VALUES (${data.fileKey}, ${data.originalName}, ${data.s3Key}, ${data.s3Url}, ${data.fileSize}, NOW())
-    ON DUPLICATE KEY UPDATE
-      original_name = VALUES(original_name),
-      s3_key = VALUES(s3_key),
-      s3_url = VALUES(s3_url),
-      file_size = VALUES(file_size),
+    ON CONFLICT (file_key) DO UPDATE SET
+      original_name = EXCLUDED.original_name,
+      s3_key = EXCLUDED.s3_key,
+      s3_url = EXCLUDED.s3_url,
+      file_size = EXCLUDED.file_size,
       updated_at = NOW()
   `);
 }
@@ -85,7 +86,7 @@ export async function getSourceFile() {
   const result: any = await (await db()).execute(sql`
     SELECT * FROM perf_source_files ORDER BY updated_at DESC LIMIT 1
   `);
-  const rows = Array.isArray(result) ? result[0] : result;
+  const rows = Array.isArray(result) ? result : [];
   return rows[0] || null;
 }
 
@@ -115,9 +116,9 @@ export async function syncDashboardData(
     await (await db()).execute(sql`
       INSERT INTO perf_employees (ohr, name, planning_group, sup_name, shift_time, updated_at)
       VALUES (${emp.ohr}, ${emp.name}, ${emp.planning_group}, ${emp.sup_name}, ${emp.shift_time}, NOW())
-      ON DUPLICATE KEY UPDATE
-        name = VALUES(name), planning_group = VALUES(planning_group),
-        sup_name = VALUES(sup_name), shift_time = VALUES(shift_time), updated_at = NOW()
+      ON CONFLICT (ohr) DO UPDATE SET
+        name = EXCLUDED.name, planning_group = EXCLUDED.planning_group,
+        sup_name = EXCLUDED.sup_name, shift_time = EXCLUDED.shift_time, updated_at = NOW()
     `);
 
     // Insert metrics per timeframe
@@ -132,11 +133,11 @@ export async function syncDashboardData(
         VALUES (${emp.ohr}, ${tfKey}, ${tf.label}, ${tf.type},
           ${m.utilization}, ${m.occupancy}, ${m.throughput}, ${m.aht}, ${m.nht}, ${m.closures},
           ${syncId}, NOW())
-        ON DUPLICATE KEY UPDATE
-          timeframe_label = VALUES(timeframe_label), timeframe_type = VALUES(timeframe_type),
-          utilization = VALUES(utilization), occupancy = VALUES(occupancy), throughput = VALUES(throughput),
-          aht = VALUES(aht), nht = VALUES(nht), closures = VALUES(closures),
-          sync_id = VALUES(sync_id), updated_at = NOW()
+        ON CONFLICT (ohr, timeframe_key) DO UPDATE SET
+          timeframe_label = EXCLUDED.timeframe_label, timeframe_type = EXCLUDED.timeframe_type,
+          utilization = EXCLUDED.utilization, occupancy = EXCLUDED.occupancy, throughput = EXCLUDED.throughput,
+          aht = EXCLUDED.aht, nht = EXCLUDED.nht, closures = EXCLUDED.closures,
+          sync_id = EXCLUDED.sync_id, updated_at = NOW()
       `);
     }
   }
@@ -150,12 +151,12 @@ export async function syncDashboardData(
       VALUES (${d.ohr}, ${d.weDate}, ${d.production_sec}, ${d.production_work_sec},
         ${d.srt_billable_sec}, ${d.decisioned_count}, ${d.ticket_count}, ${d.ht_sec},
         ${d.nht_sec}, ${d.tht_sec}, ${d.skip_count}, ${d.volume}, ${syncId}, NOW())
-      ON DUPLICATE KEY UPDATE
-        production_sec = VALUES(production_sec), production_work_sec = VALUES(production_work_sec),
-        srt_billable_sec = VALUES(srt_billable_sec), decisioned_count = VALUES(decisioned_count),
-        ticket_count = VALUES(ticket_count), ht_sec = VALUES(ht_sec), nht_sec = VALUES(nht_sec),
-        tht_sec = VALUES(tht_sec), skip_count = VALUES(skip_count), volume = VALUES(volume),
-        sync_id = VALUES(sync_id), updated_at = NOW()
+      ON CONFLICT (ohr, we_date) DO UPDATE SET
+        production_sec = EXCLUDED.production_sec, production_work_sec = EXCLUDED.production_work_sec,
+        srt_billable_sec = EXCLUDED.srt_billable_sec, decisioned_count = EXCLUDED.decisioned_count,
+        ticket_count = EXCLUDED.ticket_count, ht_sec = EXCLUDED.ht_sec, nht_sec = EXCLUDED.nht_sec,
+        tht_sec = EXCLUDED.tht_sec, skip_count = EXCLUDED.skip_count, volume = EXCLUDED.volume,
+        sync_id = EXCLUDED.sync_id, updated_at = NOW()
     `);
   }
 
@@ -173,7 +174,7 @@ export async function syncDashboardData(
     await (await db()).execute(sql`
       INSERT INTO perf_dashboard_meta (meta_key, meta_value, updated_at)
       VALUES (${entry.key}, ${entry.value}, NOW())
-      ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()
+      ON CONFLICT (meta_key) DO UPDATE SET meta_value = EXCLUDED.meta_value, updated_at = NOW()
     `);
   }
 }
@@ -183,15 +184,15 @@ export async function syncDashboardData(
 export async function getDashboardData() {
   // Get employees
   const empResult: any = await (await db()).execute(sql`SELECT * FROM perf_employees ORDER BY name`);
-  const empRows = Array.isArray(empResult) ? empResult[0] : empResult;
+  const empRows = Array.isArray(empResult) ? empResult : [];
 
   // Get all metrics
   const metResult: any = await (await db()).execute(sql`SELECT * FROM perf_employee_metrics`);
-  const metRows = Array.isArray(metResult) ? metResult[0] : metResult;
+  const metRows = Array.isArray(metResult) ? metResult : [];
 
   // Get metadata
   const metaResult: any = await (await db()).execute(sql`SELECT * FROM perf_dashboard_meta`);
-  const metaRows = Array.isArray(metaResult) ? metaResult[0] : metaResult;
+  const metaRows = Array.isArray(metaResult) ? metaResult : [];
 
   const meta: Record<string, any> = {};
   for (const row of metaRows) {
@@ -270,7 +271,7 @@ export async function getKpiForDateRange(startDate: string, endDate: string, ohr
     `);
   }
 
-  const rows = Array.isArray(result) ? result[0] : result;
+  const rows = Array.isArray(result) ? result : [];
   const r = rows[0] || {};
 
   const totalProdSec = Number(r.total_production_sec) || 0;

@@ -1,1 +1,0 @@
-ALTER TABLE `io_task_assignments` ADD `attachment_url` text;

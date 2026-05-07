@@ -56,17 +56,17 @@ export async function versionedUpdateRaw(
   setParams: unknown[],
 ): Promise<{ affectedRows: number; newVersion: number }> {
   const newVersion = expectedVersion + 1;
-  const fullSet = `${setClauses}, \`version\` = ?`;
+  const fullSet = `${setClauses}, "version" = ?`;
   const allParams = [...setParams, newVersion, idValue, expectedVersion];
 
   const result = await db.execute(
     sql.raw(
-      `UPDATE \`${tableName}\` SET ${fullSet} WHERE \`${idColumn}\` = ? AND \`version\` = ?`
+      `UPDATE "${tableName}" SET ${fullSet} WHERE "${idColumn}" = ? AND "version" = ?`
     ).append(sql`${sql.raw("")}`),
   );
 
-  // TiDB/MySQL returns ResultSetHeader as first element
-  const affectedRows = (result as any)?.[0]?.affectedRows ?? (result as any)?.affectedRows ?? 0;
+  // postgres-js returns an array of affected rows
+  const affectedRows = Array.isArray(result) ? result.length : ((result as any)?.rowCount ?? 0);
   return { affectedRows, newVersion };
 }
 
@@ -102,7 +102,8 @@ export async function optimisticUpdate(
     .set(updateWithVersion)
     .where(and(eq(idCol, idValue), eq(table.version, expectedVersion)));
 
-  const affectedRows = (result as any)?.[0]?.affectedRows ?? (result as any)?.affectedRows ?? 0;
+  // postgres-js: Drizzle update returns array of affected rows
+  const affectedRows = Array.isArray(result) ? result.length : ((result as any)?.rowCount ?? 0);
 
   if (affectedRows > 0) {
     return { ok: true, newVersion };

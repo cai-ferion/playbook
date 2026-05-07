@@ -25,16 +25,16 @@ describe("Compass Attachment Pipeline", () => {
     it("io_coaching has an attachments column", () => {
       // Find the ioCoaching table definition and check for attachments
       const coachingSection = schema.slice(
-        schema.indexOf('mysqlTable("io_coaching"'),
-        schema.indexOf('mysqlTable("io_coaching"') + 3000
+        schema.indexOf('pgTable("io_coaching"'),
+        schema.indexOf('pgTable("io_coaching"') + 3000
       );
       expect(coachingSection).toContain('attachments: text("attachments")');
     });
 
     it("io_coaching has dispute_attachments column", () => {
       const coachingSection = schema.slice(
-        schema.indexOf('mysqlTable("io_coaching"'),
-        schema.indexOf('mysqlTable("io_coaching"') + 3000
+        schema.indexOf('pgTable("io_coaching"'),
+        schema.indexOf('pgTable("io_coaching"') + 3000
       );
       expect(coachingSection).toContain('dispute_attachments: text("dispute_attachments")');
     });

@@ -29,7 +29,7 @@ async function initHaven() {
     await havenLoadEmployees();
     await havenLoadLeaves();
     await havenLoadPeriodConfig();
-    havenRenderContinuous();
+    await havenRenderContinuous();
   } catch (e) {
     console.error('[Haven] init error:', e);
   } finally {
@@ -95,16 +95,23 @@ function havenGetRole() {
 function havenGetMyAgentOhrs() {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) return [];
+  // Look up the TL's own record in io_employees by ohr_id to get the canonical full_name
+  // (users.name is "First Last" but io_employees.supervisor_name is "Last, First Middle")
+  const myEmpRecord = HAVEN.employees.find(e => e.ohr_id === user.ohr_id);
+  const supervisorKey = myEmpRecord ? myEmpRecord.full_name : user.full_name;
   return HAVEN.employees
-    .filter(e => e.supervisor_name === user.full_name)
+    .filter(e => e.supervisor_name === supervisorKey)
     .map(e => e.ohr_id);
 }
 // Get all OHRs under a manager (direct reports + agents under their TLs)
 function havenGetMyTeamOhrs() {
   const user = typeof currentUser !== 'undefined' ? currentUser : null;
   if (!user) return [];
+  // Look up the manager's own record in io_employees by ohr_id to get the canonical full_name
+  const myEmpRecord = HAVEN.employees.find(e => e.ohr_id === user.ohr_id);
+  const managerKey = myEmpRecord ? myEmpRecord.full_name : user.full_name;
   // Direct reports to this manager
-  const directReports = HAVEN.employees.filter(e => e.supervisor_name === user.full_name);
+  const directReports = HAVEN.employees.filter(e => e.supervisor_name === managerKey);
   const directOhrs = directReports.map(e => e.ohr_id);
   // Find TLs among direct reports, then get their agents
   const myTLs = directReports.filter(e => e.actual_role === 'Team Lead');
@@ -156,9 +163,33 @@ function havenIsFilingWindowOpen() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
   const day = now.getDate();
   if (day >= 1 && day <= 7) return true;
-  // On the 7th, it's open until 11:59 PM — since day<=7 covers this, we're good
+  // Check if the global filing extension is active (admin-toggled for all employees)
+  if (HAVEN._filingExtensionActive) return true;
   return false;
 }
+function havenIsNormalWindow() {
+  // Returns true if we're within the normal 1st-7th filing window (no override needed)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+  const day = now.getDate();
+  return day >= 1 && day <= 7;
+}
+
+async function havenCheckFilingExtension() {
+  // Check if the global filing extension is active (applies to all employees)
+  HAVEN._filingExtensionActive = false;
+  try {
+    const resp = await fetch(`${IO_API_BASE}/filing-extension/status`);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.active) {
+        HAVEN._filingExtensionActive = true;
+      }
+    }
+  } catch (err) {
+    console.warn('[Haven] Filing extension check failed:', err);
+  }
+}
+
 function havenGetMinLeaveDate() {
   // If admin has configured a period for the current month, use that as the minimum
   if (HAVEN._periodMinDate) return HAVEN._periodMinDate;
@@ -188,7 +219,7 @@ function havenGetMinLeaveDate() {
 
 
 // ─── Continuous Calendar Rendering ─────────────────────────────────────────────
-function havenRenderContinuous() {
+async function havenRenderContinuous() {
   const scrollEl = document.getElementById('haven-weeks-scroll');
   if (!scrollEl) return;
 
@@ -210,11 +241,16 @@ function havenRenderContinuous() {
   havenUpdateMonthLabel();
 
   // Scroll to today's week
+  // Check global filing extension before showing/hiding button
+  await havenCheckFilingExtension();
   // Show/hide File Leave button based on filing window
   const fileBtn = document.getElementById('haven-file-btn');
   if (fileBtn) {
     if (havenIsFilingWindowOpen()) {
       fileBtn.style.display = '';
+      if (HAVEN._filingExtensionActive && !havenIsNormalWindow()) {
+        fileBtn.title = 'Filing window extended by admin';
+      }
     } else {
       fileBtn.style.display = 'none';
     }
@@ -229,6 +265,8 @@ function havenRenderContinuous() {
       configBtn.style.display = 'none';
     }
   }
+  // Show/hide the admin override checkbox next to File Leave button
+  havenRenderOverrideCheckbox();
   requestAnimationFrame(() => {
     const todayCell = scrollEl.querySelector(`[data-date="${havenGetTodayPHT()}"]`);
     if (todayCell) {
@@ -284,7 +322,8 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
     for (let i = 0; i < 7; i++) {
       const cellDate = havenAddDays(currentSaturday, i);
       const dateStr = havenFormatDate(cellDate);
-      const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr);
+      const dayLeaves = visibleLeaves.filter(l => l.start_date === dateStr)
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
       const isToday = dateStr === todayStr;
       const isWeekend = (i === 0 || i === 1); // Sat, Sun (first two columns)
 
@@ -301,15 +340,14 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
         : `${dayNum}`;
       html += `<div class="haven-cal-day-num">${dayLabel}</div>`;
 
-      // Leave tabs
+      // Leave tabs — show ALL leaves (no truncation), sorted by filing date
       if (dayLeaves.length > 0) {
         html += '<div class="haven-cal-events">';
-        const maxShow = 3;
         // Pre-compute "my team" OHRs for managers (not admin) to show indicator
         const _isOMRole = role === 'om';
         const _isAdminUser = user && (window.ADMIN_OHRS || []).includes(user.ohr_id);
         const _myTeamForIndicator = (_isOMRole && !_isAdminUser) ? havenGetMyTeamOhrs() : [];
-        for (let j = 0; j < Math.min(dayLeaves.length, maxShow); j++) {
+        for (let j = 0; j < dayLeaves.length; j++) {
           const lv = dayLeaves[j];
           const statusClass = havenStatusClass(lv.status);
           const displayName = role === 'agent'
@@ -322,16 +360,13 @@ function havenBuildWeeksHtml(startSaturday, endSaturday) {
             ${myTeamBadge}<span class="haven-tab-name">${escapeHtml(displayName)}</span>${typeTag}<span class="haven-tab-icon">${statusIcon}</span>
           </div>`;
         }
-        if (dayLeaves.length > maxShow) {
-          html += `<div class="haven-cal-more" onclick="havenShowDayLeaves('${dateStr}')">+${dayLeaves.length - maxShow} more</div>`;
-        }
         html += '</div>';
       }
 
       // Add button for filing leave (agents + TLs, eligible dates only)
       // Check if current user already has a non-cancelled leave on this date
       const userAlreadyFiled = user && dayLeaves.some(l => l.ohr_id === user.ohr_id && l.status !== 'Cancelled');
-      if ((role === 'agent' || role === 'tl') && dateStr >= minLeaveDate) {
+      if ((role === 'agent' || role === 'tl') && dateStr >= minLeaveDate && havenIsFilingWindowOpen()) {
         if (userAlreadyFiled) {
           html += `<div class="haven-cal-add haven-cal-add--filed" title="You already have a leave filed for this date">&#10003;</div>`;
         } else {
@@ -1259,3 +1294,84 @@ async function havenCheckPeriodStatus() {
   }
 }
 window.havenCheckPeriodStatus = havenCheckPeriodStatus;
+
+
+// ─── Admin Override Checkbox (next to File Leave button) ──────────────────────
+/**
+ * Renders a checkbox next to the File Leave button, visible only to admins.
+ * When checked, ALL employees can file leaves outside the 1st-7th window (global extension).
+ */
+function havenRenderOverrideCheckbox() {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return;
+  const isAdmin = (window.ADMIN_OHRS || []).includes(user.ohr_id);
+
+  // Remove existing checkbox if present
+  const existing = document.getElementById('haven-override-checkbox-wrap');
+  if (existing) existing.remove();
+
+  if (!isAdmin) return;
+
+  // Insert checkbox in the header-right area (always visible to admins regardless of filing window)
+  const headerRight = document.querySelector('.haven-header-right');
+  if (!headerRight) return;
+
+  const wrap = document.createElement('label');
+  wrap.id = 'haven-override-checkbox-wrap';
+  wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);cursor:pointer;margin-right:12px;user-select:none;';
+  wrap.title = 'Extend the filing window for ALL employees this month (stays on until unchecked)';
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.id = 'haven-override-checkbox';
+  cb.checked = !!HAVEN._filingExtensionActive;
+  cb.style.cssText = 'accent-color:var(--accent-primary);cursor:pointer;';
+  cb.addEventListener('change', havenToggleFilingExtension);
+
+  const label = document.createElement('span');
+  label.textContent = 'Extend filing window';
+
+  wrap.appendChild(cb);
+  wrap.appendChild(label);
+  // Insert at the beginning of header-right so it appears before the File Leave button
+  headerRight.insertBefore(wrap, headerRight.firstChild);
+}
+
+async function havenToggleFilingExtension(e) {
+  const user = typeof currentUser !== 'undefined' ? currentUser : null;
+  if (!user) return;
+  const enabled = e.target.checked;
+
+  try {
+    const resp = await fetch(`${IO_API_BASE}/filing-extension/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-actor-ohr': user.ohr_id || '' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ enabled })
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      showToast(data.error || 'Failed to toggle filing extension', 'error');
+      e.target.checked = !enabled; // revert
+      return;
+    }
+    HAVEN._filingExtensionActive = enabled;
+    // Re-evaluate File Leave button visibility
+    const fileBtn = document.getElementById('haven-file-btn');
+    if (fileBtn) {
+      if (havenIsFilingWindowOpen()) {
+        fileBtn.style.display = '';
+        fileBtn.title = enabled && !havenIsNormalWindow() ? 'Filing window extended by admin' : '';
+      } else {
+        fileBtn.style.display = 'none';
+      }
+    }
+    // Re-render calendar to show/hide inline + buttons for all dates
+    try { havenRenderCalendar(); } catch (renderErr) { console.warn('[Haven] Calendar re-render failed:', renderErr); }
+    showToast(enabled ? 'Filing window extended — all employees can now file leaves' : 'Filing extension removed — normal 1st-7th window rules apply', 'success');
+  } catch (err) {
+    console.error('[Haven] Toggle filing extension error:', err);
+    showToast('Network error toggling filing extension: ' + (err.message || err), 'error');
+    e.target.checked = !enabled; // revert
+  }
+}

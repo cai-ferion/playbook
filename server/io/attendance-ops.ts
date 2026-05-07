@@ -37,7 +37,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
     const empRows: any = await db.execute(
       sql`SELECT ohr_id, full_name, actual_role, planning_group FROM io_employees WHERE ohr_id = ${ohrId} LIMIT 1`
     );
-    const empArr = Array.isArray(empRows[0]) ? empRows[0] : empRows;
+    const empArr = Array.isArray(empRows) ? empRows : [];
     if (!empArr || empArr.length === 0) {
       return res.json({ found: false, error: "employee_not_found", message: `Employee with OHR ${ohrId} not found in the employee database.` });
     }
@@ -49,7 +49,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
         ? sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate} AND log_date <= ${toDate}`
         : sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}`
     );
-    const countArr = Array.isArray(countResult[0]) ? countResult[0] : countResult;
+    const countArr = Array.isArray(countResult) ? countResult : [];
     const totalRows = Number(countArr[0]?.cnt || 0);
 
     if (totalRows === 0) {
@@ -68,7 +68,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
         ? sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate} AND log_date <= ${toDate}`
         : sql`SELECT MIN(log_date) as min_date, MAX(log_date) as max_date FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}`
     );
-    const rangeArr = Array.isArray(rangeResult[0]) ? rangeResult[0] : rangeResult;
+    const rangeArr = Array.isArray(rangeResult) ? rangeResult : [];
     const { min_date, max_date } = rangeArr[0] || {};
 
     // Get first 20 rows for preview
@@ -81,7 +81,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
             FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}
             ORDER BY log_date ASC LIMIT 20`
     );
-    const preview = Array.isArray(previewRows[0]) ? previewRows[0] : previewRows;
+    const preview = Array.isArray(previewRows) ? previewRows : [];
 
     // Tag distribution
     const tagResult: any = await db.execute(
@@ -93,7 +93,7 @@ router.get("/attendance-purge-preview", async (req: Request, res: Response) => {
             FROM io_attendance WHERE ohr_id = ${ohrId} AND log_date >= ${fromDate}
             GROUP BY tag ORDER BY cnt DESC`
     );
-    const tagDist = Array.isArray(tagResult[0]) ? tagResult[0] : tagResult;
+    const tagDist = Array.isArray(tagResult) ? tagResult : [];
 
     res.json({
       found: true,
@@ -128,7 +128,7 @@ router.delete("/attendance-purge", async (req: Request, res: Response) => {
         ? sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date} AND log_date <= ${to_date}`
         : sql`SELECT COUNT(*) as cnt FROM io_attendance WHERE ohr_id = ${ohr_id} AND log_date >= ${from_date}`
     );
-    const countArr = Array.isArray(countResult[0]) ? countResult[0] : countResult;
+    const countArr = Array.isArray(countResult) ? countResult : [];
     const totalRows = Number(countArr[0]?.cnt || 0);
 
     if (totalRows === 0) {

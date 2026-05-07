@@ -46,7 +46,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     const newestMonth = monthRange[0];
 
     // ── 1. Get active supervisors: only those who are active TLs AND have active agents ──
-    const [supervisorRows] = (await db.execute(sql`
+    const supervisorRows = await db.execute(sql`
       SELECT DISTINCT e.supervisor_name
       FROM io_employees e
       WHERE e.actual_role = 'Agent'
@@ -60,11 +60,11 @@ router.get("/scorecard", async (req: Request, res: Response) => {
             AND sup.actual_role IN ('Team Lead', 'TL', 'Supervisor')
         )
       ORDER BY e.supervisor_name ASC
-    `)) as unknown as [any[], any];
-    const supervisors = supervisorRows.map((r: any) => r.supervisor_name);
+    `);
+    const supervisors = (supervisorRows as any[]).map((r: any) => r.supervisor_name);
 
     // ── 2. Get agent counts per supervisor ──
-    const [agentCountRows] = (await db.execute(sql`
+    const agentCountRows = await db.execute(sql`
       SELECT supervisor_name, COUNT(DISTINCT ohr_id) as agent_count
       FROM io_employees
       WHERE actual_role = 'Agent'
@@ -72,39 +72,42 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         AND supervisor_name != ''
         AND employement_status = 'Active'
       GROUP BY supervisor_name
-    `)) as unknown as [any[], any];
+    `);
     const agentCountMap: Record<string, number> = {};
-    for (const row of agentCountRows) {
+    for (const row of agentCountRows as any[]) {
       agentCountMap[row.supervisor_name] = Number(row.agent_count) || 0;
     }
 
-    // ── 3. Valid tardiness count per supervisor per month ──
-    // io_tardiness.date is YYYY-MM-DD, supervisor_name is the supervisor
-    const [tardinessRows] = (await db.execute(sql`
+    // ── 3. Tardiness counts per supervisor per month (valid + total) ──
+    // io_tardiness.date is YYYY-MM-DD (varchar), supervisor_name is the supervisor
+    const tardinessRows = await db.execute(sql`
       SELECT supervisor_name,
-             LEFT(date, 7) as month,
-             COUNT(*) as valid_count
+             SUBSTRING(date, 1, 7) as month,
+             COUNT(*) as total_count,
+             SUM(CASE WHEN validation_status = 'Valid' THEN 1 ELSE 0 END) as valid_count
       FROM io_tardiness
-      WHERE validation_status = 'Valid'
-        AND LEFT(date, 7) >= ${oldestMonth}
-        AND LEFT(date, 7) <= ${newestMonth}
-      GROUP BY supervisor_name, LEFT(date, 7)
-    `)) as unknown as [any[], any];
-    // Map: supervisor -> month -> count
-    const tardinessMap: Record<string, Record<string, number>> = {};
-    for (const row of tardinessRows) {
+      WHERE SUBSTRING(date, 1, 7) >= ${oldestMonth}
+        AND SUBSTRING(date, 1, 7) <= ${newestMonth}
+      GROUP BY supervisor_name, SUBSTRING(date, 1, 7)
+    `);
+    // Map: supervisor -> month -> { valid, total }
+    const tardinessMap: Record<string, Record<string, { valid: number; total: number }>> = {};
+    for (const row of tardinessRows as any[]) {
       const sup = row.supervisor_name;
       const m = row.month;
       if (!tardinessMap[sup]) tardinessMap[sup] = {};
-      tardinessMap[sup][m] = Number(row.valid_count) || 0;
+      tardinessMap[sup][m] = {
+        valid: Number(row.valid_count) || 0,
+        total: Number(row.total_count) || 0,
+      };
     }
 
     // ── 4. Coaching coverage per supervisor per month ──
     // Only count coaching sessions where the coachee is a CURRENT active agent under that supervisor.
     // This prevents transferred/inactive agents from inflating the coached count.
-    const [coachingRows] = (await db.execute(sql`
+    const coachingRows = await db.execute(sql`
       SELECT c.coachee_sup as supervisor_name,
-             LEFT(c.coaching_date, 7) as month,
+             TO_CHAR(c.coaching_date, 'YYYY-MM') as month,
              COUNT(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END) as unique_agents_coached,
              COUNT(*) as total_sessions
       FROM io_coaching c
@@ -112,14 +115,14 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         ON c.coachee_ohr = e.ohr_id
         AND e.employement_status = 'Active'
         AND e.supervisor_name = c.coachee_sup
-      WHERE LEFT(c.coaching_date, 7) >= ${oldestMonth}
-        AND LEFT(c.coaching_date, 7) <= ${newestMonth}
+      WHERE TO_CHAR(c.coaching_date, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(c.coaching_date, 'YYYY-MM') <= ${newestMonth}
         AND c.coachee_sup IS NOT NULL
         AND c.coachee_sup != ''
-      GROUP BY c.coachee_sup, LEFT(c.coaching_date, 7)
-    `)) as unknown as [any[], any];
+      GROUP BY c.coachee_sup, TO_CHAR(c.coaching_date, 'YYYY-MM')
+    `);
     const coachingMap: Record<string, Record<string, { unique: number; total: number }>> = {};
-    for (const row of coachingRows) {
+    for (const row of coachingRows as any[]) {
       const sup = row.supervisor_name;
       const m = row.month;
       if (!coachingMap[sup]) coachingMap[sup] = {};
@@ -130,23 +133,23 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     }
 
     // ── 4b. Get coached agent OHRs per supervisor per month (only active agents under that sup) ──
-    const [coachedAgentRows] = (await db.execute(sql`
+    const coachedAgentRows = await db.execute(sql`
       SELECT c.coachee_sup as supervisor_name,
-             LEFT(c.coaching_date, 7) as month,
-             GROUP_CONCAT(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END) as coached_ohrs
+             TO_CHAR(c.coaching_date, 'YYYY-MM') as month,
+             STRING_AGG(DISTINCT CASE WHEN e.ohr_id IS NOT NULL THEN c.coachee_ohr END, ',') as coached_ohrs
       FROM io_coaching c
       LEFT JOIN io_employees e
         ON c.coachee_ohr = e.ohr_id
         AND e.employement_status = 'Active'
         AND e.supervisor_name = c.coachee_sup
-      WHERE LEFT(c.coaching_date, 7) >= ${oldestMonth}
-        AND LEFT(c.coaching_date, 7) <= ${newestMonth}
+      WHERE TO_CHAR(c.coaching_date, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(c.coaching_date, 'YYYY-MM') <= ${newestMonth}
         AND c.coachee_sup IS NOT NULL
         AND c.coachee_sup != ''
-      GROUP BY c.coachee_sup, LEFT(c.coaching_date, 7)
-    `)) as unknown as [any[], any];
+      GROUP BY c.coachee_sup, TO_CHAR(c.coaching_date, 'YYYY-MM')
+    `);
     const coachedOhrsMap: Record<string, Record<string, Set<string>>> = {};
-    for (const row of coachedAgentRows) {
+    for (const row of coachedAgentRows as any[]) {
       const sup = row.supervisor_name;
       const m = row.month;
       if (!coachedOhrsMap[sup]) coachedOhrsMap[sup] = {};
@@ -155,7 +158,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     }
 
     // ── 4c. Get all ACTIVE agent names per supervisor for missing coaching detection ──
-    const [agentsBySupRows] = (await db.execute(sql`
+    const agentsBySupRows = await db.execute(sql`
       SELECT supervisor_name, ohr_id, full_name
       FROM io_employees
       WHERE actual_role = 'Agent'
@@ -163,37 +166,30 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         AND supervisor_name != ''
         AND employement_status = 'Active'
       ORDER BY supervisor_name, full_name
-    `)) as unknown as [any[], any];
+    `);
     const agentsBySup: Record<string, { ohr_id: string; full_name: string }[]> = {};
-    for (const row of agentsBySupRows) {
+    for (const row of agentsBySupRows as any[]) {
       if (!agentsBySup[row.supervisor_name]) agentsBySup[row.supervisor_name] = [];
       agentsBySup[row.supervisor_name].push({ ohr_id: row.ohr_id, full_name: row.full_name });
     }
 
     // ── 5. Insights per supervisor per month ──
-    // io_insights.week_ending is stored as MM/DD/YY or M/D/YYYY — parse robustly to YYYY-MM
-    // LEFT JOIN via supervisor_email to io_employees for canonical name; fallback to i.supervisor
-    const dateExpr = sql`CASE
-      WHEN i.week_ending LIKE '__/__/__' THEN DATE_FORMAT(STR_TO_DATE(i.week_ending, '%m/%d/%y'), '%Y-%m')
-      WHEN i.week_ending LIKE '_/__/____' OR i.week_ending LIKE '__/__/____' OR i.week_ending LIKE '_/_/____'
-        THEN DATE_FORMAT(STR_TO_DATE(i.week_ending, '%c/%e/%Y'), '%Y-%m')
-      ELSE NULL
-    END`;
-    const [insightRows] = (await db.execute(sql`
+    // io_insights.week_ending is a DATE column in PostgreSQL — use TO_CHAR directly
+    const insightRows = await db.execute(sql`
       SELECT COALESCE(e.full_name, i.supervisor) as supervisor,
-             ${dateExpr} as month,
+             TO_CHAR(i.week_ending, 'YYYY-MM') as month,
              COUNT(*) as total_submitted,
              SUM(CASE WHEN i.status = 'Approved' OR i.status = 'Implemented' THEN 1 ELSE 0 END) as total_approved
       FROM io_insights i
       LEFT JOIN io_employees e ON i.supervisor_email = e.meta_email
         AND e.employement_status = 'Active'
       WHERE i.week_ending IS NOT NULL
-        AND i.week_ending != ''
-      GROUP BY COALESCE(e.full_name, i.supervisor), ${dateExpr}
-      HAVING month IS NOT NULL AND month >= ${oldestMonth} AND month <= ${newestMonth}
-    `)) as unknown as [any[], any];
+      GROUP BY COALESCE(e.full_name, i.supervisor), TO_CHAR(i.week_ending, 'YYYY-MM')
+      HAVING TO_CHAR(i.week_ending, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(i.week_ending, 'YYYY-MM') <= ${newestMonth}
+    `);
     const insightsMap: Record<string, Record<string, { submitted: number; approved: number }>> = {};
-    for (const row of insightRows) {
+    for (const row of insightRows as any[]) {
       const sup = row.supervisor;
       const m = row.month;
       if (!sup || !m) continue;
@@ -209,21 +205,21 @@ router.get("/scorecard", async (req: Request, res: Response) => {
     // P = tag IN ('P', 'LATE', 'OT', '') i.e. present
     // PL = tag = 'PL' or 'ML'
     // UPL = tag = 'UPL'
-    const [shrinkageRows] = (await db.execute(sql`
+    const shrinkageRows = await db.execute(sql`
       SELECT snap_supervisor as supervisor_name,
-             LEFT(log_date, 7) as month,
+             TO_CHAR(log_date, 'YYYY-MM') as month,
              SUM(CASE WHEN tag IN ('P','LATE','OT','') OR tag IS NULL THEN 1 ELSE 0 END) as present_days,
              SUM(CASE WHEN tag IN ('PL','ML') THEN 1 ELSE 0 END) as pl_days,
              SUM(CASE WHEN tag = 'UPL' THEN 1 ELSE 0 END) as upl_days
       FROM io_attendance
-      WHERE LEFT(log_date, 7) >= ${oldestMonth}
-        AND LEFT(log_date, 7) <= ${newestMonth}
+      WHERE TO_CHAR(log_date, 'YYYY-MM') >= ${oldestMonth}
+        AND TO_CHAR(log_date, 'YYYY-MM') <= ${newestMonth}
         AND snap_supervisor IS NOT NULL
         AND snap_supervisor != ''
-      GROUP BY snap_supervisor, LEFT(log_date, 7)
-    `)) as unknown as [any[], any];
+      GROUP BY snap_supervisor, TO_CHAR(log_date, 'YYYY-MM')
+    `);
     const shrinkageMap: Record<string, Record<string, { p: number; pl: number; upl: number; pct: number }>> = {};
-    for (const row of shrinkageRows) {
+    for (const row of shrinkageRows as any[]) {
       const sup = row.supervisor_name;
       const m = row.month;
       const p = Number(row.present_days) || 0;
@@ -251,7 +247,7 @@ router.get("/scorecard", async (req: Request, res: Response) => {
         const coveragePct = totalAgents > 0 ? Math.min(100, Math.round((actualCoached / totalAgents) * 100)) : 0;
 
         months[m] = {
-          tardiness: tardinessMap[sup]?.[m] || 0,
+          tardiness: tardinessMap[sup]?.[m] || { valid: 0, total: 0 },
           coaching: {
             unique_agents_coached: actualCoached,
             total_sessions: coaching.total,
@@ -289,14 +285,14 @@ router.get("/available-months", async (req: Request, res: Response) => {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "DB unavailable" });
 
-    const [rows] = (await db.execute(sql`
-      SELECT DISTINCT LEFT(log_date, 7) as month
+    const rows = await db.execute(sql`
+      SELECT DISTINCT TO_CHAR(log_date, 'YYYY-MM') as month
       FROM io_attendance
-      WHERE log_date IS NOT NULL AND log_date != ''
+      WHERE log_date IS NOT NULL
       ORDER BY month DESC
       LIMIT 12
-    `)) as unknown as [any[], any];
-    const months = rows.map((r: any) => r.month).filter(Boolean);
+    `);
+    const months = (rows as any[]).map((r: any) => r.month).filter(Boolean);
     res.json({ months });
   } catch (err: any) {
     console.error("[MANAGERS-NOOK] Available months error:", err.message);

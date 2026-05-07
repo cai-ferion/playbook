@@ -4096,3 +4096,30 @@
 - [x] Fix Haven leave visibility: TLs should only see their direct reports' leaves, not all agents (server-side scoping added)
 - [x] Add server-side role scoping to Tardiness Validator GET endpoint (enforce TL/Agent restrictions server-side)
 - [ ] Prepare repo for Vercel deployment (vercel.json, serverless adapter, build config)
+
+## Batch — Bug Fixes (Post-Migration)
+
+- [x] Bug: May Christine Gumban cannot see leave requests filed under her in Haven (audit Brianna Aspera too)
+- [ ] Bug: Managers Nook displaying incorrect Valid Tardiness count
+- [x] Bug: Managers Nook not showing anything after Supabase migration (SUBSTRING/!= '' on DATE columns → TO_CHAR)
+- [x] Transfer all agents under Rosales, Jenifer to Bernal, John Henry (17 agents moved to Bernal, John Henry De Leon)
+
+## Admin Tools — Leave Filing Override
+
+- [ ] Create io_leave_overrides table (employee OHR, extension deadline, reason, created_by)
+- [ ] Create API endpoints for managing leave overrides (GET, POST, DELETE)
+- [ ] Build Admin Tools UI panel for granting leave filing extensions
+- [ ] Integrate override check into Haven leave filing window logic
+- [x] Managers Nook: make visible to Team Leads (full scorecard, same as Managers)
+- [x] Managers Nook: Valid Tardiness column show fraction "Valid/Total" instead of just count
+- [x] Admin Tools Grant Extension: pre-populate employee dropdown on page load (no lazy-loading)
+- [x] Replace Grant Extension admin section with simple admin-only checkbox next to File Leave button
+- [x] Simplify backend: permanent boolean filing_override flag per employee (no deadline/reason)
+- [x] Remove Leave Overrides admin section from Admin Tools HTML and JS
+- [x] Haven: Shrinkage forecast only count Approved leaves (not Pending TL/OM)
+- [x] Haven: Sort leaves by filing date (first filed at top)
+- [x] Haven: Remove +N more truncation, show all leaves expanded in date cells
+- [x] Rework filing override: change from per-employee to global admin toggle
+- [x] Backend: store global filing_extension_active flag in io_settings table
+- [x] Frontend: checkbox checks/sets global flag, all users read it
+- [x] Fix: backend leave creation endpoint now checks global filing extension before rejecting outside 1st-7th

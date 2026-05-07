@@ -182,13 +182,13 @@ router.post("/wfm-schedule-upload", async (req: Request, res: Response) => {
     let backfilled = 0;
     try {
       const backfillResult: any = await db.execute(
-        sql`UPDATE io_attendance a
-            INNER JOIN io_wfm_schedules w
-              ON a.ohr_id = w.ohr_id AND a.log_date = w.schedule_date
-            SET a.wfm_tag = w.wfm_value`
+        sql`UPDATE io_attendance
+            SET wfm_tag = w.wfm_value
+            FROM io_wfm_schedules w
+            WHERE io_attendance.ohr_id = w.ohr_id AND io_attendance.log_date = w.schedule_date`
       );
-      const info = Array.isArray(backfillResult[0]) ? backfillResult[0] : backfillResult;
-      backfilled = info.affectedRows || 0;
+      const info = Array.isArray(backfillResult) ? backfillResult : [];
+      backfilled = info.length || 0;
     } catch (bfErr: any) {
       console.error('[IO API] WFM backfill error:', bfErr.message);
     }
@@ -215,7 +215,7 @@ async function flushWfmRecords(db: any, records: string[][]): Promise<number> {
   const bulkQuery = sql`INSERT INTO io_wfm_schedules (ohr_id, schedule_date, wfm_value, uploaded_at, uploaded_by)
     VALUES ${sql.join(valueSets, sql`, `)}`;
   const result: any = await db.execute(bulkQuery);
-  return result[0]?.affectedRows ?? 0;
+  return Array.isArray(result) ? result.length : 0;
 }
 
 // GET /api/io/wfm-schedule/dates — list all unique dates with WFM data
@@ -229,7 +229,7 @@ router.get("/wfm-schedule/dates", async (_req: Request, res: Response) => {
           GROUP BY schedule_date
           ORDER BY schedule_date DESC`
     );
-    const rows = Array.isArray(result[0]) ? result[0] : result;
+    const rows = Array.isArray(result) ? result : [];
     res.json(rows);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

@@ -644,3 +644,8 @@ async function adminOhrRemove(ohrId) {
     showToast('Network error: ' + err.message, 'error');
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Leave Filing Overrides — REMOVED (replaced by simple checkbox in Haven)
+// The override is now a permanent boolean flag (filing_override) on io_employees,
+// toggled via a checkbox next to the File Leave button (admin-only).

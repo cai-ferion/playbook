@@ -1158,11 +1158,11 @@ function applyNavPermissions(user) {
   // Regimen
   vis('nav-regimen', 'nav.regimen');
 
-  // Manager's Nook: Managers + Admin only (role-based, not permission-based)
+  // Manager's Nook: Managers + Team Leads + Admin (role-based, not permission-based)
   const nookNav = document.getElementById('nav-managers-nook');
   if (nookNav) {
-    const isManagerOrAdmin = user.actual_role === 'Manager' || (window.ADMIN_OHRS || []).includes(user.ohr_id);
-    nookNav.style.display = isManagerOrAdmin ? '' : 'none';
+    const isNookAllowed = user.actual_role === 'Manager' || user.actual_role === 'Team Lead' || (window.ADMIN_OHRS || []).includes(user.ohr_id);
+    nookNav.style.display = isNookAllowed ? '' : 'none';
   }
 
   // Compass sub-sections

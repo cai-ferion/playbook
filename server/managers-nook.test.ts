@@ -213,7 +213,7 @@ describe("Manager's Nook", () => {
 
     it('returns missing agents for coaching coverage', () => {
       expect(routeFile).toContain('missing_agents');
-      expect(routeFile).toContain('GROUP_CONCAT');
+      expect(routeFile).toContain('STRING_AGG');
     });
 
     it('exports router as default', () => {

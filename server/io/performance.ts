@@ -31,7 +31,7 @@ async function buildRosterLookup(): Promise<Map<number, any>> {
     SELECT ohr_id, full_name, planning_group, supervisor_name, shift_time, actual_role
     FROM io_employees WHERE actual_role = 'Agent'
   `);
-  const rows = Array.isArray(result) ? result[0] : result;
+  const rows = Array.isArray(result) ? result : [];
   const map = new Map();
   for (const row of rows) {
     const shiftTime = normalizeShiftTime(row.shift_time);

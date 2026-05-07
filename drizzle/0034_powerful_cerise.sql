@@ -1,1 +1,0 @@
-ALTER TABLE `io_employees` ADD `floor` varchar(10);

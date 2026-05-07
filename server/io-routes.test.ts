@@ -29,7 +29,7 @@ vi.mock("./db.js", () => {
   mockOffset.mockResolvedValue([]);
   mockLimit.mockResolvedValue([]);
   mockInsert.mockReturnValue({ values: mockValues });
-  mockValues.mockReturnValue({ onDuplicateKeyUpdate: vi.fn().mockResolvedValue([{ insertId: 1 }]) });
+  mockValues.mockReturnValue({ onConflictDoUpdate: vi.fn().mockResolvedValue([{ insertId: 1 }]) });
   mockValues.mockResolvedValue([{ insertId: 1 }]);
   mockUpdate.mockReturnValue({ set: mockSet });
   mockSet.mockReturnValue({ where: vi.fn().mockResolvedValue([]) });

@@ -49,7 +49,7 @@ const mockSelect = vi.fn().mockImplementation(() => ({ from: mockFrom }));
 
 const mockValues = vi.fn().mockImplementation(() => {
   const p = Promise.resolve(mockInsertResult);
-  (p as any).onDuplicateKeyUpdate = vi.fn().mockResolvedValue(mockInsertResult);
+  (p as any).onConflictDoUpdate = vi.fn().mockResolvedValue(mockInsertResult);
   return p;
 });
 const mockInsert = vi.fn().mockImplementation(() => ({ values: mockValues }));

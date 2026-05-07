@@ -96,11 +96,20 @@ router.get("/leaves", async (req: Request, res: Response) => {
 // POST /api/io/leaves - file a new leave request
 router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Response) => {
   try {
-    // Filing window check: 1st-7th of month, PHT
+    // Filing window check: 1st-7th of month, PHT (bypassed if global extension is active)
     const nowMNL = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
     const dayOfMonth = nowMNL.getDate();
     if (dayOfMonth < 1 || dayOfMonth > 7) {
-      return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
+      // Check if global filing extension is active before rejecting
+      const dbCheck = await getDb();
+      let extensionActive = false;
+      if (dbCheck) {
+        const extRows = await dbCheck.execute(sql`SELECT value FROM io_settings WHERE key = 'filing_extension_active' LIMIT 1`);
+        extensionActive = extRows.length > 0 && extRows[0].value === '1';
+      }
+      if (!extensionActive) {
+        return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
+      }
     }
     const leaveDate = req.body.start_date;
     const db = await getDb();
@@ -424,7 +433,8 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
     const weekStartStr = weekStart.toISOString().slice(0, 10);
     const weekEndStr = weekEnd.toISOString().slice(0, 10);
 
-    // 4. Count approved leaves for same combo in that week
+    // 4. Count ONLY Approved leaves for same combo in that week
+    // Pending leaves are excluded to avoid inflating the forecast
     const leaveRows = await db.select({
       leave_id: ioLeaves.leave_id,
       ohr_id: ioLeaves.ohr_id,
@@ -434,7 +444,7 @@ router.get("/leaves/shrinkage-forecast", async (req: Request, res: Response) => 
     }).from(ioLeaves)
       .innerJoin(ioEmployees, eq(ioLeaves.ohr_id, ioEmployees.ohr_id))
       .where(and(
-        or(eq(ioLeaves.status, 'Approved'), eq(ioLeaves.status, 'Pending OM')),
+        eq(ioLeaves.status, 'Approved'),
         gte(ioLeaves.start_date, weekStartStr),
         lte(ioLeaves.start_date, weekEndStr),
         eq(ioEmployees.actual_role, actual_role),
@@ -558,6 +568,48 @@ router.delete("/leave-periods/:id", async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch (err: any) {
     console.error("[IO API] leave-periods DELETE error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Global Filing Extension (Admin) ──────────────────────────────────────────
+// When active, ALL employees can file leaves outside the normal 1st-7th window.
+
+// GET /api/io/filing-extension/status - check if global filing extension is active
+router.get("/filing-extension/status", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const rows = await db.execute(sql`SELECT value FROM io_settings WHERE key = 'filing_extension_active' LIMIT 1`);
+    const isActive = rows.length > 0 && rows[0].value === '1';
+    res.json({ active: isActive });
+  } catch (err: any) {
+    console.error("[IO API] filing-extension status error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/io/filing-extension/toggle - toggle global filing extension (admin-only)
+router.post("/filing-extension/toggle", async (req: Request, res: Response) => {
+  try {
+    // Use x-actor-ohr header first, fall back to req.user from session auth
+    const actorOhr = (req.headers["x-actor-ohr"] as string) || (req.user as any)?.ohrId || (req.user as any)?.ohr_id || '';
+    console.log("[IO API] filing-extension toggle: actorOhr=", actorOhr, "isAdmin=", isAdminOhr(actorOhr));
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can toggle the filing extension" });
+    }
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: "enabled (boolean) is required" });
+    }
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    const now = new Date().toISOString();
+    await db.execute(sql`UPDATE io_settings SET value = ${enabled ? '1' : '0'}, updated_at = ${now}, updated_by = ${actorOhr} WHERE key = 'filing_extension_active'`);
+    console.log("[IO API] filing-extension toggled to:", enabled, "by:", actorOhr);
+    res.json({ ok: true, active: enabled });
+  } catch (err: any) {
+    console.error("[IO API] filing-extension toggle error:", err);
     res.status(500).json({ error: err.message });
   }
 });
