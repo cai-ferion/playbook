@@ -96,11 +96,20 @@ router.get("/leaves", async (req: Request, res: Response) => {
 // POST /api/io/leaves - file a new leave request
 router.post("/leaves", validate(leaveCreateSchema), async (req: Request, res: Response) => {
   try {
-    // Filing window check: 1st-7th of month, PHT
+    // Filing window check: 1st-7th of month, PHT (bypassed if global extension is active)
     const nowMNL = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
     const dayOfMonth = nowMNL.getDate();
     if (dayOfMonth < 1 || dayOfMonth > 7) {
-      return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
+      // Check if global filing extension is active before rejecting
+      const dbCheck = await getDb();
+      let extensionActive = false;
+      if (dbCheck) {
+        const extRows = await dbCheck.execute(sql`SELECT value FROM io_settings WHERE key = 'filing_extension_active' LIMIT 1`);
+        extensionActive = extRows.length > 0 && extRows[0].value === '1';
+      }
+      if (!extensionActive) {
+        return res.status(400).json({ error: "Filing window is closed. Leave requests can only be filed from the 1st to the 7th of each month." });
+      }
     }
     const leaveDate = req.body.start_date;
     const db = await getDb();

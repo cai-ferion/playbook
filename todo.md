@@ -4122,3 +4122,4 @@
 - [x] Rework filing override: change from per-employee to global admin toggle
 - [x] Backend: store global filing_extension_active flag in io_settings table
 - [x] Frontend: checkbox checks/sets global flag, all users read it
+- [x] Fix: backend leave creation endpoint now checks global filing extension before rejecting outside 1st-7th
