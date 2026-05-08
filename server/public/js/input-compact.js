@@ -1110,7 +1110,7 @@ window.fcbApplyField = async function() {
     }
     var resp = await fetch(IO_API_BASE + '/attendance/bulk-field-filtered', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-actor-ohr': user ? user.ohr_id || '' : '', 'x-actor-name': user ? user.full_name || '' : '' },
       body: JSON.stringify({
         field: field,
         value: value,

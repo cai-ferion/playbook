@@ -749,9 +749,6 @@ router.post("/attendance/bulk-field-filtered", async (req: Request, res: Respons
     if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
     if (blanks_only) conditions.push(sql`(${ioAttendance.tag} IS NULL OR ${ioAttendance.tag} = '')`);
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    // Fetch all matching records
-    const allRecords = await db.select({ id: ioAttendance.id, currentVal: ALLOWED_FIELDS[field] })
-      .from(ioAttendance).where(whereClause);
     const now = new Date().toISOString();
     // Human-readable field label for audit
     const FIELD_LABELS: Record<string, string> = {
@@ -760,43 +757,35 @@ router.post("/attendance/bulk-field-filtered", async (req: Request, res: Respons
       ot_hours: "OT Hours", tag: "Tag", upl_reason: "UPL Reason",
       internal_role: "Internal Role", internal_planning_group: "Internal PG",
     };
-    // Separate records that need updating vs those already at target value
-    const toUpdate: { id: string; oldVal: string }[] = [];
-    let skipped = 0;
-    for (const record of allRecords) {
-      const oldVal = (record as any).currentVal || "";
-      if (oldVal === value) { skipped++; continue; }
-      toUpdate.push({ id: record.id, oldVal });
-    }
-    // Batch update: single SQL statement for all matching IDs
-    let updated = 0;
-    if (toUpdate.length > 0) {
-      const idsToUpdate = toUpdate.map(r => r.id);
-      // Update in batches of 500 to avoid query size limits
-      const BATCH_SIZE = 500;
-      for (let i = 0; i < idsToUpdate.length; i += BATCH_SIZE) {
-        const batch = idsToUpdate.slice(i, i + BATCH_SIZE);
-        await db.update(ioAttendance)
-          .set({ [field]: value || null })
-          .where(inArray(ioAttendance.id, batch));
-      }
-      updated = toUpdate.length;
-      // Batch audit inserts (in chunks of 100)
-      const AUDIT_BATCH = 100;
-      for (let i = 0; i < toUpdate.length; i += AUDIT_BATCH) {
-        const auditBatch = toUpdate.slice(i, i + AUDIT_BATCH).map(r => ({
-          record_type: "attendance",
-          record_id: r.id,
-          action: "bulk_field_change",
-          field_name: FIELD_LABELS[field] || field,
-          old_value: r.oldVal || "",
-          new_value: value || "",
-          actor_ohr: actor_ohr || "",
-          actor_name: actor_name || "",
-          timestamp: now,
-        }));
-        await db.insert(ioAuditLog).values(auditBatch);
-      }
+    // Add condition to skip records already at target value
+    const colRef = ALLOWED_FIELDS[field];
+    const skipCondition = value
+      ? sql`${colRef} IS DISTINCT FROM ${value}`
+      : sql`(${colRef} IS NOT NULL AND ${colRef} != '')`;
+    const updateConditions = whereClause ? and(whereClause, skipCondition) : skipCondition;
+    // Count total matching (for reporting skipped)
+    const [{ count: totalCount }] = await db.select({ count: sql<number>`count(*)` })
+      .from(ioAttendance).where(whereClause);
+    // Single UPDATE statement — fast regardless of record count
+    const updateResult = await db.update(ioAttendance)
+      .set({ [field]: value || null })
+      .where(updateConditions);
+    // Postgres returns rowCount via the result
+    const updated = Number((updateResult as any)?.rowCount ?? (updateResult as any)?.count ?? 0);
+    const skipped = Number(totalCount) - updated;
+    // Single summary audit log entry (not per-record — prevents timeout)
+    if (updated > 0) {
+      await db.insert(ioAuditLog).values({
+        record_type: "attendance",
+        record_id: `bulk_${Date.now()}`,
+        action: "bulk_field_change",
+        field_name: FIELD_LABELS[field] || field,
+        old_value: `(${updated} records changed)`,
+        new_value: value || "",
+        actor_ohr: actor_ohr || "",
+        actor_name: actor_name || "",
+        timestamp: now,
+      });
     }
     // Notify owner
     if (updated > 0) {
@@ -806,10 +795,12 @@ router.post("/attendance/bulk-field-filtered", async (req: Request, res: Respons
       }).catch(err => console.warn("[BulkFieldFilteredNotify] Failed:", err.message));
     }
     emitChange(req, "attendance", "bulk_update", { field, value, count: updated });
-    res.json({ ok: true, updated, skipped, total: allRecords.length });
+    res.json({ ok: true, updated, skipped, total: Number(totalCount) });
   } catch (err: any) {
-    console.error("[IO API] attendance bulk-field-filtered error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("[IO API] attendance bulk-field-filtered error:", err?.message, err?.stack?.split('\n').slice(0,3).join('\n'));
+    const msg = err?.message || 'Unknown error';
+    // Return a descriptive error instead of generic 'Internal server error'
+    res.status(500).json({ error: `Bulk update failed: ${msg}` });
   }
 });
 

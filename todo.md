@@ -4126,3 +4126,4 @@
 - [x] Fix: Bulk field change Value dropdown empty in Input Portal mode (multiSelects is {} - derive from employeeLookup/serverPagState)
 - [x] Fix: Bulk field change JSON parse error (endpoint returning non-JSON for internal_role field)
 - [x] Replace confirm() modal with inline expansion confirmation in bulk field change
+- [x] Fix: Bulk field change timeout - rewrite to single UPDATE statement
