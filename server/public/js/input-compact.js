@@ -1044,7 +1044,8 @@ window.invalidateAuditCache = function(recordId) {
 })();
 
 // ===== Bulk Field Change (Admin/Manager only) =====
-window.fcbApplyField = async function() {
+// Show inline confirmation for bulk field change
+window.fcbShowFieldConfirm = function() {
   var fieldSel = document.getElementById('fcb-field-select');
   var valueSel = document.getElementById('fcb-field-value');
   var field = fieldSel ? fieldSel.value : '';
@@ -1054,14 +1055,40 @@ window.fcbApplyField = async function() {
   if (!value) { showToast('Please select a value', 'info'); return; }
   var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
   if (count === 0) { showToast('No rows selected/matched', 'info'); return; }
-  // Field label for display
   var FIELD_LABELS = {
     snap_supervisor: 'Supervisor', role: 'Billing Role', planning_group: 'Billing PG',
     internal_role: 'Internal Role', internal_planning_group: 'Internal PG',
     snap_shift_time: 'Shift Time', snap_status: 'Status'
   };
   var label = FIELD_LABELS[field] || field;
-  if (!confirm('Change "' + label + '" to "' + (value || '(empty)') + '" for ' + formatNumber(count) + ' record(s) matching current filters?\n\nThis will be logged in the audit trail.')) return;
+  var confirmPanel = document.getElementById('fcb-field-confirm');
+  var confirmMsg = document.getElementById('fcb-field-confirm-msg');
+  if (confirmMsg) confirmMsg.textContent = 'Change \u201c' + label + '\u201d to \u201c' + (value || '(empty)') + '\u201d for ' + formatNumber(count) + ' record(s)? (Logged in audit trail)';
+  if (confirmPanel) confirmPanel.style.display = 'flex';
+};
+window.fcbHideFieldConfirm = function() {
+  var confirmPanel = document.getElementById('fcb-field-confirm');
+  if (confirmPanel) confirmPanel.style.display = 'none';
+};
+
+window.fcbApplyField = async function() {
+  // Hide the inline confirmation
+  fcbHideFieldConfirm();
+  var fieldSel = document.getElementById('fcb-field-select');
+  var valueSel = document.getElementById('fcb-field-value');
+  var field = fieldSel ? fieldSel.value : '';
+  var value = valueSel ? valueSel.value : '';
+  if (value === '_select') value = '';
+  if (field === '_select') { showToast('Please select a field first', 'info'); return; }
+  if (!value) { showToast('Please select a value', 'info'); return; }
+  var count = bulkState.selectAllMatching ? (serverPagState.total || bulkState.selected.size) : bulkState.selected.size;
+  if (count === 0) { showToast('No rows selected/matched', 'info'); return; }
+  var FIELD_LABELS = {
+    snap_supervisor: 'Supervisor', role: 'Billing Role', planning_group: 'Billing PG',
+    internal_role: 'Internal Role', internal_planning_group: 'Internal PG',
+    snap_shift_time: 'Shift Time', snap_status: 'Status'
+  };
+  var label = FIELD_LABELS[field] || field;
   var user = typeof currentUser !== 'undefined' ? currentUser : null;
   var applyBtn = document.getElementById('fcb-apply-field-btn');
   if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Applying...'; }
@@ -1092,7 +1119,12 @@ window.fcbApplyField = async function() {
         filters: filters,
       }),
     });
-    var result = await resp.json();
+    var text = await resp.text();
+    var result;
+    try { result = JSON.parse(text); } catch (e) {
+      showToast('Bulk field change failed: ' + (resp.status === 500 ? 'Server error — please try again' : text.slice(0, 100)), 'error');
+      return;
+    }
     if (result.ok) {
       showToast(label + ' updated for ' + formatNumber(result.updated) + ' record(s)' + (result.skipped > 0 ? ' (' + result.skipped + ' already had this value)' : ''), 'success');
       // Reset field selection

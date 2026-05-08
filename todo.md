@@ -4124,3 +4124,5 @@
 - [x] Frontend: checkbox checks/sets global flag, all users read it
 - [x] Fix: backend leave creation endpoint now checks global filing extension before rejecting outside 1st-7th
 - [x] Fix: Bulk field change Value dropdown empty in Input Portal mode (multiSelects is {} - derive from employeeLookup/serverPagState)
+- [x] Fix: Bulk field change JSON parse error (endpoint returning non-JSON for internal_role field)
+- [x] Replace confirm() modal with inline expansion confirmation in bulk field change

@@ -752,33 +752,51 @@ router.post("/attendance/bulk-field-filtered", async (req: Request, res: Respons
     // Fetch all matching records
     const allRecords = await db.select({ id: ioAttendance.id, currentVal: ALLOWED_FIELDS[field] })
       .from(ioAttendance).where(whereClause);
-    let updated = 0;
-    let skipped = 0;
     const now = new Date().toISOString();
     // Human-readable field label for audit
     const FIELD_LABELS: Record<string, string> = {
       snap_supervisor: "Supervisor", role: "Role", planning_group: "Planning Group",
       snap_shift_time: "Shift Time", snap_status: "Status", remarks: "Remarks",
       ot_hours: "OT Hours", tag: "Tag", upl_reason: "UPL Reason",
+      internal_role: "Internal Role", internal_planning_group: "Internal PG",
     };
+    // Separate records that need updating vs those already at target value
+    const toUpdate: { id: string; oldVal: string }[] = [];
+    let skipped = 0;
     for (const record of allRecords) {
-      const oldVal = (record as any).currentVal;
+      const oldVal = (record as any).currentVal || "";
       if (oldVal === value) { skipped++; continue; }
-      // Update the record
-      await db.update(ioAttendance).set({ [field]: value || null }).where(eq(ioAttendance.id, record.id));
-      // Audit log
-      await db.insert(ioAuditLog).values({
-        record_type: "attendance",
-        record_id: record.id,
-        action: "bulk_field_change",
-        field_name: FIELD_LABELS[field] || field,
-        old_value: oldVal || "",
-        new_value: value || "",
-        actor_ohr: actor_ohr || "",
-        actor_name: actor_name || "",
-        timestamp: now,
-      });
-      updated++;
+      toUpdate.push({ id: record.id, oldVal });
+    }
+    // Batch update: single SQL statement for all matching IDs
+    let updated = 0;
+    if (toUpdate.length > 0) {
+      const idsToUpdate = toUpdate.map(r => r.id);
+      // Update in batches of 500 to avoid query size limits
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < idsToUpdate.length; i += BATCH_SIZE) {
+        const batch = idsToUpdate.slice(i, i + BATCH_SIZE);
+        await db.update(ioAttendance)
+          .set({ [field]: value || null })
+          .where(inArray(ioAttendance.id, batch));
+      }
+      updated = toUpdate.length;
+      // Batch audit inserts (in chunks of 100)
+      const AUDIT_BATCH = 100;
+      for (let i = 0; i < toUpdate.length; i += AUDIT_BATCH) {
+        const auditBatch = toUpdate.slice(i, i + AUDIT_BATCH).map(r => ({
+          record_type: "attendance",
+          record_id: r.id,
+          action: "bulk_field_change",
+          field_name: FIELD_LABELS[field] || field,
+          old_value: r.oldVal || "",
+          new_value: value || "",
+          actor_ohr: actor_ohr || "",
+          actor_name: actor_name || "",
+          timestamp: now,
+        }));
+        await db.insert(ioAuditLog).values(auditBatch);
+      }
     }
     // Notify owner
     if (updated > 0) {

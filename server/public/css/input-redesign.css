@@ -683,6 +683,30 @@
 .fcb-btn--ghost:active {
   background: rgba(255,255,255,0.04);
 }
+.fcb-inline-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  margin-left: 4px;
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 10px;
+  animation: fcb-bounce-in 0.2s ease;
+}
+.fcb-confirm-msg {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #fbbf24;
+  white-space: nowrap;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fcb-btn--sm {
+  padding: 5px 12px;
+  font-size: 11px;
+}
 
 /* ============================================================
    SELECTION MODE TOGGLE

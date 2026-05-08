@@ -554,7 +554,13 @@
         <select class="fcb-select fcb-status-only" id="fcb-field-value" style="display:none;">
           <option value="_select">&mdash; Value &mdash;</option>
         </select>
-        <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-field-btn" style="display:none;" onclick="fcbApplyField()">Apply Field</button>
+        <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-field-btn" style="display:none;" onclick="fcbShowFieldConfirm()">Apply Field</button>
+        <!-- Inline confirmation panel for bulk field change -->
+        <div id="fcb-field-confirm" style="display:none;" class="fcb-inline-confirm">
+          <span id="fcb-field-confirm-msg" class="fcb-confirm-msg"></span>
+          <button class="fcb-btn fcb-btn--primary fcb-btn--sm" id="fcb-field-confirm-yes" onclick="fcbApplyField()">Confirm</button>
+          <button class="fcb-btn fcb-btn--ghost fcb-btn--sm" onclick="fcbHideFieldConfirm()">Cancel</button>
+        </div>
         <div class="fcb-divider"></div>
         <button class="fcb-btn fcb-btn--ghost" onclick="fcbDeselectAll()">Cancel</button>
       </div>
