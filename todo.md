@@ -4123,3 +4123,4 @@
 - [x] Backend: store global filing_extension_active flag in io_settings table
 - [x] Frontend: checkbox checks/sets global flag, all users read it
 - [x] Fix: backend leave creation endpoint now checks global filing extension before rejecting outside 1st-7th
+- [x] Fix: Bulk field change Value dropdown empty in Input Portal mode (multiSelects is {} - derive from employeeLookup/serverPagState)

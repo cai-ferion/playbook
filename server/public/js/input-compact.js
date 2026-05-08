@@ -1118,6 +1118,20 @@ window.fcbApplyField = async function() {
   var valueSel = document.getElementById('fcb-field-value');
   if (!fieldSel || !valueSel) return;
 
+  // Helper: extract unique sorted values from employeeLookup by field name
+  function getValuesFromEmployees(empField) {
+    if (typeof employeeLookup !== 'object') return [];
+    var vals = Object.values(employeeLookup).map(function(e) { return (e[empField] || '').trim(); }).filter(Boolean);
+    return [...new Set(vals)].sort();
+  }
+
+  // Helper: extract unique sorted values from serverPagState.rows by field name
+  function getValuesFromRows(rowField) {
+    if (typeof serverPagState === 'undefined' || !serverPagState.rows) return [];
+    var vals = serverPagState.rows.map(function(r) { return (r[rowField] || '').trim(); }).filter(Boolean);
+    return [...new Set(vals)].sort();
+  }
+
   fieldSel.addEventListener('change', function() {
     var field = fieldSel.value;
     // Clear existing options and reset to placeholder
@@ -1127,21 +1141,30 @@ window.fcbApplyField = async function() {
 
     var options = [];
     var ms = (typeof appState !== 'undefined' && appState.multiSelects) ? appState.multiSelects : {};
+    var hasMultiSelects = ms.flm && ms.flm.options && ms.flm.options.length > 0;
 
     if (field === 'snap_supervisor') {
-      options = (ms.flm && ms.flm.options) || [];
+      options = hasMultiSelects ? (ms.flm.options || []) : getValuesFromEmployees('supervisor_name');
+      if (!options.length) options = getValuesFromRows('snap_supervisor');
     } else if (field === 'role') {
-      options = (ms.role && ms.role.options) || [];
+      options = hasMultiSelects ? (ms.role.options || []) : getValuesFromRows('role');
+      if (!options.length) options = getValuesFromRows('snap_actual_role');
+      if (!options.length) options = getValuesFromEmployees('actual_role');
     } else if (field === 'planning_group') {
-      options = (ms.pg && ms.pg.options) || [];
+      options = hasMultiSelects ? (ms.pg.options || []) : getValuesFromRows('planning_group');
+      if (!options.length) options = getValuesFromRows('snap_planning_group');
+      if (!options.length) options = getValuesFromEmployees('planning_group');
     } else if (field === 'internal_role') {
-      options = (ms.role && ms.role.options) || [];
+      options = hasMultiSelects ? (ms.role && ms.role.options || []) : getValuesFromRows('internal_role');
+      if (!options.length) options = getValuesFromEmployees('actual_role');
     } else if (field === 'internal_planning_group') {
-      options = (ms.pg && ms.pg.options) || [];
+      options = hasMultiSelects ? (ms.pg && ms.pg.options || []) : getValuesFromRows('internal_planning_group');
+      if (!options.length) options = getValuesFromEmployees('planning_group');
     } else if (field === 'snap_shift_time') {
       options = ['GY Shift', 'Mid-Shift'];
     } else if (field === 'snap_status') {
-      options = (ms.status && ms.status.options) || [];
+      options = hasMultiSelects ? (ms.status && ms.status.options || []) : getValuesFromRows('snap_status');
+      if (!options.length) options = getValuesFromEmployees('srt_status');
     }
 
     for (var i = 0; i < options.length; i++) {
