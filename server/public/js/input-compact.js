@@ -1044,8 +1044,48 @@ window.invalidateAuditCache = function(recordId) {
 })();
 
 // ===== Bulk Field Change (Admin/Manager only) =====
-// Show inline confirmation for bulk field change
-window.fcbShowFieldConfirm = function() {
+// Helper: build filter payload from omnibarState (Input Portal) or appState (legacy)
+function _buildBulkFieldFilters() {
+  var filters = {};
+  // Input Portal mode: read from omnibarState
+  if (typeof omnibarState !== 'undefined' && omnibarState.filters) {
+    var dateFilter = omnibarState.filters['date_range'];
+    var today = typeof getTodayStr === 'function' ? getTodayStr() : new Date().toISOString().slice(0, 10);
+    filters.log_date_gte = dateFilter ? dateFilter.startDate : today;
+    filters.log_date_lte = dateFilter ? dateFilter.endDate : today;
+    var fkMap = { tag: 'tag_in', wfm_tag: 'wfm_tag_in', agent: 'agent_in', flm: 'flm_in',
+      actualPlanningGroup: 'planning_group_in', status: 'status_in',
+      shiftTime: 'shift_time_in', role: 'role_in' };
+    var keys = Object.keys(omnibarState.filters);
+    for (var i = 0; i < keys.length; i++) {
+      var f = omnibarState.filters[keys[i]];
+      if (f.type === 'multi' && f.values && f.values.length > 0) {
+        var fpk = fkMap[f.key];
+        if (fpk) filters[fpk] = f.values.join('|');
+      }
+      if (f.type === 'toggle' && f.key === 'blanks') filters.blanks_only = true;
+    }
+  } else {
+    // Legacy mode: read from appState
+    if (appState.dateRange && appState.dateRange.start) filters.log_date_gte = appState.dateRange.start;
+    if (appState.dateRange && appState.dateRange.end) filters.log_date_lte = appState.dateRange.end;
+    if (appState.filters) {
+      if (appState.filters.tag_in) filters.tag_in = appState.filters.tag_in;
+      if (appState.filters.agent_in) filters.agent_in = appState.filters.agent_in;
+      if (appState.filters.flm_in) filters.flm_in = appState.filters.flm_in;
+      if (appState.filters.planning_group_in) filters.planning_group_in = appState.filters.planning_group_in;
+      if (appState.filters.status_in) filters.status_in = appState.filters.status_in;
+      if (appState.filters.shift_time_in) filters.shift_time_in = appState.filters.shift_time_in;
+      if (appState.filters.role_in) filters.role_in = appState.filters.role_in;
+      if (appState.filters.wfm_tag_in) filters.wfm_tag_in = appState.filters.wfm_tag_in;
+      if (appState.filters.blanks_only) filters.blanks_only = true;
+    }
+  }
+  return filters;
+}
+
+// Show inline confirmation with preview of affected records
+window.fcbShowFieldConfirm = async function() {
   var fieldSel = document.getElementById('fcb-field-select');
   var valueSel = document.getElementById('fcb-field-value');
   var field = fieldSel ? fieldSel.value : '';
@@ -1063,8 +1103,47 @@ window.fcbShowFieldConfirm = function() {
   var label = FIELD_LABELS[field] || field;
   var confirmPanel = document.getElementById('fcb-field-confirm');
   var confirmMsg = document.getElementById('fcb-field-confirm-msg');
-  if (confirmMsg) confirmMsg.textContent = 'Change \u201c' + label + '\u201d to \u201c' + (value || '(empty)') + '\u201d for ' + formatNumber(count) + ' record(s)? (Logged in audit trail)';
+  var confirmYes = document.getElementById('fcb-field-confirm-yes');
+  // Show loading state
+  if (confirmMsg) confirmMsg.innerHTML = '<span class="btn-spinner"></span> Loading preview...';
   if (confirmPanel) confirmPanel.style.display = 'flex';
+  if (confirmYes) confirmYes.disabled = true;
+  // Call preview endpoint
+  try {
+    var filters = _buildBulkFieldFilters();
+    var resp = await fetch(IO_API_BASE + '/attendance/bulk-field-preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field: field, value: value, filters: filters }),
+    });
+    var data = await resp.json();
+    if (!data.ok) {
+      if (confirmMsg) confirmMsg.textContent = 'Preview failed: ' + (data.error || 'Unknown error');
+      return;
+    }
+    // Build preview message
+    var msg = '';
+    if (data.wouldChange === 0) {
+      msg = '\u26A0\uFE0F No records to change. All ' + formatNumber(data.totalMatching) + ' matching records already have \u201c' + value + '\u201d as ' + label + '.';
+      if (confirmYes) confirmYes.disabled = true;
+    } else {
+      msg = 'Change \u201c' + label + '\u201d to \u201c' + value + '\u201d\n';
+      msg += '\u2022 ' + formatNumber(data.wouldChange) + ' record(s) will be updated (' + data.distinctEmployees + ' employee' + (data.distinctEmployees > 1 ? 's' : '') + ')\n';
+      if (data.alreadyHasValue > 0) msg += '\u2022 ' + formatNumber(data.alreadyHasValue) + ' already have this value (skipped)\n';
+      msg += '\u2022 Date range: ' + (data.filtersApplied.dateRange || 'today') + '\n';
+      if (data.filtersApplied.agent) msg += '\u2022 Agent filter: ' + data.filtersApplied.agent + '\n';
+      if (data.sample && data.sample.length > 0) {
+        msg += '\nAffected employees: ';
+        msg += data.sample.map(function(s) { return s.name + ' (current: ' + (s.currentValue || 'empty') + ')'; }).join(', ');
+        if (data.distinctEmployees > data.sample.length) msg += ' ... and ' + (data.distinctEmployees - data.sample.length) + ' more';
+      }
+      if (confirmYes) confirmYes.disabled = false;
+    }
+    if (confirmMsg) { confirmMsg.style.whiteSpace = 'pre-line'; confirmMsg.textContent = msg; }
+  } catch (err) {
+    if (confirmMsg) confirmMsg.textContent = 'Preview failed: ' + err.message;
+    if (confirmYes) confirmYes.disabled = true;
+  }
 };
 window.fcbHideFieldConfirm = function() {
   var confirmPanel = document.getElementById('fcb-field-confirm');
@@ -1093,21 +1172,8 @@ window.fcbApplyField = async function() {
   var applyBtn = document.getElementById('fcb-apply-field-btn');
   if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Applying...'; }
   try {
-    // Build filters from current appState
-    var filters = {};
-    if (appState.dateRange && appState.dateRange.start) filters.log_date_gte = appState.dateRange.start;
-    if (appState.dateRange && appState.dateRange.end) filters.log_date_lte = appState.dateRange.end;
-    if (appState.filters) {
-      if (appState.filters.tag_in) filters.tag_in = appState.filters.tag_in;
-      if (appState.filters.agent_in) filters.agent_in = appState.filters.agent_in;
-      if (appState.filters.flm_in) filters.flm_in = appState.filters.flm_in;
-      if (appState.filters.planning_group_in) filters.planning_group_in = appState.filters.planning_group_in;
-      if (appState.filters.status_in) filters.status_in = appState.filters.status_in;
-      if (appState.filters.shift_time_in) filters.shift_time_in = appState.filters.shift_time_in;
-      if (appState.filters.role_in) filters.role_in = appState.filters.role_in;
-      if (appState.filters.wfm_tag_in) filters.wfm_tag_in = appState.filters.wfm_tag_in;
-      if (appState.filters.blanks_only) filters.blanks_only = true;
-    }
+    // Build filters from omnibarState (Input Portal) or appState (legacy)
+    var filters = _buildBulkFieldFilters();
     var resp = await fetch(IO_API_BASE + '/attendance/bulk-field-filtered', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-actor-ohr': user ? user.ohr_id || '' : '', 'x-actor-name': user ? user.full_name || '' : '' },

@@ -4127,3 +4127,6 @@
 - [x] Fix: Bulk field change JSON parse error (endpoint returning non-JSON for internal_role field)
 - [x] Replace confirm() modal with inline expansion confirmation in bulk field change
 - [x] Fix: Bulk field change timeout - rewrite to single UPDATE statement
+- [x] Add backend preview endpoint for bulk field change (show affected records before commit)
+- [x] Update frontend inline confirmation to show preview of affected records
+- [x] Fix: Investigate and fix why filters were not passed to bulk field change

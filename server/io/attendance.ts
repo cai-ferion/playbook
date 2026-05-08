@@ -804,4 +804,82 @@ router.post("/attendance/bulk-field-filtered", async (req: Request, res: Respons
   }
 });
 
+// Preview endpoint: returns affected records WITHOUT changing them
+router.post("/attendance/bulk-field-preview", async (req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database unavailable" });
+    const { field, value, filters } = req.body;
+    if (!field || !value) return res.status(400).json({ error: "field and value are required" });
+    if (!filters) return res.status(400).json({ error: "filters object is required" });
+    const ALLOWED_FIELDS: Record<string, any> = {
+      snap_supervisor: ioAttendance.snap_supervisor,
+      role: ioAttendance.snap_actual_role,
+      planning_group: ioAttendance.snap_planning_group,
+      snap_shift_time: ioAttendance.snap_shift_time,
+      snap_status: ioAttendance.snap_status,
+      internal_role: ioAttendance.internal_role,
+      internal_planning_group: ioAttendance.internal_planning_group,
+    };
+    if (!ALLOWED_FIELDS[field]) return res.status(400).json({ error: "Invalid field" });
+    const { log_date_gte, log_date_lte, tag_in, agent_in, flm_in,
+            planning_group_in, status_in, shift_time_in, role_in, wfm_tag_in, blanks_only } = filters;
+    const conditions: any[] = [];
+    const mgrSet = await getManagerOhrSet();
+    if (mgrSet.size > 0) {
+      const mgrArr = Array.from(mgrSet);
+      conditions.push(sql`${ioAttendance.ohr_id} NOT IN (${sql.join(mgrArr.map(o => sql`${o}`), sql`, `)})`);
+    }
+    if (log_date_gte) conditions.push(gte(ioAttendance.log_date, String(log_date_gte)));
+    if (log_date_lte) conditions.push(lte(ioAttendance.log_date, String(log_date_lte)));
+    if (tag_in) conditions.push(inArray(ioAttendance.tag, String(tag_in).split("|")));
+    if (agent_in) conditions.push(inArray(ioAttendance.snap_full_name, String(agent_in).split("|")));
+    if (flm_in) conditions.push(await buildFlmCondition(db, String(flm_in).split("|"), log_date_gte ? String(log_date_gte) : undefined));
+    if (planning_group_in) conditions.push(inArray(ioAttendance.snap_planning_group, String(planning_group_in).split("|")));
+    if (status_in) conditions.push(inArray(ioAttendance.snap_status, String(status_in).split("|")));
+    if (shift_time_in) conditions.push(inArray(ioAttendance.snap_shift_time, String(shift_time_in).split("|")));
+    if (role_in) conditions.push(inArray(ioAttendance.snap_actual_role, String(role_in).split("|")));
+    if (wfm_tag_in) conditions.push(inArray(ioAttendance.wfm_tag, String(wfm_tag_in).split("|")));
+    if (blanks_only) conditions.push(sql`(${ioAttendance.tag} IS NULL OR ${ioAttendance.tag} = '')`);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const colRef = ALLOWED_FIELDS[field];
+    // Only count records that would actually change
+    const skipCondition = value
+      ? sql`${colRef} IS DISTINCT FROM ${value}`
+      : sql`(${colRef} IS NOT NULL AND ${colRef} != '')`;
+    const changeConditions = whereClause ? and(whereClause, skipCondition) : skipCondition;
+    // Get total matching filter
+    const [{ count: totalMatching }] = await db.select({ count: sql<number>`count(*)` })
+      .from(ioAttendance).where(whereClause);
+    // Get count that would actually change
+    const [{ count: wouldChange }] = await db.select({ count: sql<number>`count(*)` })
+      .from(ioAttendance).where(changeConditions);
+    // Get sample of distinct employees that would be affected (up to 20)
+    const affectedSample = await db.selectDistinct({
+      name: ioAttendance.snap_full_name,
+      currentValue: sql<string>`${colRef}`,
+    }).from(ioAttendance).where(changeConditions).limit(20);
+    // Get distinct employee count
+    const [{ count: distinctEmployees }] = await db.select({ count: sql<number>`count(distinct ${ioAttendance.snap_full_name})` })
+      .from(ioAttendance).where(changeConditions);
+    const alreadyHasValue = Number(totalMatching) - Number(wouldChange);
+    res.json({
+      ok: true,
+      totalMatching: Number(totalMatching),
+      wouldChange: Number(wouldChange),
+      alreadyHasValue,
+      distinctEmployees: Number(distinctEmployees),
+      sample: affectedSample.map((r: any) => ({ name: r.name, currentValue: r.currentValue })),
+      filtersApplied: {
+        dateRange: log_date_gte || log_date_lte ? `${log_date_gte || '...'} to ${log_date_lte || '...'}` : null,
+        agent: agent_in || null,
+        role: role_in || null,
+      },
+    });
+  } catch (err: any) {
+    console.error("[IO API] attendance bulk-field-preview error:", err?.message);
+    res.status(500).json({ error: `Preview failed: ${err?.message}` });
+  }
+});
+
 export default router;
