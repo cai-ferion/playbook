@@ -5700,6 +5700,7 @@ body {
 }
 
 .rc-queue-bar-inner {
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5718,13 +5719,21 @@ body {
   font-weight: 600;
   color: var(--accent-primary, #3b82f6);
 }
-
 .rc-queue-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
+.rc-queue-actions .rc-btn-ghost {
+  color: rgba(255,255,255,0.7);
+}
+.rc-queue-actions .rc-btn-ghost:hover {
+  color: #ffffff;
+}
+.rc-queue-actions .rc-btn-outline {
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.4);
+}
 /* Queue Modal */
 #rc-queue-modal {
   position: fixed;
@@ -5748,6 +5757,7 @@ body {
 }
 
 .rc-queue-modal-content {
+  color: #e2e8f0;
   position: relative;
   width: 90%;
   max-width: 700px;
@@ -5761,6 +5771,7 @@ body {
 }
 
 .rc-queue-modal-header {
+  color: #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5768,8 +5779,16 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.rc-queue-modal-header .rc-btn-ghost {
+  color: #94a3b8;
+  font-size: 20px;
+}
+.rc-queue-modal-header .rc-btn-ghost:hover {
+  color: #ffffff;
+}
 .rc-queue-modal-header h3 {
   margin: 0;
+  color: #ffffff;
   font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
@@ -5778,10 +5797,14 @@ body {
 
 .rc-queue-modal-body {
   padding: 16px 20px;
+  color: #e2e8f0;
   overflow-y: auto;
   flex: 1;
 }
 
+.rc-queue-modal-body table { color: #e2e8f0; }
+.rc-queue-modal-body th { color: #94a3b8; }
+.rc-queue-modal-body td { color: #e2e8f0; }
 .rc-queue-modal-footer {
   display: flex;
   align-items: center;
@@ -5814,11 +5837,22 @@ body {
     align-items: flex-start;
   }
   .rc-queue-bar-inner {
+  color: #ffffff;
     flex-direction: column;
     gap: 10px;
     align-items: stretch;
   }
   .rc-queue-actions {
+}
+.rc-queue-actions .rc-btn-ghost {
+  color: rgba(255,255,255,0.7);
+}
+.rc-queue-actions .rc-btn-ghost:hover {
+  color: #ffffff;
+}
+.rc-queue-actions .rc-btn-outline {
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.4);
     justify-content: flex-end;
   }
 }
