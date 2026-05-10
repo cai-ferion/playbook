@@ -4133,3 +4133,4 @@
 - [x] Fix: Exempt Managers from date-based lock in PATCH /attendance/:id
 - [x] Left sidebar nav sections collapsed by default
 - [x] Phase 1: Lazy-load module CSS (compass-redesign, sandbox-redesign, corrective-actions, haven, tardiness-restyle)
+- [x] Phase 7: Add database indexes to key tables (attendance, employees, coaching, notifications, tasks, sync_log)
