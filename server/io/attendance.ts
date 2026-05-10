@@ -232,8 +232,14 @@ router.patch("/attendance/:id", async (req: Request, res: Response) => {
     const [current] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, recordId)).limit(1);
     if (!current) return res.status(404).json({ error: "Record not found" });
 
-    // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin)
-    if (!ADMIN_OHRS.includes(actorOhr)) {
+    // Date-based lock enforcement: yesterday and earlier locked after 11 AM PHT (except admin/manager)
+    let isManagerOrAdmin = ADMIN_OHRS.includes(actorOhr);
+    if (!isManagerOrAdmin) {
+      const [actorRecord] = await db.select({ role: ioEmployees.actual_role })
+        .from(ioEmployees).where(eq(ioEmployees.ohr_id, actorOhr)).limit(1);
+      if (actorRecord && actorRecord.role === "Manager") isManagerOrAdmin = true;
+    }
+    if (!isManagerOrAdmin) {
       const now = new Date();
       const phtTime = new Date(now.getTime() + 8 * 60 * 60000);
       const phtHour = phtTime.getUTCHours();

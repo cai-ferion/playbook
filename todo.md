@@ -4130,3 +4130,4 @@
 - [x] Add backend preview endpoint for bulk field change (show affected records before commit)
 - [x] Update frontend inline confirmation to show preview of affected records
 - [x] Fix: Investigate and fix why filters were not passed to bulk field change
+- [x] Fix: Exempt Managers from date-based lock in PATCH /attendance/:id
