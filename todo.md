@@ -4131,3 +4131,4 @@
 - [x] Update frontend inline confirmation to show preview of affected records
 - [x] Fix: Investigate and fix why filters were not passed to bulk field change
 - [x] Fix: Exempt Managers from date-based lock in PATCH /attendance/:id
+- [x] Left sidebar nav sections collapsed by default

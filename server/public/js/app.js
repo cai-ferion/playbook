@@ -447,11 +447,7 @@ async function loginAsEmployee(emp) {
   showLoading(false);
 
   startRefreshTimer();
-  // Auto-expand Anchor and Helm nav groups
-  const anchorGroup = document.getElementById('nav-group-anchor');
-  if (anchorGroup) anchorGroup.classList.add('expanded');
-  const helmGroup = document.getElementById('nav-group-helm');
-  if (helmGroup) helmGroup.classList.add('expanded');
+  // Nav groups start collapsed by default; they auto-expand when a child view is selected
   // Default sidebar to Alerts (notifications) for all users
   if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
   if (typeof initNotifications === 'function') initNotifications();
@@ -853,11 +849,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         initDashboardMultiSelects();
         await loadDataOptimized();
         startRefreshTimer();
-        // Auto-expand Anchor and Helm nav groups
-        const anchorGroup2 = document.getElementById('nav-group-anchor');
-        if (anchorGroup2) anchorGroup2.classList.add('expanded');
-        const helmGroup2 = document.getElementById('nav-group-helm');
-        if (helmGroup2) helmGroup2.classList.add('expanded');
+        // Nav groups start collapsed by default; they auto-expand when a child view is selected
         // Default sidebar to Alerts (notifications) for all users
         if (typeof setSidebarMode === 'function') setSidebarMode('notifications');
         if (typeof initNotifications === 'function') initNotifications();
