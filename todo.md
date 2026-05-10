@@ -4141,3 +4141,8 @@
 - [ ] Refactor Role Change: Consolidated email generation from queue
 - [ ] Refactor Role Change: Collapsible history section at bottom of Billing Compliance
 - [ ] Refactor Role Change: Deficit row highlighting (red left-border)
+- [x] Replace Status column with 7-day schedule strip (Sat-Fri) in Role Change staff table
+- [x] Backend: return per-day schedule array instead of single status string
+- [x] Frontend: render colored mini-cells (SCH=green, WO=gray, PL/UPL/ML/LOA=orange, RC=blue, -=muted)
+- [x] Sort staff by least non-SCH days first (most available at top)
+- [x] Add S|S|M|T|W|T|F header row above the strip

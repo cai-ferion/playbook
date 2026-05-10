@@ -149,10 +149,10 @@ describe('Role Change — Inline Contextual Flow', () => {
       expect(js).toContain('/role-change/history');
     });
 
-    it('renders badge styles (success, warning, danger, muted)', () => {
-      expect(js).toContain('rc-badge-success');
-      expect(js).toContain('rc-badge-warning');
-      expect(js).toContain('rc-badge-muted');
+    it('renders 7-day schedule strip with color-coded cells', () => {
+      expect(js).toContain('rc-sched-strip');
+      expect(js).toContain('rc-sched-cell');
+      expect(js).toContain('codeColors');
     });
 
     it('restricts access to Managers, TLs, and Admin OHRs (via billing.js)', () => {
@@ -279,6 +279,11 @@ describe('Role Change — Inline Contextual Flow', () => {
 
     it('defines available-staff GET route', () => {
       expect(routes).toContain('router.get("/available-staff"');
+    });
+    it('returns 7-day schedule strip per staff member', () => {
+      expect(routes).toContain('schedule');
+      expect(routes).toContain('non_sch_count');
+      expect(routes).toContain('weekDates');
     });
 
     it('defines generate POST route', () => {

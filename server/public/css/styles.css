@@ -5823,6 +5823,34 @@ body {
   }
 }
 
+/* ── Role Change: 7-Day Schedule Strip ────────────────────── */
+.rc-sched-strip {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  align-items: center;
+}
+.rc-sched-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  cursor: default;
+  transition: transform 0.1s;
+}
+.rc-sched-cell:hover {
+  transform: scale(1.15);
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.rc-row-unavailable .rc-sched-strip {
+  opacity: 0.5;
+}
 /* ═══════════════════════════════════════════════════════════
    Manager's Nook — Supervisor Scorecard
    ═══════════════════════════════════════════════════════════ */

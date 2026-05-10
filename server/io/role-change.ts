@@ -282,46 +282,77 @@ router.get("/available-staff", async (req: Request, res: Response) => {
       existingMap.get(e.ohr_id)!.push(e);
     }
 
-    // Compute availability for each staff member
+    // Build 7-day schedule strip (Sat → Fri) for each staff member
+    // Generate the 7 dates in the work week (dateFrom = Saturday, dateTo = Friday)
+    const weekDates: string[] = [];
+    const startDate = new Date(dateFrom + 'T00:00:00');
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      weekDates.push(d.toISOString().slice(0, 10));
+    }
+
+    const leaveTags = ["PL", "UPL", "ML", "EXIT", "LOA"];
+    const restDayValues = ["WO", "RD", "REST"];
+
     const staff = staffRows.map((s: any) => {
       const att = attMap.get(s.ohr_id) || [];
       const wfm = wfmMap.get(s.ohr_id) || [];
       const existing = existingMap.get(s.ohr_id) || [];
 
-      // Check for leave days in the range
-      const leaveTags = ["PL", "UPL", "ML", "EXIT", "LOA"];
-      const leaveDays = att.filter((a: any) => leaveTags.includes((a.tag || "").toUpperCase()));
-      const onLeave = leaveDays.length > 0;
-
-      // Check for rest days from WFM
-      const restDayValues = ["WO", "RD", "REST"];
-      const restDays = wfm.filter((w: any) =>
-        restDayValues.includes((w.wfm_value || "").toUpperCase())
-      );
-      const hasRestDay = restDays.length > 0;
-
-      // Check if already role-changed for overlapping dates
-      const alreadyChanged = existing.length > 0;
-
-      // Check if already has a different billing role in attendance (manually changed)
-      const billingRoleChanged = att.some(
-        (a: any) => a.billing_role && a.billing_role !== s.actual_role
-      );
-
-      // Determine status
-      let status = "Available";
-      let statusDetail = "";
-      if (alreadyChanged) {
-        status = "Already Assigned";
-        const ex = existing[0];
-        statusDetail = `→ ${ex.new_role} @ ${ex.new_pg}`;
-      } else if (onLeave) {
-        status = "On Leave";
-        statusDetail = leaveDays.map((d: any) => `${d.tag} (${d.log_date})`).join(", ");
-      } else if (hasRestDay) {
-        status = "Rest Day";
-        statusDetail = restDays.map((d: any) => d.schedule_date).join(", ");
+      // Build lookup maps by date for this staff member
+      const attByDate = new Map<string, any>();
+      for (const a of att) {
+        const d = String(a.log_date || '').slice(0, 10);
+        attByDate.set(d, a);
       }
+      const wfmByDate = new Map<string, any>();
+      for (const w of wfm) {
+        const d = String(w.schedule_date || '').slice(0, 10);
+        wfmByDate.set(d, w);
+      }
+
+      // Check if role change covers a specific date
+      const rcCoversDate = (date: string): any | null => {
+        for (const rc of existing) {
+          const rcFrom = String(rc.date_from || '').slice(0, 10);
+          const rcTo = String(rc.date_to || '').slice(0, 10);
+          if (date >= rcFrom && date <= rcTo) return rc;
+        }
+        return null;
+      };
+
+      // Compute per-day status for the 7-day strip
+      const schedule: { date: string; code: string; detail?: string }[] = weekDates.map(date => {
+        // Priority 1: Existing role change assignment
+        const rc = rcCoversDate(date);
+        if (rc) {
+          return { date, code: 'RC', detail: `${rc.new_role} @ ${rc.new_pg}` };
+        }
+        // Priority 2: Leave from attendance
+        const attRec = attByDate.get(date);
+        if (attRec && leaveTags.includes((attRec.tag || '').toUpperCase())) {
+          return { date, code: (attRec.tag || '').toUpperCase() };
+        }
+        // Priority 3: Rest day from WFM schedule
+        const wfmRec = wfmByDate.get(date);
+        if (wfmRec && restDayValues.includes((wfmRec.wfm_value || '').toUpperCase())) {
+          return { date, code: 'WO' };
+        }
+        // Priority 4: Has WFM schedule entry (scheduled to work)
+        if (wfmRec) {
+          return { date, code: 'SCH' };
+        }
+        // Priority 5: Has attendance record (worked that day)
+        if (attRec) {
+          return { date, code: 'SCH' };
+        }
+        // Fallback: no data
+        return { date, code: '-' };
+      });
+
+      // Count non-SCH days (lower = more available)
+      const nonSchCount = schedule.filter(d => d.code !== 'SCH').length;
 
       return {
         ohr_id: s.ohr_id,
@@ -331,15 +362,14 @@ router.get("/available-staff", async (req: Request, res: Response) => {
         planning_group: s.planning_group,
         supervisor_name: s.supervisor_name,
         shift_time: s.shift_time,
-        status,
-        status_detail: statusDetail,
-        is_available: status === "Available",
+        schedule,
+        non_sch_count: nonSchCount,
       };
     });
 
-    // Sort: Available first, then by role (TL first), then by name
+    // Sort: least non-SCH days first (most available), then by role (TL first), then by name
     staff.sort((a: any, b: any) => {
-      if (a.is_available !== b.is_available) return a.is_available ? -1 : 1;
+      if (a.non_sch_count !== b.non_sch_count) return a.non_sch_count - b.non_sch_count;
       if (a.actual_role !== b.actual_role) return a.actual_role === "Team Lead" ? -1 : 1;
       return (a.full_name || "").localeCompare(b.full_name || "");
     });

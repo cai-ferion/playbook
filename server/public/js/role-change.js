@@ -108,44 +108,52 @@ async function rcLoadInlineStaff(targetPG, targetRole) {
 function rcRenderInlineStaff(targetPG, targetRole) {
   const body = document.getElementById('rc-inline-staff-body');
   if (!body) return;
-
-  const available = _rcInlineStaff.filter(s => s.is_available && !s.already_queued);
-
   if (_rcInlineStaff.length === 0) {
     body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No staff available outside this PG</td></tr>';
     return;
   }
-
   // Suggest the target role for the "New Role" dropdown
   const suggestedRole = targetRole === '*' ? 'Agent' : targetRole;
-
+  // Color map for schedule codes
+  const codeColors = {
+    'SCH': { bg: '#dcfce7', text: '#166534', label: 'Scheduled' },
+    'WO':  { bg: '#f3f4f6', text: '#6b7280', label: 'Work-Off' },
+    'PL':  { bg: '#fef3c7', text: '#92400e', label: 'Planned Leave' },
+    'UPL': { bg: '#fee2e2', text: '#991b1b', label: 'Unplanned Leave' },
+    'ML':  { bg: '#fef3c7', text: '#92400e', label: 'Medical Leave' },
+    'LOA': { bg: '#fef3c7', text: '#92400e', label: 'Leave of Absence' },
+    'EXIT':{ bg: '#fee2e2', text: '#991b1b', label: 'Exit' },
+    'RC':  { bg: '#dbeafe', text: '#1e40af', label: 'Role Changed' },
+    '-':   { bg: '#f9fafb', text: '#d1d5db', label: 'No Data' },
+  };
   body.innerHTML = _rcInlineStaff.map((s, idx) => {
-    const isAvailable = s.is_available && !s.already_queued;
-    const statusClass = s.already_queued ? 'rc-badge-muted' : (s.is_available ? 'rc-badge-success' : (s.status === 'On Leave' ? 'rc-badge-warning' : 'rc-badge-muted'));
-    const statusText = s.already_queued ? 'Queued' : s.status;
-    const disabled = !isAvailable ? 'disabled' : '';
-
+    const isQueued = s.already_queued;
+    // Staff is selectable unless already queued
+    const disabled = isQueued ? 'disabled' : '';
     const roleOptions = RC_ROLE_OPTIONS.map(r =>
       `<option value="${r}" ${r === suggestedRole ? 'selected' : ''}>${r}</option>`
     ).join('');
-
-    return `<tr class="${!isAvailable ? 'rc-row-unavailable' : ''}">
+    // Build the 7-day schedule strip
+    const scheduleStrip = (s.schedule || []).map(day => {
+      const c = codeColors[day.code] || codeColors['-'];
+      const tooltip = day.detail ? `${c.label}: ${day.detail}` : c.label;
+      return `<span class="rc-sched-cell" style="background:${c.bg};color:${c.text};" title="${tooltip}">${day.code}</span>`;
+    }).join('');
+    const rowClass = isQueued ? 'rc-row-unavailable' : '';
+    return `<tr class="${rowClass}">
       <td style="text-align:center;"><input type="checkbox" class="rc-inline-check" data-idx="${idx}" ${disabled} onchange="rcInlineUpdateCount()"></td>
       <td style="font-weight:500;">${escapeHtml(s.full_name)}</td>
       <td style="font-family:monospace;font-size:12px;">${s.ohr_id}</td>
       <td>${s.actual_role}</td>
       <td>${s.planning_group || '—'}</td>
       <td style="text-align:center;">
-        <span class="rc-badge ${statusClass}">${statusText}</span>
-        ${s.status_detail ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${s.status_detail}</div>` : ''}
+        <div class="rc-sched-strip">${scheduleStrip}</div>
       </td>
       <td><select class="rc-inline-select" id="rc-inline-role-${idx}" ${disabled}>${roleOptions}</select></td>
     </tr>`;
   }).join('');
-
   rcInlineUpdateCount();
 }
-
 // ── Select All Toggle ────────────────────────────────────────
 function rcInlineToggleSelectAll() {
   const selectAll = document.getElementById('rc-inline-select-all');
