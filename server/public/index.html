@@ -854,8 +854,21 @@
                 <button class="rc-btn rc-btn-ghost" onclick="rcCloseQueuePreview()">&times;</button>
               </div>
               <div class="rc-queue-modal-body" id="rc-queue-modal-body"></div>
-              <div class="rc-queue-modal-footer">
-                <button class="rc-btn rc-btn-primary" onclick="rcCloseQueuePreview();rcProcessQueue();">Generate Email & Apply All</button>
+              <div class="rc-queue-modal-footer" id="rc-queue-modal-footer">
+                <button class="rc-btn rc-btn-primary" onclick="rcShowProcessConfirm()">Generate Email & Apply All</button>
+              </div>
+              <div class="rc-queue-confirm-panel" id="rc-queue-confirm-panel" style="display:none;">
+                <div class="rc-confirm-body">
+                  <span class="rc-confirm-icon">&#9888;&#65039;</span>
+                  <div class="rc-confirm-text">
+                    <p class="rc-confirm-title">Confirm Role Change</p>
+                    <p class="rc-confirm-detail" id="rc-confirm-detail"></p>
+                  </div>
+                </div>
+                <div class="rc-confirm-actions">
+                  <button class="rc-btn rc-btn-outline" onclick="rcHideProcessConfirm()">Cancel</button>
+                  <button class="rc-btn rc-btn-primary" onclick="rcConfirmAndProcess()">Yes, Proceed</button>
+                </div>
               </div>
             </div>
           </div>

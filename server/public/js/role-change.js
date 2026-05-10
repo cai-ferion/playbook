@@ -303,6 +303,39 @@ function rcClearQueue() {
 }
 
 // ── Process Queue (Generate Email & Apply) ───────────────────
+// ── Inline Confirmation Flow ─────────────────────────────────────
+function rcShowProcessConfirm() {
+  if (_rcQueue.length === 0) {
+    showToast('Queue is empty', 'warning');
+    return;
+  }
+  const select = document.getElementById('billing-week-select');
+  const weekEnding = select ? select.value : '';
+  if (!weekEnding) {
+    showToast('No week selected', 'error');
+    return;
+  }
+  const panel = document.getElementById('rc-queue-confirm-panel');
+  const detail = document.getElementById('rc-confirm-detail');
+  const footer = document.getElementById('rc-queue-modal-footer');
+  if (detail) {
+    detail.innerHTML = `This will:<br>• Create <strong>${_rcQueue.length}</strong> role change record(s)<br>• Update attendance records for WE <strong>${weekEnding}</strong><br>• Generate the email template`;
+  }
+  if (footer) footer.style.display = 'none';
+  if (panel) panel.style.display = '';
+}
+function rcHideProcessConfirm() {
+  const panel = document.getElementById('rc-queue-confirm-panel');
+  const footer = document.getElementById('rc-queue-modal-footer');
+  if (panel) panel.style.display = 'none';
+  if (footer) footer.style.display = '';
+}
+function rcConfirmAndProcess() {
+  rcHideProcessConfirm();
+  rcCloseQueuePreview();
+  rcProcessQueue();
+}
+
 async function rcProcessQueue() {
   if (_rcQueue.length === 0) {
     showToast('Queue is empty', 'warning');
@@ -331,13 +364,6 @@ async function rcProcessQueue() {
     date_from: dateFrom,
     date_to: dateTo,
   }));
-
-  // Confirm
-  if (!confirm(`This will:\n• Create ${assignments.length} role change record(s)\n• Update attendance records for WE ${weekEnding}\n• Generate the email template\n\nProceed?`)) {
-    return;
-  }
-
-  // Close queue modal if open
   rcCloseQueuePreview();
 
   try {
