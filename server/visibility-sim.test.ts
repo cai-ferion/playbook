@@ -55,7 +55,7 @@ describe("Visibility — Manager's Nook (client-side)", () => {
   it("Manager's Nook nav visibility is role-gated to Manager + Admin", () => {
     expect(appJs).toContain("nav-managers-nook");
     expect(appJs).toContain("user.actual_role === 'Manager'");
-    expect(appJs).toContain("isManagerOrAdmin");
+    expect(appJs).toContain("isNookAllowed");
   });
 
   it("Manager's Nook nav item exists in index.html", () => {

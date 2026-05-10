@@ -397,7 +397,8 @@ describe("Tardiness — HTML Structure", () => {
     expect(indexHtml).toContain("tardQuickFilter('Grace')");
   });
   it("includes tardiness-restyle.css", () => {
-    expect(indexHtml).toContain('tardiness-restyle.css');
+    // CSS now lazy-loaded via module-loader.js (Phase 1 perf optimization)
+    expect(moduleLoaderJs).toContain('tardiness-restyle.css');
   });
   it("nav item is under Horizon group", () => {
     const horizonGroupIdx = indexHtml.indexOf('id="nav-group-horizon"');

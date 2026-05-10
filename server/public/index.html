@@ -628,17 +628,7 @@
       <div class="view-container view-hidden" id="view-billing">
         <div class="billing-compliance-container">
 
-          <!-- Billing Tab Bar -->
-          <div class="rc-tab-bar" id="billing-main-tabs">
-            <button class="rc-tab active" id="billing-main-tab-compliance" onclick="switchBillingMainTab('compliance')">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              Compliance
-            </button>
-            <button class="rc-tab" id="billing-main-tab-role-changes" onclick="switchBillingMainTab('role-changes')" style="display:none;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-              Role Changes
-            </button>
-          </div>
+
 
           <!-- Compliance Tab Content -->
           <div id="billing-tab-compliance">
@@ -780,9 +770,115 @@
             <div class="card admin-card">
               <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
                 <span class="card-title" id="billing-drilldown-title">DAILY BREAKDOWN</span>
-                <button class="btn btn-outline btn-sm" onclick="document.getElementById('billing-drilldown').style.display='none'" style="font-size:11px;">Close</button>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button class="rc-btn rc-btn-primary rc-btn-sm" id="rc-do-role-change-btn" onclick="rcOpenInlinePanel()" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                    Do Role Change?
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="closeBillingDrilldown()" style="font-size:11px;">Close</button>
+                </div>
               </div>
               <div class="admin-card-body" id="billing-drilldown-body"></div>
+            </div>
+          </div>
+
+          <!-- Inline Role Change Panel (appears below drilldown) -->
+          <div id="rc-inline-panel" style="display:none;margin-top:12px;">
+            <div class="card admin-card rc-inline-card">
+              <div class="card-header rc-inline-header">
+                <div class="rc-inline-context">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                  <span class="rc-inline-title">ROLE CHANGE</span>
+                  <span class="rc-inline-context-badge" id="rc-inline-context-badge">—</span>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="rcCloseInlinePanel()" style="font-size:11px;">Close</button>
+              </div>
+              <div class="admin-card-body">
+                <!-- Sticky context header -->
+                <div class="rc-context-bar" id="rc-context-bar">
+                  <span id="rc-context-pg">—</span>
+                  <span class="rc-context-sep">|</span>
+                  <span id="rc-context-deficit">—</span>
+                  <span class="rc-context-sep">|</span>
+                  <span id="rc-context-hc">—</span>
+                </div>
+                <!-- Staff table -->
+                <div class="rc-table-wrap">
+                  <table class="rc-table" id="rc-inline-staff-table">
+                    <thead>
+                      <tr>
+                        <th style="width:40px;text-align:center;"><input type="checkbox" id="rc-inline-select-all" onchange="rcInlineToggleSelectAll()"></th>
+                        <th>Name</th>
+                        <th>OHR</th>
+                        <th>Current Role</th>
+                        <th>Current PG</th>
+                        <th style="text-align:center;">Status</th>
+                        <th>New Role</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rc-inline-staff-body">
+                      <tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">Loading available staff...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <!-- Action bar -->
+                <div class="rc-actions-bar" id="rc-inline-action-bar" style="display:none;">
+                  <span class="rc-selected-count" id="rc-inline-selected-count">0 selected</span>
+                  <button class="rc-btn rc-btn-outline" id="rc-queue-btn" onclick="rcAddToQueue()">Add to Queue</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Role Change Queue (floating bar) -->
+          <div id="rc-queue-bar" style="display:none;">
+            <div class="rc-queue-bar-inner">
+              <div class="rc-queue-info">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <span id="rc-queue-count">0 role change(s) queued</span>
+              </div>
+              <div class="rc-queue-actions">
+                <button class="rc-btn rc-btn-outline rc-btn-sm" onclick="rcShowQueuePreview()">Review Queue</button>
+                <button class="rc-btn rc-btn-primary rc-btn-sm" onclick="rcProcessQueue()">Generate Email & Apply</button>
+                <button class="rc-btn rc-btn-ghost rc-btn-sm" onclick="rcClearQueue()">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Queue Preview Modal -->
+          <div id="rc-queue-modal" style="display:none;">
+            <div class="rc-queue-modal-backdrop" onclick="rcCloseQueuePreview()"></div>
+            <div class="rc-queue-modal-content">
+              <div class="rc-queue-modal-header">
+                <h3>Queued Role Changes</h3>
+                <button class="rc-btn rc-btn-ghost" onclick="rcCloseQueuePreview()">&times;</button>
+              </div>
+              <div class="rc-queue-modal-body" id="rc-queue-modal-body"></div>
+              <div class="rc-queue-modal-footer">
+                <button class="rc-btn rc-btn-outline" onclick="rcCloseQueuePreview()">Close</button>
+                <button class="rc-btn rc-btn-primary" onclick="rcCloseQueuePreview();rcProcessQueue();">Generate Email & Apply All</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Email Result Panel -->
+          <div id="rc-email-result" style="display:none;margin-top:12px;">
+            <div class="card admin-card">
+              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="card-title">EMAIL PREVIEW</span>
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('rc-email-result').style.display='none'" style="font-size:11px;">Close</button>
+              </div>
+              <div class="admin-card-body">
+                <div class="rc-result-summary" id="rc-result-summary" style="display:none;"></div>
+                <div class="rc-email-preview-bar">
+                  <div class="rc-email-subject" id="rc-email-subject"></div>
+                  <div class="rc-email-actions">
+                    <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailHtml()">Copy HTML</button>
+                    <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailPlainText()">Copy Plain Text</button>
+                  </div>
+                </div>
+                <div class="rc-email-preview" id="rc-email-preview"></div>
+              </div>
             </div>
           </div>
 
@@ -790,129 +886,41 @@
 
           </div><!-- end billing-tab-compliance -->
 
-          <!-- Role Changes Tab Content -->
-          <div id="billing-tab-role-changes" style="display:none;">
-
-            <!-- Step 1: Week Selection -->
-            <div class="rc-wizard-section" id="rc-step-1">
-              <div class="rc-section-header">
-                <span class="rc-step-badge">1</span>
-                <h3 class="rc-section-title">Select Week Ending</h3>
-              </div>
-              <div class="rc-controls-row">
-                <div class="rc-control-group">
-                  <label class="rc-label">Week Ending</label>
-                  <select class="rc-select" id="rc-week-select" onchange="rcOnWeekChange()">
-                    <option value="">Select Week Ending</option>
-                  </select>
+          <!-- Role Change History (collapsible, always visible at bottom) -->
+          <div class="rc-history-section" id="rc-history-section" style="margin-top:20px;">
+            <div class="card admin-card">
+              <div class="card-header rc-history-header" onclick="rcToggleHistory()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#6b7280;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span class="card-title">ROLE CHANGE HISTORY</span>
+                  <span class="rc-badge rc-badge-muted" id="rc-history-count">—</span>
                 </div>
-                <div class="rc-control-group rc-control-actions">
-                  <button class="rc-btn rc-btn-primary" id="rc-analyze-btn" onclick="rcAnalyze()" disabled>Analyze Deficits</button>
-                </div>
+                <svg id="rc-history-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
-            </div>
-
-            <!-- Step 2: Deficit Analysis -->
-            <div class="rc-wizard-section" id="rc-step-2" style="display:none;">
-              <div class="rc-section-header">
-                <span class="rc-step-badge">2</span>
-                <h3 class="rc-section-title">Deficit Analysis</h3>
-                <span class="rc-section-subtitle" id="rc-deficit-summary"></span>
-              </div>
-              <div class="rc-table-wrap">
-                <table class="rc-table" id="rc-deficit-table">
-                  <thead>
-                    <tr>
-                      <th>PG × Role</th>
-                      <th style="text-align:center;">Target Hrs</th>
-                      <th style="text-align:center;">Billed Hrs</th>
-                      <th style="text-align:center;">Compliance %</th>
-                      <th style="text-align:center;">Hours Gap</th>
-                      <th style="text-align:center;">HC Needed</th>
-                      <th style="text-align:center;">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="rc-deficit-body"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Step 3: Available Staff -->
-            <div class="rc-wizard-section" id="rc-step-3" style="display:none;">
-              <div class="rc-section-header">
-                <span class="rc-step-badge">3</span>
-                <h3 class="rc-section-title">Available Support Staff</h3>
-                <span class="rc-section-subtitle" id="rc-staff-summary"></span>
-              </div>
-              <div class="rc-table-wrap">
-                <table class="rc-table" id="rc-staff-table">
-                  <thead>
-                    <tr>
-                      <th style="width:40px;text-align:center;"><input type="checkbox" id="rc-select-all" onchange="rcToggleSelectAll()"></th>
-                      <th>Name</th>
-                      <th>OHR</th>
-                      <th>Role</th>
-                      <th>Planning Group</th>
-                      <th style="text-align:center;">Status</th>
-                      <th>New Role</th>
-                      <th>New PG</th>
-                    </tr>
-                  </thead>
-                  <tbody id="rc-staff-body"></tbody>
-                </table>
-              </div>
-              <div class="rc-actions-bar" id="rc-generate-bar" style="display:none;">
-                <span class="rc-selected-count" id="rc-selected-count">0 selected</span>
-                <button class="rc-btn rc-btn-primary" id="rc-generate-btn" onclick="rcGenerateEmail()">Generate Email & Update Attendance</button>
-              </div>
-            </div>
-
-            <!-- Step 4: Email Preview -->
-            <div class="rc-wizard-section" id="rc-step-4" style="display:none;">
-              <div class="rc-section-header">
-                <span class="rc-step-badge">4</span>
-                <h3 class="rc-section-title">Email Preview</h3>
-              </div>
-              <div class="rc-email-preview-bar">
-                <div class="rc-email-subject" id="rc-email-subject"></div>
-                <div class="rc-email-actions">
-                  <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailHtml()">Copy HTML to Clipboard</button>
-                  <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailPlainText()">Copy Plain Text</button>
+              <div class="admin-card-body" id="rc-history-body-wrap" style="display:none;">
+                <div class="rc-table-wrap">
+                  <table class="rc-table" id="rc-history-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>OHR</th>
+                        <th>Original Role</th>
+                        <th>Original PG</th>
+                        <th>New Role</th>
+                        <th>New PG</th>
+                        <th>Dates</th>
+                        <th>Created By</th>
+                        <th>Generated At</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rc-history-body">
+                      <tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">Loading history...</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div class="rc-email-preview" id="rc-email-preview"></div>
-              <div class="rc-result-summary" id="rc-result-summary" style="display:none;"></div>
             </div>
-
-            <!-- History Section -->
-            <div class="rc-wizard-section" id="rc-history-section">
-              <div class="rc-section-header">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#6b7280;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <h3 class="rc-section-title">Role Change History</h3>
-              </div>
-              <div class="rc-table-wrap">
-                <table class="rc-table" id="rc-history-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>OHR</th>
-                      <th>Original Role</th>
-                      <th>Original PG</th>
-                      <th>New Role</th>
-                      <th>New PG</th>
-                      <th>Dates</th>
-                      <th>Created By</th>
-                      <th>Generated At</th>
-                    </tr>
-                  </thead>
-                  <tbody id="rc-history-body">
-                    <tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">Select a week to view history</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div><!-- end billing-tab-role-changes -->
+          </div>
 
         </div>
       </div>

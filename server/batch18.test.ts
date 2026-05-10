@@ -173,7 +173,8 @@ const moduleLoaderJs = fs.readFileSync(
     });
 
     it("should have bumped sandbox-redesign.css version", () => {
-      expect(indexHtml).toContain("sandbox-redesign.css?v=122");
+      // CSS now lazy-loaded via module-loader.js (Phase 1 perf optimization)
+      expect(moduleLoaderJs).toContain("sandbox-redesign.css");
     });
 
     it("should have bumped app.js version", () => {

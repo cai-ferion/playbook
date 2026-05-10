@@ -205,7 +205,8 @@ describe("Manual CA Log CSS", () => {
 // ═══════════════════════════════════════════════════════════════
 describe("Cache Version Bumps", () => {
   it("corrective-actions.css version is bumped to v7", () => {
-    expect(indexHtml).toContain("corrective-actions.css?v=7");
+    // CSS now lazy-loaded via module-loader.js (Phase 1 perf optimization)
+    expect(moduleLoaderJs).toContain("corrective-actions.css");
   });
 
   it("corrective-actions.js version is bumped to v13", () => {

@@ -178,8 +178,8 @@ describe("Batch 26 — Revisions", () => {
         path.join(__dirname, "public/js/app.js"),
         "utf-8"
       );
-      // Should have switchView('alerts') as default for non-agents
-      expect(appJs).toContain("switchView('alerts')");
+      // Should have switchView('alerts', ...) as default for non-agents (suppressExpand added)
+      expect(appJs).toContain("switchView('alerts'");
     });
   });
 });

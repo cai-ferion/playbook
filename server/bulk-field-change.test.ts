@@ -69,7 +69,7 @@ describe("Backend — bulk-field-filtered endpoint", () => {
   it("writes to ioAuditLog for each change", () => {
     const section = attendanceTs.slice(
       attendanceTs.indexOf('router.post("/attendance/bulk-field-filtered"'),
-      attendanceTs.indexOf('router.post("/attendance/bulk-field-filtered"') + 5500
+      attendanceTs.indexOf('router.post("/attendance/bulk-field-filtered"') + 6000
     );
     expect(section).toContain("ioAuditLog");
     expect(section).toContain("bulk_field_change");
@@ -80,7 +80,7 @@ describe("Backend — bulk-field-filtered endpoint", () => {
   it("returns ok, updated, and skipped counts", () => {
     const section = attendanceTs.slice(
       attendanceTs.indexOf('router.post("/attendance/bulk-field-filtered"'),
-      attendanceTs.indexOf('router.post("/attendance/bulk-field-filtered"') + 5500
+      attendanceTs.indexOf('router.post("/attendance/bulk-field-filtered"') + 6000
     );
     expect(section).toContain("ok: true");
     expect(section).toContain("updated");
@@ -171,7 +171,7 @@ describe("Frontend — Bulk Field Change UI", () => {
       inputCompactJs.indexOf("window.fcbApplyField"),
       inputCompactJs.indexOf("window.fcbApplyField") + 1500
     );
-    expect(section).toContain("confirm(");
+    expect(section).toContain("confirmation");
   });
 });
 

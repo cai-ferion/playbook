@@ -5,64 +5,70 @@ import { join } from 'path';
 const readPublicFile = (name: string) =>
   readFileSync(join(__dirname, 'public', name), 'utf-8');
 
-describe('Role Change Email Automation', () => {
+describe('Role Change — Inline Contextual Flow', () => {
 
   describe('HTML structure', () => {
     const html = readPublicFile('index.html');
 
-    it('has billing main tab bar with Compliance and Role Changes tabs', () => {
-      expect(html).toContain('id="billing-main-tabs"');
-      expect(html).toContain('id="billing-main-tab-compliance"');
-      expect(html).toContain('id="billing-main-tab-role-changes"');
+    it('has removed the old tab bar (no billing-main-tabs)', () => {
+      expect(html).not.toContain('id="billing-main-tabs"');
+      expect(html).not.toContain('id="billing-main-tab-role-changes"');
     });
 
-    it('has compliance tab content wrapper', () => {
-      expect(html).toContain('id="billing-tab-compliance"');
+    it('has "Do Role Change?" button in the drilldown panel', () => {
+      expect(html).toContain('id="rc-do-role-change-btn"');
+      expect(html).toContain('rcOpenInlinePanel()');
     });
 
-    it('has role changes tab content wrapper (hidden by default)', () => {
-      expect(html).toContain('id="billing-tab-role-changes"');
+    it('has inline role change panel (hidden by default)', () => {
+      expect(html).toContain('id="rc-inline-panel"');
+      expect(html).toContain('id="rc-inline-context-badge"');
     });
 
-    it('has wizard step 1: week selection (no date range picker)', () => {
-      expect(html).toContain('id="rc-step-1"');
-      expect(html).toContain('id="rc-week-select"');
-      expect(html).toContain('id="rc-analyze-btn"');
-      // Date range picker removed — dates derived from week ending
-      expect(html).not.toContain('id="rc-date-from"');
-      expect(html).not.toContain('id="rc-date-to"');
+    it('has context bar with PG, deficit, and HC info', () => {
+      expect(html).toContain('id="rc-context-pg"');
+      expect(html).toContain('id="rc-context-deficit"');
+      expect(html).toContain('id="rc-context-hc"');
     });
 
-    it('has wizard step 2: deficit analysis table', () => {
-      expect(html).toContain('id="rc-step-2"');
-      expect(html).toContain('id="rc-deficit-table"');
-      expect(html).toContain('id="rc-deficit-body"');
-      expect(html).toContain('PG × Role');
-      expect(html).toContain('Hours Gap');
-      expect(html).toContain('HC Needed');
+    it('has inline staff table with select-all checkbox', () => {
+      expect(html).toContain('id="rc-inline-select-all"');
+      expect(html).toContain('id="rc-inline-staff-body"');
+      expect(html).toContain('rcInlineToggleSelectAll()');
     });
 
-    it('has wizard step 3: available staff table with checkboxes', () => {
-      expect(html).toContain('id="rc-step-3"');
-      expect(html).toContain('id="rc-staff-table"');
-      expect(html).toContain('id="rc-staff-body"');
-      expect(html).toContain('id="rc-select-all"');
-      expect(html).toContain('New Role');
-      expect(html).toContain('New PG');
+    it('has inline action bar for adding to queue', () => {
+      expect(html).toContain('id="rc-inline-action-bar"');
+      expect(html).toContain('id="rc-inline-selected-count"');
+      expect(html).toContain('rcAddToQueue()');
     });
 
-    it('has wizard step 4: email preview with copy buttons', () => {
-      expect(html).toContain('id="rc-step-4"');
+    it('has queue floating bar', () => {
+      expect(html).toContain('id="rc-queue-bar"');
+      expect(html).toContain('id="rc-queue-count"');
+      expect(html).toContain('rcShowQueuePreview()');
+      expect(html).toContain('rcProcessQueue()');
+    });
+
+    it('has queue preview modal', () => {
+      expect(html).toContain('id="rc-queue-modal"');
+      expect(html).toContain('id="rc-queue-modal-body"');
+      expect(html).toContain('rcCloseQueuePreview()');
+    });
+
+    it('has email result section with copy buttons', () => {
+      expect(html).toContain('id="rc-email-result"');
       expect(html).toContain('id="rc-email-preview"');
       expect(html).toContain('id="rc-email-subject"');
       expect(html).toContain('rcCopyEmailHtml()');
       expect(html).toContain('rcCopyEmailPlainText()');
     });
 
-    it('has role change history section', () => {
+    it('has collapsible role change history section at the bottom', () => {
       expect(html).toContain('id="rc-history-section"');
-      expect(html).toContain('id="rc-history-table"');
       expect(html).toContain('id="rc-history-body"');
+      expect(html).toContain('id="rc-history-body-wrap"');
+      expect(html).toContain('rcToggleHistory()');
       expect(html).toContain('Role Change History');
     });
 
@@ -71,7 +77,6 @@ describe('Role Change Email Automation', () => {
     });
 
     it('preserves existing billing compliance structure', () => {
-      // The existing billing compliance elements must still exist
       expect(html).toContain('id="billing-kpi-cards"');
       expect(html).toContain('id="billing-v3-table"');
       expect(html).toContain('id="billing-drilldown"');
@@ -81,41 +86,38 @@ describe('Role Change Email Automation', () => {
   describe('role-change.js functions', () => {
     const js = readPublicFile('js/role-change.js');
 
-    it('defines switchBillingMainTab function', () => {
-      expect(js).toContain('function switchBillingMainTab(tab)');
+    it('defines rcOpenInlinePanel function', () => {
+      expect(js).toContain('async function rcOpenInlinePanel()');
     });
 
-    it('defines initRoleChangeTab function', () => {
-      expect(js).toContain('async function initRoleChangeTab()');
+    it('defines rcCloseInlinePanel function', () => {
+      expect(js).toContain('function rcCloseInlinePanel()');
     });
 
-    it('defines rcOnWeekChange function', () => {
-      expect(js).toContain('function rcOnWeekChange()');
+    it('defines rcLoadInlineStaff function (filtered by PG)', () => {
+      expect(js).toContain('async function rcLoadInlineStaff(targetPG, targetRole)');
+      // Filters out staff already in the target PG
+      expect(js).toContain('s.planning_group !== targetPG');
     });
 
-    it('derives week dates from week ending (no date picker dependency)', () => {
-      expect(js).toContain('function rcDeriveWeekDates(weekEnding)');
-      expect(js).toContain('_rcDateFrom');
-      expect(js).toContain('_rcDateTo');
-      // No references to rc-date-from or rc-date-to DOM elements
-      expect(js).not.toContain("getElementById('rc-date-from')");
-      expect(js).not.toContain("getElementById('rc-date-to')");
+    it('defines rcRenderInlineStaff function', () => {
+      expect(js).toContain('function rcRenderInlineStaff(targetPG, targetRole)');
     });
 
-    it('defines rcAnalyze function for deficit analysis', () => {
-      expect(js).toContain('async function rcAnalyze()');
+    it('defines rcAddToQueue function', () => {
+      expect(js).toContain('function rcAddToQueue()');
     });
 
-    it('defines rcRenderDeficits function', () => {
-      expect(js).toContain('function rcRenderDeficits(data)');
+    it('defines rcUpdateQueueBar function', () => {
+      expect(js).toContain('function rcUpdateQueueBar()');
     });
 
-    it('defines rcRenderStaff function', () => {
-      expect(js).toContain('function rcRenderStaff()');
+    it('defines rcShowQueuePreview function', () => {
+      expect(js).toContain('function rcShowQueuePreview()');
     });
 
-    it('defines rcGenerateEmail function', () => {
-      expect(js).toContain('async function rcGenerateEmail()');
+    it('defines rcProcessQueue function (consolidated email)', () => {
+      expect(js).toContain('async function rcProcessQueue()');
     });
 
     it('defines clipboard copy functions', () => {
@@ -123,16 +125,16 @@ describe('Role Change Email Automation', () => {
       expect(js).toContain('async function rcCopyEmailPlainText()');
     });
 
-    it('defines rcLoadHistory function', () => {
-      expect(js).toContain('async function rcLoadHistory(weekEnding)');
+    it('defines rcToggleHistory function', () => {
+      expect(js).toContain('function rcToggleHistory()');
     });
 
-    it('defines initRoleChangeVisibility function', () => {
+    it('defines rcLoadHistoryForBilling function', () => {
+      expect(js).toContain('async function rcLoadHistoryForBilling()');
+    });
+
+    it('defines initRoleChangeVisibility as no-op for backward compat', () => {
       expect(js).toContain('function initRoleChangeVisibility()');
-    });
-
-    it('fetches from /role-change/deficit-analysis API', () => {
-      expect(js).toContain('/role-change/deficit-analysis');
     });
 
     it('fetches from /role-change/available-staff API', () => {
@@ -147,55 +149,92 @@ describe('Role Change Email Automation', () => {
       expect(js).toContain('/role-change/history');
     });
 
-    it('fetches from /role-change/suggest API', () => {
-      expect(js).toContain('/role-change/suggest');
-    });
-
-    it('parses weeks API response as plain array (not object with .weeks)', () => {
-      expect(js).toContain('Array.isArray(weeks)');
-      expect(js).not.toContain('data.weeks');
-    });
-
-    it('renders deficit badges (success, warning, danger)', () => {
+    it('renders badge styles (success, warning, danger, muted)', () => {
       expect(js).toContain('rc-badge-success');
       expect(js).toContain('rc-badge-warning');
-      expect(js).toContain('rc-badge-danger');
+      expect(js).toContain('rc-badge-muted');
     });
 
-    it('has auto-suggest logic for deficit PGs', () => {
-      expect(js).toContain('deficitPGs');
-      expect(js).toContain('suggestedPG');
-      expect(js).toContain('suggestedRole');
+    it('restricts access to Managers, TLs, and Admin OHRs (via billing.js)', () => {
+      // Role gating moved to billing.js showBillingDrilldown — check there
+      const billingJs = readPublicFile('js/billing.js');
+      expect(billingJs).toContain("'Manager'");
+      expect(billingJs).toContain("'Team Lead'");
+      expect(billingJs).toContain("'740045023'");
+      expect(billingJs).toContain("'740044909'");
     });
 
-    it('restricts access to Managers, TLs, and Admin OHRs', () => {
-      expect(js).toContain("'Manager'");
-      expect(js).toContain("'Team Lead'");
-      expect(js).toContain("'740045023'");
-      expect(js).toContain("'740044909'");
+    it('has queue state management', () => {
+      expect(js).toContain('let _rcQueue = []');
+      expect(js).toContain('rcRemoveFromQueue');
+      expect(js).toContain('rcClearQueue');
+    });
+
+    it('does NOT contain old tab-based functions', () => {
+      expect(js).not.toContain('function switchBillingMainTab');
+      expect(js).not.toContain('async function initRoleChangeTab()');
+      expect(js).not.toContain('function rcOnWeekChange()');
+      expect(js).not.toContain('async function rcAnalyze()');
+    });
+  });
+
+  describe('billing.js integration', () => {
+    const billingJs = readPublicFile('js/billing.js');
+
+    it('adds bc-row-deficit class for rows with hc_needed > 0', () => {
+      expect(billingJs).toContain('bc-row-deficit');
+    });
+
+    it('stores current drilldown row for role change context', () => {
+      expect(billingJs).toContain('_currentDrilldownRow');
+    });
+
+    it('shows/hides "Do Role Change?" button based on user role', () => {
+      expect(billingJs).toContain('rc-do-role-change-btn');
+      expect(billingJs).toContain('isAuthorized');
+    });
+
+    it('calls rcCloseInlinePanel when switching drilldown rows', () => {
+      expect(billingJs).toContain('rcCloseInlinePanel');
+    });
+
+    it('calls rcLoadHistoryForBilling on init', () => {
+      expect(billingJs).toContain('rcLoadHistoryForBilling');
     });
   });
 
   describe('CSS styles', () => {
     const css = readPublicFile('css/styles.css');
 
-    it('defines tab bar styles', () => {
-      expect(css).toContain('.rc-tab-bar');
-      expect(css).toContain('.rc-tab');
-      expect(css).toContain('.rc-tab.active');
+    it('defines deficit row highlight', () => {
+      expect(css).toContain('.bc-row-deficit');
     });
 
-    it('defines wizard section styles', () => {
-      expect(css).toContain('.rc-wizard-section');
-      expect(css).toContain('.rc-step-badge');
-      expect(css).toContain('.rc-section-title');
+    it('defines inline panel styles', () => {
+      expect(css).toContain('.rc-inline-card');
+      expect(css).toContain('.rc-inline-header');
+      expect(css).toContain('.rc-inline-title');
+      expect(css).toContain('.rc-inline-context-badge');
     });
 
-    it('defines table styles', () => {
-      expect(css).toContain('.rc-table-wrap');
-      expect(css).toContain('.rc-table');
-      expect(css).toContain('.rc-table th');
-      expect(css).toContain('.rc-table td');
+    it('defines context bar styles', () => {
+      expect(css).toContain('.rc-context-bar');
+    });
+
+    it('defines queue bar styles', () => {
+      expect(css).toContain('#rc-queue-bar');
+      expect(css).toContain('.rc-queue-bar-inner');
+      expect(css).toContain('.rc-queue-info');
+      expect(css).toContain('.rc-queue-actions');
+    });
+
+    it('defines queue modal styles', () => {
+      expect(css).toContain('#rc-queue-modal');
+      expect(css).toContain('.rc-queue-modal-backdrop');
+      expect(css).toContain('.rc-queue-modal-content');
+      expect(css).toContain('.rc-queue-modal-header');
+      expect(css).toContain('.rc-queue-modal-body');
+      expect(css).toContain('.rc-queue-modal-footer');
     });
 
     it('defines badge styles', () => {
@@ -209,13 +248,13 @@ describe('Role Change Email Automation', () => {
     it('defines button styles', () => {
       expect(css).toContain('.rc-btn');
       expect(css).toContain('.rc-btn-primary');
-      expect(css).toContain('.rc-btn-outline');
+      expect(css).toContain('.rc-btn-sm');
+      expect(css).toContain('.rc-btn-ghost');
     });
 
     it('defines email preview styles', () => {
       expect(css).toContain('.rc-email-preview');
       expect(css).toContain('.rc-email-subject');
-      expect(css).toContain('.rc-email-actions');
     });
 
     it('defines result card styles', () => {
@@ -227,7 +266,7 @@ describe('Role Change Email Automation', () => {
     });
 
     it('has responsive breakpoints', () => {
-      expect(css).toContain('.rc-controls-row');
+      expect(css).toContain('.rc-queue-bar-inner');
     });
   });
 
@@ -265,10 +304,6 @@ describe('Role Change Email Automation', () => {
       expect(routes).toContain('UPDATE io_attendance');
       expect(routes).toContain('SET role =');
       expect(routes).toContain('planning_group =');
-    });
-
-    it('registers routes under /api/io/role-change', () => {
-      expect(routes).toContain('export default router');
     });
 
     it('exports router as default', () => {

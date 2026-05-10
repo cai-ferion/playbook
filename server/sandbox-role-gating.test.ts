@@ -349,7 +349,8 @@ describe("Cache Version Alignment", () => {
   });
 
   it("sandbox-redesign.css cache version is bumped to v107", () => {
-    expect(indexHtml).toContain("sandbox-redesign.css?v=122");
+    // CSS now lazy-loaded via module-loader.js (Phase 1 perf optimization)
+    expect(moduleLoaderJs).toContain("sandbox-redesign.css");
   });
 });
 

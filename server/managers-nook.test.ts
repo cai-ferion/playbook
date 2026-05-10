@@ -160,7 +160,7 @@ describe("Manager's Nook", () => {
 
     it('has Manager/Admin role check for nook nav visibility', () => {
       expect(appJs).toContain('nav-managers-nook');
-      expect(appJs).toContain('isManagerOrAdmin');
+      expect(appJs).toContain('isNookAllowed');
     });
   });
 

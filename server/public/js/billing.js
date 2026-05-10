@@ -236,8 +236,8 @@ async function initBillingCompliance() {
 
 
 
-  // Role Change tab visibility (Managers, TLs, Admin)
-  if (typeof initRoleChangeVisibility === 'function') initRoleChangeVisibility();
+  // Load role change history for the selected week
+  if (typeof rcLoadHistoryForBilling === 'function') rcLoadHistoryForBilling();
 }
 
 // ===== Load Compliance Data =====
@@ -381,7 +381,7 @@ function renderBillingComplianceTable(data) {
   tbody.innerHTML = '';
   for (const r of rows) {
     const tr = document.createElement('tr');
-    tr.className = 'bc-row';
+    tr.className = 'bc-row' + (r.hc_needed > 0 ? ' bc-row-deficit' : '');
     tr.style.cursor = 'pointer';
     tr.setAttribute('data-pg', r.planning_group);
     tr.setAttribute('data-role', r.role);
@@ -444,15 +444,38 @@ function renderBillingComplianceTable(data) {
   tbody.appendChild(ttr);
 }
 
+// ===== Close Drilldown =====
+function closeBillingDrilldown() {
+  const panel = document.getElementById('billing-drilldown');
+  if (panel) panel.style.display = 'none';
+  // Also close inline role change panel
+  if (typeof rcCloseInlinePanel === 'function') rcCloseInlinePanel();
+}
+
 // ===== Drill-Down =====
+let _currentDrilldownRow = null;
+
 function showBillingDrilldown(row) {
   const panel = document.getElementById('billing-drilldown');
   const title = document.getElementById('billing-drilldown-title');
   const body = document.getElementById('billing-drilldown-body');
   if (!panel || !body) return;
 
+  _currentDrilldownRow = row;
   if (title) title.textContent = `DAILY BREAKDOWN — ${row.label.replace(' × Any', '')}`;
   panel.style.display = '';
+
+  // Show "Do Role Change?" button for authorized users (Admin, Manager, TL)
+  const rcBtn = document.getElementById('rc-do-role-change-btn');
+  if (rcBtn) {
+    const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+    const ADMIN_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
+    const isAuthorized = cu && (ADMIN_OHRS.includes(cu.ohr_id) || cu.actual_role === 'Manager' || cu.actual_role === 'Team Lead');
+    rcBtn.style.display = isAuthorized ? '' : 'none';
+  }
+
+  // Close inline panel if switching rows
+  if (typeof rcCloseInlinePanel === 'function') rcCloseInlinePanel();
 
   const days = row.day_breakdown || [];
   if (days.length === 0) {

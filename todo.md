@@ -4134,3 +4134,10 @@
 - [x] Left sidebar nav sections collapsed by default
 - [x] Phase 1: Lazy-load module CSS (compass-redesign, sandbox-redesign, corrective-actions, haven, tardiness-restyle)
 - [x] Phase 7: Add database indexes to key tables (attendance, employees, coaching, notifications, tasks, sync_log)
+- [ ] Refactor Role Change: Remove "Role Changes" tab from Billing Compliance
+- [ ] Refactor Role Change: Add "Do Role Change?" button in drilldown panel
+- [ ] Refactor Role Change: Contextual staff list (filtered to exclude current PG)
+- [ ] Refactor Role Change: Multi-PG queue system for batching role changes
+- [ ] Refactor Role Change: Consolidated email generation from queue
+- [ ] Refactor Role Change: Collapsible history section at bottom of Billing Compliance
+- [ ] Refactor Role Change: Deficit row highlighting (red left-border)

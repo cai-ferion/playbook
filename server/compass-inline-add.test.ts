@@ -240,6 +240,7 @@ describe("Inline Panel Cache Versions", () => {
   });
 
   it("should have compass-redesign.css at v=110", () => {
-    expect(indexHtml).toContain("compass-redesign.css?v=113");
+    // CSS now lazy-loaded via module-loader.js (Phase 1 perf optimization)
+    expect(moduleLoaderJs).toContain("compass-redesign.css");
   });
 });

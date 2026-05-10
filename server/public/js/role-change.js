@@ -1,306 +1,324 @@
 /**
- * Role Change Email Automation — Wizard Logic
- * Lives as a tab within Billing Compliance.
+ * Role Change — Inline Contextual Flow
+ * Integrated into Billing Compliance drilldown panel.
  * Access: Managers, Team Leads, Admin OHRs.
+ *
+ * Flow: Click PG row → Drilldown → "Do Role Change?" → Staff panel → Add to Queue → Generate Email
  */
 
 // ── State ─────────────────────────────────────────────────────
-let _rcDeficits = [];
-let _rcStaff = [];
-let _rcSuggestions = {};
+let _rcInlineStaff = [];
+let _rcQueue = []; // Array of { ohr_id, full_name, original_role, original_pg, new_role, new_pg, target_pg, target_role }
 let _rcLastEmail = '';
 let _rcLastSubject = '';
-let _rcInitialized = false;
-let _rcDateFrom = '';
-let _rcDateTo = '';
+let _rcHistoryExpanded = false;
 
-// PG options for the "New PG" dropdown
+// PG options for the "New Role" dropdown in inline panel
 const RC_PG_OPTIONS = [
   'S-ABF', 'CS-ABF', 'RECALL_MEASUREMENT_CTR', 'CSO_CTR', 'FAD_CTR', 'SME_CTR', 'QPE_CTR'
 ];
 
-// Role options for the "New Role" dropdown
 const RC_ROLE_OPTIONS = [
   'Agent', 'Operational SME', 'Quality & Policy Expert'
 ];
 
-// ── Tab Switching ─────────────────────────────────────────────
-function switchBillingMainTab(tab) {
-  const complianceTab = document.getElementById('billing-tab-compliance');
-  const roleChangesTab = document.getElementById('billing-tab-role-changes');
-  const complianceBtn = document.getElementById('billing-main-tab-compliance');
-  const roleChangesBtn = document.getElementById('billing-main-tab-role-changes');
+// ── Inline Panel: Open ───────────────────────────────────────
+async function rcOpenInlinePanel() {
+  const row = (typeof _currentDrilldownRow !== 'undefined') ? _currentDrilldownRow : null;
+  if (!row) { showToast('No PG selected', 'warning'); return; }
 
-  if (tab === 'compliance') {
-    if (complianceTab) complianceTab.style.display = '';
-    if (roleChangesTab) roleChangesTab.style.display = 'none';
-    if (complianceBtn) complianceBtn.classList.add('active');
-    if (roleChangesBtn) roleChangesBtn.classList.remove('active');
-  } else if (tab === 'role-changes') {
-    if (complianceTab) complianceTab.style.display = 'none';
-    if (roleChangesTab) roleChangesTab.style.display = '';
-    if (complianceBtn) complianceBtn.classList.remove('active');
-    if (roleChangesBtn) roleChangesBtn.classList.add('active');
-    if (!_rcInitialized) initRoleChangeTab();
+  const panel = document.getElementById('rc-inline-panel');
+  if (panel) panel.style.display = '';
+
+  // Set context badge
+  const badge = document.getElementById('rc-inline-context-badge');
+  if (badge) badge.textContent = row.label.replace(' × Any', '');
+
+  // Set context bar
+  const pgEl = document.getElementById('rc-context-pg');
+  const deficitEl = document.getElementById('rc-context-deficit');
+  const hcEl = document.getElementById('rc-context-hc');
+  if (pgEl) pgEl.innerHTML = `<strong>Fixing:</strong> ${escapeHtml(row.label.replace(' × Any', ''))}`;
+  if (deficitEl) {
+    const gap = row.goal_to_100;
+    deficitEl.innerHTML = `<strong>Deficit:</strong> <span style="color:${gap < 0 ? 'var(--bc-red)' : 'var(--bc-green)'}">${gap < 0 ? gap.toFixed(1) : '+' + gap.toFixed(1)} hrs</span>`;
   }
+  if (hcEl) hcEl.innerHTML = `<strong>HC Needed:</strong> <span style="color:${row.hc_needed > 0 ? 'var(--bc-red)' : 'inherit'}">${row.hc_needed}</span>`;
+
+  // Load available staff filtered to EXCLUDE current PG
+  await rcLoadInlineStaff(row.planning_group, row.role);
+
+  // Scroll to panel
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── Helper: derive Sat–Fri date range from week ending (Friday) ──
-function rcDeriveWeekDates(weekEnding) {
-  const weDate = new Date(weekEnding + 'T00:00:00');
-  const wsDate = new Date(weDate);
-  wsDate.setDate(wsDate.getDate() - 6);
-  return {
-    dateFrom: wsDate.toISOString().slice(0, 10),
-    dateTo: weekEnding,
-  };
+// ── Inline Panel: Close ──────────────────────────────────────
+function rcCloseInlinePanel() {
+  const panel = document.getElementById('rc-inline-panel');
+  if (panel) panel.style.display = 'none';
 }
 
-// ── Init ──────────────────────────────────────────────────────
-async function initRoleChangeTab() {
-  _rcInitialized = true;
+// ── Load Staff (filtered by excluding target PG) ─────────────
+async function rcLoadInlineStaff(targetPG, targetRole) {
+  const body = document.getElementById('rc-inline-staff-body');
+  if (!body) return;
 
-  // Populate week selector (reuse billing weeks endpoint)
-  // API returns a plain JSON array of YYYY-MM-DD strings
-  try {
-    const resp = await fetch(`${IO_API_BASE}/billing-compliance/weeks`);
-    if (resp.ok) {
-      const weeks = await resp.json();
-      const select = document.getElementById('rc-week-select');
-      if (select && Array.isArray(weeks) && weeks.length > 0) {
-        select.innerHTML = '<option value="">Select Week Ending</option>';
-        weeks.forEach(w => {
-          // Format label as mm/dd for display, value stays YYYY-MM-DD
-          const d = new Date(w + 'T00:00:00');
-          const label = String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
-          const opt = document.createElement('option');
-          opt.value = w;
-          opt.textContent = label;
-          select.appendChild(opt);
-        });
-        // Default to the week ending closest to today (not in the future)
-        const today = new Date().toISOString().slice(0, 10);
-        const pastWeeks = weeks.filter(w => w <= today);
-        const currentWE = pastWeeks.length > 0 ? pastWeeks[pastWeeks.length - 1] : weeks[0];
-        select.value = currentWE;
-        rcOnWeekChange();
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load role change weeks:', e);
-  }
+  body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">Loading available staff...</td></tr>';
 
-  // Load suggestion map
-  try {
-    const resp = await fetch(`${IO_API_BASE}/role-change/suggest?week_ending=any`);
-    if (resp.ok) {
-      const data = await resp.json();
-      _rcSuggestions = data.suggestions || {};
-    }
-  } catch (e) {
-    console.warn('Failed to load suggestions:', e);
-  }
-}
-
-// ── Step 1: Week Selection ────────────────────────────────────
-function rcOnWeekChange() {
-  const select = document.getElementById('rc-week-select');
-  const we = select ? select.value : '';
-  if (!we) return;
-
-  // Derive full week dates from week ending
-  const { dateFrom, dateTo } = rcDeriveWeekDates(we);
-  _rcDateFrom = dateFrom;
-  _rcDateTo = dateTo;
-
-  const analyzeBtn = document.getElementById('rc-analyze-btn');
-  if (analyzeBtn) analyzeBtn.disabled = false;
-
-  // Load history for this week
-  rcLoadHistory(we);
-}
-
-// ── Step 2: Analyze Deficits ──────────────────────────────────
-async function rcAnalyze() {
-  const we = document.getElementById('rc-week-select')?.value;
-  if (!we) return;
-
-  // Show step 2
-  const step2 = document.getElementById('rc-step-2');
-  const step3 = document.getElementById('rc-step-3');
-  const step4 = document.getElementById('rc-step-4');
-  if (step2) step2.style.display = '';
-  if (step3) step3.style.display = '';
-  if (step4) step4.style.display = 'none';
-
-  // Fetch deficit analysis
-  try {
-    const resp = await fetch(`${IO_API_BASE}/role-change/deficit-analysis?week_ending=${we}`);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
-    _rcDeficits = data.deficits || [];
-    rcRenderDeficits(data);
-  } catch (e) {
-    console.error('Deficit analysis failed:', e);
-    showToast('Failed to load deficit analysis', 'error');
+  // Get week ending from billing selector
+  const select = document.getElementById('billing-week-select');
+  const weekEnding = select ? select.value : '';
+  if (!weekEnding) {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#ef4444;">No week selected</td></tr>';
     return;
   }
 
-  // Fetch available staff using derived dates
+  // Derive date range
+  const weDate = new Date(weekEnding + 'T00:00:00');
+  const wsDate = new Date(weDate);
+  wsDate.setDate(wsDate.getDate() - 6);
+  const dateFrom = wsDate.toISOString().slice(0, 10);
+  const dateTo = weekEnding;
+
   try {
-    const resp = await fetch(`${IO_API_BASE}/role-change/available-staff?week_ending=${we}&date_from=${_rcDateFrom}&date_to=${_rcDateTo}`);
+    const resp = await fetch(`${IO_API_BASE}/role-change/available-staff?week_ending=${weekEnding}&date_from=${dateFrom}&date_to=${dateTo}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
-    _rcStaff = data.staff || [];
-    rcRenderStaff();
+    let staff = data.staff || [];
+
+    // Filter: only show staff NOT in the target PG (candidates to move INTO it)
+    staff = staff.filter(s => s.planning_group !== targetPG);
+
+    // Also filter out anyone already in the queue for this week
+    const queuedOhrs = _rcQueue.map(q => q.ohr_id);
+    staff = staff.map(s => ({
+      ...s,
+      already_queued: queuedOhrs.includes(s.ohr_id),
+    }));
+
+    _rcInlineStaff = staff;
+    rcRenderInlineStaff(targetPG, targetRole);
   } catch (e) {
-    console.error('Available staff fetch failed:', e);
-    showToast('Failed to load available staff', 'error');
+    console.error('Failed to load inline staff:', e);
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#ef4444;">Failed to load staff</td></tr>';
   }
 }
 
-function rcRenderDeficits(data) {
-  const body = document.getElementById('rc-deficit-body');
-  const summary = document.getElementById('rc-deficit-summary');
+// ── Render Inline Staff Table ────────────────────────────────
+function rcRenderInlineStaff(targetPG, targetRole) {
+  const body = document.getElementById('rc-inline-staff-body');
   if (!body) return;
 
-  const deficits = data.deficits || [];
-  const inDeficit = deficits.filter(d => d.in_deficit);
+  const available = _rcInlineStaff.filter(s => s.is_available && !s.already_queued);
 
-  if (summary) {
-    summary.textContent = inDeficit.length > 0
-      ? `${inDeficit.length} PG(s) below 98% target`
-      : 'All PGs at or above 98% target';
-    summary.style.color = inDeficit.length > 0 ? 'var(--danger, #ef4444)' : 'var(--success, #22c55e)';
+  if (_rcInlineStaff.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No staff available outside this PG</td></tr>';
+    return;
   }
 
-  body.innerHTML = deficits.map(d => {
-    const pct = d.compliance_pct;
-    let badgeClass = 'rc-badge-success';
-    let badgeText = 'On Track';
-    if (pct < 98) { badgeClass = 'rc-badge-danger'; badgeText = 'Deficit'; }
-    else if (pct < 100) { badgeClass = 'rc-badge-warning'; badgeText = 'At Risk'; }
+  // Suggest the target role for the "New Role" dropdown
+  const suggestedRole = targetRole === '*' ? 'Agent' : targetRole;
 
-    return `<tr class="${d.in_deficit ? 'rc-row-deficit' : ''}">
-      <td style="font-weight:600;">${d.label}</td>
-      <td style="text-align:center;">${d.target_hours.toLocaleString()}</td>
-      <td style="text-align:center;">${d.total_billed.toLocaleString()}</td>
-      <td style="text-align:center;">${pct.toFixed(1)}%</td>
-      <td style="text-align:center;font-weight:600;color:${d.hours_gap > 0 ? 'var(--danger, #ef4444)' : 'var(--success, #22c55e)'};">${d.hours_gap > 0 ? '+' : ''}${d.hours_gap.toFixed(1)}</td>
-      <td style="text-align:center;">${d.hc_needed}</td>
-      <td style="text-align:center;"><span class="rc-badge ${badgeClass}">${badgeText}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Step 3: Available Staff ───────────────────────────────────
-function rcRenderStaff() {
-  const body = document.getElementById('rc-staff-body');
-  const staffSummary = document.getElementById('rc-staff-summary');
-  if (!body) return;
-
-  const available = _rcStaff.filter(s => s.is_available);
-  if (staffSummary) {
-    staffSummary.textContent = `${available.length} available of ${_rcStaff.length} total`;
-  }
-
-  // Find deficit PGs for auto-suggest
-  const deficitPGs = _rcDeficits.filter(d => d.in_deficit).map(d => d.planning_group);
-
-  body.innerHTML = _rcStaff.map((s, idx) => {
-    const statusClass = s.is_available ? 'rc-badge-success' : (s.status === 'On Leave' ? 'rc-badge-warning' : 'rc-badge-muted');
-    const disabled = !s.is_available ? 'disabled' : '';
-
-    // Auto-suggest: pick the first deficit PG that's different from staff's current PG
-    let suggestedPG = '';
-    let suggestedRole = '';
-    if (s.is_available && deficitPGs.length > 0) {
-      const candidatePG = deficitPGs.find(pg => pg !== s.planning_group) || deficitPGs[0];
-      suggestedPG = candidatePG;
-      suggestedRole = _rcSuggestions[candidatePG] || 'Agent';
-    }
-
-    const pgOptions = RC_PG_OPTIONS.map(pg =>
-      `<option value="${pg}" ${pg === suggestedPG ? 'selected' : ''}>${pg}</option>`
-    ).join('');
+  body.innerHTML = _rcInlineStaff.map((s, idx) => {
+    const isAvailable = s.is_available && !s.already_queued;
+    const statusClass = s.already_queued ? 'rc-badge-muted' : (s.is_available ? 'rc-badge-success' : (s.status === 'On Leave' ? 'rc-badge-warning' : 'rc-badge-muted'));
+    const statusText = s.already_queued ? 'Queued' : s.status;
+    const disabled = !isAvailable ? 'disabled' : '';
 
     const roleOptions = RC_ROLE_OPTIONS.map(r =>
       `<option value="${r}" ${r === suggestedRole ? 'selected' : ''}>${r}</option>`
     ).join('');
 
-    return `<tr class="${!s.is_available ? 'rc-row-unavailable' : ''}">
-      <td style="text-align:center;"><input type="checkbox" class="rc-staff-check" data-idx="${idx}" ${disabled} onchange="rcUpdateSelectedCount()"></td>
-      <td style="font-weight:500;">${s.full_name}</td>
+    return `<tr class="${!isAvailable ? 'rc-row-unavailable' : ''}">
+      <td style="text-align:center;"><input type="checkbox" class="rc-inline-check" data-idx="${idx}" ${disabled} onchange="rcInlineUpdateCount()"></td>
+      <td style="font-weight:500;">${escapeHtml(s.full_name)}</td>
       <td style="font-family:monospace;font-size:12px;">${s.ohr_id}</td>
       <td>${s.actual_role}</td>
       <td>${s.planning_group || '—'}</td>
       <td style="text-align:center;">
-        <span class="rc-badge ${statusClass}">${s.status}</span>
+        <span class="rc-badge ${statusClass}">${statusText}</span>
         ${s.status_detail ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${s.status_detail}</div>` : ''}
       </td>
-      <td><select class="rc-inline-select" id="rc-new-role-${idx}" ${disabled}>${roleOptions}</select></td>
-      <td><select class="rc-inline-select" id="rc-new-pg-${idx}" ${disabled}>${pgOptions}</select></td>
+      <td><select class="rc-inline-select" id="rc-inline-role-${idx}" ${disabled}>${roleOptions}</select></td>
     </tr>`;
   }).join('');
 
-  rcUpdateSelectedCount();
+  rcInlineUpdateCount();
 }
 
-function rcToggleSelectAll() {
-  const selectAll = document.getElementById('rc-select-all');
-  const checks = document.querySelectorAll('.rc-staff-check:not(:disabled)');
+// ── Select All Toggle ────────────────────────────────────────
+function rcInlineToggleSelectAll() {
+  const selectAll = document.getElementById('rc-inline-select-all');
+  const checks = document.querySelectorAll('.rc-inline-check:not(:disabled)');
   checks.forEach(cb => { cb.checked = selectAll.checked; });
-  rcUpdateSelectedCount();
+  rcInlineUpdateCount();
 }
 
-function rcUpdateSelectedCount() {
-  const checks = document.querySelectorAll('.rc-staff-check:checked');
-  const countEl = document.getElementById('rc-selected-count');
-  const bar = document.getElementById('rc-generate-bar');
-  const btn = document.getElementById('rc-generate-btn');
+// ── Update Selected Count ────────────────────────────────────
+function rcInlineUpdateCount() {
+  const checks = document.querySelectorAll('.rc-inline-check:checked');
+  const countEl = document.getElementById('rc-inline-selected-count');
+  const bar = document.getElementById('rc-inline-action-bar');
 
   if (countEl) countEl.textContent = `${checks.length} selected`;
   if (bar) bar.style.display = checks.length > 0 ? 'flex' : 'none';
-  if (btn) btn.disabled = checks.length === 0;
 }
 
-// ── Step 4: Generate Email & Update Attendance ────────────────
-async function rcGenerateEmail() {
-  const we = document.getElementById('rc-week-select')?.value;
-  if (!we) return;
+// ── Add to Queue ─────────────────────────────────────────────
+function rcAddToQueue() {
+  const row = _currentDrilldownRow;
+  if (!row) return;
 
-  const checks = document.querySelectorAll('.rc-staff-check:checked');
+  const checks = document.querySelectorAll('.rc-inline-check:checked');
   if (checks.length === 0) {
-    showToast('Please select at least one staff member', 'warning');
+    showToast('Select at least one staff member', 'warning');
     return;
   }
 
-  // Build assignments — dates derived from week ending
-  const assignments = [];
+  const targetPG = row.planning_group;
+  let added = 0;
+
   checks.forEach(cb => {
     const idx = parseInt(cb.dataset.idx);
-    const staff = _rcStaff[idx];
+    const staff = _rcInlineStaff[idx];
     if (!staff) return;
 
-    const newRole = document.getElementById(`rc-new-role-${idx}`)?.value || 'Agent';
-    const newPG = document.getElementById(`rc-new-pg-${idx}`)?.value || '';
+    const newRole = document.getElementById(`rc-inline-role-${idx}`)?.value || 'Agent';
 
-    assignments.push({
+    // Prevent duplicates
+    if (_rcQueue.some(q => q.ohr_id === staff.ohr_id)) return;
+
+    _rcQueue.push({
       ohr_id: staff.ohr_id,
+      full_name: staff.full_name,
+      original_role: staff.actual_role,
+      original_pg: staff.planning_group,
       new_role: newRole,
-      new_pg: newPG,
-      date_from: _rcDateFrom,
-      date_to: _rcDateTo,
+      new_pg: targetPG,
+      target_pg: targetPG,
+      target_role: row.role,
     });
+    added++;
   });
 
-  // Confirm
-  if (!confirm(`This will:\n• Create ${assignments.length} role change record(s)\n• Update attendance records for WE ${we}\n• Generate the email template\n\nProceed?`)) {
+  if (added > 0) {
+    showToast(`${added} staff added to queue`, 'success');
+    rcUpdateQueueBar();
+    // Re-render staff to mark queued ones
+    rcRenderInlineStaff(row.planning_group, row.role);
+    // Uncheck select-all
+    const selectAll = document.getElementById('rc-inline-select-all');
+    if (selectAll) selectAll.checked = false;
+  }
+}
+
+// ── Queue Bar Update ─────────────────────────────────────────
+function rcUpdateQueueBar() {
+  const bar = document.getElementById('rc-queue-bar');
+  const countEl = document.getElementById('rc-queue-count');
+
+  if (bar) bar.style.display = _rcQueue.length > 0 ? '' : 'none';
+  if (countEl) countEl.textContent = `${_rcQueue.length} role change(s) queued`;
+}
+
+// ── Queue Preview Modal ──────────────────────────────────────
+function rcShowQueuePreview() {
+  const modal = document.getElementById('rc-queue-modal');
+  const body = document.getElementById('rc-queue-modal-body');
+  if (!modal || !body) return;
+
+  modal.style.display = '';
+
+  if (_rcQueue.length === 0) {
+    body.innerHTML = '<p style="text-align:center;padding:20px;color:#9ca3af;">Queue is empty</p>';
     return;
   }
 
-  const btn = document.getElementById('rc-generate-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  let html = `<table class="rc-table" style="width:100%;font-size:12px;">
+    <thead><tr>
+      <th>Name</th>
+      <th>OHR</th>
+      <th>From Role</th>
+      <th>From PG</th>
+      <th>→ New Role</th>
+      <th>→ New PG</th>
+      <th style="width:40px;"></th>
+    </tr></thead><tbody>`;
+
+  _rcQueue.forEach((q, idx) => {
+    html += `<tr>
+      <td style="font-weight:500;">${escapeHtml(q.full_name)}</td>
+      <td style="font-family:monospace;font-size:11px;">${q.ohr_id}</td>
+      <td>${q.original_role}</td>
+      <td>${q.original_pg}</td>
+      <td style="font-weight:600;color:var(--accent-primary, #3b82f6);">${q.new_role}</td>
+      <td style="font-weight:600;color:var(--accent-primary, #3b82f6);">${q.new_pg}</td>
+      <td style="text-align:center;">
+        <button class="rc-btn rc-btn-ghost rc-btn-sm" onclick="rcRemoveFromQueue(${idx})" title="Remove" style="color:var(--bc-red);padding:2px 6px;">&times;</button>
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+function rcCloseQueuePreview() {
+  const modal = document.getElementById('rc-queue-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function rcRemoveFromQueue(idx) {
+  _rcQueue.splice(idx, 1);
+  rcUpdateQueueBar();
+  rcShowQueuePreview(); // re-render
+  if (_rcQueue.length === 0) rcCloseQueuePreview();
+}
+
+function rcClearQueue() {
+  if (_rcQueue.length > 0 && !confirm('Clear all queued role changes?')) return;
+  _rcQueue = [];
+  rcUpdateQueueBar();
+  showToast('Queue cleared', 'info');
+}
+
+// ── Process Queue (Generate Email & Apply) ───────────────────
+async function rcProcessQueue() {
+  if (_rcQueue.length === 0) {
+    showToast('Queue is empty', 'warning');
+    return;
+  }
+
+  const select = document.getElementById('billing-week-select');
+  const weekEnding = select ? select.value : '';
+  if (!weekEnding) {
+    showToast('No week selected', 'error');
+    return;
+  }
+
+  // Derive date range
+  const weDate = new Date(weekEnding + 'T00:00:00');
+  const wsDate = new Date(weDate);
+  wsDate.setDate(wsDate.getDate() - 6);
+  const dateFrom = wsDate.toISOString().slice(0, 10);
+  const dateTo = weekEnding;
+
+  // Build assignments from queue
+  const assignments = _rcQueue.map(q => ({
+    ohr_id: q.ohr_id,
+    new_role: q.new_role,
+    new_pg: q.new_pg,
+    date_from: dateFrom,
+    date_to: dateTo,
+  }));
+
+  // Confirm
+  if (!confirm(`This will:\n• Create ${assignments.length} role change record(s)\n• Update attendance records for WE ${weekEnding}\n• Generate the email template\n\nProceed?`)) {
+    return;
+  }
+
+  // Close queue modal if open
+  rcCloseQueuePreview();
 
   try {
     const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
@@ -311,7 +329,7 @@ async function rcGenerateEmail() {
         'x-actor-ohr': cu?.ohr_id || '',
         'x-actor-name': cu?.full_name || '',
       },
-      body: JSON.stringify({ week_ending: we, assignments }),
+      body: JSON.stringify({ week_ending: weekEnding, assignments }),
     });
 
     if (!resp.ok) {
@@ -323,9 +341,9 @@ async function rcGenerateEmail() {
     _rcLastEmail = data.email_html || '';
     _rcLastSubject = data.email_subject || '';
 
-    // Show step 4
-    const step4 = document.getElementById('rc-step-4');
-    if (step4) step4.style.display = '';
+    // Show email result panel
+    const resultPanel = document.getElementById('rc-email-result');
+    if (resultPanel) resultPanel.style.display = '';
 
     // Render email preview
     const subjectEl = document.getElementById('rc-email-subject');
@@ -351,17 +369,22 @@ async function rcGenerateEmail() {
 
     showToast(`Email generated! ${data.total_assignments} role change(s) applied.`, 'success');
 
-    // Refresh history
-    rcLoadHistory(we);
+    // Clear queue
+    _rcQueue = [];
+    rcUpdateQueueBar();
 
-    // Scroll to email preview
-    step4.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Refresh history
+    rcLoadHistoryForBilling();
+
+    // Refresh compliance data
+    if (typeof loadBillingCompliance === 'function') loadBillingCompliance();
+
+    // Scroll to email result
+    resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch (e) {
     console.error('Generate email failed:', e);
     showToast(`Failed: ${e.message}`, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Generate Email & Update Attendance'; }
   }
 }
 
@@ -396,16 +419,40 @@ async function rcCopyEmailPlainText() {
   }
 }
 
-// ── History ───────────────────────────────────────────────────
-async function rcLoadHistory(weekEnding) {
+// ── History (collapsible at bottom of Billing Compliance) ────
+function rcToggleHistory() {
+  const bodyWrap = document.getElementById('rc-history-body-wrap');
+  const chevron = document.getElementById('rc-history-chevron');
+  if (!bodyWrap) return;
+
+  _rcHistoryExpanded = !_rcHistoryExpanded;
+  bodyWrap.style.display = _rcHistoryExpanded ? '' : 'none';
+  if (chevron) chevron.style.transform = _rcHistoryExpanded ? 'rotate(180deg)' : '';
+
+  if (_rcHistoryExpanded) {
+    rcLoadHistoryForBilling();
+  }
+}
+
+async function rcLoadHistoryForBilling() {
   const body = document.getElementById('rc-history-body');
+  const countBadge = document.getElementById('rc-history-count');
   if (!body) return;
+
+  const select = document.getElementById('billing-week-select');
+  const weekEnding = select ? select.value : '';
+  if (!weekEnding) {
+    body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">Select a week to view history</td></tr>';
+    return;
+  }
 
   try {
     const resp = await fetch(`${IO_API_BASE}/role-change/history?week_ending=${weekEnding}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     const history = data.history || [];
+
+    if (countBadge) countBadge.textContent = history.length > 0 ? `${history.length}` : '—';
 
     if (history.length === 0) {
       body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">No role changes for this week</td></tr>';
@@ -432,20 +479,8 @@ async function rcLoadHistory(weekEnding) {
   }
 }
 
-// ── Visibility Gate ───────────────────────────────────────────
+// ── Visibility Gate (now controls "Do Role Change?" button visibility) ──
 function initRoleChangeVisibility() {
-  const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
-  if (!cu) return;
-
-  const ADMIN_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
-  const isAdmin = ADMIN_OHRS.includes(cu.ohr_id);
-  const isManager = cu.actual_role === 'Manager';
-  const isTL = cu.actual_role === 'Team Lead';
-
-  if (isAdmin || isManager || isTL) {
-    const tabBtn = document.getElementById('billing-main-tab-role-changes');
-    if (tabBtn) tabBtn.style.display = '';
-    const tabBar = document.getElementById('billing-main-tabs');
-    if (tabBar) tabBar.style.display = '';
-  }
+  // No longer needed — button visibility is handled in showBillingDrilldown
+  // Kept as no-op for backward compatibility
 }
