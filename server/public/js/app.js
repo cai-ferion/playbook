@@ -455,10 +455,11 @@ async function loginAsEmployee(emp) {
   startIdleTimer();
 
   // Route to Helm Task Board for Agents with no anchor access, Risk Intelligence for others
+  // suppressExpand: keep all nav groups collapsed on initial login
   if (!currentUser.permissions['nav.anchor']) {
-    switchView('helm-board');
+    switchView('helm-board', { suppressExpand: true });
   } else {
-    switchView('alerts');
+    switchView('alerts', { suppressExpand: true });
   }
 
   // ── BACKGROUND PRELOAD: Load all module scripts ──
@@ -531,7 +532,7 @@ async function handleLogin() {
     if (typeof forceSync === 'function') await forceSync();
     if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
     startIdleTimer();
-    switchView('input');
+    switchView('input', { suppressExpand: true });
     return;
   }
 
@@ -798,7 +799,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof forceSync === 'function') await forceSync();
         if (typeof setDefaultOmnibarFilters === 'function') setDefaultOmnibarFilters();
         startIdleTimer();
-        switchView('input');
+        switchView('input', { suppressExpand: true });
       } else {
         // ── Prospective cascade: Re-fetch employee profile from DB on session restore ──
         // This ensures currentUser always has the latest supervisor, planning group, role, etc.
@@ -855,11 +856,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof initNotifications === 'function') initNotifications();
         // Start inactivity session timeout
         startIdleTimer();
-        // Route based on permissions
+        // Route based on permissions — suppressExpand: keep nav groups collapsed on session restore
         if (!currentUser.permissions['nav.anchor']) {
-          switchView('helm-board');
+          switchView('helm-board', { suppressExpand: true });
         } else {
-          switchView('alerts');
+          switchView('alerts', { suppressExpand: true });
         }
       }
     } catch (e) {
@@ -1221,8 +1222,9 @@ function applyNavPermissions(user) {
 
 // ===== View Switching =====
 
-async function switchView(view) {
+async function switchView(view, opts) {
   appState.activeView = view;
+  var suppressExpand = opts && opts.suppressExpand;
 
   // Lazy-load module scripts on demand (with skeleton loading state)
   if (window.ModuleLoader && !window.ModuleLoader.isModuleLoaded(view)) {
@@ -1246,32 +1248,34 @@ async function switchView(view) {
     el.classList.toggle('active', el.dataset.view === view);
   });
 
-  // Auto-expand collapsible group if a child view is selected
-  const anchorViews = ['input', 'dashboard', 'billing', 'alerts'];
-  if (anchorViews.includes(view)) {
-    const anchorGroup = document.getElementById('nav-group-anchor');
-    if (anchorGroup) anchorGroup.classList.add('expanded');
-  }
-  const compassViews = ['compass-input', 'compass-disputes', 'compass-corrective'];
-  if (compassViews.includes(view)) {
-    const compassGroup = document.getElementById('nav-group-compass');
-    if (compassGroup) compassGroup.classList.add('expanded');
-  }
-  const sandboxViews = ['sandbox-input', 'sandbox-review', 'sandbox-analytics'];
-  if (sandboxViews.includes(view)) {
-    const sandboxGroup = document.getElementById('nav-group-sandbox');
-    if (sandboxGroup) sandboxGroup.classList.add('expanded');
-  }
-  // Haven is now a single view (no collapsible group)
-  const helmViews = ['helm-board', 'helm-dashboard'];
-  if (helmViews.includes(view)) {
-    const helmGroup = document.getElementById('nav-group-helm');
-    if (helmGroup) helmGroup.classList.add('expanded');
-  }
-  const horizonViews = ['managers-nook', 'tardiness-validator'];
-  if (horizonViews.includes(view)) {
-    const horizonGroup = document.getElementById('nav-group-horizon');
-    if (horizonGroup) horizonGroup.classList.add('expanded');
+  // Auto-expand collapsible group if a child view is selected (skip on initial login)
+  if (!suppressExpand) {
+    const anchorViews = ['input', 'dashboard', 'billing', 'alerts'];
+    if (anchorViews.includes(view)) {
+      const anchorGroup = document.getElementById('nav-group-anchor');
+      if (anchorGroup) anchorGroup.classList.add('expanded');
+    }
+    const compassViews = ['compass-input', 'compass-disputes', 'compass-corrective'];
+    if (compassViews.includes(view)) {
+      const compassGroup = document.getElementById('nav-group-compass');
+      if (compassGroup) compassGroup.classList.add('expanded');
+    }
+    const sandboxViews = ['sandbox-input', 'sandbox-review', 'sandbox-analytics'];
+    if (sandboxViews.includes(view)) {
+      const sandboxGroup = document.getElementById('nav-group-sandbox');
+      if (sandboxGroup) sandboxGroup.classList.add('expanded');
+    }
+    // Haven is now a single view (no collapsible group)
+    const helmViews = ['helm-board', 'helm-dashboard'];
+    if (helmViews.includes(view)) {
+      const helmGroup = document.getElementById('nav-group-helm');
+      if (helmGroup) helmGroup.classList.add('expanded');
+    }
+    const horizonViews = ['managers-nook', 'tardiness-validator'];
+    if (horizonViews.includes(view)) {
+      const horizonGroup = document.getElementById('nav-group-horizon');
+      if (horizonGroup) horizonGroup.classList.add('expanded');
+    }
   }
 
   const titles = {
