@@ -4132,3 +4132,4 @@
 - [x] Fix: Investigate and fix why filters were not passed to bulk field change
 - [x] Fix: Exempt Managers from date-based lock in PATCH /attendance/:id
 - [x] Left sidebar nav sections collapsed by default
+- [x] Phase 1: Lazy-load module CSS (compass-redesign, sandbox-redesign, corrective-actions, haven, tardiness-restyle)

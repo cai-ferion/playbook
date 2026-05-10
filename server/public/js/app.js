@@ -1325,7 +1325,7 @@ async function switchView(view, opts) {
   if (view === 'compass-input') { if (typeof initCompass === 'function') initCompass(); }
   if (view === 'compass-disputes') { if (typeof initCompassDisputes === 'function') initCompassDisputes(); }
   if (view === 'compass-corrective') { if (typeof initCorrectiveActions === 'function') initCorrectiveActions(); }
-  if (sandboxViews.includes(view)) { if (typeof initSandbox === 'function') initSandbox(view); }
+  if (['sandbox-input', 'sandbox-review', 'sandbox-analytics'].includes(view)) { if (typeof initSandbox === 'function') initSandbox(view); }
   if (view === 'haven') { if (typeof initHaven === 'function') initHaven(); }
   if (['helm-board', 'helm-dashboard'].includes(view)) { if (typeof initHelm === 'function') initHelm(view); }
   if (view === 'regimen') { if (typeof initRoster === 'function') initRoster(); }
