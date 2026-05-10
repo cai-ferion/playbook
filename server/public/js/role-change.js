@@ -112,6 +112,17 @@ function rcRenderInlineStaff(targetPG, targetRole) {
     body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No staff available outside this PG</td></tr>';
     return;
   }
+  // Update the Schedule column header with actual dates
+  const headerEl = document.getElementById('rc-schedule-header');
+  if (headerEl && _rcInlineStaff[0] && _rcInlineStaff[0].schedule) {
+    const days = ['S', 'S', 'M', 'T', 'W', 'T', 'F'];
+    const dateCells = _rcInlineStaff[0].schedule.map((d, i) => {
+      const dt = new Date(d.date + 'T00:00:00');
+      const dayNum = dt.getDate();
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;width:24px;"><span style="font-size:8px;color:#9ca3af;font-weight:400;">${days[i]}</span><span style="font-size:10px;font-weight:600;">${dayNum}</span></span>`;
+    }).join('')
+    headerEl.innerHTML = `Schedule<div style="display:flex;gap:3px;justify-content:center;margin-top:3px;">${dateCells}</div>`;
+  }
   // Suggest the target role for the "New Role" dropdown
   const suggestedRole = targetRole === '*' ? 'Agent' : targetRole;
   // Color map for schedule codes
