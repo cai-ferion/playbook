@@ -77,7 +77,7 @@ async function rcLoadInlineStaff(targetPG, targetRole) {
   const weDate = new Date(weekEnding + 'T00:00:00');
   const wsDate = new Date(weDate);
   wsDate.setDate(wsDate.getDate() - 6);
-  const dateFrom = wsDate.toISOString().slice(0, 10);
+  const dateFrom = wsDate.getFullYear() + '-' + String(wsDate.getMonth() + 1).padStart(2, '0') + '-' + String(wsDate.getDate()).padStart(2, '0');
   const dateTo = weekEnding;
 
   try {
@@ -320,7 +320,7 @@ async function rcProcessQueue() {
   const weDate = new Date(weekEnding + 'T00:00:00');
   const wsDate = new Date(weDate);
   wsDate.setDate(wsDate.getDate() - 6);
-  const dateFrom = wsDate.toISOString().slice(0, 10);
+  const dateFrom = wsDate.getFullYear() + '-' + String(wsDate.getMonth() + 1).padStart(2, '0') + '-' + String(wsDate.getDate()).padStart(2, '0');
   const dateTo = weekEnding;
 
   // Build assignments from queue

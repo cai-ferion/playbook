@@ -285,7 +285,7 @@ router.get("/available-staff", async (req: Request, res: Response) => {
     // Build 7-day schedule strip (Sat → Fri) for each staff member
     // Generate the 7 dates in the work week (dateFrom = Saturday, dateTo = Friday)
     const weekDates: string[] = [];
-    const startDate = new Date(dateFrom + 'T00:00:00');
+    const startDate = new Date(dateFrom + 'T00:00:00Z');
     for (let i = 0; i < 7; i++) {
       const d = new Date(startDate);
       d.setDate(d.getDate() + i);
