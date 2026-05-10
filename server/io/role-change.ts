@@ -582,7 +582,7 @@ function generateRoleChangeEmailHtml(weekEnding: string, assignments: any[]): st
 
   return `<div style="font-family:Calibri,sans-serif;font-size:11pt;">
 <p>Hi Team,</p>
-<p>Kindly requesting the following role change/s for <strong>WE ${weFormatted}</strong>:</p>
+<p>Kindly requesting the following change/s:</p>
 
 <table style="border-collapse:collapse;width:100%;margin:16px 0;">
   <thead>
@@ -604,7 +604,6 @@ function generateRoleChangeEmailHtml(weekEnding: string, assignments: any[]): st
 </table>
 
 <p>Thank you.</p>
-<p>Best regards,<br>Playbook Reporting</p>
 </div>`;
 }
 

@@ -349,11 +349,9 @@ async function rcProcessQueue() {
     return;
   }
 
-  // Derive date range
-  const weDate = new Date(weekEnding + 'T00:00:00');
-  const wsDate = new Date(weDate);
-  wsDate.setDate(wsDate.getDate() - 6);
-  const dateFrom = wsDate.getFullYear() + '-' + String(wsDate.getMonth() + 1).padStart(2, '0') + '-' + String(wsDate.getDate()).padStart(2, '0');
+  // Derive date range: start from today (shift date) to week ending
+  const now = new Date();
+  const dateFrom = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
   const dateTo = weekEnding;
 
   // Build assignments from queue

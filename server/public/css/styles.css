@@ -5611,6 +5611,7 @@ body {
   border: 1px solid rgba(34, 197, 94, 0.2);
   border-radius: 8px;
   margin-top: 12px;
+  margin-bottom: 16px;
 }
 
 /* ── Inline Role Change Panel ─────────────────────────────── */

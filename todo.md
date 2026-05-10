@@ -4146,3 +4146,10 @@
 - [x] Frontend: render colored mini-cells (SCH=green, WO=gray, PL/UPL/ML/LOA=orange, RC=blue, -=muted)
 - [x] Sort staff by least non-SCH days first (most available at top)
 - [x] Add S|S|M|T|W|T|F header row above the strip
+
+## Role Change Email Tweaks — Batch (Current)
+- [x] Revert most recent role change record from io_role_changes table
+- [x] Email dates column: show shift_date start instead of full week range
+- [x] Email body: replace "Kindly requesting the following role change/s for WE {date}:" with "Kindly requesting the following change/s:"
+- [x] Email body: remove "Best regards, Playbook Reporting" sign-off
+- [x] UI: add spacing between "Successfully Generated" box and Copy buttons
