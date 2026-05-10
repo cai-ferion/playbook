@@ -115,11 +115,12 @@ function rcRenderInlineStaff(targetPG, targetRole) {
   // Update the Schedule column header with actual dates
   const headerEl = document.getElementById('rc-schedule-header');
   if (headerEl && _rcInlineStaff[0] && _rcInlineStaff[0].schedule) {
-    const days = ['S', 'S', 'M', 'T', 'W', 'T', 'F'];
-    const dateCells = _rcInlineStaff[0].schedule.map((d, i) => {
+    const dayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const dateCells = _rcInlineStaff[0].schedule.map((d) => {
       const dt = new Date(d.date + 'T00:00:00');
       const dayNum = dt.getDate();
-      return `<span style="display:inline-flex;flex-direction:column;align-items:center;width:24px;"><span style="font-size:8px;color:#9ca3af;font-weight:400;">${days[i]}</span><span style="font-size:10px;font-weight:600;">${dayNum}</span></span>`;
+      const dayLetter = dayLetters[dt.getDay()];
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;width:24px;"><span style="font-size:8px;color:#9ca3af;font-weight:400;">${dayLetter}</span><span style="font-size:10px;font-weight:600;">${dayNum}</span></span>`;
     }).join('')
     headerEl.innerHTML = `Schedule<div style="display:flex;gap:3px;justify-content:center;margin-top:3px;">${dateCells}</div>`;
   }
