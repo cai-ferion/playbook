@@ -465,7 +465,7 @@ function showBillingDrilldown(row) {
   if (title) title.textContent = `DAILY BREAKDOWN — ${row.label.replace(' × Any', '')}`;
   panel.style.display = '';
 
-  // Show "Do Role Change?" button for authorized users (Admin, Manager, TL)
+  // Show "Do Assignment Change?" button for authorized users (Admin, Manager, TL)
   const rcBtn = document.getElementById('rc-do-role-change-btn');
   if (rcBtn) {
     const cu = (typeof currentUser !== 'undefined') ? currentUser : null;

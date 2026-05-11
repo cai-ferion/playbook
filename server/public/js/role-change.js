@@ -3,7 +3,7 @@
  * Integrated into Billing Compliance drilldown panel.
  * Access: Managers, Team Leads, Admin OHRs.
  *
- * Flow: Click PG row → Drilldown → "Do Role Change?" → Staff panel → Add to Queue → Generate Email
+ * Flow: Click PG row → Drilldown → "Do Assignment Change?" → Staff panel → Add to Queue → Generate Email
  */
 
 // ── State ─────────────────────────────────────────────────────
@@ -415,12 +415,12 @@ async function rcProcessQueue() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           <div>
             <div style="font-weight:600;color:#22c55e;">Successfully Generated</div>
-            <div style="font-size:12px;color:#9ca3af;margin-top:2px;">${data.total_assignments} role change(s) created • ${totalAttRows} attendance row(s) updated</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:2px;">${data.total_assignments} assignment change(s) created • ${totalAttRows} attendance row(s) updated</div>
           </div>
         </div>`;
     }
 
-    showToast(`Email generated! ${data.total_assignments} role change(s) applied.`, 'success');
+    showToast(`Email generated! ${data.total_assignments} assignment change(s) applied.`, 'success');
 
     // Clear queue
     _rcQueue = [];
@@ -565,7 +565,7 @@ async function rcRevertRoleChange(id, employeeName) {
     <div class="toast-confirm-card">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span style="font-weight:600;font-size:14px;">Revert Role Change</span>
+        <span style="font-weight:600;font-size:14px;">Revert Assignment Change</span>
       </div>
       <p style="font-size:13px;color:var(--fg-muted, #5E6C84);margin-bottom:16px;">
         This will restore <strong>${employeeName}</strong>'s original role and planning group in attendance records. This action cannot be undone.
@@ -607,7 +607,7 @@ async function rcDoRevert(id, btnEl) {
   }
 }
 
-// ── Visibility Gate (now controls "Do Role Change?" button visibility) ──
+// ── Visibility Gate (now controls "Do Assignment Change?" button visibility) ──
 function initRoleChangeVisibility() {
   // No longer needed — button visibility is handled in showBillingDrilldown
   // Kept as no-op for backward compatibility

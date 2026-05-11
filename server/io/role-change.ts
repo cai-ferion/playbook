@@ -483,7 +483,7 @@ router.post("/generate", validate(roleChangeGenerateSchema), async (req: Request
       total_assignments: results.length,
       results,
       email_html: emailHtml,
-      email_subject: `Role/PG Change Request - WE ${formatWeekEndingShort(week_ending)}`,
+      email_subject: `Assignment Change Request - WE ${formatWeekEndingShort(week_ending)}`,
     });
   } catch (err: any) {
     console.error("[IO API] role-change/generate error:", err);

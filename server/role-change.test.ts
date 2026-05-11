@@ -69,7 +69,7 @@ describe('Role Change — Inline Contextual Flow', () => {
       expect(html).toContain('id="rc-history-body"');
       expect(html).toContain('id="rc-history-body-wrap"');
       expect(html).toContain('rcToggleHistory()');
-      expect(html).toContain('Role Change History');
+      expect(html).toContain('Assignment Change History');
     });
 
     it('loads role-change.js script', () => {

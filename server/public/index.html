@@ -773,7 +773,7 @@
                 <div style="display:flex;gap:8px;align-items:center;">
                   <button class="rc-btn rc-btn-primary rc-btn-sm" id="rc-do-role-change-btn" onclick="rcOpenInlinePanel()" style="display:none;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-                    Do Role Change?
+                    Do Assignment Change?
                   </button>
                   <button class="btn btn-outline btn-sm" onclick="closeBillingDrilldown()" style="font-size:11px;">Close</button>
                 </div>
@@ -782,7 +782,7 @@
             </div>
           </div>
 
-          <!-- Inline Role Change Panel (appears below drilldown) -->
+          <!-- Inline Assignment Change Panel (appears below drilldown) -->
           <div id="rc-inline-panel" style="display:none;margin-top:12px;">
             <div class="card admin-card rc-inline-card">
               <div class="card-header rc-inline-header">
@@ -831,7 +831,7 @@
             </div>
           </div>
 
-          <!-- Role Change Queue (floating bar) -->
+          <!-- Assignment Change Queue (floating bar) -->
           <div id="rc-queue-bar" style="display:none;">
             <div class="rc-queue-bar-inner">
               <div class="rc-queue-info">
@@ -851,7 +851,7 @@
             <div class="rc-queue-modal-backdrop" onclick="rcCloseQueuePreview()"></div>
             <div class="rc-queue-modal-content">
               <div class="rc-queue-modal-header">
-                <h3>Queued Role Changes</h3>
+                <h3>Queued Assignment Changes</h3>
                 <button class="rc-btn rc-btn-ghost" onclick="rcCloseQueuePreview()">&times;</button>
               </div>
               <div class="rc-queue-modal-body" id="rc-queue-modal-body"></div>
@@ -862,7 +862,7 @@
                 <div class="rc-confirm-body">
                   <span class="rc-confirm-icon">&#9888;&#65039;</span>
                   <div class="rc-confirm-text">
-                    <p class="rc-confirm-title">Confirm Role Change</p>
+                    <p class="rc-confirm-title">Confirm Assignment Change</p>
                     <p class="rc-confirm-detail" id="rc-confirm-detail"></p>
                   </div>
                 </div>
@@ -899,7 +899,7 @@
 
           </div><!-- end billing-tab-compliance -->
 
-          <!-- Role Change History (collapsible, always visible at bottom) -->
+          <!-- Assignment Change History (collapsible, always visible at bottom) -->
           <div class="rc-history-section" id="rc-history-section" style="margin-top:20px;">
             <div class="card admin-card">
               <div class="card-header rc-history-header" onclick="rcToggleHistory()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
