@@ -213,6 +213,18 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Global JSON error handler — Express 4 does NOT catch async rejections natively.
+  // Without this, unhandled errors produce plain-text "Internal Server Error" responses.
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    const status = err?.status || err?.statusCode || 500;
+    const message = err?.message || "Internal Server Error";
+    console.error(`[Global Error Handler] ${status}:`, message, err?.stack?.split('\n').slice(0, 3).join(' | '));
+    if (!res.headersSent) {
+      res.status(status).json({ error: message });
+    }
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

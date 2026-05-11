@@ -366,61 +366,66 @@ router.post("/attendance/bulk-tag", validate(attendanceBulkTagSchema), async (re
   try {
     const db = await getDb();
     if (!db) return res.status(500).json({ error: "Database not available" });
-
     const { ids, tag, actor_ohr, actor_name } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: "ids array is required" });
     }
     if (tag === undefined || tag === null) return res.status(400).json({ error: "tag is required" });
-
     const now = new Date().toISOString();
-    let updated = 0;
-    let locked = 0;
+    const isAdmin = ADMIN_OHRS.includes(actor_ohr);
 
-    for (const id of ids) {
-      const [record] = await db.select().from(ioAttendance).where(eq(ioAttendance.id, id)).limit(1);
-      if (!record) continue;
+    // Build conditions: match the provided IDs, exclude rows already having this tag
+    const conditions: any[] = [
+      inArray(ioAttendance.id, ids),
+      sql`(${ioAttendance.tag} IS DISTINCT FROM ${tag})`,
+    ];
 
-      // Date-based lock (except admin)
-      if (!ADMIN_OHRS.includes(actor_ohr)) {
-        const nowD = new Date();
-        const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
-        const phtHourD = phtD.getUTCHours();
-        const yesterdayBulk = new Date(phtD);
-        yesterdayBulk.setUTCDate(yesterdayBulk.getUTCDate() - 1);
-        const yesterdayStr = yesterdayBulk.toISOString().slice(0, 10);
-        const recDate = record.log_date || '';
-        if (recDate < yesterdayStr) { locked++; continue; }
-        if (recDate === yesterdayStr && phtHourD >= 11) { locked++; continue; }
-      }
+    // Date-based lock for non-admins
+    if (!isAdmin) {
+      const nowD = new Date();
+      const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
+      const phtHour = phtD.getUTCHours();
+      const todayStr = phtD.toISOString().slice(0, 10);
+      const yesterdayD = new Date(phtD);
+      yesterdayD.setUTCDate(yesterdayD.getUTCDate() - 1);
+      const yesterdayStr = yesterdayD.toISOString().slice(0, 10);
+      // Before 11 AM PHT: can edit yesterday+today; after 11 AM: today only
+      const earliestEditable = (phtHour >= 11) ? todayStr : yesterdayStr;
+      conditions.push(gte(ioAttendance.log_date, earliestEditable));
+    }
 
-      const oldTag = record.tag || "";
-      if (oldTag === tag) continue;
+    const where = and(...conditions)!;
 
-      await db.update(ioAttendance).set({ tag }).where(eq(ioAttendance.id, id));
+    // Count how many will actually be updated (single query)
+    const [{ cnt }] = await db.select({ cnt: sql<number>`count(*)` })
+      .from(ioAttendance).where(where);
+    const updated = Number(cnt) || 0;
 
+    // Single batch UPDATE — no per-record loop
+    if (updated > 0) {
+      await db.update(ioAttendance).set({ tag }).where(where);
+      // Single summary audit log entry
       await db.insert(ioAuditLog).values({
         record_type: "attendance",
-        record_id: id,
+        record_id: `bulk_tag_${Date.now()}`,
         action: "bulk_tag",
         field_name: "tag",
-        old_value: oldTag,
+        old_value: `(${updated} records)`,
         new_value: tag,
         actor_ohr: actor_ohr || "",
         actor_name: actor_name || "",
         timestamp: now,
       });
-      updated++;
     }
 
+    const locked = isAdmin ? 0 : (ids.length - updated);
     emitChange(req, "attendance", "bulk_update", { tag, count: updated });
     res.json({ ok: true, updated, locked, total: ids.length });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-tag error:", err);
-    res.status(500).json({ error: err.message });
+     res.status(500).json({ error: err.message });
   }
 });
-
 // POST /api/io/attendance/bulk-tag-filtered - bulk tag ALL records matching current filters
 router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response) => {
   try {
