@@ -63,13 +63,13 @@ async function rcLoadInlineStaff(targetPG, targetRole) {
   const body = document.getElementById('rc-inline-staff-body');
   if (!body) return;
 
-  body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">Loading available staff...</td></tr>';
+  body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#9ca3af;">Loading available staff...</td></tr>';
 
   // Get week ending from billing selector
   const select = document.getElementById('billing-week-select');
   const weekEnding = select ? select.value : '';
   if (!weekEnding) {
-    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#ef4444;">No week selected</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444;">No week selected</td></tr>';
     return;
   }
 
@@ -114,7 +114,7 @@ function rcRenderInlineStaff(targetPG, targetRole) {
   const body = document.getElementById('rc-inline-staff-body');
   if (!body) return;
   if (_rcInlineStaff.length === 0) {
-    body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">No staff available outside this PG</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:#9ca3af;">No staff available outside this PG</td></tr>';
     return;
   }
   // Update the Schedule column header with actual dates
@@ -157,6 +157,9 @@ function rcRenderInlineStaff(targetPG, targetRole) {
       return `<span class="rc-sched-cell" style="background:${c.bg};color:${c.text};" title="${tooltip}">${day.code}</span>`;
     }).join('');
     const rowClass = isQueued ? 'rc-row-unavailable' : '';
+    const pgOptions = RC_PG_OPTIONS.map(p =>
+      `<option value="${p}" ${p === targetPG ? 'selected' : ''}>${p}</option>`
+    ).join('');
     return `<tr class="${rowClass}">
       <td style="text-align:center;"><input type="checkbox" class="rc-inline-check" data-idx="${idx}" ${disabled} onchange="rcInlineUpdateCount()"></td>
       <td style="font-weight:500;">${escapeHtml(s.full_name)}</td>
@@ -167,6 +170,7 @@ function rcRenderInlineStaff(targetPG, targetRole) {
         <div class="rc-sched-strip">${scheduleStrip}</div>
       </td>
       <td><select class="rc-inline-select" id="rc-inline-role-${idx}" ${disabled}>${roleOptions}</select></td>
+      <td><select class="rc-inline-select" id="rc-inline-pg-${idx}" ${disabled}>${pgOptions}</select></td>
     </tr>`;
   }).join('');
   rcInlineUpdateCount();

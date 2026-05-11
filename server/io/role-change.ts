@@ -222,12 +222,12 @@ router.get("/available-staff", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "week_ending, date_from, date_to are required" });
     }
 
-    // Return all active staff so the frontend can filter by PG+Role
-    // Return all active staff (not just TL/Trainer) so the frontend can filter by PG+Role
+    // Only return Team Leads and Trainers — these are the staff eligible for billing role/PG changes
     const staffResult: any = await db.execute(
       sql`SELECT ohr_id, full_name, actual_role, planning_group, srt_id, supervisor_name, shift_time
           FROM io_employees
           WHERE employement_status = 'Active'
+            AND actual_role IN ('Team Lead', 'Trainer')
           ORDER BY actual_role, full_name`
     );
     const staffRows = Array.isArray(staffResult) ? staffResult : [];
@@ -478,13 +478,12 @@ router.post("/generate", validate(roleChangeGenerateSchema), async (req: Request
     const emailHtml = generateRoleChangeEmailHtml(week_ending, results);
 
     emitChange(req, "role-change", "record_created", { count: results.length });
-    emitChange(req, "role-change", "record_created", { count: results.length });
     res.json({
       success: true,
       total_assignments: results.length,
       results,
       email_html: emailHtml,
-      email_subject: `Role Change Request - WE ${formatWeekEndingShort(week_ending)}`,
+      email_subject: `Role/PG Change Request - WE ${formatWeekEndingShort(week_ending)}`,
     });
   } catch (err: any) {
     console.error("[IO API] role-change/generate error:", err);

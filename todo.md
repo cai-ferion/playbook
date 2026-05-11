@@ -4163,3 +4163,13 @@
 - [x] Fix bulk-tag-filtered endpoint: replace per-record loop with batch UPDATE + single audit entry to prevent timeout
 - [x] Fix admin OHR assignment not persisting/taking effect (DB + cache refresh)
 - [x] Add name-based search for adding admins instead of manual OHR input
+
+## Combined Role + PG Change Feature
+- [x] Add new_pg and original_pg columns to io_role_changes table
+- [x] Update available-staff endpoint: limit to Team Leads and Trainers only
+- [x] Update backend apply endpoint to support PG changes alongside role changes
+- [x] Update email generation to include PG change columns
+- [x] Update frontend: add PG selector dropdown in role change queue
+- [x] Update frontend: show PG columns in email preview and history table
+- [x] Update revert mechanism to also restore original PG in attendance
+- [x] Rename feature label from "Role Change" to "Assignment Change" or similar
