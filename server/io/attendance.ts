@@ -434,6 +434,7 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
     const { log_date_gte, log_date_lte, tag_in, agent_in, flm_in,
             planning_group_in, status_in, shift_time_in, role_in, wfm_tag_in, blanks_only } = filters;
 
+    // Build WHERE conditions for the batch UPDATE
     const conditions: any[] = [];
     const mgrSet2 = await getManagerOhrSet();
     if (mgrSet2.size > 0) {
@@ -458,55 +459,58 @@ router.post("/attendance/bulk-tag-filtered", async (req: Request, res: Response)
       ));
     }
 
+    // Date-based lock: non-admins can only tag today and yesterday (before 11 AM PHT)
+    const isAdmin = ADMIN_OHRS.includes(actor_ohr);
+    if (!isAdmin) {
+      const nowD = new Date();
+      const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
+      const phtHour = phtD.getUTCHours();
+      const todayStr = phtD.toISOString().slice(0, 10);
+      const yesterdayD = new Date(phtD);
+      yesterdayD.setUTCDate(yesterdayD.getUTCDate() - 1);
+      const yesterdayStr = yesterdayD.toISOString().slice(0, 10);
+      // Determine the earliest editable date
+      const earliestEditable = (phtHour >= 11) ? todayStr : yesterdayStr;
+      conditions.push(gte(ioAttendance.log_date, earliestEditable));
+    }
+
+    // Exclude records that already have this tag (no-op rows)
+    conditions.push(sql`(${ioAttendance.tag} IS DISTINCT FROM ${tag})`);
+
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    let q = db.select({
-      id: ioAttendance.id,
-      tag: ioAttendance.tag,
-      log_date: ioAttendance.log_date,
-    }).from(ioAttendance);
-    if (where) q = q.where(where) as any;
-    const allRecords = await q;
+    // Count total matching records BEFORE update (for reporting)
+    let countQ = db.select({ cnt: sql<number>`count(*)` }).from(ioAttendance);
+    if (where) countQ = countQ.where(where) as any;
+    const [{ cnt: totalToUpdate }] = await countQ;
 
+    // Single batch UPDATE — O(1) round-trips regardless of record count
+    let updateResult: any;
+    if (where) {
+      updateResult = await db.update(ioAttendance).set({ tag }).where(where);
+    } else {
+      updateResult = await db.update(ioAttendance).set({ tag });
+    }
+    const updated = Number(totalToUpdate) || 0;
+
+    // Single summary audit log entry (prevents timeout from per-record inserts)
     const now = new Date().toISOString();
-    let updated = 0;
-    let locked = 0;
-    let skipped = 0;
-
-    for (const record of allRecords) {
-      if (!ADMIN_OHRS.includes(actor_ohr)) {
-        const nowD = new Date();
-        const phtD = new Date(nowD.getTime() + 8 * 60 * 60000);
-        const phtHourD = phtD.getUTCHours();
-        const yesterdayBulk = new Date(phtD);
-        yesterdayBulk.setUTCDate(yesterdayBulk.getUTCDate() - 1);
-        const yesterdayStr = yesterdayBulk.toISOString().slice(0, 10);
-        const recDate = record.log_date || '';
-        if (recDate < yesterdayStr) { locked++; continue; }
-        if (recDate === yesterdayStr && phtHourD >= 11) { locked++; continue; }
-      }
-
-      const oldTag = record.tag || "";
-      if (oldTag === tag) { skipped++; continue; }
-
-      await db.update(ioAttendance).set({ tag }).where(eq(ioAttendance.id, record.id));
-
+    if (updated > 0) {
       await db.insert(ioAuditLog).values({
         record_type: "attendance",
-        record_id: record.id,
+        record_id: `bulk_tag_${Date.now()}`,
         action: "bulk_tag_filtered",
         field_name: "tag",
-        old_value: oldTag,
+        old_value: `(${updated} records changed)`,
         new_value: tag,
         actor_ohr: actor_ohr || "",
         actor_name: actor_name || "",
         timestamp: now,
       });
-      updated++;
     }
 
     emitChange(req, "attendance", "bulk_update", { tag, count: updated });
-    res.json({ ok: true, updated, locked, skipped, total: allRecords.length });
+    res.json({ ok: true, updated, locked: 0, skipped: 0, total: updated });
   } catch (err: any) {
     console.error("[IO API] attendance bulk-tag-filtered error:", err);
     res.status(500).json({ error: err.message });

@@ -4160,3 +4160,4 @@
 - [x] Build POST /role-change/revert endpoint with attendance restoration
 - [x] Add Revert button to Role Change History UI with inline confirmation
 - [x] Fix staff availability filter: exclude by PG+Role instead of PG only
+- [x] Fix bulk-tag-filtered endpoint: replace per-record loop with batch UPDATE + single audit entry to prevent timeout
