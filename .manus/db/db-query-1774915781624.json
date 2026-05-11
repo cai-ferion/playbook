@@ -1,0 +1,70 @@
+{
+  "query": "SELECT DISTINCT log_date FROM io_attendance ORDER BY log_date LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT DISTINCT log_date FROM io_attendance ORDER BY log_date LIMIT 20;",
+  "rows": [
+    {
+      "log_date": "Fri, 01/02"
+    },
+    {
+      "log_date": "Fri, 01/09"
+    },
+    {
+      "log_date": "Fri, 01/16"
+    },
+    {
+      "log_date": "Fri, 01/23"
+    },
+    {
+      "log_date": "Fri, 01/30"
+    },
+    {
+      "log_date": "Fri, 02/06"
+    },
+    {
+      "log_date": "Fri, 02/13"
+    },
+    {
+      "log_date": "Fri, 02/20"
+    },
+    {
+      "log_date": "Fri, 02/27"
+    },
+    {
+      "log_date": "Fri, 03/06"
+    },
+    {
+      "log_date": "Fri, 03/13"
+    },
+    {
+      "log_date": "Fri, 03/20"
+    },
+    {
+      "log_date": "Fri, 03/27"
+    },
+    {
+      "log_date": "Fri, 04/03"
+    },
+    {
+      "log_date": "Fri, 04/10"
+    },
+    {
+      "log_date": "Fri, 04/17"
+    },
+    {
+      "log_date": "Fri, 04/24"
+    },
+    {
+      "log_date": "Mon, 01/05"
+    },
+    {
+      "log_date": "Mon, 01/12"
+    },
+    {
+      "log_date": "Mon, 01/19"
+    }
+  ],
+  "messages": [],
+  "stdout": "log_date\nFri, 01/02\nFri, 01/09\nFri, 01/16\nFri, 01/23\nFri, 01/30\nFri, 02/06\nFri, 02/13\nFri, 02/20\nFri, 02/27\nFri, 03/06\nFri, 03/13\nFri, 03/20\nFri, 03/27\nFri, 04/03\nFri, 04/10\nFri, 04/17\nFri, 04/24\nMon, 01/05\nMon, 01/12\nMon, 01/19\n",
+  "stderr": "",
+  "execution_time_ms": 1656
+}

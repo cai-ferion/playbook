@@ -1,0 +1,149 @@
+/* ============================================================
+   Skeleton Loading States
+   Shows content-shaped placeholders while modules lazy-load.
+   ============================================================ */
+
+/* Base skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton-pulse {
+  background: linear-gradient(90deg, var(--bg-tertiary, #1c2128) 25%, var(--bg-secondary, #252c35) 50%, var(--bg-tertiary, #1c2128) 75%);
+  background-size: 200px 100%;
+  animation: skeleton-shimmer 1.5s infinite ease-in-out;
+  border-radius: 4px;
+}
+
+/* Skeleton container */
+.skeleton-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Table skeleton */
+.skeleton-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.skeleton-table-header {
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr 1fr 100px 80px;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-primary, #30363d);
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr 1fr 100px 80px;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-primary, #30363d);
+}
+
+.skeleton-cell {
+  height: 16px;
+}
+
+.skeleton-cell-sm {
+  height: 12px;
+  width: 60%;
+}
+
+/* Card skeleton (for dashboard) */
+.skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.skeleton-card {
+  height: 100px;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-card-title {
+  height: 14px;
+  width: 50%;
+}
+
+.skeleton-card-value {
+  height: 28px;
+  width: 70%;
+}
+
+.skeleton-card-subtitle {
+  height: 12px;
+  width: 40%;
+  margin-top: auto;
+}
+
+/* Filter bar skeleton */
+.skeleton-filter-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.skeleton-filter {
+  height: 32px;
+  width: 140px;
+  border-radius: 6px;
+}
+
+.skeleton-btn {
+  height: 32px;
+  width: 80px;
+  border-radius: 6px;
+}
+
+/* Chart skeleton */
+.skeleton-chart {
+  height: 200px;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+/* Text block skeleton */
+.skeleton-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-text-line {
+  height: 14px;
+  border-radius: 3px;
+}
+
+.skeleton-text-line:nth-child(1) { width: 90%; }
+.skeleton-text-line:nth-child(2) { width: 75%; }
+.skeleton-text-line:nth-child(3) { width: 85%; }
+.skeleton-text-line:nth-child(4) { width: 60%; }
+
+/* Module-loading overlay (replaces mascot spinner for lazy modules) */
+.module-loading-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: var(--bg-primary, #0d1117);
+  padding: 24px;
+  display: none;
+}
+
+.module-loading-skeleton.active {
+  display: block;
+}

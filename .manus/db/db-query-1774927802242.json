@@ -1,0 +1,85 @@
+{
+  "query": "SELECT ohr_id, full_name, employement_status FROM io_employees WHERE employement_status = 'Nesting' ORDER BY full_name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT ohr_id, full_name, employement_status FROM io_employees WHERE employement_status = 'Nesting' ORDER BY full_name;",
+  "rows": [
+    {
+      "ohr_id": "740051437",
+      "full_name": "Abiang, Jerome Anthony Navarra",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740037488",
+      "full_name": "Berja, Monica Cate Dionio",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740041876",
+      "full_name": "Bermejo, Chrisrei Cruz",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740053897",
+      "full_name": "Cabural, Lovely Grace Hilario",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740032190",
+      "full_name": "Canete, Danilo Maribojoc",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740053835",
+      "full_name": "Dominguez, Sein Gabriel Feliciano",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740031291",
+      "full_name": "Jamen, Greggy Bayani",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740053852",
+      "full_name": "Magomnang, Nasrima Pandapatan",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740037450",
+      "full_name": "Manalo, Henzi Sophia Mae San Buenaventura",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740053748",
+      "full_name": "Molina, Charlotte Acabado",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740041868",
+      "full_name": "Natividad, Marie Avee Jay",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740054135",
+      "full_name": "Nimer, Shella Lauron",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740032659",
+      "full_name": "Orjalo, Madeline B",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740027103",
+      "full_name": "Romero, Krantz Maigue",
+      "employement_status": "Nesting"
+    },
+    {
+      "ohr_id": "740052326",
+      "full_name": "Soliven, Peniel Joy Querol",
+      "employement_status": "Nesting"
+    }
+  ],
+  "messages": [],
+  "stdout": "ohr_id\tfull_name\temployement_status\n740051437\tAbiang, Jerome Anthony Navarra\tNesting\n740037488\tBerja, Monica Cate Dionio\tNesting\n740041876\tBermejo, Chrisrei Cruz\tNesting\n740053897\tCabural, Lovely Grace Hilario\tNesting\n740032190\tCanete, Danilo Maribojoc\tNesting\n740053835\tDominguez, Sein Gabriel Feliciano\tNesting\n740031291\tJamen, Greggy Bayani\tNesting\n740053852\tMagomnang, Nasrima Pandapatan\tNesting\n740037450\tManalo, Henzi Sophia Mae San Buenaventura\tNesting\n740053748\tMolina, Charlotte Acabado\tNesting\n740041868\tNatividad, Marie Avee Jay\tNesting\n740054135\tNimer, Shella Lauron\tNesting\n740032659\tOrjalo, Madeline B\tNesting\n740027103\tRomero, Krantz Maigue\tNesting\n740052326\tSoliven, Peniel Joy Querol\tNesting\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

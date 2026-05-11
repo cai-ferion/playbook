@@ -1,0 +1,30 @@
+{
+  "query": "SELECT ohr_id, full_name, employement_status FROM io_employees WHERE full_name LIKE '%Abang%' OR full_name LIKE '%Ablang%' OR full_name LIKE '%Navarra%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT ohr_id, full_name, employement_status FROM io_employees WHERE full_name LIKE '%Abang%' OR full_name LIKE '%Ablang%' OR full_name LIKE '%Navarra%';",
+  "rows": [
+    {
+      "ohr_id": "740047299",
+      "full_name": "Cabangcala, Ejay Pancipane",
+      "employement_status": "Active"
+    },
+    {
+      "ohr_id": "740047804",
+      "full_name": "Cabangil, John Mark Seneris",
+      "employement_status": "Active"
+    },
+    {
+      "ohr_id": "740050443",
+      "full_name": "Navarra, Sharmaine Ballesteros",
+      "employement_status": "Active"
+    },
+    {
+      "ohr_id": "740051437",
+      "full_name": "Abiang, Jerome Anthony Navarra",
+      "employement_status": "Active"
+    }
+  ],
+  "messages": [],
+  "stdout": "ohr_id\tfull_name\temployement_status\n740047299\tCabangcala, Ejay Pancipane\tActive\n740047804\tCabangil, John Mark Seneris\tActive\n740050443\tNavarra, Sharmaine Ballesteros\tActive\n740051437\tAbiang, Jerome Anthony Navarra\tActive\n",
+  "stderr": "",
+  "execution_time_ms": 1601
+}

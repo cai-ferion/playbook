@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playbook</title>
+  <link rel="icon" href="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-icon_00ad95f9.png" type="image/png">
+  <!-- Preconnect to CDN origins for faster script loading -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin>
+  <link rel="stylesheet" href="css/styles.css?v=143">
+  <link rel="stylesheet" href="css/input-redesign.css?v=121">
+  <link rel="stylesheet" href="css/filter-bar.css?v=118">
+  <link rel="stylesheet" href="css/dashboard-restyle.css?v=121d">
+  <link rel="stylesheet" href="css/regimen-redesign.css?v=101">
+  <link rel="stylesheet" href="css/mascot.css?v=200">
+  <link rel="stylesheet" href="css/skeleton.css?v=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <!-- Global error monitoring (Phase 7.2) — must load first to catch early errors -->
+  <script src="js/error-reporter.js?v=1"></script>
+</head>
+<body>
+  <!-- ===== Auth Page ===== -->
+  <div class="auth-page" id="auth-page">
+    <!-- Left: Branded Hero Panel with Module Carousel -->
+    <div class="auth-hero">
+      <div class="auth-hero-bg"></div>
+      <div class="auth-hero-content">
+        <div class="auth-hero-mascot">
+          <div class="sprite-mascot" role="img" aria-label="Playbook Fox"></div>
+        </div>
+        <h2 class="auth-hero-title">Playbook</h2>
+        <p class="auth-hero-tagline">IO Powerhouse Hub</p>
+        <!-- Module Showcase Carousel -->
+        <div class="auth-carousel" id="auth-carousel">
+          <div class="auth-carousel-track">
+            <div class="auth-carousel-slide active" data-index="0">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              </div>
+              <h3>Anchor</h3>
+              <p>Real-time attendance tracking, dashboards, billing, and daily input management.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="1">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+              </div>
+              <h3>Compass</h3>
+              <p>Quality audits, dispute management, and corrective action workflows.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="2">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              </div>
+              <h3>Sandbox</h3>
+              <p>Performance scoring, metric input, and team review dashboards.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="3">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <h3>Haven</h3>
+              <p>Leave filing, approval workflows, calendar view, and balance tracking.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="4">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+              <h3>Helm</h3>
+              <p>Task assignment, group workflows, and team productivity boards.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="5">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+              <h3>Horizon</h3>
+              <p>Manager tools, tardiness validation, and operational oversight.</p>
+            </div>
+            <div class="auth-carousel-slide" data-index="6">
+              <div class="carousel-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <h3>Regimen</h3>
+              <p>Roster management, shift scheduling, and team composition tracking.</p>
+            </div>
+          </div>
+          <!-- Carousel Dots -->
+          <div class="auth-carousel-dots" id="auth-carousel-dots">
+            <button class="carousel-dot active" data-index="0"></button>
+            <button class="carousel-dot" data-index="1"></button>
+            <button class="carousel-dot" data-index="2"></button>
+            <button class="carousel-dot" data-index="3"></button>
+            <button class="carousel-dot" data-index="4"></button>
+            <button class="carousel-dot" data-index="5"></button>
+            <button class="carousel-dot" data-index="6"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Right: Login / Onboarding Panel -->
+    <div class="auth-panel">
+      <div class="auth-panel-inner">
+        <div class="auth-panel-header">
+          <div class="auth-logo">
+            <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-icon_00ad95f9.png" alt="Playbook">
+            <span>Playbook</span>
+          </div>
+        </div>
+        <!-- Login Form -->
+        <div class="auth-form" id="auth-form-login" style="display:block;">
+          <div class="auth-form-header">
+            <h2>Welcome back</h2>
+            <p>Sign in with your OHR ID to continue</p>
+          </div>
+          <form id="login-form" onsubmit="event.preventDefault(); handleLogin();">
+            <div class="auth-field">
+              <label for="login-ohr">OHR ID</label>
+              <div class="auth-input-wrap">
+                <svg class="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input type="text" id="login-ohr" placeholder="Enter your OHR ID" autocomplete="off">
+              </div>
+            </div>
+            <div class="auth-error" id="login-error"></div>
+            <button type="submit" class="auth-submit-btn" id="login-submit-btn">
+              <span class="btn-text">Sign In</span>
+              <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <svg class="btn-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><circle cx="12" cy="12" r="10" stroke-dasharray="31.4" stroke-dashoffset="10"/></svg>
+            </button>
+          </form>
+          <p class="auth-help-text">Enter your OHR ID to access Playbook.<br>Contact your Team Lead if you don't have access.</p>
+        </div>
+        <!-- Onboarding Form -->
+        <div class="auth-form" id="auth-form-onboarding" style="display:none;">
+          <div class="auth-form-header">
+            <h2>Complete Your Profile</h2>
+            <p>Fill in your details to get started</p>
+          </div>
+          <div class="onboard-scroll">
+            <div class="onboard-section">
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">1</div>
+                <h4 class="onboard-section-title">Personal Information</h4>
+              </div>
+              <div class="onboard-grid">
+                <div class="auth-field">
+                  <label>Last Name <span class="req">*</span></label>
+                  <input type="text" id="onboard-last-name" placeholder="Last Name" required>
+                </div>
+                <div class="auth-field">
+                  <label>Given Name <span class="req">*</span></label>
+                  <input type="text" id="onboard-given-name" placeholder="Given Name" required>
+                </div>
+                <div class="auth-field">
+                  <label>Middle Name</label>
+                  <input type="text" id="onboard-middle-name" placeholder="Optional">
+                </div>
+                <div class="auth-field">
+                  <label>Suffix</label>
+                  <input type="text" id="onboard-suffix" placeholder="e.g. Jr., III">
+                </div>
+              </div>
+              <div class="onboard-grid">
+                <div class="auth-field">
+                  <label>Date of Birth <span class="req">*</span></label>
+                  <input type="date" id="onboard-dob">
+                </div>
+                <div class="auth-field">
+                  <label>Hire Date <span class="req">*</span></label>
+                  <input type="date" id="onboard-hire-date">
+                </div>
+              </div>
+            </div>
+            <div class="onboard-section">
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">2</div>
+                <h4 class="onboard-section-title">Contact Details</h4>
+              </div>
+              <div class="onboard-grid">
+                <div class="auth-field">
+                  <label>Personal Email <span class="req">*</span></label>
+                  <input type="email" id="onboard-personal-email" placeholder="your@email.com">
+                </div>
+                <div class="auth-field">
+                  <label>Contact Number <span class="req">*</span></label>
+                  <input type="tel" id="onboard-contact" placeholder="09XXXXXXXXX">
+                </div>
+              </div>
+            </div>
+            <div class="onboard-section">
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">3</div>
+                <h4 class="onboard-section-title">Address</h4>
+              </div>
+              <div class="auth-field" style="grid-column:1/-1;">
+                <label>Primary Address <span class="req">*</span></label>
+                <input type="text" id="onboard-address" placeholder="Street, Bldg, etc.">
+              </div>
+              <div class="onboard-grid onboard-grid-3">
+                <div class="auth-field">
+                  <label>Barangay <span class="req">*</span></label>
+                  <input type="text" id="onboard-barangay" placeholder="Barangay">
+                </div>
+                <div class="auth-field">
+                  <label>City <span class="req">*</span></label>
+                  <input type="text" id="onboard-city" placeholder="City">
+                </div>
+                <div class="auth-field">
+                  <label>Province <span class="req">*</span></label>
+                  <input type="text" id="onboard-province" placeholder="Province">
+                </div>
+              </div>
+            </div>
+            <div class="onboard-section">
+              <div class="onboard-section-header">
+                <div class="onboard-step-badge">4</div>
+                <h4 class="onboard-section-title">Equipment &amp; Access</h4>
+              </div>
+              <div class="onboard-grid">
+                <div class="auth-field">
+                  <label>Chromebook Asset ID <span class="req">*</span></label>
+                  <input type="text" id="onboard-chromebook" placeholder="Chromebook Asset ID">
+                </div>
+                <div class="auth-field">
+                  <label>Badge ID <span class="req">*</span></label>
+                  <input type="text" id="onboard-badge-id" placeholder="Badge ID">
+                </div>
+                <div class="auth-field">
+                  <label>Badge Serial <span class="req">*</span></label>
+                  <input type="text" id="onboard-badge-serial" placeholder="Badge Serial">
+                </div>
+                <div class="auth-field">
+                  <label>Locker Floor</label>
+                  <input type="text" id="onboard-locker-floor" placeholder="Floor number">
+                </div>
+                <div class="auth-field">
+                  <label>Locker Number</label>
+                  <input type="text" id="onboard-locker-number" placeholder="Locker number">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="auth-error" id="onboard-error"></div>
+          <button class="auth-submit-btn" onclick="handleOnboardingSubmit()">
+            <span>Submit &amp; Complete Onboarding</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+          <button class="auth-cancel-btn" onclick="handleOnboardingCancel()">Back to Login</button>
+        </div>
+        <div class="auth-panel-footer">
+          <span>Secured access &middot; Session timeout enabled</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container" id="app-container" style="display:none;">
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663445219651/5AVfpygNb7cNbPRpHCcCdp/playbook-mascot-v2-icon_00ad95f9.png" alt="Logo">
+          <h1>Playbook</h1>
+        </div>
+        <div class="sidebar-subtitle">Operational Platform &middot; 2026</div>
+        <!-- Sidebar Mode Toggle -->
+        <div class="sidebar-mode-toggle" id="sidebar-mode-toggle">
+          <button class="sidebar-toggle-btn" id="sidebar-toggle-nav" onclick="setSidebarMode('nav')" title="Navigation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            Menu
+          </button>
+          <button class="sidebar-toggle-btn active" id="sidebar-toggle-notif" onclick="setSidebarMode('notifications')" title="Notifications">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Alerts
+            <span class="sidebar-notif-badge" id="sidebar-notif-badge" style="display:none;">0</span>
+          </button>
+        </div>
+      </div>
+      <nav class="sidebar-nav" style="overflow:hidden;display:none;">
+        <div class="sidebar-nav-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-bottom:8px;">
+        <!-- Anchor Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-anchor">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('anchor')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></svg>
+            Anchor
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-anchor">
+            <button class="nav-item" data-view="alerts" onclick="switchView('alerts')" id="nav-alerts">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Risk Intelligence
+              <span class="nav-badge" id="alert-nav-count">0</span>
+            </button>
+            <button class="nav-item" data-view="dashboard" onclick="switchView('dashboard')" id="nav-dashboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dashboard
+            </button>
+            <button class="nav-item" data-view="billing" onclick="switchView('billing')" id="nav-billing">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Billing Compliance
+            </button>
+            <button class="nav-item" data-view="input" onclick="switchView('input')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Input Portal
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Compass Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-compass">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('compass')" id="nav-compass">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            Compass
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-compass">
+            <button class="nav-item" data-view="compass-input" onclick="switchView('compass-input')" id="nav-compass-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M12 11a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M17 18.5c0-1.4-2.2-2.5-5-2.5s-5 1.1-5 2.5"/></svg>
+              Coaching Profile
+            </button>
+            <button class="nav-item" data-view="compass-disputes" onclick="switchView('compass-disputes')" id="nav-compass-disputes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Disputes Area
+            </button>
+            <button class="nav-item" data-view="compass-corrective" onclick="switchView('compass-corrective')" id="nav-compass-corrective">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Corrective Actions
+            </button>
+          </div>
+        </div>
+
+        <!-- Sandbox Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-sandbox">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('sandbox')" id="nav-sandbox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            Sandbox
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-sandbox">
+            <button class="nav-item" data-view="sandbox-input" onclick="switchView('sandbox-input')" id="nav-sandbox-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Input Portal
+            </button>
+            <button class="nav-item" data-view="sandbox-review" onclick="switchView('sandbox-review')" id="nav-sandbox-review">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Review Area
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Haven (Single Page) -->
+        <button class="nav-item" data-view="haven" onclick="switchView('haven')" id="nav-haven">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Haven
+        </button>
+
+        <!-- Helm Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-helm">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('helm')" id="nav-helm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+            Helm
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-helm">
+            <button class="nav-item" data-view="helm-board" onclick="switchView('helm-board')" id="nav-helm-board">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+              Task Board
+            </button>
+            <button class="nav-item" data-view="helm-dashboard" onclick="switchView('helm-dashboard')" id="nav-helm-dashboard" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+              Task Dashboard
+            </button>
+          </div>
+        </div>
+
+        <!-- Horizon Section (Collapsible) -->
+        <div class="nav-group" id="nav-group-horizon">
+          <button class="nav-item nav-group-toggle" onclick="toggleNavGroup('horizon')" id="nav-horizon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Horizon
+            <svg class="nav-group-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="nav-group-items" id="nav-group-items-horizon">
+            <button class="nav-item" data-view="managers-nook" onclick="switchView('managers-nook')" id="nav-managers-nook" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Manager's Nook
+            </button>
+            <button class="nav-item" data-view="tardiness-validator" onclick="switchView('tardiness-validator')" id="nav-tardiness-validator">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Tardiness Validator
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Regimen (Employee Roster) - Main nav item -->
+        <div class="nav-group" id="nav-group-regimen">
+          <button class="nav-item" data-view="regimen" onclick="switchView('regimen')" id="nav-regimen" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Regimen
+          </button>
+        </div>
+
+        </div>
+        <!-- Fixed bottom nav items -->
+        <div class="sidebar-nav-bottom" style="flex-shrink:0;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:column;gap:4px;">
+          <button class="nav-item" data-view="admin" onclick="switchView('admin')" id="nav-admin" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            Admin Tools
+          </button>
+        </div>
+      </nav>
+      <!-- Sidebar Notification Panel (hidden by default, shown when toggled) -->
+      <div class="sidebar-notif-panel" id="sidebar-notif-panel" style="display:flex;">
+        <div class="sidebar-notif-header">
+          <div class="sidebar-notif-actions">
+            <button class="notif-action-btn" onclick="markAllNotificationsRead()" title="Mark all as read">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Mark all read
+            </button>
+            <button class="notif-action-btn" onclick="clearAllNotifications()" title="Clear all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Clear all
+            </button>
+          </div>
+        </div>
+        <div class="sidebar-notif-list" id="sidebar-notif-list">
+          <div class="notif-empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--fg-subtle)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <p>No notifications yet</p>
+          </div>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div>Playbook &middot; IO Operations</div>
+      </div>
+    </aside>
+
+    <!-- ===== Main Content ===== -->
+    <div class="main-content">
+
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h2 id="view-title">Command Dashboard</h2>
+          <span class="header-meta" id="header-meta">Last Updated: &mdash;</span>
+        </div>
+        <div class="header-right">
+
+          <button class="btn btn-outline btn-sm export-csv-btn" id="export-csv-btn" onclick="handleExportCSV()" style="display:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="forceSync()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh Data
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="handleLogout()" title="Logout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== View 1: Input Portal ===== -->
+      <div class="view-container view-hidden input-redesign-active" id="view-input">
+
+        <!-- Input Portal Filter Bar (persistent pills) -->
+        <div class="filter-bar" id="input-filter-bar">
+          <div class="filter-bar-row" id="input-filter-pills">
+            <!-- Pills rendered by input-portal.js -->
+          </div>
+        </div>
+
+
+
+
+        <!-- Old Bulk Selection Toolbar (hidden, replaced by floating command bar) -->
+        <div class="bulk-toolbar" id="bulk-toolbar" style="display:none !important;">
+          <div class="bulk-toolbar-left"><span id="bulk-count">0 selected</span></div>
+          <div class="bulk-toolbar-right">
+            <select class="form-select form-select-sm" id="bulk-tag-select"><option value="_select">— Select Tag —</option><option value="">&mdash;</option></select>
+            <button class="btn btn-primary btn-sm" id="bulk-apply-tag-btn" onclick="bulkApplyTag()">Apply Tag</button>
+          </div>
+        </div>
+
+        <!-- Select All Matching Banner (cross-page bulk selection) -->
+        <div class="select-all-banner" id="select-all-banner" style="display:none;">
+          <span id="select-all-banner-text">All <strong>50</strong> records on this page are selected.</span>
+          <a href="#" id="select-all-banner-link" onclick="event.preventDefault(); selectAllMatchingRecords();">Select all <strong id="select-all-banner-total">0</strong> matching records</a>
+          <a href="#" id="select-all-banner-undo" style="display:none;" onclick="event.preventDefault(); undoSelectAllMatching();">Undo — select only this page</a>
+        </div>
+
+        <!-- Toolbar: edit count, undo, save -->
+        <div class="input-toolbar">
+          <div class="input-toolbar-left">
+            <button class="select-mode-toggle" id="select-mode-btn" onclick="toggleSelectionMode()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+              Select Rows
+            </button>
+            <span class="input-edit-count" id="input-edit-count"></span>
+          </div>
+          <div class="input-toolbar-right">
+            <span class="input-record-info" id="input-record-info"></span>
+            <div class="input-pagination" id="input-pagination"></div>
+            <button class="btn btn-outline btn-sm" id="undo-btn" onclick="handleUndoAll()" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Undo All
+            </button>
+            <button class="btn btn-primary btn-sm" id="save-btn" onclick="handleSave()" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save Changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Compact Card-Row Table Container -->
+        <div class="input-table-wrapper" id="vtable-scroll-container">
+          <table class="data-table compact-table" id="input-table">
+            <thead id="input-table-head"></thead>
+            <tbody id="input-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Floating Command Bar (bulk operations) -->
+      <div class="floating-command-bar" id="floating-command-bar">
+        <span class="fcb-count" id="fcb-count">0 selected</span>
+        <div class="fcb-divider"></div>
+        <button class="fcb-btn fcb-btn--ghost" onclick="compactSelectAll()">Select All</button>
+        <div class="fcb-divider"></div>
+        <select class="fcb-select" id="fcb-tag-select">
+          <option value="_select">— Tag —</option>
+          <option value="">&mdash;</option>
+        </select>
+        <button class="fcb-btn fcb-btn--primary" id="fcb-apply-btn" onclick="fcbApplyTag()">Apply Tag</button>
+        <div class="fcb-divider fcb-status-only" id="fcb-field-divider" style="display:none;"></div>
+        <select class="fcb-select fcb-status-only" id="fcb-field-select" style="display:none;">
+          <option value="_select">&mdash; Field &mdash;</option>
+          <option value="snap_supervisor">Supervisor</option>
+          <option value="role">Billing Role</option>
+          <option value="planning_group">Billing PG</option>
+          <option value="internal_role">Internal Role</option>
+          <option value="internal_planning_group">Internal PG</option>
+          <option value="snap_shift_time">Shift Time</option>
+          <option value="snap_status">Status</option>
+        </select>
+        <select class="fcb-select fcb-status-only" id="fcb-field-value" style="display:none;">
+          <option value="_select">&mdash; Value &mdash;</option>
+        </select>
+        <button class="fcb-btn fcb-btn--primary fcb-status-only" id="fcb-apply-field-btn" style="display:none;" onclick="fcbShowFieldConfirm()">Apply Field</button>
+        <!-- Inline confirmation panel for bulk field change -->
+        <div id="fcb-field-confirm" style="display:none;" class="fcb-inline-confirm">
+          <span id="fcb-field-confirm-msg" class="fcb-confirm-msg"></span>
+          <button class="fcb-btn fcb-btn--primary fcb-btn--sm" id="fcb-field-confirm-yes" onclick="fcbApplyField()">Confirm</button>
+          <button class="fcb-btn fcb-btn--ghost fcb-btn--sm" onclick="fcbHideFieldConfirm()">Cancel</button>
+        </div>
+        <div class="fcb-divider"></div>
+        <button class="fcb-btn fcb-btn--ghost" onclick="fcbDeselectAll()">Cancel</button>
+      </div>
+
+      <!-- ===== View 2: Dashboard ===== -->
+      <div class="view-container" id="view-dashboard">
+        <div class="loading-overlay" id="dashboard-loading" style="display:none;">
+          <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+          <div class="loading-text">Loading Data...</div>
+        </div>
+
+        <div id="dashboard-content">
+          <!-- Dashboard Filter Bar (persistent pills) -->
+          <div class="filter-bar" id="dash-filter-bar">
+            <div class="filter-bar-row" id="dash-filter-pills">
+              <!-- Pills rendered by dash-omnibar.js -->
+            </div>
+          </div>
+
+          <!-- KPI Cards (4 cards) -->
+          <div class="kpi-grid" id="kpi-grid"></div>
+
+          <!-- Side-by-side: Shift Breakdown + FLM Supervisor -->
+          <div class="dash-row">
+            <div class="card shift-combined-card">
+              <div class="card-header">
+                <span class="card-title">SHIFT BREAKDOWN</span>
+                <button class="expand-btn" onclick="expandShiftBreakdown()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Expand
+                </button>
+              </div>
+              <div id="shift-breakdown"></div>
+            </div>
+            <div class="card flm-card" style="overflow-y:auto;">
+              <div class="card-header">
+                <span class="card-title">SUPERVISOR WISE</span>
+              </div>
+              <div id="flm-breakdown"></div>
+            </div>
+          </div>
+
+          <!-- Asset Inventory + Shrink Details side by side -->
+          <div class="dash-row">
+            <div class="card" style="flex:1;min-width:0;display:flex;flex-direction:column;">
+              <div class="card-header" style="flex-shrink:0;">
+                <span class="card-title">ASSET INVENTORY & ENDORSEMENT</span>
+                <button class="expand-btn" onclick="expandAssetInventory()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Expand
+                </button>
+              </div>
+              <div id="asset-inventory-widget" style="flex:1;overflow-y:auto;"></div>
+            </div>
+            <div class="card shrink-details-card" style="flex:1;min-width:0;">
+              <div class="card-header">
+                <span class="card-title">SHRINK DETAILS</span>
+                <button class="expand-btn" onclick="expandShrinkDetails()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                  Expand
+                </button>
+              </div>
+              <div id="agent-list" style="flex:1;overflow-y:auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 5: Billing Compliance ===== -->
+      <div class="view-container view-hidden" id="view-billing">
+        <div class="billing-compliance-container">
+
+
+
+          <!-- Compliance Tab Content -->
+          <div id="billing-tab-compliance">
+
+          <div class="billing-controls">
+            <div class="filter-group">
+              <label class="filter-label">Select Week Ending:</label>
+              <select class="form-select" id="billing-week-select" onchange="loadBillingCompliance()">
+                <option value="">Select Week Ending</option>
+              </select>
+            </div>
+            <!-- Status Filter Dropdown -->
+            <div class="bc-status-filter-wrap" style="position:relative;">
+              <button class="btn btn-outline btn-sm" id="billing-status-filter-btn" onclick="toggleBillingStatusFilter()" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                <span>Status Filter</span>
+                <span class="bc-sf-badge" id="billing-sf-badge" style="display:none;"></span>
+              </button>
+              <div class="bc-status-filter-panel" id="billing-status-filter-panel" style="display:none;">
+                <div class="bc-sf-header">
+                  <span class="bc-sf-title">Include Statuses</span>
+                  <button class="bc-sf-close" onclick="toggleBillingStatusFilter()" type="button">&times;</button>
+                </div>
+                <div class="bc-sf-body" id="billing-sf-body"></div>
+                <div class="bc-sf-footer">
+                  <button class="btn btn-sm bc-sf-apply" id="billing-sf-apply" onclick="applyBillingStatusFilter()" type="button">Apply</button>
+                  <button class="btn btn-sm btn-outline bc-sf-reset" onclick="resetBillingStatusFilter()" type="button">Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-outline btn-sm" id="billing-edit-targets-btn" onclick="openBillingTargetsEditor()" style="display:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit Targets
+            </button>
+          </div>
+
+          <!-- Billing Targets Editor (hidden by default) -->
+          <div id="billing-targets-editor" style="display:none;margin-bottom:16px;">
+            <div class="billing-editor-card">
+              <div class="billing-editor-header">
+                <div class="billing-editor-header-left">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  <span class="billing-editor-title">Edit Billing Targets</span>
+                </div>
+                <button class="billing-editor-close-btn" onclick="closeBillingTargetsEditor()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="billing-editor-body">
+                <div class="billing-editor-table-wrap">
+                  <table class="billing-editor-table" id="billing-targets-edit-table">
+                    <thead>
+                      <tr>
+                        <th class="billing-editor-th-label">Billing Group</th>
+                        <th class="billing-editor-th-hours">Target Hours</th>
+                      </tr>
+                    </thead>
+                    <tbody id="billing-targets-edit-body"></tbody>
+                  </table>
+                </div>
+                <div class="billing-editor-footer">
+                  <span class="billing-editor-hint">Changes apply to the selected week ending.</span>
+                  <button class="billing-editor-save-btn" id="billing-targets-save-btn" onclick="saveBillingTargets()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Save Targets
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="loading-overlay" id="billing-compliance-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Data...</div>
+          </div>
+
+          <!-- KPI Summary Cards -->
+          <div id="billing-kpi-cards" style="display:none;">
+            <div class="billing-kpi-grid">
+              <div class="billing-kpi-card" id="kpi-compliance">
+                <div class="kpi-label">TOTAL COMPLIANCE</div>
+                <div class="kpi-value" id="kpi-compliance-value">—</div>
+                <div class="kpi-sub" id="kpi-compliance-sub"></div>
+              </div>
+              <div class="billing-kpi-card" id="kpi-hours-gap">
+                <div class="kpi-label">HOURS GAP TO 100%</div>
+                <div class="kpi-value" id="kpi-hours-gap-value">—</div>
+                <div class="kpi-sub" id="kpi-hours-gap-sub"></div>
+              </div>
+              <div class="billing-kpi-card" id="kpi-ot-needed">
+                <div class="kpi-label">OT HOURS NEEDED</div>
+                <div class="kpi-value" id="kpi-ot-needed-value">—</div>
+                <div class="kpi-sub" id="kpi-ot-needed-sub"></div>
+              </div>
+              <div class="billing-kpi-card" id="kpi-hc-needed">
+                <div class="kpi-label">HC NEEDED</div>
+                <div class="kpi-value" id="kpi-hc-needed-value">—</div>
+                <div class="kpi-sub" id="kpi-hc-needed-sub"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Week info bar -->
+          <div id="billing-week-info" style="display:none;margin-bottom:12px;">
+            <span id="billing-week-range" style="font-size:12px;color:var(--text-secondary);"></span>
+            <span id="billing-days-badge" style="margin-left:12px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;"></span>
+            <span id="billing-excluded-indicator" style="margin-left:12px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;background:rgba(107,114,128,0.1);color:var(--fg-muted);"></span>
+          </div>
+
+          <!-- Compliance Table -->
+          <div id="billing-compliance-table" style="display:none;">
+            <div class="billing-table-wrapper">
+              <table class="data-table billing-table" id="billing-v3-table">
+                <thead>
+                  <tr>
+                    <th style="text-align:left">PG × Role</th>
+                    <th style="text-align:center">Delivered Hrs</th>
+                    <th style="text-align:center">Target Hrs</th>
+                    <th style="text-align:center">UPL Days</th>
+                    <th style="text-align:center">PL Days</th>
+                    <th style="text-align:center;min-width:160px;">Compliance %</th>
+                    <th style="text-align:center">Goal 98%</th>
+                    <th style="text-align:center">Goal 100%</th>
+                    <th style="text-align:center">Goal 102%</th>
+                    <th style="text-align:center">Pred. UPL</th>
+                    <th style="text-align:center">Pred. OT</th>
+                    <th style="text-align:center">OTs Needed</th>
+                    <th style="text-align:center">HC Needed</th>
+                  </tr>
+                </thead>
+                <tbody id="billing-compliance-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Daily drill-down panel -->
+          <div id="billing-drilldown" style="display:none;margin-top:12px;">
+            <div class="card admin-card">
+              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="card-title" id="billing-drilldown-title">DAILY BREAKDOWN</span>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button class="rc-btn rc-btn-primary rc-btn-sm" id="rc-do-role-change-btn" onclick="rcOpenInlinePanel()" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                    Do Role Change?
+                  </button>
+                  <button class="btn btn-outline btn-sm" onclick="closeBillingDrilldown()" style="font-size:11px;">Close</button>
+                </div>
+              </div>
+              <div class="admin-card-body" id="billing-drilldown-body"></div>
+            </div>
+          </div>
+
+          <!-- Inline Role Change Panel (appears below drilldown) -->
+          <div id="rc-inline-panel" style="display:none;margin-top:12px;">
+            <div class="card admin-card rc-inline-card">
+              <div class="card-header rc-inline-header">
+                <div class="rc-inline-context">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+                  <span class="rc-inline-title">ROLE CHANGE</span>
+                  <span class="rc-inline-context-badge" id="rc-inline-context-badge">—</span>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="rcCloseInlinePanel()" style="font-size:11px;">Close</button>
+              </div>
+              <div class="admin-card-body">
+                <!-- Sticky context header -->
+                <div class="rc-context-bar" id="rc-context-bar">
+                  <span id="rc-context-pg">—</span>
+                  <span class="rc-context-sep">|</span>
+                  <span id="rc-context-deficit">—</span>
+                  <span class="rc-context-sep">|</span>
+                  <span id="rc-context-hc">—</span>
+                </div>
+                <!-- Staff table -->
+                <div class="rc-table-wrap">
+                  <table class="rc-table" id="rc-inline-staff-table">
+                    <thead>
+                      <tr>
+                        <th style="width:40px;text-align:center;"><input type="checkbox" id="rc-inline-select-all" onchange="rcInlineToggleSelectAll()"></th>
+                        <th>Name</th>
+                        <th>OHR</th>
+                        <th>Current Role</th>
+                        <th>Current PG</th>
+                        <th style="text-align:center;min-width:200px;" id="rc-schedule-header">Schedule<div style="font-size:9px;letter-spacing:2px;color:#9ca3af;margin-top:3px;font-weight:400;">S &middot; S &middot; M &middot; T &middot; W &middot; T &middot; F</div></th>
+                        <th>New Role</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rc-inline-staff-body">
+                      <tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af;">Loading available staff...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <!-- Action bar -->
+                <div class="rc-actions-bar" id="rc-inline-action-bar" style="display:none;">
+                  <span class="rc-selected-count" id="rc-inline-selected-count">0 selected</span>
+                  <button class="rc-btn rc-btn-outline" id="rc-queue-btn" onclick="rcAddToQueue()">Add to Queue</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Role Change Queue (floating bar) -->
+          <div id="rc-queue-bar" style="display:none;">
+            <div class="rc-queue-bar-inner">
+              <div class="rc-queue-info">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <span id="rc-queue-count">0 role change(s) queued</span>
+              </div>
+              <div class="rc-queue-actions">
+                <button class="rc-btn rc-btn-outline rc-btn-sm" onclick="rcShowQueuePreview()">Review Queue</button>
+                <button class="rc-btn rc-btn-primary rc-btn-sm" onclick="rcProcessQueue()">Generate Email & Apply</button>
+                <button class="rc-btn rc-btn-ghost rc-btn-sm" onclick="rcClearQueue()">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Queue Preview Modal -->
+          <div id="rc-queue-modal" style="display:none;">
+            <div class="rc-queue-modal-backdrop" onclick="rcCloseQueuePreview()"></div>
+            <div class="rc-queue-modal-content">
+              <div class="rc-queue-modal-header">
+                <h3>Queued Role Changes</h3>
+                <button class="rc-btn rc-btn-ghost" onclick="rcCloseQueuePreview()">&times;</button>
+              </div>
+              <div class="rc-queue-modal-body" id="rc-queue-modal-body"></div>
+              <div class="rc-queue-modal-footer" id="rc-queue-modal-footer">
+                <button class="rc-btn rc-btn-primary" onclick="rcShowProcessConfirm()">Generate Email & Apply All</button>
+              </div>
+              <div class="rc-queue-confirm-panel" id="rc-queue-confirm-panel" style="display:none;">
+                <div class="rc-confirm-body">
+                  <span class="rc-confirm-icon">&#9888;&#65039;</span>
+                  <div class="rc-confirm-text">
+                    <p class="rc-confirm-title">Confirm Role Change</p>
+                    <p class="rc-confirm-detail" id="rc-confirm-detail"></p>
+                  </div>
+                </div>
+                <div class="rc-confirm-actions">
+                  <button class="rc-btn rc-btn-outline" onclick="rcHideProcessConfirm()">Cancel</button>
+                  <button class="rc-btn rc-btn-primary" onclick="rcConfirmAndProcess()">Yes, Proceed</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Email Result Panel -->
+          <div id="rc-email-result" style="display:none;margin-top:12px;">
+            <div class="card admin-card">
+              <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="card-title">EMAIL PREVIEW</span>
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('rc-email-result').style.display='none'" style="font-size:11px;">Close</button>
+              </div>
+              <div class="admin-card-body">
+                <div class="rc-result-summary" id="rc-result-summary" style="display:none;"></div>
+                <div class="rc-email-preview-bar">
+                  <div class="rc-email-subject" id="rc-email-subject"></div>
+                  <div class="rc-email-actions">
+                    <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailHtml()">Copy HTML</button>
+                    <button class="rc-btn rc-btn-outline" onclick="rcCopyEmailPlainText()">Copy Plain Text</button>
+                  </div>
+                </div>
+                <div class="rc-email-preview" id="rc-email-preview"></div>
+              </div>
+            </div>
+          </div>
+
+
+
+          </div><!-- end billing-tab-compliance -->
+
+          <!-- Role Change History (collapsible, always visible at bottom) -->
+          <div class="rc-history-section" id="rc-history-section" style="margin-top:20px;">
+            <div class="card admin-card">
+              <div class="card-header rc-history-header" onclick="rcToggleHistory()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#6b7280;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span class="card-title">ROLE CHANGE HISTORY</span>
+                  <span class="rc-badge rc-badge-muted" id="rc-history-count">—</span>
+                </div>
+                <svg id="rc-history-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="admin-card-body" id="rc-history-body-wrap" style="display:none;">
+                <div class="rc-table-wrap">
+                  <table class="rc-table" id="rc-history-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>OHR</th>
+                        <th>Original Role</th>
+                        <th>Original PG</th>
+                        <th>New Role</th>
+                        <th>New PG</th>
+                        <th>Dates</th>
+                        <th>Created By</th>
+                        <th>Generated At</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rc-history-body">
+                      <tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;">Loading history...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+
+
+      <!-- ===== View 4: Admin Tools ===== -->
+      <div class="view-container view-hidden" id="view-admin">
+        <!-- Hidden panels for backward compat with adminSwitchTab -->
+        <div id="admin-panel-tools" style="display:none;"></div>
+        <div id="admin-panel-permissions" style="display:none;"></div>
+        <div id="admin-panel-admins" style="display:none;"></div>
+        <div id="admin-tab-tools" style="display:none;"></div>
+        <div id="admin-tab-permissions" style="display:none;"></div>
+        <div id="admin-tab-admins" style="display:none;"></div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <!-- ADMIN TOOLS — Unified Redesign                                  -->
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="admin-hub">
+          <!-- Page Header -->
+
+
+          <!-- ─── SECTION: System ─────────────────────────────────────── -->
+          <div class="admin-section" id="admin-section-system">
+            <div class="admin-section-header" onclick="adminToggleSection('system')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span>System</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div class="admin-grid">
+                <!-- Site Maintenance -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Site Maintenance</span>
+                      <span id="pause-status-badge" class="admin-badge"></span>
+                    </div>
+                    <p class="admin-tool-desc">Pause the site for all users except admins. Users will see a maintenance screen.</p>
+                    <button class="btn btn-sm admin-tool-action" id="pause-site-btn" onclick="toggleSitePause()">
+                      <span id="pause-btn-text">Pause Site</span>
+                    </button>
+                  </div>
+                </div>
+                <!-- Admin List -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Admin Access</span>
+                      <button class="btn btn-ghost btn-sm" onclick="adminOhrShowAddForm()" style="font-size:11px;padding:2px 8px;">+ Add</button>
+                    </div>
+                    <p class="admin-tool-desc">Manage who has admin privileges. Owner (740045023) is protected.</p>
+                    <div id="admin-ohr-add-form" style="display:none;margin:8px 0;padding:10px;background:var(--bg-alt);border-radius:8px;">
+                      <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:120px;">
+                          <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">OHR ID</label>
+                          <input type="text" id="admin-ohr-add-input" class="form-input form-input-sm" placeholder="OHR" style="width:100%;" />
+                        </div>
+                        <div style="flex:1;min-width:120px;">
+                          <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">Name (optional)</label>
+                          <input type="text" id="admin-ohr-add-name" class="form-input form-input-sm" placeholder="Full name" style="width:100%;" />
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="adminOhrAdd()" style="font-size:11px;">Add</button>
+                        <button class="btn btn-ghost btn-sm" onclick="adminOhrHideAddForm()" style="font-size:11px;">Cancel</button>
+                      </div>
+                      <div id="admin-ohr-add-error" style="color:var(--danger);font-size:11px;margin-top:4px;display:none;"></div>
+                    </div>
+                    <div id="admin-ohr-list-container" style="margin-top:8px;">
+                      <span style="font-size:12px;color:var(--fg-muted);">Loading...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── SECTION: Data Uploads ───────────────────────────────── -->
+          <div class="admin-section" id="admin-section-uploads">
+            <div class="admin-section-header" onclick="adminToggleSection('uploads')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Data Uploads</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div class="admin-grid admin-grid-uploads">
+                <!-- Billing CSV Upload -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Billing Data</span>
+                      <span id="billing-upload-status" class="admin-badge"></span>
+                    </div>
+                    <p class="admin-tool-desc">Upload <strong>TEMPLATE_BILLING</strong> CSV to update Billing Role, PG, SRT Status for attendance rows.</p>
+                    <p class="admin-tool-meta">Columns: <code>date, ohr, srt_id, billing_name, srt_status, role, planning_group</code></p>
+                    <div id="billing-upload-last" style="font-size:11px;color:var(--fg-muted);margin:4px 0;"></div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                      <input type="file" id="billing-csv-input" accept=".csv" style="font-size:12px;max-width:200px;">
+                      <button class="btn btn-primary btn-sm" id="billing-upload-btn" onclick="runBillingCsvUpload()" disabled style="font-size:11px;">
+                        Upload CSV
+                      </button>
+                    </div>
+                    <div class="admin-progress" id="billing-upload-progress" style="display:none;margin-top:8px;">
+                      <div class="admin-progress-bar"><div class="admin-progress-fill" id="billing-upload-progress-fill" style="width:0%;"></div></div>
+                      <span class="admin-progress-text" id="billing-upload-progress-text">Uploading...</span>
+                    </div>
+                    <div class="admin-result" id="billing-upload-result" style="display:none;margin-top:6px;"></div>
+                    <div id="billing-upload-summary" style="margin-top:8px;"></div>
+                  </div>
+                </div>
+
+                <!-- WFM Schedule Upload -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">WFM Schedule</span>
+                    </div>
+                    <p class="admin-tool-desc">Upload OHR x Date matrix CSV to populate the WFM Tag column in Input Portal.</p>
+                    <p class="admin-tool-meta">First row = date headers; first two columns = OHR, Employee Name.</p>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                      <input type="file" id="wfm-csv-input" accept=".csv" style="font-size:12px;max-width:200px;" />
+                      <button class="btn btn-primary btn-sm" id="wfm-upload-btn" onclick="wfmUploadSchedule()" disabled style="font-size:11px;">
+                        Upload Schedule
+                      </button>
+                    </div>
+                    <div class="admin-progress" id="wfm-upload-progress" style="display:none;margin-top:8px;">
+                      <div class="admin-progress-bar"><div class="admin-progress-fill" id="wfm-upload-progress-fill" style="width:0%;"></div></div>
+                      <span class="admin-progress-text" id="wfm-upload-progress-text">Parsing CSV...</span>
+                    </div>
+                    <div class="admin-result" id="wfm-upload-result" style="display:none;margin-top:6px;"></div>
+                    <div id="wfm-schedule-summary" style="margin-top:8px;"></div>
+                  </div>
+                </div>
+
+                <!-- Tardiness Data Upload -->
+                <div class="admin-tool-card">
+                  <div class="admin-tool-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div class="admin-tool-content">
+                    <div class="admin-tool-title-row">
+                      <span class="admin-tool-title">Tardiness Data</span>
+                      <span id="tardiness-upload-status" class="admin-badge"></span>
+                    </div>
+                    <p class="admin-tool-desc">Upload tardiness CSV. Only late logins (tardiness > 0 min) are imported. Duplicates auto-skipped.</p>
+                    <p class="admin-tool-meta">Columns: <code>ohr, name, date, roster_login, roster_logout, actual_login, actual_logout</code></p>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                      <input type="file" id="tardiness-csv-input" accept=".csv,.xlsx,.xls" style="font-size:12px;max-width:200px;">
+                      <button class="btn btn-primary btn-sm" id="tardiness-upload-btn" onclick="tardinessUploadCSV()" disabled style="font-size:11px;">
+                        Upload Tardiness
+                      </button>
+                    </div>
+                    <div class="admin-progress" id="tardiness-upload-progress" style="display:none;margin-top:8px;">
+                      <div class="admin-progress-bar"><div class="admin-progress-fill" id="tardiness-upload-progress-fill" style="width:0%;"></div></div>
+                      <span class="admin-progress-text" id="tardiness-upload-progress-text">Parsing file...</span>
+                    </div>
+                    <div class="admin-result" id="tardiness-upload-result" style="display:none;margin-top:6px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── SECTION: Database ───────────────────────────────────── -->
+          <div class="admin-section" id="admin-section-database">
+            <div class="admin-section-header" onclick="adminToggleSection('database')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                <span>Database</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div class="admin-tool-card admin-tool-card-wide">
+                <div class="admin-tool-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <div class="admin-tool-content">
+                  <div class="admin-tool-title-row">
+                    <span class="admin-tool-title">Backup &amp; Export</span>
+                  </div>
+                  <p class="admin-tool-desc">Export IO Operations tables as CSV or JSON for backup and safekeeping.</p>
+                  <div id="backup-loading" style="display:none;color:var(--fg-muted);font-size:12px;padding:4px 0;">Loading table info...</div>
+                  <div class="admin-preview-table-wrapper" id="backup-table-wrapper" style="display:none;margin-top:8px;">
+                    <table class="data-table admin-preview-table" id="backup-table" style="font-size:12px;">
+                      <thead><tr><th>Table</th><th style="text-align:right;">Records</th><th style="text-align:center;">Action</th></tr></thead>
+                      <tbody id="backup-body"></tbody>
+                    </table>
+                  </div>
+                  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" onclick="loadBackupTables()" style="font-size:11px;">Refresh Counts</button>
+                    <button class="btn btn-primary btn-sm" onclick="exportAllTables()" style="font-size:11px;">Export All (JSON)</button>
+                  </div>
+                  <div class="admin-result" id="backup-result" style="display:none;margin-top:6px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ─── SECTION: Permissions ────────────────────────────────── -->
+          <div class="admin-section" id="admin-section-permissions">
+            <div class="admin-section-header" onclick="adminToggleSection('permissions')">
+              <div class="admin-section-label">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Permissions</span>
+              </div>
+              <svg class="admin-section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="admin-section-body">
+              <div style="padding:4px 0;">
+                <!-- Search & filter -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                  <input type="text" class="form-input form-input-sm" id="admin-perm-search" placeholder="Search by name or OHR..." oninput="permFilterTable()" style="max-width:280px;font-size:12px;">
+                  <select class="form-input form-input-sm" id="admin-perm-role-filter" onchange="permFilterTable()" style="max-width:160px;font-size:12px;">
+                    <option value="">All Roles</option>
+                    <option value="Agent">Agent</option>
+                    <option value="Operational SME">SME</option>
+                    <option value="Quality Analyst">QA</option>
+                    <option value="Trainer">Trainer</option>
+                    <option value="Team Lead">Team Lead</option>
+                    <option value="Manager">Manager</option>
+                  </select>
+                </div>
+                <!-- Permissions Table -->
+                <div class="module-table-wrapper">
+                  <table class="data-table module-table" id="admin-perm-table">
+                    <thead id="admin-perm-table-head"></thead>
+                    <tbody id="admin-perm-table-body"></tbody>
+                  </table>
+                </div>
+                <div class="module-pagination" id="admin-perm-pagination"></div>
+              </div>
+              <!-- Permission Detail Panel (modal overlay) -->
+              <div class="module-form-overlay" id="admin-perm-detail-overlay" style="display:none;">
+                <div class="module-form-panel" style="max-width:700px;max-height:90vh;" onclick="event.stopPropagation()">
+                  <div class="module-form-header">
+                    <h3 id="admin-perm-detail-title">Permissions</h3>
+                    <button class="module-form-close" onclick="permCloseDetail()">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <div class="module-form-body" id="admin-perm-detail-body" style="overflow-y:auto;"></div>
+                  <div class="module-form-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-outline btn-sm" onclick="permResetToDefaults()">Reset to Defaults</button>
+                    <button class="btn btn-primary btn-sm" id="admin-perm-save-btn" onclick="permSaveChanges()">Save Changes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+        </div><!-- /admin-hub -->
+      </div>
+
+      <!-- ===== View 3: Risk Alerts ===== -->
+      <div class="view-container view-hidden" id="view-alerts">
+        <div class="loading-overlay" id="alerts-loading" style="display:none;">
+          <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+          <div class="loading-text">Loading Data...</div>
+        </div>
+
+        <div id="alerts-content">
+          <div class="filter-bar" style="margin-bottom:16px;">
+            <span class="filter-label">Month:</span>
+            <select class="form-select" id="alert-filter-month" onchange="void applyAlertFilters()">
+              <option value="All">All Months</option>
+            </select>
+            <span class="filter-label">Week Ending:</span>
+            <select class="form-select" id="alert-filter-week" onchange="void applyAlertFilters()">
+              <option value="All">All Weeks</option>
+            </select>
+            <span class="filter-label">Planning Group:</span>
+            <select class="form-select" id="alert-filter-pg" onchange="void applyAlertFilters()">
+              <option value="All">All Planning Groups</option>
+            </select>
+          </div>
+
+          <div class="alert-tabs" id="alert-tabs"></div>
+          <div class="alert-description" id="alert-description"></div>
+          <div id="alert-list"></div>
+        </div>
+      </div>
+
+      <!-- ===== View: Performance Dashboard ===== -->
+      <div class="view-container view-hidden" id="view-performance">
+        <div class="module-page">
+
+          <div class="loading-overlay" id="perf-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Performance Data...</div>
+          </div>
+
+          <!-- Upload / Sync Bar -->
+          <div class="filter-bar" style="margin-bottom:16px;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+              <span class="filter-label">Timeframe:</span>
+              <select class="form-select" id="perf-timeframe" onchange="perfApplyFilters()" style="min-width:180px;"></select>
+              <span class="filter-label">Planning Group:</span>
+              <select class="form-select" id="perf-planning-group" onchange="perfApplyFilters()">
+                <option value="All">All</option>
+              </select>
+              <span class="filter-label">Supervisor:</span>
+              <select class="form-select" id="perf-supervisor" onchange="perfApplyFilters()">
+                <option value="All">All</option>
+              </select>
+              <span class="filter-label">Shift:</span>
+              <select class="form-select" id="perf-shift" onchange="perfApplyFilters()">
+                <option value="All">All</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="perf-sync-info" style="font-size:12px;color:var(--text-muted);"></span>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload .xlsb
+                <input type="file" accept=".xlsb" id="perf-file-input" onchange="perfHandleUpload(this)" style="display:none;">
+              </label>
+              <button class="btn btn-outline btn-sm" onclick="perfResync()" id="perf-resync-btn" title="Re-process stored file">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                Resync
+              </button>
+            </div>
+          </div>
+
+          <!-- KPI Summary Cards -->
+          <div id="perf-kpi-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;"></div>
+
+          <!-- Employee Data Table -->
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="perf-table">
+              <thead>
+                <tr id="perf-table-header"></tr>
+              </thead>
+              <tbody id="perf-table-body"></tbody>
+            </table>
+          </div>
+
+          <div id="perf-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted);">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:12px;opacity:0.5;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <h3 style="margin-bottom:8px;">No Performance Data</h3>
+            <p>Upload a .xlsb file to populate the dashboard.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== View 6a: Compass Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-compass-input">
+        <div class="module-page">
+
+          <div class="loading-overlay" id="compass-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Coaching Logs...</div>
+          </div>
+
+          <div id="compass-content" style="display:none;">
+          <!-- Stats Strip -->
+          <div class="compass-stats-strip" id="compass-stats-strip"></div>
+          <!-- Compass Filter Bar (Input Portal style) with Add button as first item -->
+          <div class="filter-bar" id="compass-filter-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div id="compass-new-btn" style="position:relative;flex-shrink:0;">
+              <button class="btn btn-primary btn-sm" id="compass-add-trigger" onclick="compassToggleAddMenu()" style="white-space:nowrap;display:flex;align-items:center;gap:4px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="compass-add-menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;min-width:260px;background:var(--bg-card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1000;overflow:hidden;"></div>
+            </div>
+            <!-- Admin View Toggle (visible only to 740045023) -->
+            <div id="compass-view-toggle" style="display:none;flex-shrink:0;">
+              <div style="display:inline-flex;border-radius:6px;overflow:hidden;border:1px solid #cbd5e1;font-size:12px;font-weight:600;">
+                <button id="compass-toggle-all" onclick="compassSetViewMode('all')" style="padding:5px 12px;border:none;cursor:pointer;transition:background .15s,color .15s;background:#1a365d;color:#fff;">All Logs</button>
+                <button id="compass-toggle-tl" onclick="compassSetViewMode('tl')" style="padding:5px 12px;border:none;cursor:pointer;transition:background .15s,color .15s;background:#f8fafc;color:#64748b;">My Team</button>
+              </div>
+            </div>
+            <div class="filter-bar-row" id="compass-filter-pills" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;">
+              <!-- Pills rendered by compass-omnibar.js -->
+            </div>
+          </div>
+          <!-- Hidden filters kept for backward compatibility -->
+          <select class="form-select" id="compass-filter-type" style="display:none;"><option value="All">All Types</option></select>
+          <select class="form-select" id="compass-filter-status" style="display:none;"><option value="All">All Statuses</option></select>
+
+          <!-- Inline Add Panel (replaces modal) -->
+          <div class="compass-inline-add" id="compass-inline-add" style="display:none;">
+            <!-- Type chips + collapse button in one row -->
+            <div class="compass-inline-add-types" id="compass-inline-add-types"></div>
+            <!-- Step 2: Form body (shown after type selection) -->
+            <div class="compass-inline-add-form" id="compass-inline-add-form" style="display:none;"></div>
+            <!-- Form footer -->
+            <div class="compass-inline-add-footer" id="compass-inline-add-footer" style="display:none;"></div>
+          </div>
+
+          <!-- Side-by-side tables: Coaching Given & Coaching Received -->
+          <div class="compass-dual-tables" id="compass-dual-tables">
+            <div class="compass-table-panel">
+              <div class="compass-table-panel-header">
+                <span class="compass-table-panel-title">Coaching Given</span>
+                <span class="compass-table-panel-count"><strong id="compass-given-count">0</strong> records</span>
+                <div class="compass-export-wrapper" id="compass-export-wrapper">
+                  <button class="btn btn-outline btn-xs compass-export-btn" id="compass-export-btn" onclick="compassExportCSV('filtered')" title="Export CSV">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export CSV
+                  </button>
+                  <div class="compass-export-dropdown" id="compass-export-dropdown" style="display:none;">
+                    <button class="compass-export-dropdown-item" onclick="compassExportCSV('filtered')">Export Filtered</button>
+                    <button class="compass-export-dropdown-item" onclick="compassExportCSV('all')">Export All</button>
+                  </div>
+                </div>
+              </div>
+              <div class="compass-given-tabs" id="compass-given-tabs">
+                <button class="compass-given-tab active" data-tab="all" onclick="compassSwitchGivenTab('all')">All</button>
+                <button class="compass-given-tab" data-tab="unacknowledged" onclick="compassSwitchGivenTab('unacknowledged')">Unacknowledged <span id="compass-unack-count" class="compass-tab-badge">0</span></button>
+                <button class="compass-given-tab" data-tab="acknowledged" onclick="compassSwitchGivenTab('acknowledged')">Acknowledged <span id="compass-ack-count" class="compass-tab-badge">0</span></button>
+              </div>
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="compass-table-given">
+                  <thead id="compass-table-given-head"></thead>
+                  <tbody id="compass-table-given-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="compass-pagination-given"></div>
+            </div>
+            <div class="compass-table-panel">
+              <div class="compass-table-panel-header">
+                <span class="compass-table-panel-title">Coaching Received</span>
+                <span class="compass-table-panel-count"><strong id="compass-received-count">0</strong> records</span>
+              </div>
+              <div class="compass-given-tabs" id="compass-received-tabs">
+                <button class="compass-given-tab active" data-tab="all" onclick="compassSwitchReceivedTab('all')">All</button>
+                <button class="compass-given-tab" data-tab="unacknowledged" onclick="compassSwitchReceivedTab('unacknowledged')">Unacknowledged <span id="compass-recv-unack-count" class="compass-tab-badge">0</span></button>
+                <button class="compass-given-tab" data-tab="acknowledged" onclick="compassSwitchReceivedTab('acknowledged')">Acknowledged <span id="compass-recv-ack-count" class="compass-tab-badge">0</span></button>
+              </div>
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="compass-table-received">
+                  <thead id="compass-table-received-head"></thead>
+                  <tbody id="compass-table-received-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="compass-pagination-received"></div>
+            </div>
+          </div>
+          </div><!-- end compass-content -->
+
+          <!-- New/Edit Form (hidden by default) -->
+          <div class="module-form-overlay" id="compass-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="compass-form-title">New Coaching Log</h3>
+                <button class="module-form-close" onclick="compassCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="compass-form-body"></div>
+              <div class="module-form-footer" id="compass-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 6b: Compass Disputes Area ===== -->
+      <div class="view-container view-hidden" id="view-compass-disputes">
+        <div class="module-page">
+          <div class="module-header" style="display:none;"></div>
+          <div class="loading-overlay" id="compass-disputes-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Disputes...</div>
+          </div>
+          <!-- Disputes Search/Filter Bar -->
+          <div class="disputes-filter-bar" id="disputes-filter-bar">
+            <div class="search-wrapper">
+              <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="disputes-search-input" placeholder="Search by name, ID, or session goal..." oninput="disputesFilterCards()">
+            </div>
+            <span class="disputes-filter-count" id="disputes-filter-count"></span>
+            <div id="disputes-qa-toggle" class="disputes-qa-toggle" style="display:none;">
+              <button class="disputes-toggle-btn active" data-mode="all" onclick="disputesSetQaMode('all')">All Disputes</button>
+              <button class="disputes-toggle-btn" data-mode="mine" onclick="disputesSetQaMode('mine')">My Disputes</button>
+            </div>
+          </div>
+          <div class="disputes-layout-wrapper" id="disputes-layout-wrapper">
+            <div id="compass-kanban-board" class="kanban-board"></div>
+          </div>
+          <!-- Disputes Side Panel moved to body-level for reliable position:fixed rendering -->
+          <!-- Disputes Detail Overlay (opens within Disputes Area, not Coaching Profile) -->
+          <!-- Disputes Action Modal -->
+          <div class="disputes-modal-overlay" id="disputes-action-overlay">
+            <div class="disputes-modal">
+              <div class="disputes-modal-header">
+                <h3 id="disputes-action-title">Action</h3>
+                <button class="disputes-modal-close" onclick="disputesCloseAction()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="disputes-modal-body" id="disputes-action-body"></div>
+              <div class="disputes-modal-footer" id="disputes-action-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 6c: Compass Corrective Actions ===== -->
+      <div class="view-container view-hidden" id="view-compass-corrective">
+        <div class="module-page">
+          <div class="loading-overlay" id="ca-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Corrective Actions...</div>
+          </div>
+          <!-- Summary Cards -->
+          <div class="ca-summary-cards" id="ca-summary-cards"></div>
+          <!-- Filter Bar -->
+          <div class="ca-filter-bar" id="ca-filter-bar"></div>
+          <!-- Inline Document Build Assist Panel -->
+          <div id="ca-inline-add" style="display:none;margin:12px 0;border:2px solid #6366F1;border-radius:12px;background:linear-gradient(135deg,#F8FAFC 0%,#EEF2FF 100%);overflow:hidden;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);">
+            <!-- Type chips + collapse button in one row (no header bar) -->
+            <div id="ca-inline-add-types" style="display:flex;gap:8px;padding:12px 20px;flex-wrap:wrap;align-items:center;"></div>
+            <div id="ca-inline-add-form" style="display:none;">
+              <div style="padding:10px 20px;border-top:1px solid rgba(99,102,241,0.12);border-bottom:1px solid rgba(99,102,241,0.12);background:rgba(99,102,241,0.04);">
+                <span id="ca-inline-form-title" style="font-size:13px;font-weight:700;color:#6366F1;"></span>
+              </div>
+              <div id="ca-inline-form-body" style="padding:16px 20px;"></div>
+              <div id="ca-inline-form-footer" style="padding:10px 20px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border,#e2e8f0);"></div>
+            </div>
+          </div>
+          <!-- Table -->
+          <div class="ca-table-container" id="ca-table-container"></div>
+          <!-- Detail Overlay -->
+          <div class="ca-detail-overlay" id="ca-detail-overlay">
+            <div class="ca-detail-panel">
+              <div class="ca-detail-header">
+                <h3 id="ca-detail-title">Corrective Action</h3>
+                <button class="disputes-modal-close" onclick="caCloseDetail()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="ca-detail-body" id="ca-detail-body"></div>
+              <div class="ca-detail-actions" id="ca-detail-footer"></div>
+            </div>
+          </div>
+          <!-- Create NTE Modal -->
+          <!-- NTE Build Assist Wizard Overlay -->
+          <div class="module-form-overlay" id="ca-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="ca-form-title">NTE Build Assist</h3>
+                <button class="module-form-close" onclick="caCloseWizard()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="ca-form-body"></div>
+              <div class="module-form-footer" id="ca-form-footer"></div>
+            </div>
+          </div>
+          <!-- Knowledge Base Sidebar -->
+          <div class="ca-kb-sidebar" id="ca-kb-sidebar">
+            <div class="ca-kb-header">
+              <div class="ca-kb-header-top">
+                <h3 class="ca-kb-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  Policy Reference
+                </h3>
+                <button class="ca-kb-close" onclick="caKbToggle()" title="Close">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="ca-kb-search-wrapper">
+                <svg class="ca-kb-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="ca-kb-search" placeholder="Search violations, CAP levels, FAQ..." oninput="caKbSearch(this.value)">
+              </div>
+              <div class="ca-kb-tabs" id="ca-kb-tabs"></div>
+            </div>
+            <div class="ca-kb-body" id="ca-kb-body">
+              <div class="ca-kb-list" id="ca-kb-list"></div>
+              <div class="ca-kb-article" id="ca-kb-article" style="display:none;"></div>
+            </div>
+          </div>
+          <!-- CAP Decision Modal -->
+          <div class="ca-modal-overlay" id="ca-cap-overlay">
+            <div class="ca-modal">
+              <div class="ca-modal-header">
+                <h3 id="ca-cap-title">Assign Corrective Action</h3>
+                <button class="disputes-modal-close" onclick="caCloseCapModal()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="ca-modal-body" id="ca-cap-body"></div>
+              <div class="ca-modal-footer" id="ca-cap-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 7a: Sandbox — Input Portal ===== -->
+      <div class="view-container view-hidden" id="view-sandbox-input">
+        <div class="module-page">
+          <!-- Stats Strip -->
+          <div class="sandbox-stats-strip" id="sandbox-stats-strip"></div>
+
+          <!-- Sandbox Filter Bar (pill-based) -->
+          <div class="sandbox-filter-toolbar" style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="sandbox-new-btn" onclick="sandboxShowNewForm()" style="white-space:nowrap;flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New Insight
+            </button>
+            <div class="sandbox-team-toggle" id="sandbox-team-toggle" style="display:none;"></div>
+            <div style="position:relative;flex-shrink:0;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--fg-muted);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="sandbox-input-search" class="form-input" placeholder="Search insights..." oninput="sandboxInputSearchApply()" style="padding-left:32px;height:34px;font-size:13px;width:220px;border-radius:6px;">
+            </div>
+            <div class="filter-bar" id="sandbox-filter-pills" style="flex:1;min-width:0;"></div>
+          </div>
+
+          <!-- Inline New Insight Form Container -->
+          <div id="sandbox-inline-form-container" style="display:none;"></div>
+
+          <!-- Loading Overlay -->
+          <div class="loading-overlay" id="sandbox-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Insights...</div>
+          </div>
+
+          <!-- Table + TL Team Analytics side-by-side -->
+          <div class="sandbox-dual-layout" id="sandbox-dual-layout">
+            <div class="sandbox-main-col">
+              <div class="sandbox-table-wrapper">
+                <table class="sandbox-table" id="sandbox-table">
+                  <thead id="sandbox-table-head"></thead>
+                  <tbody id="sandbox-table-body"></tbody>
+                </table>
+              </div>
+              <div class="sandbox-pagination" id="sandbox-pagination"></div>
+            </div>
+            <div class="sandbox-analytics-col" id="sandbox-analytics-col" style="display:none;">
+              <div class="sandbox-analytics-panel">
+                <div class="sandbox-analytics-header">
+                  <div class="sandbox-analytics-title">Team Analytics</div>
+                  <div class="sandbox-analytics-subtitle" id="sandbox-analytics-subtitle">Per-agent insight metrics</div>
+                </div>
+                <div id="sandbox-analytics-body"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View 7b: Sandbox — Review Area ===== -->
+      <div class="view-container view-hidden" id="view-sandbox-review">
+        <div class="module-page">
+          <!-- Review Area Header -->
+          <div class="sandbox-review-header">
+            <div>
+              <div class="sandbox-review-title">Review Area</div>
+              <div class="sandbox-review-subtitle">Manage and review submitted insights across all stages</div>
+            </div>
+          </div>
+
+          <!-- Loading Overlay -->
+          <div class="loading-overlay" id="sandbox-review-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Review Queue...</div>
+          </div>
+
+          <!-- Review Area Toolbar (Search + PG Filter) -->
+          <div class="sandbox-review-toolbar" id="sandbox-review-toolbar"></div>
+
+          <!-- Kanban Board -->
+          <div class="sandbox-kanban-board" id="sandbox-kanban-board"></div>
+
+          <!-- Review Area Form Overlay -->
+          <div class="module-form-overlay" id="sandbox-review-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="sandbox-review-form-title">Insight Detail</h3>
+                <button class="module-form-close" onclick="sandboxCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="sandbox-review-form-body"></div>
+              <div class="module-form-footer" id="sandbox-review-form-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- ===== View 8: Haven — Leave Management ===== -->
+      <div class="view-container view-hidden" id="view-haven">
+        <div class="module-page haven-page">
+          <!-- Haven Toolbar: month label + legend + actions -->
+          <div class="haven-header">
+            <div class="haven-header-left">
+              <span class="haven-current-month" id="haven-current-month"></span>
+            </div>
+            <div class="haven-header-right">
+              <div class="haven-legend">
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-pending"></span>Pending TL</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-pendingom"></span>Pending OM</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-approved"></span>Approved</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-rejected"></span>Rejected</span>
+                <span class="haven-legend-item"><span class="haven-dot haven-dot-cancelled"></span>Cancelled</span>
+              </div>
+              <button class="btn btn-ghost btn-sm" id="haven-today-btn" onclick="havenScrollToToday()">Today</button>
+              <button class="btn btn-outline btn-sm" id="haven-config-btn" onclick="havenShowPeriodConfig()" style="display:none;" title="Leave Period Configuration">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Config
+              </button>
+              <button class="btn btn-primary btn-sm" id="haven-file-btn" onclick="havenShowFileForm()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                File Leave
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div class="loading-overlay" id="haven-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Haven...</div>
+          </div>
+
+          <!-- Infinite Scroll Calendar -->
+          <div class="haven-scroll-container">
+            <div class="haven-weekday-header">
+              <div class="haven-weekday-cell">Sat</div>
+              <div class="haven-weekday-cell">Sun</div>
+              <div class="haven-weekday-cell">Mon</div>
+              <div class="haven-weekday-cell">Tue</div>
+              <div class="haven-weekday-cell">Wed</div>
+              <div class="haven-weekday-cell">Thu</div>
+              <div class="haven-weekday-cell">Fri</div>
+            </div>
+            <div class="haven-weeks-scroll" id="haven-weeks-scroll"></div>
+          </div>
+
+
+          <!-- Form Overlay -->
+          <div class="module-form-overlay" id="haven-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="haven-form-title">File Leave Request</h3>
+                <button class="module-form-close" onclick="havenCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="haven-form-body"></div>
+              <div class="module-form-footer" id="haven-form-footer"></div>
+            </div>
+          </div>
+
+          <!-- Inline confirmations now used instead of popup overlay -->
+        </div>
+      </div>
+
+      <!-- ===== View 10a: Helm — Task Board ===== -->
+      <div class="view-container view-hidden" id="view-helm-board">
+        <div class="module-page">
+          <!-- Sub-page: Task Board -->
+          <div id="helm-sub-board">
+            <!-- Full-page loading screen -->
+            <div id="helm-board-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;">
+              <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+              <div class="loading-text" style="margin-top:12px;">Loading Task Board...</div>
+            </div>
+            <!-- Board content (hidden until loaded) -->
+            <div id="helm-board-content" style="display:none;">
+            <!-- Action buttons -->
+            <div class="module-header-right" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+              <button class="btn btn-primary btn-sm" id="helm-new-btn" onclick="helmShowNewForm()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Task
+              </button>
+              <button class="btn btn-primary btn-sm" id="helm-new-request-btn" onclick="helmShowNewRequestForm()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                New Request
+              </button>
+              <button class="btn btn-primary btn-sm" id="helm-new-group-task-btn" onclick="helmShowGroupTaskWizard()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                New Group Task
+              </button>
+            </div>
+
+            <!-- Page-level filters (shared across all tabs) -->
+            <div class="module-filters" id="helm-page-filters" style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div class="filter-group">
+                <label class="filter-label">Status:</label>
+                <select class="form-select form-select-sm" id="helm-filter-status" onchange="helmApplyActiveTabFilters()">
+                  <option value="All">All Statuses</option>
+                  <option value="Open">Open</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Search:</label>
+                <input type="text" class="form-input form-input-sm" id="helm-search" placeholder="Title, ID, name..." oninput="helmApplyActiveTabFilters()" style="max-width:200px;">
+              </div>
+            </div>
+
+            <!-- Board Tabs -->
+            <div id="helm-board-tabs" style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
+              <button class="helm-board-tab active" data-board-tab="given" onclick="helmSwitchBoardTab('given')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Tasks Given</button>
+              <button class="helm-board-tab" data-board-tab="received" onclick="helmSwitchBoardTab('received')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Tasks Received</button>
+              <button class="helm-board-tab" data-board-tab="approvals" onclick="helmSwitchBoardTab('approvals')" style="padding:8px 20px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--fg-muted);transition:all 0.2s;">Approvals</button>
+
+            </div>
+
+            <!-- Tasks Given Panel -->
+            <div id="helm-tab-tasks" style="display:block;">
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="helm-table" style="font-size:12px;">
+                  <thead id="helm-table-head"></thead>
+                  <tbody id="helm-table-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="helm-pagination"></div>
+            </div>
+
+            <!-- Tasks Received Panel -->
+            <div id="helm-tab-received" style="display:none;">
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="helm-received-table" style="font-size:12px;">
+                  <thead id="helm-received-table-head"></thead>
+                  <tbody id="helm-received-table-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="helm-received-pagination"></div>
+            </div>
+
+            <!-- Shift Extensions (merged into Approvals tab) -->
+            <div id="helm-tab-shift-ext" style="display:none;"></div>
+
+            <!-- Approvals Panel -->
+            <div id="helm-tab-approvals" style="display:none;">
+
+              <div class="module-table-wrapper">
+                <table class="data-table module-table" id="helm-approvals-table" style="font-size:12px;">
+                  <thead id="helm-approvals-table-head"></thead>
+                  <tbody id="helm-approvals-table-body"></tbody>
+                </table>
+              </div>
+              <div class="module-pagination" id="helm-approvals-pagination"></div>
+            </div>
+          </div>
+          </div><!-- end helm-board-content -->
+
+          <!-- New/Edit Form -->
+          <div class="module-form-overlay" id="helm-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="helm-form-title">New Task</h3>
+                <button class="module-form-close" onclick="helmCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="helm-form-body"></div>
+              <div class="module-form-footer" id="helm-form-footer"></div>
+            </div>
+          </div>
+
+          <!-- Group Task Wizard Modal -->
+          <div class="module-form-overlay" id="gt-wizard-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:680px;width:95%;">
+              <div class="module-form-header">
+                <h3 id="gt-wizard-title">New Group Task</h3>
+                <button class="module-form-close" onclick="gtWizardClose()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <!-- Step indicators -->
+              <div id="gt-wizard-steps" style="display:flex;align-items:center;gap:0;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--bg-subtle);">
+                <div class="gt-step active" data-step="1"><span class="gt-step-num">1</span> Details</div>
+                <div class="gt-step-line"></div>
+                <div class="gt-step" data-step="2"><span class="gt-step-num">2</span> Filters</div>
+                <div class="gt-step-line"></div>
+                <div class="gt-step" data-step="3"><span class="gt-step-num">3</span> Preview</div>
+                <div class="gt-step-line"></div>
+                <div class="gt-step" data-step="4"><span class="gt-step-num">4</span> Confirm</div>
+              </div>
+              <div class="module-form-body" id="gt-wizard-body" style="max-height:480px;overflow-y:auto;"></div>
+              <div class="module-form-footer" id="gt-wizard-footer" style="display:flex;justify-content:space-between;align-items:center;"></div>
+            </div>
+          </div>
+
+          <!-- Group Task Detail Modal -->
+          <div class="module-form-overlay" id="gt-detail-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:780px;width:95%;">
+              <div class="module-form-header">
+                <h3 id="gt-detail-title">Group Task Details</h3>
+                <button class="module-form-close" onclick="gtDetailClose()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="gt-detail-body" style="max-height:520px;overflow-y:auto;"></div>
+              <div class="module-form-footer" id="gt-detail-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ===== View: Task Dashboard ===== -->
+      <div class="view-container view-hidden" id="view-helm-dashboard">
+        <div class="module-page">
+          <div id="helm-dash-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text" style="margin-top:12px;">Loading Task Dashboard...</div>
+          </div>
+          <div id="helm-dash-content" style="display:none;">
+            <!-- Summary cards -->
+            <div id="helm-dash-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;"></div>
+            <!-- Filters -->
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+              <div class="filter-group">
+                <label class="filter-label">Status:</label>
+                <select class="form-select form-select-sm" id="helm-dash-filter-status" onchange="helmDashApplyFilters()">
+                  <option value="All">All</option>
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label class="filter-label">Search:</label>
+                <input type="text" class="form-input form-input-sm" id="helm-dash-search" placeholder="Task title or ID..." oninput="helmDashApplyFilters()" style="max-width:200px;">
+              </div>
+            </div>
+            <!-- Table -->
+            <div class="module-table-wrapper" style="max-height:600px;overflow-y:auto;">
+              <table class="data-table module-table" id="helm-dash-table" style="font-size:12px;">
+                <thead id="helm-dash-table-head"></thead>
+                <tbody id="helm-dash-table-body"></tbody>
+              </table>
+            </div>
+            <div class="module-pagination" id="helm-dash-pagination"></div>
+          </div>
+
+          <!-- Group Task Detail Modal (Dashboard context) -->
+          <div class="module-form-overlay" id="gt-dash-detail-overlay" style="display:none;">
+            <div class="module-form-panel" style="max-width:780px;width:95%;">
+              <div class="module-form-header">
+                <h3 id="gt-dash-detail-title">Group Task Details</h3>
+                <button class="module-form-close" onclick="gtDashDetailClose()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="gt-dash-detail-body" style="max-height:520px;overflow-y:auto;"></div>
+              <div class="module-form-footer" id="gt-dash-detail-footer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== View: Manager's Nook ===== -->
+      <div class="view-container view-hidden" id="view-managers-nook">
+        <div class="module-page">
+          <div class="loading-overlay" id="managers-nook-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Supervisor Scorecard...</div>
+          </div>
+
+          <!-- Month Selector -->
+          <div class="filter-bar" style="margin-bottom:16px;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+              <span class="filter-label">Month:</span>
+              <select class="form-select" id="nook-month-select" onchange="nookLoadScorecard()" style="min-width:160px;"></select>
+              <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);margin-left:12px;cursor:pointer;">
+                <input type="checkbox" id="nook-trend-toggle" onchange="nookToggleTrend()" style="accent-color:var(--accent-primary);">
+                Show 3-Month Trend
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="nook-supervisor-count" style="font-size:12px;font-weight:600;color:var(--text-secondary);">Supervisors: 0</span>
+            </div>
+          </div>
+
+          <!-- Scorecard Table -->
+          <div id="managers-nook-content">
+            <div class="module-table-wrapper">
+              <table class="data-table module-table nook-table" id="nook-table" style="font-size:12px;">
+                <thead id="nook-table-head">
+                  <tr>
+                    <th style="position:sticky;left:0;z-index:2;background:var(--bg-secondary);min-width:200px;">Supervisor</th>
+                    <th style="text-align:center;min-width:60px;">Agents</th>
+                    <th style="text-align:center;min-width:80px;">Valid Tardiness</th>
+                    <th style="text-align:center;min-width:120px;">Coaching Coverage</th>
+                    <th style="text-align:center;min-width:100px;">Insights (Sub/App)</th>
+                    <th style="text-align:center;min-width:90px;">Shrinkage %</th>
+                  </tr>
+                </thead>
+                <tbody id="nook-table-body"></tbody>
+              </table>
+            </div>
+            <div id="nook-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text-secondary);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 12px;opacity:0.4;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <p>No scorecard data available for the selected month.</p>
+            </div>
+          </div>
+
+          <!-- Drill-down Modal: Missing Coaching -->
+          <div class="modal-overlay" id="nook-coaching-modal" style="display:none;">
+            <div class="modal-content" style="max-width:500px;">
+              <div class="modal-header">
+                <h3 id="nook-coaching-modal-title">Missing Coaching</h3>
+                <button class="modal-close" onclick="document.getElementById('nook-coaching-modal').style.display='none';">&times;</button>
+              </div>
+              <div class="modal-body" id="nook-coaching-modal-body" style="max-height:400px;overflow-y:auto;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== Tardiness Validator View ===== -->
+      <div class="view-container view-hidden" id="view-tardiness-validator">
+        <div class="module-page tard-page">
+          <div class="loading-overlay" id="tardiness-validator-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Tardiness Data...</div>
+          </div>
+
+          <!-- ── Summary Stats Strip ── -->
+          <div class="tard-stats-strip" id="tard-stats-strip">
+            <div class="tard-stat-card tard-stat-total" id="tard-stat-total">
+              <div class="tard-stat-label">Total Records</div>
+              <div class="tard-stat-value" id="tard-stat-total-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-pending" id="tard-stat-pending" onclick="tardQuickFilter('Pending')" title="Click to filter Pending">
+              <div class="tard-stat-label">Pending</div>
+              <div class="tard-stat-value" id="tard-stat-pending-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-valid" id="tard-stat-valid" onclick="tardQuickFilter('Valid')" title="Click to filter Valid">
+              <div class="tard-stat-label">Valid</div>
+              <div class="tard-stat-value" id="tard-stat-valid-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-invalid" id="tard-stat-invalid" onclick="tardQuickFilter('Invalid')" title="Click to filter Invalid">
+              <div class="tard-stat-label">Invalid</div>
+              <div class="tard-stat-value" id="tard-stat-invalid-val">0</div>
+            </div>
+            <div class="tard-stat-card tard-stat-grace" id="tard-stat-grace" onclick="tardQuickFilter('Grace')" title="Click to filter Grace Period">
+              <div class="tard-stat-label">Grace Period</div>
+              <div class="tard-stat-value" id="tard-stat-grace-val">0</div>
+            </div>
+          </div>
+
+          <!-- ── Filter Bar ── -->
+          <div class="tard-filter-bar">
+            <div class="tard-filter-row">
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Week Ending</label>
+                <select class="tard-filter-select" id="tard-week-select" onchange="tardLoadData()"></select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Status</label>
+                <select class="tard-filter-select" id="tard-status-filter" onchange="tardLoadData()">
+                  <option value="">All</option>
+                  <option value="Pending" selected>Pending</option>
+                  <option value="Valid">Valid</option>
+                  <option value="Invalid">Invalid</option>
+                </select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Planning Group</label>
+                <select class="tard-filter-select" id="tard-pg-filter" onchange="tardLoadData()">
+                  <option value="">All Groups</option>
+                </select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Supervisor</label>
+                <select class="tard-filter-select" id="tard-supervisor-filter" onchange="tardLoadData()">
+                  <option value="">All Supervisors</option>
+                </select>
+              </div>
+              <div class="tard-filter-group">
+                <label class="tard-filter-label">Shift</label>
+                <select class="tard-filter-select" id="tard-shift-filter" onchange="tardLoadData()">
+                  <option value="">All Shifts</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Mid-Shift">Mid-Shift</option>
+                  <option value="GY Shift">GY Shift</option>
+                </select>
+              </div>
+              <div class="tard-filter-group tard-filter-search">
+                <label class="tard-filter-label">Search</label>
+                <input type="text" class="tard-filter-input" id="tard-search" placeholder="Agent or OHR..." oninput="tardSearchDebounce()">
+              </div>
+            </div>
+            <div class="tard-filter-actions">
+              <button class="tard-btn tard-btn-team" id="tard-my-team-btn" onclick="tardToggleMyTeam()" title="Show only your direct reports">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                My Team
+              </button>
+              <button class="tard-btn tard-btn-clear" onclick="tardClearFilters()" title="Reset all filters">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Clear
+              </button>
+              <span class="tard-record-badge" id="tard-record-count">0 items</span>
+              <button class="tard-btn tard-btn-bulk" id="tard-bulk-valid-btn" onclick="tardOpenBulkModal('Valid')" style="display:none;">Bulk Valid</button>
+              <button class="tard-btn tard-btn-bulk" id="tard-bulk-invalid-btn" onclick="tardOpenBulkModal('Invalid')" style="display:none;">Bulk Invalid</button>
+              <button class="tard-btn tard-btn-export" onclick="tardExportCSV()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Table ── -->
+          <div id="tardiness-validator-content">
+            <div class="tard-table-wrapper">
+              <table class="tard-table" id="tard-table">
+                <thead>
+                  <tr>
+                    <th class="tard-th-check"><input type="checkbox" id="tard-select-all" onchange="tardToggleSelectAll()" title="Select all"></th>
+                    <th class="tard-th-ohr">OHR</th>
+                    <th class="tard-th-name">Full Name</th>
+                    <th class="tard-th-date">Date</th>
+                    <th class="tard-th-min">Min. Late</th>
+                    <th class="tard-th-sup">Supervisor</th>
+                    <th class="tard-th-shift">Shift</th>
+                    <th class="tard-th-pg">Planning Group</th>
+                    <th class="tard-th-roster">Roster Login</th>
+                    <th class="tard-th-actual">Actual Login</th>
+                    <th class="tard-th-status">Status</th>
+                    <th class="tard-th-remarks">Remarks</th>
+                    <th class="tard-th-validby">Validated By</th>
+                    <th class="tard-th-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tard-table-body"></tbody>
+              </table>
+            </div>
+
+            <!-- ── Validation Modal ── -->
+            <div id="tard-validation-modal" class="tard-modal-overlay">
+              <div class="tard-modal-card">
+                <div class="tard-modal-header">
+                  <h3 id="tard-modal-title">Validate Item</h3>
+                  <button class="tard-modal-close" onclick="tardCloseModal()" title="Close">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <div class="tard-modal-context" id="tard-modal-agent"></div>
+                <div class="tard-modal-body">
+                  <label class="tard-modal-label">Remarks <span class="tard-required">*</span></label>
+                  <textarea id="tard-modal-remarks" class="tard-modal-textarea" rows="3" placeholder="Enter remarks (required)..." required></textarea>
+                  <p id="tard-modal-error" class="tard-modal-error">Remarks are required.</p>
+                </div>
+                <div class="tard-modal-footer">
+                  <button class="tard-btn tard-btn-cancel" onclick="tardCloseModal()">Cancel</button>
+                  <button class="tard-btn tard-btn-invalid" id="tard-modal-invalid-btn" onclick="tardConfirmModal('Invalid')">Mark Invalid</button>
+                  <button class="tard-btn tard-btn-valid" id="tard-modal-valid-btn" onclick="tardConfirmModal('Valid')">Mark Valid</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="tard-empty" class="tard-empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <p>No tardiness items found for the selected filters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- ===== View 9: Roster Management ===== -->
+
+
+      <div class="view-container view-hidden" id="view-regimen">
+        <div class="module-page">
+          <!-- Regimen Tab Bar -->
+          <div class="regimen-tabs" id="regimen-tabs">
+            <button class="regimen-tab active" id="regimen-tab-roster" onclick="rosterSwitchTab('roster')">Roster</button>
+            <button class="regimen-tab" id="regimen-tab-onboarding" onclick="rosterSwitchTab('onboarding')" style="display:none;">Incomplete Rostering</button>
+          </div>
+          <!-- Roster Tab Content -->
+          <div id="regimen-panel-roster">
+          <!-- Sticky Filter Bar -->
+          <div class="regimen-filter-bar" id="roster-filter-bar">
+            <div class="regimen-filter-toolbar" id="roster-filter-toolbar"></div>
+            <div class="regimen-filter-pills" id="roster-filter-pills"></div>
+          </div>
+          <!-- Loading -->
+          <div class="loading-overlay" id="roster-loading" style="display:none;">
+            <div class="sprite-mascot mascot-loader" role="img" aria-label="Loading..."></div>
+            <div class="loading-text">Loading Roster...</div>
+          </div>
+          <!-- Table -->
+          <div class="regimen-table-wrapper">
+            <table class="regimen-table" id="roster-table">
+              <thead id="roster-table-head"></thead>
+              <tbody id="roster-table-body"></tbody>
+            </table>
+          </div>
+          <div class="regimen-pagination" id="roster-pagination"></div>
+          <!-- Add/Edit Form Modal -->
+          <div class="module-form-overlay" id="roster-form-overlay" style="display:none;">
+            <div class="module-form-panel">
+              <div class="module-form-header">
+                <h3 id="roster-form-title">Edit Employee</h3>
+                <button class="module-form-close" onclick="rosterCloseForm()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div class="module-form-body" id="roster-form-body"></div>
+              <div class="module-form-footer" id="roster-form-footer"></div>
+            </div>
+          </div>
+          </div><!-- /regimen-panel-roster -->
+          <!-- Onboarding Tab Content -->
+          <div id="regimen-panel-onboarding" style="display:none;">
+            <div style="padding:12px 0;">
+              <!-- Filter Bar for Incomplete Rostering -->
+              <div class="regimen-filter-bar" id="ir-filter-bar">
+                <div class="regimen-filter-toolbar" id="ir-filter-toolbar"></div>
+                <div class="regimen-filter-pills" id="ir-filter-pills"></div>
+              </div>
+              <!-- Table -->
+              <div class="regimen-table-wrapper">
+                <table class="regimen-table" id="onboarding-table">
+                  <thead id="onboarding-table-head"></thead>
+                  <tbody id="onboarding-table-body"></tbody>
+                </table>
+              </div>
+              <div class="regimen-pagination" id="onboarding-pagination"></div>
+            </div>
+          </div>
+          </div>
+          <!-- Permissions Tab moved to Admin Tools -->
+        </div>
+      </div>
+    </div>
+
+  <!-- Save Confirmation Modal -->
+  <!-- Audit Timeline Modal -->
+  <div class="modal-overlay" id="audit-modal" style="display:none;" onclick="closeAuditModal()">
+    <div class="modal-dialog modal-autosize" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Audit Timeline</h3>
+        <button class="modal-close-btn" onclick="closeAuditModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="audit-modal-body">
+        <div class="audit-loading">Loading audit trail...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="save-modal" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Confirm Save</h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to save the changes?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-sm" onclick="closeSaveModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="save-confirm-btn" onclick="confirmSave()">Yes, Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Shrink Details Overlay -->
+  <div class="modal-overlay" id="shrink-fullscreen" style="display:none;" onclick="closeShrinkFullscreen()">
+    <div class="modal-dialog" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>SHRINK DETAILS</h3>
+        <button class="modal-close-btn" onclick="closeShrinkFullscreen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="shrink-fullscreen-body"></div>
+      <div class="modal-footer" id="shrink-pagination"></div>
+    </div>
+  </div>
+
+  <!-- Modal Asset Inventory Overlay -->
+  <div class="modal-overlay" id="asset-fullscreen" style="display:none;" onclick="closeAssetFullscreen()">
+    <div class="modal-dialog modal-autosize" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>ASSET INVENTORY & ENDORSEMENT</h3>
+        <button class="modal-close-btn" onclick="closeAssetFullscreen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="asset-fullscreen-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal Shift Breakdown Overlay -->
+  <div class="modal-overlay" id="shift-fullscreen" style="display:none;" onclick="closeShiftFullscreen()">
+    <div class="modal-dialog modal-autosize" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>SHIFT BREAKDOWN</h3>
+        <button class="modal-close-btn" onclick="closeShiftFullscreen()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="shift-fullscreen-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+  <!-- Core shell scripts (always loaded) -->
+  <script src="js/skeleton.js?v=1"></script>
+  <script src="js/module-loader.js?v=1"></script>
+  <script src="js/data.js?v=109"></script>
+  <script src="js/conflict-dialog.js?v=1"></script>
+  <script src="js/app.js?v=131"></script>
+  <script src="js/sse-client.js?v=1"></script>
+  <script src="js/command-palette.js?v=1"></script>
+  <script src="js/notifications.js?v=107"></script>
+  <script src="js/maintenance.js?v=105"></script>
+  <script src="js/role-change.js?v=103"></script>
+  <script src="js/performance.js?v=102g" defer></script>
+  <script src="js/horizon.js?v=103" defer></script>
+  <!-- Module scripts below are lazy-loaded on demand by module-loader.js -->
+  <!-- input-portal.js, input-compact.js, dashboard-anim.js, dash-omnibar.js,
+       admin.js, billing.js, billing-v2.js, billing-v2-page.js,
+       compass.js, compass-omnibar.js, compass-coaching.js, compass-ai-assistant.js,
+       corrective-actions.js, ca-knowledge-base.js, compass-violations.js, compass-ca-cases.js,
+       sandbox.js, sandbox-omnibar.js, haven.js, helm.js, group-task.js,
+       shift-extension.js, helm-dashboard.js, roster.js, permissions.js,
+       managers-nook.js, tardiness.js -->
+
+  <!-- Maintenance Overlay -->
+  <div id="maintenance-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:var(--bg-primary,#0d1117);">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;padding:40px;">
+      <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#f0883e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:24px;">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <h1 style="color:#e6edf3;font-size:28px;font-weight:700;margin:0 0 12px 0;">Under Maintenance</h1>
+      <p style="color:#8b949e;font-size:16px;max-width:400px;line-height:1.6;margin:0;">Playbook is currently undergoing scheduled maintenance. Please check back shortly.</p>
+    </div>
+  </div>
+<!-- Sandbox Review Side Panel (body-level for reliable position:fixed rendering) -->
+<div class="sandbox-side-panel" id="sandbox-review-panel" onclick="if(event.target===this)sandboxCloseReviewPanel()">
+  <div class="sandbox-side-panel-inner">
+    <div class="sandbox-side-panel-header">
+      <h3 id="sandbox-review-panel-title">Insight Detail</h3>
+      <button class="disputes-modal-close" onclick="sandboxCloseReviewPanel()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="sandbox-side-panel-body" id="sandbox-review-panel-body"></div>
+    <div class="sandbox-side-panel-footer" id="sandbox-review-panel-footer"></div>
+  </div>
+</div>
+<!-- Disputes Side Panel (body-level for reliable position:fixed rendering) -->
+<div class="disputes-side-panel" id="disputes-detail-overlay" onclick="if(event.target===this)disputesCloseDetail()">
+  <div class="disputes-side-panel-inner">
+    <div class="disputes-side-panel-header">
+      <h3 id="disputes-detail-title">Coaching Log</h3>
+      <button class="disputes-modal-close" onclick="disputesCloseDetail()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="disputes-side-panel-body" id="disputes-detail-body"></div>
+    <div class="disputes-side-panel-footer" id="disputes-detail-footer"></div>
+    <!-- Inline Action Panel (replaces modal) -->
+    <div id="disputes-inline-action" class="disputes-inline-action-panel">
+      <div class="disputes-inline-action-header">
+        <h4 id="disputes-inline-action-title">Action</h4>
+        <button class="collapse-btn" onclick="disputesCollapseInlineAction()" title="Collapse">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+      </div>
+      <div id="disputes-inline-action-body" class="disputes-inline-action-body"></div>
+      <div id="disputes-inline-action-footer" class="disputes-inline-action-footer"></div>
+    </div>
+  </div>
+</div>
+    <datalist id="supervisor-datalist"></datalist>
+</body>
+</html>

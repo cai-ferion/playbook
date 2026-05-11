@@ -1,0 +1,172 @@
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// Helper to read public JS files
+function readPublicJS(filename: string): string {
+  return readFileSync(join(__dirname, '..', 'server', 'public', 'js', filename), 'utf-8');
+}
+
+function readPublicCSS(filename: string): string {
+  return readFileSync(join(__dirname, '..', 'server', 'public', 'css', filename), 'utf-8');
+}
+
+function readHTML(): string {
+  return readFileSync(join(__dirname, '..', 'server', 'public', 'index.html'), 'utf-8');
+}
+
+describe('Batch 22 — Anchor Billing Table & Charts', () => {
+  const html = readHTML();
+  const css = readPublicCSS('styles.css');
+
+  it('[V3] billing compliance table has Target Hrs column header', () => {
+    expect(html).toContain('Target Hrs');
+  });
+
+  it('[V3] billing KPI cards exist', () => {
+    expect(html).toContain('id="billing-kpi-cards"');
+    expect(html).toContain('id="kpi-compliance"');
+  });
+
+  it('[V3] billing compliance CSS has KPI grid and traffic-light styles', () => {
+    expect(css).toContain('.billing-kpi-grid');
+    expect(css).toContain('.billing-kpi-card');
+    expect(css).toContain('--bc-green');
+    expect(css).toContain('--bc-red');
+  });
+});
+
+describe('Batch 22 — Compass Group Coaching', () => {
+  const compass = readPublicJS('compass.js');
+
+  it('group coaching creates individual logs with coaching_type General Coaching', () => {
+    expect(compass).toContain("coaching_type: 'General Coaching'");
+    // The group coaching block sets individual records
+    const groupBlock = compass.indexOf("type === 'Group Coaching' && coacheeList.length > 0");
+    expect(groupBlock).toBeGreaterThan(-1);
+  });
+});
+
+describe('Batch 22 — Compass LV4 Trainer Dispute Flow', () => {
+  const compass = readPublicJS('compass.js');
+
+  it('LV4 trainer buttons use popout functions instead of quick actions', () => {
+    expect(compass).toContain('disputesShowLV4ReverseMarkdown()');
+    expect(compass).toContain('disputesShowLV4RetainMarkdown()');
+  });
+
+  it('LV4 retain markdown popout function exists with remarks field', () => {
+    expect(compass).toContain("function disputesShowLV4RetainMarkdown()");
+    expect(compass).toContain('dispute-lv4-retain-remarks');
+    expect(compass).toContain("_disputesOpenInlineAction('Retain Markdown')");
+  });
+
+  it('LV4 retain sets status to Markdown Retained - Trainer', () => {
+    expect(compass).toContain("status: 'Markdown Retained - Trainer'");
+  });
+
+  it('LV4 reverse markdown popout function exists', () => {
+    expect(compass).toContain("function disputesShowLV4ReverseMarkdown()");
+    expect(compass).toContain("_disputesOpenInlineAction('Reverse Markdown')");
+  });
+
+  it('LV4 reverse sets status to Markdown Reversed - Trainer', () => {
+    expect(compass).toContain("status: 'Markdown Reversed - Trainer'");
+  });
+
+  it('LV4 retain supports file attachments', () => {
+    expect(compass).toContain('dispute-lv4-retain-remarks');
+  });
+
+  it('no duplicate disputeRemoveFile function', () => {
+    const matches = compass.match(/function disputeRemoveFile/g);
+    expect(matches).toHaveLength(1);
+  });
+});
+
+describe('Batch 22 — Helm New Request Button', () => {
+  const html = readHTML();
+  const helm = readPublicJS('helm.js');
+
+  it('New Request button exists in the Helm toolbar', () => {
+    expect(html).toContain('helmShowNewRequestForm()');
+    expect(html).toContain('New Request');
+  });
+
+  it('helmShowNewRequestForm function exists', () => {
+    expect(helm).toContain('function helmShowNewRequestForm()');
+  });
+
+  it('request type includes Attendance Backdated Change Tag', () => {
+    expect(helm).toContain('attendance_backdated_change_tag');
+    expect(helm).toContain('Attendance Backdated Change Tag');
+  });
+
+  it('request form has date, agent, and reason fields', () => {
+    expect(helm).toContain('helm-req-date');
+    expect(helm).toContain('helm-req-agent-search');
+    expect(helm).toContain('helm-req-reason');
+  });
+
+  it('request submission creates a task with request metadata', () => {
+    expect(helm).toContain('[Request] Attendance Backdated Change Tag');
+    expect(helm).toContain('helmSubmitNewRequest');
+  });
+
+  it('request submission creates a notification', () => {
+    expect(helm).toContain("title: 'Backdate Tag Change'");
+  });
+});
+
+describe('Batch 22 — Regimen Roster Fix', () => {
+  const roster = readPublicJS('roster.js');
+
+  it('roster.js has no syntax errors (notification calls removed in Batch 51)', () => {
+    // The old broken call had user?.ohr_id as positional args
+    expect(roster).not.toContain('user?.ohr_id, user?.full_name)');
+    // Batch 51: roster notifications removed — verify they are gone
+    expect(roster).not.toContain("type: 'roster_add'");
+    expect(roster).not.toContain("type: 'roster_edit'");
+    expect(roster).not.toContain("type: 'roster_delete'");
+  });
+
+  it('rosterRenderTable function exists and renders visible columns', () => {
+    expect(roster).toContain('function rosterRenderTable()');
+    expect(roster).toContain('ROSTER.getVisibleColumns()');
+  });
+});
+
+describe('Batch 22 — Sandbox Approve Popout', () => {
+  const sandbox = readPublicJS('sandbox.js');
+
+  it('Elevate button is removed from the final review footer', () => {
+    // The old elevate button pattern should not exist
+    expect(sandbox).not.toContain("onclick=\"sandboxReview('elevate')\"");
+  });
+
+  it('Approve button for final review uses sandboxShowFinalApprovePopout', () => {
+    expect(sandbox).toContain('sandboxShowFinalApprovePopout()');
+  });
+
+  it('sandboxShowFinalApprovePopout function exists', () => {
+    expect(sandbox).toContain('function sandboxShowFinalApprovePopout()');
+  });
+
+  it('approve popout presents all 4 elevated status choices', () => {
+    expect(sandbox).toContain('Elevated - Task in Progress');
+    expect(sandbox).toContain('Elevated - POC Rejected');
+    expect(sandbox).toContain('Elevated - Pending POC Discussion');
+    expect(sandbox).toContain('Elevated - No POC');
+  });
+
+  it('sandboxSubmitFinalApprove function exists and updates status', () => {
+    expect(sandbox).toContain('function sandboxSubmitFinalApprove()');
+    expect(sandbox).toContain('sandbox-approve-status');
+  });
+
+  it('old elevate action is removed from sandbox', () => {
+    // The old sandboxReview function with elevate branch should no longer exist
+    expect(sandbox).not.toContain("action === 'elevate'");
+    expect(sandbox).not.toContain("onclick=\"sandboxReview('elevate')\"");
+  });
+});

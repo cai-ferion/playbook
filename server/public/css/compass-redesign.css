@@ -1,0 +1,2219 @@
+/* ============================================================
+   COMPASS COACHING PROFILE — Visual Overhaul
+   "Command Center" aesthetic: depth, gradients, micro-interactions
+   ============================================================ */
+
+/* ---- Compass-specific CSS custom properties ---- */
+:root {
+  --compass-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  --compass-accent: #38BDF8;
+  --compass-accent-dim: rgba(56, 189, 248, 0.12);
+  --compass-accent-glow: rgba(56, 189, 248, 0.25);
+  --compass-surface: #FFFFFF;
+  --compass-surface-alt: #F8FAFC;
+  --compass-border: #E2E8F0;
+  --compass-border-subtle: #F1F5F9;
+  --compass-text: #0F172A;
+  --compass-text-muted: #64748B;
+  --compass-text-subtle: #94A3B8;
+  --compass-success: #10B981;
+  --compass-success-bg: rgba(16, 185, 129, 0.08);
+  --compass-warning: #F59E0B;
+  --compass-warning-bg: rgba(245, 158, 11, 0.08);
+  --compass-danger: #EF4444;
+  --compass-danger-bg: rgba(239, 68, 68, 0.08);
+  --compass-info: #6366F1;
+  --compass-info-bg: rgba(99, 102, 241, 0.08);
+  --compass-radius: 12px;
+  --compass-radius-sm: 8px;
+  --compass-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --compass-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --compass-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --compass-shadow-xl: 0 20px 60px rgba(15, 23, 42, 0.15), 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+/* ---- Entrance animations ---- */
+@keyframes compassFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes compassFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes compassSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes compassPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes compassCountUp {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes compassShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ---- Hero Stats Strip ---- */
+#view-compass-input .compass-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+  animation: compassFadeUp 0.4s ease-out;
+}
+
+.compass-stat-card {
+  position: relative;
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius);
+  padding: 18px 20px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--compass-shadow-sm);
+}
+.compass-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--compass-shadow);
+}
+
+/* Accent stripe at top of stat card */
+.compass-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--compass-radius) var(--compass-radius) 0 0;
+}
+.compass-stat-card.stat-total::before { background: linear-gradient(90deg, #6366F1, #818CF8); }
+.compass-stat-card.stat-pending::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.compass-stat-card.stat-acked::before { background: linear-gradient(90deg, #10B981, #34D399); }
+.compass-stat-card.stat-dispute::before { background: linear-gradient(90deg, #38BDF8, #7DD3FC); }
+
+.compass-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+.compass-stat-card.stat-total .compass-stat-icon { background: var(--compass-info-bg); color: #6366F1; }
+.compass-stat-card.stat-pending .compass-stat-icon { background: var(--compass-warning-bg); color: #F59E0B; }
+.compass-stat-card.stat-acked .compass-stat-icon { background: var(--compass-success-bg); color: #10B981; }
+.compass-stat-card.stat-dispute .compass-stat-icon { background: var(--compass-accent-dim); color: #38BDF8; }
+
+.compass-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--compass-text);
+  line-height: 1;
+  letter-spacing: -0.5px;
+  animation: compassCountUp 0.5s ease-out;
+}
+.compass-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  #view-compass-input .compass-stats-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---- Redesigned Filter Bar ---- */
+#view-compass-input .filter-bar {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--compass-shadow-sm);
+  animation: compassFadeUp 0.45s ease-out;
+  backdrop-filter: blur(8px);
+}
+
+#view-compass-input .filter-bar .btn-primary {
+  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px 16px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+}
+#view-compass-input .filter-bar .btn-primary:hover {
+  background: linear-gradient(135deg, #4F46E5, #4338CA);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+#view-compass-input .filter-bar .btn-primary svg {
+  stroke-width: 2.5;
+}
+
+/* Filter pills inside compass */
+#view-compass-input .filter-pill {
+  border-radius: var(--compass-radius-sm);
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--compass-border);
+  background: var(--compass-surface);
+  transition: all 0.2s ease;
+}
+#view-compass-input .filter-pill:hover {
+  border-color: #6366F1;
+  background: rgba(99, 102, 241, 0.04);
+}
+#view-compass-input .filter-pill.active {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #4F46E5;
+}
+#view-compass-input .filter-pill.has-sort {
+  border-left: 3px solid #6366F1;
+}
+#view-compass-input .filter-bar-clear:hover {
+  background: var(--compass-danger-bg);
+  color: var(--compass-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* ---- Dual Table Panels ---- */
+#view-compass-input .compass-dual-tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+  animation: compassFadeUp 0.5s ease-out;
+}
+@media (max-width: 1100px) {
+  #view-compass-input .compass-dual-tables {
+    grid-template-columns: 1fr;
+  }
+}
+
+#view-compass-input .compass-table-panel {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius);
+  box-shadow: var(--compass-shadow-sm);
+  overflow: hidden;
+  overflow-x: auto;
+  transition: box-shadow 0.2s ease;
+}
+#view-compass-input .compass-table-panel:hover {
+  box-shadow: var(--compass-shadow);
+}
+
+/* Panel header with gradient accent */
+#view-compass-input .compass-table-panel-header {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-bottom: 1px solid var(--compass-border);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#view-compass-input .compass-table-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--compass-text);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Icon before panel title */
+#view-compass-input .compass-table-panel-title::before {
+  content: '';
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #6366F1, #818CF8);
+  flex-shrink: 0;
+}
+#view-compass-input .compass-table-panel-count {
+  font-size: 12px;
+  color: var(--compass-text-muted);
+  background: var(--compass-surface);
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--compass-border);
+  font-weight: 600;
+}
+#view-compass-input .compass-table-panel-count strong {
+  color: #6366F1;
+  font-weight: 800;
+}
+
+/* ---- Tabs (All / Acknowledged / Unacknowledged) ---- */
+#view-compass-input .compass-given-tabs {
+  background: var(--compass-surface-alt);
+  border-bottom: 1px solid var(--compass-border);
+  padding: 0 18px;
+  gap: 0;
+}
+#view-compass-input .compass-given-tab {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+#view-compass-input .compass-given-tab:hover {
+  color: var(--compass-text);
+}
+#view-compass-input .compass-given-tab.active {
+  color: #6366F1;
+  border-bottom-color: #6366F1;
+  font-weight: 700;
+}
+#view-compass-input .compass-tab-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: #F1F5F9;
+  color: var(--compass-text-muted);
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+#view-compass-input .compass-given-tab.active .compass-tab-badge {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366F1;
+}
+
+/* ---- Table Styling ---- */
+#view-compass-input .compass-table-panel .module-table {
+  font-size: 12px;
+  width: 100%;
+}
+/* Person column (last): allow wrapping for expand indicator layout */
+#view-compass-input .compass-table-panel .module-table td:last-child {
+  white-space: normal;
+}
+/* Person column (4th): truncate long names */
+#view-compass-input .compass-table-panel .module-table td:nth-child(4) {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ID column: keep compact */
+#view-compass-input .compass-table-panel .module-table td:first-child {
+  white-space: nowrap;
+}
+#view-compass-input .compass-table-panel .module-table th {
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--compass-text-muted);
+  background: var(--compass-surface-alt);
+  border-bottom: 1px solid var(--compass-border);
+}
+#view-compass-input .compass-table-panel .module-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+  color: var(--compass-text);
+  vertical-align: middle;
+}
+#view-compass-input .compass-table-panel .module-row {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+#view-compass-input .compass-table-panel .module-row:hover {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.03), rgba(99, 102, 241, 0.01));
+}
+
+/* Coaching ID badge */
+#view-compass-input .compass-table-panel .module-id {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 11px;
+  background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
+  color: #4F46E5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+/* ---- Coaching Type Badges ---- */
+#view-compass-input .compass-table-panel .module-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+/* ---- Type Badge Color Overrides (with !important to beat base styles) ---- */
+#view-compass-input .module-type-badge.type-cap-0-coaching { background: linear-gradient(135deg, #DBEAFE, #EFF6FF) !important; color: #1D4ED8 !important; border: 1px solid rgba(29, 78, 216, 0.15) !important; }
+#view-compass-input .module-type-badge.type-follow-up-session { background: linear-gradient(135deg, #FEF3C7, #FFFBEB) !important; color: #B45309 !important; border: 1px solid rgba(180, 83, 9, 0.15) !important; }
+#view-compass-input .module-type-badge.type-group-coaching { background: linear-gradient(135deg, #D1FAE5, #ECFDF5) !important; color: #047857 !important; border: 1px solid rgba(4, 120, 87, 0.15) !important; }
+#view-compass-input .module-type-badge.type-triad-coaching { background: linear-gradient(135deg, #EDE9FE, #F5F3FF) !important; color: #6D28D9 !important; border: 1px solid rgba(109, 40, 217, 0.15) !important; }
+#view-compass-input .module-type-badge.type-qa-feedback { background: linear-gradient(135deg, #FCE7F3, #FDF2F8) !important; color: #BE185D !important; border: 1px solid rgba(190, 24, 93, 0.15) !important; }
+#view-compass-input .module-type-badge.type-ztp-coaching { background: linear-gradient(135deg, #FEE2E2, #FEF2F2) !important; color: #DC2626 !important; border: 1px solid rgba(220, 38, 38, 0.15) !important; }
+#view-compass-input .module-type-badge.type-new-session { background: linear-gradient(135deg, #E0E7FF, #EEF2FF) !important; color: #4338CA !important; border: 1px solid rgba(67, 56, 202, 0.15) !important; }
+#view-compass-input .module-type-badge.type-general-coaching { background: linear-gradient(135deg, #CFFAFE, #ECFEFF) !important; color: #0E7490 !important; border: 1px solid rgba(14, 116, 144, 0.15) !important; }
+#view-compass-input .module-type-badge.type-nte-log { background: linear-gradient(135deg, #E0E7FF, #EEF2FF) !important; color: #4338CA !important; border: 1px solid rgba(67, 56, 202, 0.15) !important; }
+#view-compass-input .module-type-badge.type-incident-report { background: linear-gradient(135deg, #FEF3C7, #FEF9C3) !important; color: #D97706 !important; border: 1px solid rgba(217, 119, 6, 0.15) !important; }
+
+/* ---- Pagination ---- */
+#view-compass-input .compass-table-panel .module-pagination {
+  border-top: 1px solid var(--compass-border);
+  padding: 10px 18px;
+  background: var(--compass-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+#view-compass-input .compass-table-panel .module-pagination .btn-ghost {
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 5px 12px;
+  border: 1px solid var(--compass-border);
+  background: var(--compass-surface);
+  color: var(--compass-text-muted);
+  transition: all 0.2s ease;
+}
+#view-compass-input .compass-table-panel .module-pagination .btn-ghost:hover:not(:disabled) {
+  border-color: #6366F1;
+  color: #6366F1;
+  background: rgba(99, 102, 241, 0.04);
+}
+#view-compass-input .compass-table-panel .module-pagination .btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+#view-compass-input .module-page-info {
+  color: var(--compass-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+#view-compass-input .module-page-num {
+  color: var(--compass-text-subtle);
+  font-size: 11px;
+}
+
+/* ---- Detail/Form Overlay ---- */
+#view-compass-input .module-form-overlay,
+#compass-form-overlay,
+#ca-form-overlay {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+#view-compass-input .module-form-panel,
+#compass-form-overlay .module-form-panel,
+#ca-form-overlay .module-form-panel {
+  background: var(--compass-surface);
+  border-radius: 16px;
+  max-width: 640px;
+  box-shadow: var(--compass-shadow-xl);
+  border: 1px solid var(--compass-border);
+  animation: compassFadeUp 0.25s ease-out;
+}
+
+#view-compass-input .module-form-header,
+#compass-form-overlay .module-form-header,
+#ca-form-overlay .module-form-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--compass-border);
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-radius: 16px 16px 0 0;
+}
+#view-compass-input .module-form-header h3,
+#compass-form-overlay .module-form-header h3,
+#ca-form-overlay .module-form-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  letter-spacing: -0.3px;
+}
+#view-compass-input .module-form-close,
+#compass-form-overlay .module-form-close,
+#ca-form-overlay .module-form-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--compass-text-muted);
+  transition: all 0.15s ease;
+}
+#view-compass-input .module-form-close:hover,
+#compass-form-overlay .module-form-close:hover,
+#ca-form-overlay .module-form-close:hover {
+  background: #FEE2E2;
+  color: #EF4444;
+}
+
+#view-compass-input .module-form-body,
+#compass-form-overlay .module-form-body,
+#ca-form-overlay .module-form-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+#view-compass-input .module-form-footer,
+#compass-form-overlay .module-form-footer,
+#ca-form-overlay .module-form-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--compass-border);
+  background: var(--compass-surface-alt);
+  border-radius: 0 0 16px 16px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ---- Detail View Sections ---- */
+#compass-form-overlay .detail-section-title,
+#ca-form-overlay .detail-section-title {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  color: #6366F1 !important;
+  border-bottom: 2px solid rgba(99, 102, 241, 0.2) !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 14px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#compass-form-overlay .detail-row,
+#ca-form-overlay .detail-row {
+  display: flex;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--compass-border-subtle);
+  transition: background 0.15s ease;
+}
+#compass-form-overlay .detail-row,
+#ca-form-overlay .detail-row:hover {
+  background: rgba(99, 102, 241, 0.02);
+  border-radius: 6px;
+  margin: 0 -6px;
+  padding: 8px 6px;
+}
+#compass-form-overlay .detail-row,
+#ca-form-overlay .detail-row:last-child {
+  border-bottom: none;
+}
+#compass-form-overlay .detail-label,
+#ca-form-overlay .detail-label {
+  min-width: 160px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--compass-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+#compass-form-overlay .detail-value,
+#ca-form-overlay .detail-value {
+  font-size: 13px;
+  color: var(--compass-text);
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* ---- Form Fields (New/Edit) ---- */
+#compass-form-overlay .form-section,
+#ca-form-overlay .form-section {
+  margin-bottom: 24px;
+}
+#compass-form-overlay .form-section-title,
+#ca-form-overlay .form-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6366F1;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid rgba(99, 102, 241, 0.15);
+}
+#compass-form-overlay .form-label,
+#ca-form-overlay .form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  margin-bottom: 5px;
+  display: block;
+}
+#compass-form-overlay .form-input,
+#ca-form-overlay .form-input,
+#compass-form-overlay .form-select,
+#ca-form-overlay .form-select,
+#compass-form-overlay .form-textarea,
+#ca-form-overlay .form-textarea {
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface);
+  color: var(--compass-text);
+  font-size: 13px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+#compass-form-overlay .form-input:focus,
+#ca-form-overlay .form-input:focus,
+#compass-form-overlay .form-select:focus,
+#ca-form-overlay .form-select:focus,
+#compass-form-overlay .form-textarea:focus,
+#ca-form-overlay .form-textarea:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  outline: none;
+}
+
+/* ---- Footer Buttons ---- */
+#compass-form-overlay .btn-primary,
+#ca-form-overlay .btn-primary {
+  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  font-weight: 600;
+  padding: 8px 20px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  transition: all 0.2s ease;
+}
+#compass-form-overlay .btn-primary:hover,
+#ca-form-overlay .btn-primary:hover {
+  background: linear-gradient(135deg, #4F46E5, #4338CA);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+#compass-form-overlay .btn-outline,
+#ca-form-overlay .btn-outline {
+  border-radius: var(--compass-radius-sm);
+  border: 1px solid var(--compass-border);
+  font-weight: 600;
+  padding: 8px 20px;
+  color: var(--compass-text-muted);
+  transition: all 0.2s ease;
+}
+#compass-form-overlay .btn-outline:hover,
+#ca-form-overlay .btn-outline:hover {
+  border-color: var(--compass-text-muted);
+  color: var(--compass-text);
+  background: var(--compass-surface-alt);
+}
+#compass-form-overlay .btn-success,
+#ca-form-overlay .btn-success {
+  background: linear-gradient(135deg, #10B981, #059669);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  font-weight: 600;
+  padding: 8px 20px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+  color: #fff;
+}
+#compass-form-overlay .btn-success:hover,
+#ca-form-overlay .btn-success:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+#compass-form-overlay .btn-danger,
+#ca-form-overlay .btn-danger {
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  font-weight: 600;
+  padding: 8px 20px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+  transition: all 0.2s ease;
+  color: #fff;
+}
+#compass-form-overlay .btn-danger:hover,
+#ca-form-overlay .btn-danger:hover {
+  background: linear-gradient(135deg, #DC2626, #B91C1C);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ---- RTE (Rich Text Editor) inside overlay ---- */
+#compass-form-overlay .rte-container,
+#ca-form-overlay .rte-container {
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  overflow: hidden;
+}
+#compass-form-overlay .rte-toolbar,
+#ca-form-overlay .rte-toolbar {
+  background: var(--compass-surface-alt);
+  border-bottom: 1px solid var(--compass-border);
+  padding: 5px 8px;
+}
+#compass-form-overlay .rte-btn,
+#ca-form-overlay .rte-btn {
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+}
+#compass-form-overlay .rte-btn:hover,
+#ca-form-overlay .rte-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+#compass-form-overlay .rte-btn.rte-active,
+#ca-form-overlay .rte-btn.rte-active {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366F1;
+}
+#compass-form-overlay .rte-editor,
+#ca-form-overlay .rte-editor {
+  min-height: 100px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--compass-surface);
+}
+
+/* ---- CAP Radio Group Styling ---- */
+#compass-form-overlay .cap-radio-group,
+#ca-form-overlay .cap-radio-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#compass-form-overlay .cap-radio-group label,
+#ca-form-overlay .cap-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  transition: all 0.2s ease;
+  background: var(--compass-surface);
+}
+#compass-form-overlay .cap-radio-group label:hover,
+#ca-form-overlay .cap-radio-group label:hover {
+  border-color: #6366F1;
+  background: rgba(99, 102, 241, 0.04);
+}
+#compass-form-overlay .cap-radio-group input[type="radio"],
+#ca-form-overlay .cap-radio-group input[type="radio"] {
+  accent-color: #6366F1;
+}
+
+/* ---- Loading State ---- */
+#view-compass-input .loading-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+}
+#view-compass-input .loading-overlay .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--compass-border);
+  border-top-color: #6366F1;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+#view-compass-input .loading-overlay .loading-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--compass-text-muted);
+}
+
+/* ---- Empty State ---- */
+#view-compass-input .compass-table-panel .module-table td[colspan] {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--compass-text-subtle);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* ---- Searchable Select inside Compass ---- */
+#compass-followup-dropdown {
+  border-radius: var(--compass-radius-sm) !important;
+  box-shadow: var(--compass-shadow-lg) !important;
+  border: 1px solid var(--compass-border) !important;
+}
+#compass-followup-dropdown .searchable-select-option {
+  padding: 10px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+  transition: background 0.15s ease;
+}
+#compass-followup-dropdown .searchable-select-option:hover {
+  background: rgba(99, 102, 241, 0.06);
+  color: #4F46E5;
+}
+
+/* ---- Coachee dropdown inside Compass ---- */
+#compass-form-overlay .searchable-select-dropdown,
+#ca-form-overlay .searchable-select-dropdown {
+  border-radius: var(--compass-radius-sm);
+  box-shadow: var(--compass-shadow-lg);
+  border: 1px solid var(--compass-border);
+}
+#compass-form-overlay .searchable-select-option,
+#ca-form-overlay .searchable-select-option {
+  padding: 8px 12px;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+#compass-form-overlay .searchable-select-option:hover,
+#ca-form-overlay .searchable-select-option:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: #4F46E5;
+}
+
+/* ---- Multi-select inside Compass ---- */
+#compass-form-overlay .multi-select-trigger,
+#ca-form-overlay .multi-select-trigger {
+  border-radius: var(--compass-radius-sm);
+  border: 1px solid var(--compass-border);
+  transition: all 0.2s ease;
+}
+#compass-form-overlay .multi-select-trigger:hover,
+#ca-form-overlay .multi-select-trigger:hover {
+  border-color: #6366F1;
+}
+#compass-form-overlay .multi-select-dropdown,
+#ca-form-overlay .multi-select-dropdown {
+  border-radius: var(--compass-radius-sm);
+  box-shadow: var(--compass-shadow-lg);
+  border: 1px solid var(--compass-border);
+}
+#compass-form-overlay .multi-select-option:hover,
+#ca-form-overlay .multi-select-option:hover {
+  background: rgba(99, 102, 241, 0.06);
+}
+#compass-form-overlay .multi-select-option input[type="checkbox"],
+#ca-form-overlay .multi-select-option input[type="checkbox"] {
+  accent-color: #6366F1;
+}
+
+/* ---- Acknowledgement Stars ---- */
+#compass-form-overlay .star-rating-display,
+#ca-form-overlay .star-rating-display {
+  display: inline-flex;
+  gap: 2px;
+}
+
+/* ---- NTE Previous Warnings Cards ---- */
+#compass-form-overlay .nte-warning-card,
+#ca-form-overlay .nte-warning-card {
+  padding: 10px 14px;
+  background: var(--compass-surface-alt);
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  margin-bottom: 8px;
+  transition: all 0.15s ease;
+}
+#compass-form-overlay .nte-warning-card:hover,
+#ca-form-overlay .nte-warning-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: var(--compass-shadow-sm);
+}
+
+/* ---- Subpage Tabs (Coaching Profile / Disputes Area) ---- */
+#view-compass-input .module-subpage-tabs {
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--compass-border);
+}
+#view-compass-input .subpage-tab {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 10px 24px;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+#view-compass-input .subpage-tab:hover {
+  color: var(--compass-text);
+  background: rgba(99, 102, 241, 0.04);
+}
+#view-compass-input .subpage-tab.active {
+  color: #6366F1;
+  border-bottom-color: #6366F1;
+}
+
+/* ---- Filter Dropdown Panel Overrides ---- */
+#view-compass-input .filter-dropdown {
+  border-radius: var(--compass-radius);
+  box-shadow: var(--compass-shadow-lg);
+  border: 1px solid var(--compass-border);
+}
+#view-compass-input .filter-dropdown-header {
+  border-bottom: 1px solid var(--compass-border-subtle);
+}
+#view-compass-input .filter-dropdown-title {
+  color: #6366F1;
+  font-weight: 700;
+}
+#view-compass-input .filter-sort-btn.active-sort {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366F1;
+}
+#view-compass-input .filter-dropdown-item:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+#view-compass-input .filter-dropdown-item input[type="checkbox"] {
+  accent-color: #6366F1;
+}
+#view-compass-input .filter-action-link {
+  color: #6366F1;
+}
+
+
+/* ===== Disputes Area — Full UI/UX Overhaul ===== */
+
+/* -- Search/Filter Bar -- */
+.disputes-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 0 2px;
+}
+.disputes-filter-bar .search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+}
+.disputes-filter-bar .search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--compass-text-subtle);
+  pointer-events: none;
+}
+.disputes-filter-bar input[type="text"] {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  font-size: 13px;
+  border: 1px solid var(--compass-border);
+  border-radius: 8px;
+  background: var(--compass-surface);
+  color: var(--compass-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.disputes-filter-bar input[type="text"]:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.disputes-filter-count {
+  font-size: 12px;
+  color: var(--compass-text-muted);
+  white-space: nowrap;
+}
+
+/* -- Column Level Accent Colors -- */
+.kanban-column[data-level="1"] { border-top: 3px solid #6366F1; }
+.kanban-column[data-level="2"] { border-top: 3px solid #F59E0B; }
+.kanban-column[data-level="3"] { border-top: 3px solid #F97316; }
+.kanban-column[data-level="4"] { border-top: 3px solid #EF4444; }
+.kanban-column[data-level="5"] { border-top: 3px solid #BE185D; }
+.kanban-column[data-level="6"] { border-top: 3px solid #7C3AED; }
+
+.kanban-column[data-level="1"] .kanban-column-count { background: rgba(99,102,241,0.1); color: #6366F1; }
+.kanban-column[data-level="2"] .kanban-column-count { background: rgba(245,158,11,0.1); color: #D97706; }
+.kanban-column[data-level="3"] .kanban-column-count { background: rgba(249,115,22,0.1); color: #EA580C; }
+.kanban-column[data-level="4"] .kanban-column-count { background: rgba(239,68,68,0.1); color: #DC2626; }
+.kanban-column[data-level="5"] .kanban-column-count { background: rgba(190,24,93,0.1); color: #BE185D; }
+.kanban-column[data-level="6"] .kanban-column-count { background: rgba(124,58,237,0.1); color: #7C3AED; }
+
+/* Column header level badge */
+.kanban-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.kanban-column[data-level="1"] .kanban-level-badge { background: rgba(99,102,241,0.12); color: #6366F1; }
+.kanban-column[data-level="2"] .kanban-level-badge { background: rgba(245,158,11,0.12); color: #D97706; }
+.kanban-column[data-level="3"] .kanban-level-badge { background: rgba(249,115,22,0.12); color: #EA580C; }
+.kanban-column[data-level="4"] .kanban-level-badge { background: rgba(239,68,68,0.12); color: #DC2626; }
+.kanban-column[data-level="5"] .kanban-level-badge { background: rgba(190,24,93,0.12); color: #BE185D; }
+.kanban-column[data-level="6"] .kanban-level-badge { background: rgba(124,58,237,0.12); color: #7C3AED; }
+
+/* -- Enriched Card Styles -- */
+.kanban-card-styled {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, transform 0.12s ease, border-color 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+.kanban-card-styled:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+  border-color: #6366F1;
+}
+.kanban-card-styled:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+/* Card aging indicator strip (left edge) */
+.kanban-card-styled::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+}
+.kanban-card-styled.aging-ok::before { background: #22C55E; }
+.kanban-card-styled.aging-warn::before { background: #F59E0B; }
+.kanban-card-styled.aging-critical::before { background: #EF4444; }
+
+/* Card header row */
+.kanban-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.kanban-card-header .kanban-card-id {
+  font-weight: 600;
+  font-size: 11px;
+  color: #6366F1;
+  letter-spacing: 0.3px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* Aging badge */
+.kanban-card-aging {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.kanban-card-aging.aging-ok { background: rgba(34,197,94,0.1); color: #16A34A; }
+.kanban-card-aging.aging-warn { background: rgba(245,158,11,0.1); color: #D97706; }
+.kanban-card-aging.aging-critical { background: rgba(239,68,68,0.1); color: #DC2626; }
+
+/* Coachee name row */
+.kanban-card-coachee-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--compass-text);
+  line-height: 1.3;
+}
+
+/* Session goal tag */
+.kanban-card-goal-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(99,102,241,0.08);
+  color: #6366F1;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Card footer (coach + date) */
+.kanban-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--compass-text-subtle);
+  padding-top: 4px;
+  border-top: 1px solid var(--compass-border-subtle);
+  margin-top: 2px;
+}
+.kanban-card-footer .coach-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kanban-card-footer .card-date {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Escalation progress dots */
+.kanban-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+}
+.kanban-card-progress .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--compass-border);
+  transition: background 0.2s ease;
+}
+.kanban-card-progress .dot.active { background: #6366F1; }
+.kanban-card-progress .dot.passed { background: var(--compass-text-subtle); }
+
+/* -- Empty State -- */
+.kanban-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 10px;
+  flex: 1;
+}
+.kanban-empty-state svg {
+  opacity: 0.3;
+  color: var(--compass-text-subtle);
+}
+.kanban-empty-state p {
+  font-size: 12px;
+  color: var(--compass-text-subtle);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* -- Action Modal Overhaul -- */
+.disputes-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: disputes-fade-in 0.2s ease;
+}
+.disputes-modal-overlay.active { display: flex; }
+
+@keyframes disputes-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.disputes-modal {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: 14px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: var(--compass-shadow-xl);
+  animation: disputes-modal-slide 0.25s ease;
+}
+
+@keyframes disputes-modal-slide {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.disputes-modal-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.disputes-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--compass-text);
+  margin: 0;
+}
+.disputes-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--compass-text-muted);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s ease;
+}
+.disputes-modal-close:hover {
+  background: var(--compass-surface-alt);
+}
+
+.disputes-modal-body {
+  padding: 18px 20px;
+}
+
+.disputes-modal-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--compass-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Remarks textarea in modal */
+.disputes-remarks-field {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--compass-border);
+  border-radius: 8px;
+  background: var(--compass-surface-alt);
+  color: var(--compass-text);
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.disputes-remarks-field:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.disputes-remarks-field::placeholder {
+  color: var(--compass-text-subtle);
+}
+
+/* Confirmation modal icon */
+.disputes-confirm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+}
+.disputes-confirm-icon.success { background: var(--compass-success-bg); color: var(--compass-success); }
+.disputes-confirm-icon.warning { background: var(--compass-warning-bg); color: var(--compass-warning); }
+.disputes-confirm-icon.danger { background: var(--compass-danger-bg); color: var(--compass-danger); }
+
+/* -- Detail Overlay Polish -- */
+/* ---- Disputes Layout Wrapper (board + side panel) ---- */
+.disputes-layout-wrapper {
+  display: flex;
+  gap: 0;
+  position: relative;
+  min-height: 0;
+}
+.disputes-layout-wrapper .kanban-board {
+  flex: 1;
+  min-width: 0;
+  transition: flex 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ---- Side Panel (drawer) ---- */
+.disputes-side-panel {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1000;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+.disputes-side-panel.active {
+  display: flex;
+}
+.disputes-side-panel-inner {
+  width: 1400px;
+  max-width: 92vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--compass-surface, #fff);
+  border-left: 1px solid var(--compass-border, #e2e8f0);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.12);
+}
+
+/* Side Panel Header */
+.disputes-side-panel-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--compass-border, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: var(--compass-surface, #fff);
+}
+.disputes-side-panel-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--compass-text, #1e293b);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.3;
+}
+
+/* Side Panel Body */
+.disputes-side-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+
+/* Side Panel Footer */
+.disputes-side-panel-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-top: 1px solid var(--compass-border, #e2e8f0);
+  background: var(--compass-surface, #fff);
+}
+.disputes-side-panel-footer:empty {
+  display: none;
+}
+
+/* Reuse cdp-* classes inside side panel for content sections */
+.disputes-side-panel-body .cdp-section { margin-bottom: 8px; }
+.disputes-side-panel-body .cdp-header { margin-bottom: 10px; }
+
+/* Responsive: full-width on narrow screens */
+@media (max-width: 1024px) {
+  .disputes-side-panel {
+    width: 100%;
+  }
+  .disputes-side-panel-inner {
+    width: 100%;
+  }
+}
+
+/* Detail sections */
+.disputes-section {
+  margin-bottom: 20px;
+}
+.disputes-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--compass-text-muted);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--compass-border-subtle);
+}
+.disputes-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.disputes-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.disputes-detail-item.full-width {
+  grid-column: 1 / -1;
+}
+.disputes-detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.disputes-detail-value {
+  font-size: 13px;
+  color: var(--compass-text);
+  line-height: 1.5;
+}
+
+/* Detail action buttons (now in side panel footer) */
+.disputes-side-panel-footer .btn {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+/* -- Disputes Inline Action Panel -- */
+.disputes-inline-action-panel {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: var(--surface-alt, var(--surface));
+}
+.disputes-inline-action-panel.open {
+  display: block;
+}
+.disputes-inline-action-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.disputes-inline-action-header h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+}
+.disputes-inline-action-header .collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--fg-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.disputes-inline-action-header .collapse-btn:hover {
+  background: var(--hover);
+  color: var(--fg);
+}
+.disputes-inline-action-body {
+  padding: 12px 16px;
+}
+.disputes-inline-action-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* -- Dispute Trail Polish -- */
+.dispute-trail {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+.dispute-trail-entry {
+  position: relative;
+  padding-left: 24px;
+  padding-bottom: 16px;
+}
+.dispute-trail-entry:last-child {
+  padding-bottom: 4px;
+}
+.dispute-trail-entry::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 0;
+  width: 2px;
+  background: var(--compass-border);
+}
+.dispute-trail-entry:last-child::before {
+  display: none;
+}
+.dispute-trail-dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #6366F1;
+  border: 2px solid var(--compass-surface);
+  box-shadow: 0 0 0 2px #6366F1;
+}
+.dispute-trail-entry:first-child .dispute-trail-dot {
+  background: #6366F1;
+  box-shadow: 0 0 0 2px #6366F1, 0 0 8px rgba(99,102,241,0.3);
+}
+.dispute-trail-meta {
+  font-size: 11px;
+  color: var(--compass-text-muted);
+  margin-bottom: 3px;
+}
+.dispute-trail-meta strong {
+  color: var(--compass-text);
+}
+.dispute-trail-message {
+  font-size: 13px;
+  color: var(--compass-text);
+  line-height: 1.5;
+  background: var(--compass-surface-alt);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+/* -- FLIP Animation Enhancements -- */
+.kanban-card-styled.flip-entering {
+  animation: disputes-card-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes disputes-card-enter {
+  from { opacity: 0; transform: scale(0.9) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.kanban-card-styled.flip-moving {
+  animation: disputes-card-glow 0.6s ease;
+}
+@keyframes disputes-card-glow {
+  0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+  50% { box-shadow: 0 0 16px 4px rgba(99,102,241,0.2); }
+  100% { box-shadow: none; }
+}
+
+/* ===== QA Toggle for Disputes Area ===== */
+.disputes-qa-toggle {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+.disputes-toggle-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted, #64748b);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.disputes-toggle-btn:hover {
+  background: var(--bg-hover, #f1f5f9);
+}
+.disputes-toggle-btn.active {
+  background: var(--accent, #3B82F6);
+  color: #fff;
+}
+
+/* ===== Export CSV Button & Dropdown ===== */
+.compass-export-wrapper {
+  position: relative;
+  margin-left: auto;
+}
+.compass-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #1f2937);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.compass-export-btn:hover {
+  background: var(--bg-secondary, #f3f4f6);
+  border-color: var(--accent-color, #3b82f6);
+}
+.compass-export-btn.has-dropdown {
+  padding-right: 8px;
+}
+.compass-export-btn .dropdown-arrow {
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.compass-export-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+.compass-export-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 13px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary, #1f2937);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.compass-export-dropdown-item:hover {
+  background: var(--bg-secondary, #f3f4f6);
+}
+.compass-export-dropdown-item:first-child {
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+/* ============================================================
+   INLINE ADD PANEL — replaces modal for coaching log creation
+   Slides down below filter bar, pushes table content down.
+   ============================================================ */
+
+@keyframes compassInlineSlideDown {
+  from { opacity: 0; max-height: 0; transform: translateY(-8px); }
+  to   { opacity: 1; max-height: 2000px; transform: translateY(0); }
+}
+@keyframes compassInlineSlideUp {
+  from { opacity: 1; max-height: 2000px; }
+  to   { opacity: 0; max-height: 0; }
+}
+
+.compass-inline-add {
+  background: var(--compass-surface);
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius);
+  box-shadow: var(--compass-shadow);
+  margin: 12px 0;
+  overflow: hidden;
+  animation: compassInlineSlideDown 0.3s ease-out forwards;
+}
+.compass-inline-add.collapsing {
+  animation: compassInlineSlideUp 0.25s ease-in forwards;
+}
+
+/* Header bar removed — collapse button now sits inline with type chips */
+.compass-inline-add-collapse {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface);
+  color: var(--compass-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.compass-inline-add-collapse:hover {
+  border-color: var(--compass-text-muted);
+  color: var(--compass-text);
+  background: var(--compass-surface-alt);
+}
+
+/* ---- Type Chips ---- */
+.compass-inline-add-types {
+  padding: 12px 20px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  align-items: center;
+}
+.compass-type-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--compass-border);
+  border-radius: 20px;
+  background: var(--compass-surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.compass-type-chip:hover {
+  border-color: var(--compass-accent);
+  background: var(--compass-accent-dim);
+  transform: translateY(-1px);
+  box-shadow: var(--compass-shadow-sm);
+}
+.compass-type-chip.selected {
+  border-color: #6366F1;
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+.compass-type-chip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.compass-type-chip-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--compass-text);
+  line-height: 1;
+}
+
+/* ---- Inline Form Body ---- */
+.compass-inline-add-form {
+  padding: 20px;
+  border-top: 1px solid var(--compass-border-subtle);
+  animation: compassFadeUp 0.2s ease-out;
+}
+
+/* Reuse existing form styles inside inline panel */
+.compass-inline-add .form-section { margin-bottom: 20px; }
+.compass-inline-add .form-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6366F1;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid rgba(99, 102, 241, 0.15);
+}
+.compass-inline-add .form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--compass-text-muted);
+  margin-bottom: 5px;
+  display: block;
+}
+.compass-inline-add .form-input,
+.compass-inline-add .form-select,
+.compass-inline-add .form-textarea {
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  background: var(--compass-surface);
+  color: var(--compass-text);
+  font-size: 13px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.compass-inline-add .form-input:focus,
+.compass-inline-add .form-select:focus,
+.compass-inline-add .form-textarea:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  outline: none;
+}
+
+/* RTE inside inline panel */
+.compass-inline-add .rte-container {
+  border: 1px solid var(--compass-border);
+  border-radius: var(--compass-radius-sm);
+  overflow: hidden;
+}
+.compass-inline-add .rte-toolbar {
+  background: var(--compass-surface-alt);
+  border-bottom: 1px solid var(--compass-border);
+  padding: 5px 8px;
+}
+.compass-inline-add .rte-btn {
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+}
+.compass-inline-add .rte-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+.compass-inline-add .rte-btn.rte-active {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366F1;
+}
+.compass-inline-add .rte-editor {
+  min-height: 100px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  background: var(--compass-surface);
+}
+
+/* Searchable select inside inline panel */
+.compass-inline-add .searchable-select-dropdown {
+  border-radius: var(--compass-radius-sm);
+  box-shadow: var(--compass-shadow-lg);
+  border: 1px solid var(--compass-border);
+  z-index: 100;
+}
+.compass-inline-add .searchable-select-option {
+  padding: 8px 12px;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+.compass-inline-add .searchable-select-option:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: #4F46E5;
+}
+
+/* Multi-select inside inline panel */
+.compass-inline-add .multi-select-trigger {
+  border-radius: var(--compass-radius-sm);
+  border: 1px solid var(--compass-border);
+  transition: all 0.2s ease;
+}
+.compass-inline-add .multi-select-trigger:hover {
+  border-color: #6366F1;
+}
+.compass-inline-add .multi-select-dropdown {
+  border-radius: var(--compass-radius-sm);
+  box-shadow: var(--compass-shadow-lg);
+  border: 1px solid var(--compass-border);
+}
+
+/* Buttons inside inline panel */
+.compass-inline-add .btn-primary {
+  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  border: none;
+  border-radius: var(--compass-radius-sm);
+  font-weight: 600;
+  padding: 8px 20px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  transition: all 0.2s ease;
+  color: #fff;
+}
+.compass-inline-add .btn-primary:hover {
+  background: linear-gradient(135deg, #4F46E5, #4338CA);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+.compass-inline-add .btn-outline {
+  border-radius: var(--compass-radius-sm);
+  border: 1px solid var(--compass-border);
+  font-weight: 600;
+  padding: 8px 20px;
+  color: var(--compass-text-muted);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+.compass-inline-add .btn-outline:hover {
+  border-color: var(--compass-text-muted);
+  color: var(--compass-text);
+  background: var(--compass-surface-alt);
+}
+
+/* Footer */
+.compass-inline-add-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--compass-border);
+  background: var(--compass-surface-alt);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Success flash after submit */
+.compass-inline-add-footer .submit-success-msg {
+  color: var(--compass-success);
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: compassFadeIn 0.3s ease;
+}
+
+/* Responsive: stack chips on narrow screens */
+@media (max-width: 768px) {
+  .compass-inline-add-types {
+    gap: 5px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .compass-type-chip {
+    padding: 5px 10px;
+  }
+}
+
+/* ============================================================
+   COACHING LOG INLINE DETAIL EXPANSION (Accordion)
+   ============================================================ */
+
+/* Row hover & expand indicator */
+#compass-table-given .module-row,
+#compass-table-received .module-row {
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+#compass-table-given .module-row:hover,
+#compass-table-received .module-row:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+.module-row.compass-row-expanded {
+  background: rgba(99, 102, 241, 0.06) !important;
+  box-shadow: inset 3px 0 0 #6366F1;
+}
+
+/* Expand indicator chevron */
+.compass-expand-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--compass-border, #e2e8f0);
+  color: var(--compass-text-muted, #94a3b8);
+  font-size: 10px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.module-row:hover .compass-expand-indicator {
+  background: rgba(99, 102, 241, 0.15);
+  color: #6366F1;
+}
+.module-row.compass-row-expanded .compass-expand-indicator {
+  transform: rotate(180deg);
+  background: #6366F1;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INLINE DETAIL PANEL — Complete Overhaul
+   Card-based sections, 2-column grid metadata, polished hierarchy
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Container row */
+.compass-detail-panel-row td {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-style: normal !important;
+}
+
+/* Main panel shell */
+.compass-detail-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--compass-surface, #fff);
+  border-left: 3px solid var(--compass-accent, #6366F1);
+  border-bottom: 1px solid var(--compass-border, #e2e8f0);
+  margin: 0;
+  padding: 0 20px;
+}
+.compass-detail-panel.open {
+  max-height: 5000px;
+  opacity: 1;
+  padding: 0 20px 16px;
+  overflow-y: visible;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CDP DESIGN SYSTEM v2 — Left-aligned, compact, professional
+   Shared across Coaching Profile + Corrective Actions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---- Header Bar ---- */
+.cdp-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 0 10px;
+  border-bottom: 2px solid var(--compass-accent, #38BDF8);
+  margin-bottom: 12px;
+}
+.cdp-header-icon {
+  width: 32px; height: 32px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.cdp-header-info {
+  flex: 1; min-width: 0;
+  text-align: left;
+}
+.cdp-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--compass-text, #0F172A);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.cdp-header-sub {
+  font-size: 11px;
+  color: var(--compass-text-muted, #64748B);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.cdp-header-actions {
+  display: flex; gap: 5px; align-items: center; flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ---- Section Blocks ---- */
+.cdp-section {
+  background: var(--compass-surface-alt, #F8FAFC);
+  border: 1px solid var(--compass-border-subtle, #F1F5F9);
+  border-left: 3px solid var(--compass-accent, #38BDF8);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.cdp-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--compass-accent, #38BDF8);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--compass-border-subtle, #F1F5F9);
+  text-align: left;
+}
+.cdp-section-title::before {
+  display: none;
+}
+
+/* ---- 2-Column Grid ---- */
+.cdp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+}
+.cdp-grid-full {
+  grid-column: 1 / -1;
+}
+
+/* ---- Field Rows ---- */
+.cdp-field {
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  text-align: left;
+}
+.cdp-field:last-child { border-bottom: none; }
+.cdp-field-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--compass-text-subtle, #94A3B8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1px;
+  text-align: left;
+}
+.cdp-field-value {
+  font-size: 12.5px;
+  color: var(--compass-text, #0F172A);
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
+  text-align: left;
+}
+.cdp-field-value.multiline {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--compass-text, #334155);
+  padding: 4px 0;
+}
+
+/* ---- Full-width content block (Coaching Details, RCA, etc.) ---- */
+.cdp-content-block {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  text-align: left;
+}
+.cdp-content-block .cdp-field-label { margin-bottom: 3px; }
+.cdp-content-block .cdp-field-value.multiline {
+  background: var(--compass-surface, #fff);
+  border: 1px solid var(--compass-border-subtle, #F1F5F9);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* ---- Status Badges ---- */
+.cdp-ack-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.cdp-ack-badge.acknowledged {
+  background: var(--compass-success-bg, rgba(16,185,129,0.08));
+  color: var(--compass-success, #10B981);
+}
+.cdp-ack-badge.needs-ack {
+  background: var(--compass-warning-bg, rgba(245,158,11,0.08));
+  color: var(--compass-warning, #F59E0B);
+}
+
+/* ---- CAP Level Badge ---- */
+.cdp-cap-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ---- Markdown Status Badge ---- */
+.cdp-md-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ---- Ack Form (inline) ---- */
+.cdp-ack-form {
+  background: var(--compass-surface, #fff);
+  border: 1px solid var(--compass-accent, #38BDF8);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+.cdp-ack-form label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--compass-text-muted, #64748B);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: block;
+  margin-bottom: 3px;
+  text-align: left;
+}
+.cdp-ack-form textarea {
+  width: 100%;
+  min-height: 48px;
+  resize: vertical;
+  font-size: 12.5px;
+  border: 1px solid var(--compass-border, #E2E8F0);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: var(--compass-surface-alt, #F8FAFC);
+  transition: border-color 0.15s;
+}
+.cdp-ack-form textarea:focus {
+  outline: none;
+  border-color: var(--compass-accent, #38BDF8);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.12);
+}
+
+/* ---- Footer Actions ---- */
+.compass-detail-panel-footer {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--compass-border-subtle, #F1F5F9);
+  background: var(--compass-surface, #fff);
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-bottom: 4px;
+}
+
+/* ---- Staggered entrance animation ---- */
+@keyframes cdp-section-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.compass-detail-panel.open .cdp-section,
+.compass-detail-panel.open .cdp-header {
+  animation: cdp-section-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.compass-detail-panel.open .cdp-header { animation-delay: 20ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(1) { animation-delay: 50ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(2) { animation-delay: 80ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(3) { animation-delay: 110ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(4) { animation-delay: 140ms; }
+.compass-detail-panel.open .cdp-section:nth-of-type(n+5) { animation-delay: 170ms; }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .compass-detail-panel.open { padding: 0 10px 12px; }
+  .cdp-grid { grid-template-columns: 1fr; }
+  .cdp-header { flex-wrap: wrap; }
+  .cdp-header-actions { width: 100%; justify-content: flex-start; margin-top: 4px; }
+}
