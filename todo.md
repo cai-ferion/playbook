@@ -4153,3 +4153,10 @@
 - [x] Email body: replace "Kindly requesting the following role change/s for WE {date}:" with "Kindly requesting the following change/s:"
 - [x] Email body: remove "Best regards, Playbook Reporting" sign-off
 - [x] UI: add spacing between "Successfully Generated" box and Copy buttons
+
+## Role Change Improvements — Batch (Current)
+- [x] Revert Jenifer Rosales's role changes from DB and restore attendance records
+- [x] Add is_reverted and reverted_at columns to io_role_changes table
+- [x] Build POST /role-change/revert endpoint with attendance restoration
+- [x] Add Revert button to Role Change History UI with inline confirmation
+- [x] Fix staff availability filter: exclude by PG+Role instead of PG only

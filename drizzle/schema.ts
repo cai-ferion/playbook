@@ -836,6 +836,10 @@ export const ioRoleChanges = pgTable("io_role_changes", {
   email_generated_at: varchar("email_generated_at", { length: 64 }),
   attendance_updated: boolean("attendance_updated").default(false),
   created_at: varchar("created_at", { length: 64 }),
+  is_reverted: boolean("is_reverted").default(false),
+  reverted_at: varchar("reverted_at", { length: 64 }),
+  reverted_by: varchar("reverted_by", { length: 255 }),
+  reverted_by_ohr: varchar("reverted_by_ohr", { length: 20 }),
 });
 export type IoRoleChange = typeof ioRoleChanges.$inferSelect;
 export type InsertIoRoleChange = typeof ioRoleChanges.$inferInsert;

@@ -86,8 +86,13 @@ async function rcLoadInlineStaff(targetPG, targetRole) {
     const data = await resp.json();
     let staff = data.staff || [];
 
-    // Filter: only show staff NOT in the target PG (candidates to move INTO it)
-    staff = staff.filter(s => s.planning_group !== targetPG);
+    // Filter: exclude staff who already match BOTH the target PG AND target role
+    // e.g. for S-ABF × QA: exclude S-ABF staff who are already QAs, but keep S-ABF Agents/SMEs
+    if (targetRole && targetRole !== '*') {
+      staff = staff.filter(s => !(s.planning_group === targetPG && s.actual_role === targetRole));
+    } else {
+      staff = staff.filter(s => s.planning_group !== targetPG);
+    }
 
     // Also filter out anyone already in the queue for this week
     const queuedOhrs = _rcQueue.map(q => q.ohr_id);
@@ -482,30 +487,51 @@ async function rcLoadHistoryForBilling() {
   const body = document.getElementById('rc-history-body');
   const countBadge = document.getElementById('rc-history-count');
   if (!body) return;
-
   const select = document.getElementById('billing-week-select');
   const weekEnding = select ? select.value : '';
   if (!weekEnding) {
-    body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">Select a week to view history</td></tr>';
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;">Select a week to view history</td></tr>';
     return;
   }
-
   try {
     const resp = await fetch(`${IO_API_BASE}/role-change/history?week_ending=${weekEnding}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     const history = data.history || [];
-
-    if (countBadge) countBadge.textContent = history.length > 0 ? `${history.length}` : '—';
-
+    // Count only active (non-reverted) records for the badge
+    const activeCount = history.filter(h => !h.is_reverted).length;
+    if (countBadge) countBadge.textContent = activeCount > 0 ? `${activeCount}` : '—';
     if (history.length === 0) {
-      body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;">No role changes for this week</td></tr>';
+      body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;">No role changes for this week</td></tr>';
       return;
     }
+    // Check if current user can revert
+    const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+    const ADMIN_OHRS = window.ADMIN_OHRS || ['740045023', '740044909'];
+    const canRevert = cu && (ADMIN_OHRS.includes(cu.ohr_id) || cu.actual_role === 'Manager' || cu.actual_role === 'Team Lead');
 
     body.innerHTML = history.map(h => {
       const genAt = h.email_generated_at ? new Date(h.email_generated_at).toLocaleString() : '—';
-      return `<tr>
+      const isReverted = h.is_reverted;
+      const rowStyle = isReverted ? 'opacity:0.55;' : '';
+      const statusHtml = isReverted
+        ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#ef4444;background:rgba(239,68,68,0.08);padding:2px 8px;border-radius:4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reverted</span>`
+        : `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#22c55e;background:rgba(34,197,94,0.08);padding:2px 8px;border-radius:4px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Active</span>`;
+      let actionsHtml = '';
+      if (canRevert && !isReverted) {
+        actionsHtml = `<button class="rc-btn rc-btn-outline" style="font-size:11px;padding:3px 10px;color:#ef4444;border-color:rgba(239,68,68,0.3);" onclick="rcRevertRoleChange(${h.id}, '${(h.employee_name || '').replace(/'/g, "\\'")}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Revert</button>`;
+      } else if (isReverted) {
+        const revertedAt = h.reverted_at ? new Date(h.reverted_at).toLocaleString() : '';
+        const revertedBy = h.reverted_by || '';
+        actionsHtml = `<span style="font-size:10px;color:#9ca3af;" title="Reverted by ${revertedBy} at ${revertedAt}">by ${revertedBy.split(',')[0] || '—'}</span>`;
+      }
+      return `<tr style="${rowStyle}">
         <td style="font-weight:500;">${h.employee_name}</td>
         <td style="font-family:monospace;font-size:12px;">${h.ohr_id}</td>
         <td>${h.original_role}</td>
@@ -515,11 +541,65 @@ async function rcLoadHistoryForBilling() {
         <td>${h.date_from} → ${h.date_to}</td>
         <td>${h.created_by || '—'}</td>
         <td style="font-size:11px;">${genAt}</td>
+        <td>${statusHtml}</td>
+        <td style="text-align:center;">${actionsHtml}</td>
       </tr>`;
     }).join('');
   } catch (e) {
     console.error('Failed to load role change history:', e);
-    body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#ef4444;">Failed to load history</td></tr>';
+    body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#ef4444;">Failed to load history</td></tr>';
+  }
+}
+
+
+// ── Revert a role change with inline confirmation ──
+async function rcRevertRoleChange(id, employeeName) {
+  // Show inline confirmation toast
+  const toastEl = document.createElement('div');
+  toastEl.className = 'toast-confirm-overlay';
+  toastEl.innerHTML = `
+    <div class="toast-confirm-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span style="font-weight:600;font-size:14px;">Revert Role Change</span>
+      </div>
+      <p style="font-size:13px;color:var(--fg-muted, #5E6C84);margin-bottom:16px;">
+        This will restore <strong>${employeeName}</strong>'s original role and planning group in attendance records. This action cannot be undone.
+      </p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="rc-btn rc-btn-outline" onclick="this.closest('.toast-confirm-overlay').remove()">Cancel</button>
+        <button class="rc-btn" style="background:#ef4444;color:#fff;font-weight:600;" onclick="rcDoRevert(${id}, this)">Revert</button>
+      </div>
+    </div>`;
+  document.body.appendChild(toastEl);
+}
+
+async function rcDoRevert(id, btnEl) {
+  const overlay = btnEl.closest('.toast-confirm-overlay');
+  btnEl.disabled = true;
+  btnEl.textContent = 'Reverting...';
+  try {
+    const cu = (typeof currentUser !== 'undefined') ? currentUser : null;
+    const resp = await fetch(`${IO_API_BASE}/role-change/revert`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-actor-ohr': cu ? cu.ohr_id : '',
+        'x-actor-name': cu ? cu.full_name : '',
+      },
+      body: JSON.stringify({ id }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Revert failed');
+    if (overlay) overlay.remove();
+    showToast(`Reverted: ${data.employee_name} (${data.attendance_rows_reverted} attendance rows restored)`, 'success');
+    rcLoadHistoryForBilling();
+    // Refresh compliance data
+    if (typeof loadBillingCompliance === 'function') loadBillingCompliance();
+  } catch (e) {
+    console.error('Revert failed:', e);
+    if (overlay) overlay.remove();
+    showToast(`Revert failed: ${e.message}`, 'error');
   }
 }
 

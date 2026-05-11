@@ -222,12 +222,12 @@ router.get("/available-staff", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "week_ending, date_from, date_to are required" });
     }
 
-    // Get all active TLs and Trainers
+    // Return all active staff so the frontend can filter by PG+Role
+    // Return all active staff (not just TL/Trainer) so the frontend can filter by PG+Role
     const staffResult: any = await db.execute(
       sql`SELECT ohr_id, full_name, actual_role, planning_group, srt_id, supervisor_name, shift_time
           FROM io_employees
-          WHERE actual_role IN ('Team Lead', 'Trainer')
-            AND employement_status = 'Active'
+          WHERE employement_status = 'Active'
           ORDER BY actual_role, full_name`
     );
     const staffRows = Array.isArray(staffResult) ? staffResult : [];
@@ -553,6 +553,70 @@ router.get("/suggest", async (req: Request, res: Response) => {
     res.json({ suggestions: PG_ROLE_SUGGESTIONS });
   } catch (err: any) {
     console.error("[IO API] role-change/suggest error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// POST /role-change/revert
+// Soft-reverts a role change: restores attendance, marks as reverted
+// ============================================================
+router.post("/revert", async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "DB unavailable" });
+
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: "id is required" });
+
+    const actorOhr = String(req.headers["x-actor-ohr"] || "").trim();
+    const actorName = String(req.headers["x-actor-name"] || "").trim();
+
+    // Fetch the role change record
+    const [record]: any[] = await db
+      .select()
+      .from(ioRoleChanges)
+      .where(eq(ioRoleChanges.id, Number(id)))
+      .limit(1);
+
+    if (!record) return res.status(404).json({ error: "Role change not found" });
+    if (record.is_reverted) return res.status(400).json({ error: "Already reverted" });
+
+    // Restore attendance records: set role and planning_group back to original
+    const attResult: any = await db.execute(
+      sql`UPDATE io_attendance
+          SET role = ${record.original_role},
+              planning_group = ${record.original_pg}
+          WHERE ohr_id = ${record.ohr_id}
+            AND log_date >= ${record.date_from}
+            AND log_date <= ${record.date_to}
+            AND role = ${record.new_role}
+            AND planning_group = ${record.new_pg}`
+    );
+    const rowsReverted = Array.isArray(attResult) ? attResult.length : 0;
+
+    // Soft-delete: mark as reverted with audit trail
+    const now = new Date().toISOString();
+    await db
+      .update(ioRoleChanges)
+      .set({
+        is_reverted: true,
+        reverted_at: now,
+        reverted_by: actorName,
+        reverted_by_ohr: actorOhr,
+      })
+      .where(eq(ioRoleChanges.id, Number(id)));
+
+    emitChange(req, "role-change", "record_updated", { id: record.id, action: "reverted" });
+
+    res.json({
+      success: true,
+      id: record.id,
+      employee_name: record.employee_name,
+      attendance_rows_reverted: rowsReverted,
+    });
+  } catch (err: any) {
+    console.error("[IO API] role-change/revert error:", err);
     res.status(500).json({ error: err.message });
   }
 });
