@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE io_employees SET employement_status = 'Nesting' WHERE ohr_id IN ('740051437', '740032190', '740032659', '740037450', '740027103', '740031291', '740037488', '740053852', '740053897', '740053748', '740054135', '740053835', '740041868', '740052326', '740041876');",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute UPDATE io_employees SET employement_status = 'Nesting' WHERE ohr_id IN ('740051437', '740032190', '740032659', '740037450', '740027103', '740031291', '740037488', '740053852', '740053897', '740053748', '740054135', '740053835', '740041868', '740052326', '740041876');",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1572
-}
