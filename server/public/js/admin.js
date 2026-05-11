@@ -12,7 +12,7 @@
 // ===== Helpers =====
 
 function isAdmin() {
-  return window.currentUserOhr === ADMIN_OHR;
+  return (window.ADMIN_OHRS || []).includes(window.currentUserOhr) || window.currentUserOhr === ADMIN_OHR;
 }
 
 function escapeHtml(str) {
@@ -224,6 +224,7 @@ function onAdminViewLoad() {
   if (isAdmin()) {
     loadBackupTables();
     adminOhrLoadList();
+    adminOhrSearchInit();
     if (typeof initPermissions === 'function') initPermissions();
   }
 }
@@ -583,6 +584,70 @@ function adminOhrHideAddForm() {
   if (form) form.style.display = 'none';
   document.getElementById('admin-ohr-add-input').value = '';
   document.getElementById('admin-ohr-add-name').value = '';
+  const searchInput = document.getElementById('admin-ohr-search-input');
+  if (searchInput) searchInput.value = '';
+  const resultsDiv = document.getElementById('admin-ohr-search-results');
+  if (resultsDiv) { resultsDiv.style.display = 'none'; resultsDiv.innerHTML = ''; }
+}
+
+// ── Name-based employee search for admin add ──
+let _adminSearchCache = null;
+let _adminSearchDebounce = null;
+
+async function adminOhrSearchInit() {
+  const searchInput = document.getElementById('admin-ohr-search-input');
+  if (!searchInput) return;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(_adminSearchDebounce);
+    _adminSearchDebounce = setTimeout(() => adminOhrDoSearch(searchInput.value), 250);
+  });
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const resultsDiv = document.getElementById('admin-ohr-search-results');
+    if (resultsDiv && !resultsDiv.contains(e.target) && e.target.id !== 'admin-ohr-search-input') {
+      resultsDiv.style.display = 'none';
+    }
+  });
+}
+
+async function adminOhrDoSearch(query) {
+  const resultsDiv = document.getElementById('admin-ohr-search-results');
+  if (!resultsDiv) return;
+  const q = (query || '').trim().toLowerCase();
+  if (q.length < 2) { resultsDiv.style.display = 'none'; return; }
+  // Load employee cache if not loaded
+  if (!_adminSearchCache) {
+    try {
+      const resp = await fetch('/api/io/employees/slim');
+      if (resp.ok) _adminSearchCache = await resp.json();
+    } catch (e) { /* ignore */ }
+  }
+  if (!_adminSearchCache) { resultsDiv.style.display = 'none'; return; }
+  // Filter by name match
+  const matches = _adminSearchCache.filter(emp =>
+    emp.full_name && emp.full_name.toLowerCase().includes(q)
+  ).slice(0, 10);
+  if (matches.length === 0) {
+    resultsDiv.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--fg-muted);">No results found</div>';
+    resultsDiv.style.display = '';
+    return;
+  }
+  resultsDiv.innerHTML = matches.map(emp =>
+    '<div class="admin-search-item" style="padding:6px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);" ' +
+    'onmouseover="this.style.background=\'var(--bg-alt)\'" onmouseout="this.style.background=\'\'" ' +
+    'onclick="adminOhrSelectEmployee(\'' + emp.ohr_id + '\', \'' + escapeHtml(emp.full_name).replace(/'/g, "\\'") + '\')">' +
+    '<div style="font-weight:600;">' + escapeHtml(emp.full_name) + '</div>' +
+    '<div style="font-size:10px;color:var(--fg-muted);">' + emp.ohr_id + ' &middot; ' + escapeHtml(emp.actual_role || '') + ' &middot; ' + escapeHtml(emp.planning_group || '') + '</div>' +
+    '</div>'
+  ).join('');
+  resultsDiv.style.display = '';
+}
+
+function adminOhrSelectEmployee(ohrId, fullName) {
+  document.getElementById('admin-ohr-add-input').value = ohrId;
+  document.getElementById('admin-ohr-add-name').value = fullName;
+  document.getElementById('admin-ohr-search-input').value = fullName;
+  document.getElementById('admin-ohr-search-results').style.display = 'none';
 }
 
 async function adminOhrAdd() {

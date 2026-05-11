@@ -47,16 +47,28 @@ router.post("/admin-ohrs", async (req: Request, res: Response) => {
     // Check duplicate
     const [existing] = await db.select().from(ioAdminOhrs).where(eq(ioAdminOhrs.ohr_id, ohr_id.trim()));
     if (existing) return res.status(409).json({ error: "OHR is already an admin" });
+    const trimmedOhr = ohr_id.trim();
     await db.insert(ioAdminOhrs).values({
-      ohr_id: ohr_id.trim(),
+      ohr_id: trimmedOhr,
       full_name: full_name || null,
       added_by: req.headers["x-actor-name"] as string || actorOhr,
       added_by_ohr: actorOhr,
       added_at: new Date().toISOString(),
     });
+    // Seed all permissions = true for the new admin (upsert to override any existing false values)
+    for (const key of ALL_PERMISSION_KEYS) {
+      const [existingPerm] = await db.select().from(ioPermissions)
+        .where(and(eq(ioPermissions.ohr_id, trimmedOhr), eq(ioPermissions.permission_key, key)));
+      if (existingPerm) {
+        await db.update(ioPermissions).set({ granted: true, updated_by: actorOhr })
+          .where(and(eq(ioPermissions.ohr_id, trimmedOhr), eq(ioPermissions.permission_key, key)));
+      } else {
+        await db.insert(ioPermissions).values({ ohr_id: trimmedOhr, permission_key: key, granted: true, updated_by: actorOhr });
+      }
+    }
     // Refresh in-memory cache
     await refreshAdminOhrs();
-    emitChange(req, "admin-ohrs", "record_created", { ohr_id: ohr_id.trim() });
+    emitChange(req, "admin-ohrs", "record_created", { ohr_id: trimmedOhr });
     res.json({ success: true, admin_ohrs: ADMIN_OHRS });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -106,10 +118,14 @@ router.get("/my-permissions", async (req: Request, res: Response) => {
       dbMap[row.permission_key] = row.granted;
     }
 
-    // Merge: DB overrides defaults
+    // Merge: for admin OHRs, defaults (all true) take precedence to prevent stale DB rows from blocking access
+    // For non-admins, DB overrides defaults as before
+    const isAdmin = ADMIN_OHRS.includes(ohrId);
     const merged: Record<string, boolean> = { ...defaults };
-    for (const key of ALL_PERMISSION_KEYS) {
-      if (key in dbMap) merged[key] = dbMap[key];
+    if (!isAdmin) {
+      for (const key of ALL_PERMISSION_KEYS) {
+        if (key in dbMap) merged[key] = dbMap[key];
+      }
     }
 
     res.json({ ohr_id: ohrId, permissions: merged });

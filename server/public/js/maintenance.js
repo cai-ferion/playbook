@@ -109,7 +109,8 @@ async function enforceMaintenanceMode() {
   if (!isPaused) return;
 
   // If current user is NOT admin, show overlay
-  if (!currentUser || currentUser.ohr_id !== ADMIN_OHR) {
+  const _isAdminUser = currentUser && ((window.ADMIN_OHRS || []).includes(currentUser.ohr_id) || currentUser.ohr_id === ADMIN_OHR);
+  if (!_isAdminUser) {
     const overlay = document.getElementById('maintenance-overlay');
     if (overlay) {
       overlay.style.display = 'block';
@@ -128,7 +129,8 @@ function startMaintenancePoll() {
     const isPaused = await getMaintenanceState();
     const overlay = document.getElementById('maintenance-overlay');
 
-    if (isPaused && currentUser && currentUser.ohr_id !== ADMIN_OHR) {
+    const _isAdmPoll = currentUser && ((window.ADMIN_OHRS || []).includes(currentUser.ohr_id) || currentUser.ohr_id === ADMIN_OHR);
+    if (isPaused && !_isAdmPoll) {
       if (overlay) {
         overlay.style.display = 'block';
         document.body.style.overflow = 'hidden';

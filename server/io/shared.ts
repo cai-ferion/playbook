@@ -104,9 +104,9 @@ const ALL_PERMISSION_KEYS = [
 export function getPermissionDefaults(role: string, ohrId: string): Record<string, boolean> {
   // Owner gets everything
   if (ohrId === '740045023') return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
+  // Admin OHRs get full access (same as owner)
+  if (isAdminOhr(ohrId)) return Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, true]));
   const b: Record<string, boolean> = Object.fromEntries(ALL_PERMISSION_KEYS.map(k => [k, false]));
-  // Admin OHRs get nav.admin
-  if (isAdminOhr(ohrId)) b['nav.admin'] = true;
   if (role === 'Agent') { b['nav.compass'] = true; b['nav.sandbox'] = true; b['nav.helm'] = true; b['nav.haven'] = true; return b; }
   b['nav.anchor'] = true;
   b['anchor.input_portal'] = true;

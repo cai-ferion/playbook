@@ -4161,3 +4161,5 @@
 - [x] Add Revert button to Role Change History UI with inline confirmation
 - [x] Fix staff availability filter: exclude by PG+Role instead of PG only
 - [x] Fix bulk-tag-filtered endpoint: replace per-record loop with batch UPDATE + single audit entry to prevent timeout
+- [x] Fix admin OHR assignment not persisting/taking effect (DB + cache refresh)
+- [x] Add name-based search for adding admins instead of manual OHR input

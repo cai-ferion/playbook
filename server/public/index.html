@@ -998,14 +998,16 @@
                     <p class="admin-tool-desc">Manage who has admin privileges. Owner (740045023) is protected.</p>
                     <div id="admin-ohr-add-form" style="display:none;margin:8px 0;padding:10px;background:var(--bg-alt);border-radius:8px;">
                       <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">
-                        <div style="flex:1;min-width:120px;">
+                        <div style="flex:2;min-width:200px;position:relative;">
+                          <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">Search by Name</label>
+                          <input type="text" id="admin-ohr-search-input" class="form-input form-input-sm" placeholder="Type a name to search..." style="width:100%;" autocomplete="off" />
+                          <div id="admin-ohr-search-results" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.15);margin-top:2px;"></div>
+                        </div>
+                        <div style="min-width:100px;">
                           <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">OHR ID</label>
-                          <input type="text" id="admin-ohr-add-input" class="form-input form-input-sm" placeholder="OHR" style="width:100%;" />
+                          <input type="text" id="admin-ohr-add-input" class="form-input form-input-sm" placeholder="Auto-filled" style="width:100%;background:var(--bg-alt);" readonly />
                         </div>
-                        <div style="flex:1;min-width:120px;">
-                          <label style="font-size:10px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:3px;">Name (optional)</label>
-                          <input type="text" id="admin-ohr-add-name" class="form-input form-input-sm" placeholder="Full name" style="width:100%;" />
-                        </div>
+                        <input type="hidden" id="admin-ohr-add-name" />
                         <button class="btn btn-primary btn-sm" onclick="adminOhrAdd()" style="font-size:11px;">Add</button>
                         <button class="btn btn-ghost btn-sm" onclick="adminOhrHideAddForm()" style="font-size:11px;">Cancel</button>
                       </div>
