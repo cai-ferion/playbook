@@ -30,20 +30,21 @@ const SANDBOX_MOD = {
 
   STATUSES: [
     'Pending - Initial Review',
-    'Pending - Final Review',
-    'Elevated - Task in Progress',
-    'Elevated - POC Rejected',
-    'Elevated - Pending POC Discussion',
-    'Elevated - No POC',
-    'Implemented',
     'Rejected - Initial Review [Duplicate]',
     'Rejected - Initial Review [Insufficient Context/Details]',
     'Rejected - Initial Review [Out of Scope]',
     'Rejected - Initial Review [Pitched Already]',
+    'Pending - Final Review',
     'Rejected - Final Review [Duplicate]',
     'Rejected - Final Review [Insufficient Context/Details]',
     'Rejected - Final Review [Out of Scope]',
-    'Rejected - Final Review [Pitched Already]'
+    'Rejected - Final Review [Pitched Already]',
+    'Approved - Final Review',
+    'Elevated - Task in Progress',
+    'Elevated - POC Rejected',
+    'Elevated - Pending POC Discussion',
+    'Elevated - No POC',
+    'Implemented'
   ],
 
   STATUS_COLORS: {
@@ -86,12 +87,33 @@ const sandboxOmniState = {
   pendingOp: null
 };
 
+const SANDBOX_INSIGHT_STATUSES = [
+  'Pending - Initial Review',
+  'Rejected - Initial Review [Duplicate]',
+  'Rejected - Initial Review [Insufficient Context/Details]',
+  'Rejected - Initial Review [Out of Scope]',
+  'Rejected - Initial Review [Pitched Already]',
+  'Pending - Final Review',
+  'Rejected - Final Review [Duplicate]',
+  'Rejected - Final Review [Insufficient Context/Details]',
+  'Rejected - Final Review [Out of Scope]',
+  'Rejected - Final Review [Pitched Already]',
+  'Approved - Final Review',
+  'Elevated - Task in Progress',
+  'Elevated - POC Rejected',
+  'Elevated - Pending POC Discussion',
+  'Elevated - No POC',
+  'Implemented'
+];
+const SANDBOX_PROPOSAL_TYPES = ['Tooling', 'Process/Workflow Related', 'IS Impacting'];
+const SANDBOX_CATEGORIES = ['Efficiency', 'Effectiveness'];
 const SANDBOX_OMNI_FIELDS = [
   { key: 'insight_id', label: 'Insight ID', type: 'text' },
   { key: 'title', label: 'Title', type: 'text' },
-  { key: 'category', label: 'Category', type: 'multi', optionsFn: () => [...new Set(SANDBOX_MOD.insights.map(i => i.category || i.insight_category).filter(Boolean))].sort() },
-  { key: 'proposal_type', label: 'Proposal Type', type: 'multi', optionsFn: () => [...new Set(SANDBOX_MOD.insights.map(i => i.proposal_type).filter(Boolean))].sort() },
-  { key: 'status', label: 'Status', type: 'multi', optionsFn: () => [...new Set(SANDBOX_MOD.insights.map(i => i.status).filter(Boolean))].sort() },
+  { key: 'planning_group', label: 'Planning Group', type: 'multi', optionsFn: () => [...new Set(SANDBOX_MOD.insights.map(i => i.planning_group).filter(Boolean))].sort() },
+  { key: 'category', label: 'Insight Category', type: 'multi', optionsFn: () => SANDBOX_CATEGORIES },
+  { key: 'proposal_type', label: 'Proposal Type', type: 'multi', optionsFn: () => SANDBOX_PROPOSAL_TYPES },
+  { key: 'status', label: 'Status', type: 'multi', optionsFn: () => SANDBOX_INSIGHT_STATUSES },
   { key: 'created_at', label: 'Created Date', type: 'date' }
 ];
 
@@ -99,7 +121,9 @@ const SANDBOX_DEFAULT_SORT = { field: 'created_at', dir: 'desc' };
 const SANDBOX_SORT_FIELDS = [
   { key: 'insight_id', label: 'Insight ID' },
   { key: 'title', label: 'Title' },
-  { key: 'category', label: 'Category' },
+  { key: 'planning_group', label: 'Planning Group' },
+  { key: 'category', label: 'Insight Category' },
+  { key: 'proposal_type', label: 'Proposal Type' },
   { key: 'status', label: 'Status' },
   { key: 'created_at', label: 'Created Date' }
 ];
@@ -475,10 +499,10 @@ function sandboxRenderTable() {
     currentUser.actual_role === 'Operational SME' ||
     currentUser.actual_role === 'Content Reviewer'
   );
-  const colSpan = showSubmitter ? 8 : 7; // +1 for expand arrow column
+  const colSpan = showSubmitter ? 9 : 8; // +1 for expand arrow column
   thead.innerHTML = `<tr>
     <th style="width:30px;"></th>
-    <th>Insight ID</th>${showSubmitter ? '<th>Submitter</th>' : ''}<th>Title</th><th>Category</th><th>Proposal Type</th><th>Status</th><th>Created Date</th>
+    <th>Insight ID</th>${showSubmitter ? '<th>Submitter</th>' : ''}<th>Title</th><th>Planning Group</th><th>Category</th><th>Proposal Type</th><th>Status</th><th>Created Date</th>
   </tr>`;
 
   const start = (SANDBOX_MOD.page - 1) * SANDBOX_MOD.pageSize;
@@ -503,6 +527,7 @@ function sandboxRenderTable() {
       <td><span class="sandbox-id-pill">${escapeHtml(ins.insight_id || '')}</span></td>
       ${showSubmitter ? `<td>${escapeHtml(ins.submitter || ins.ohr_id || '\u2014')}</td>` : ''}
       <td class="sandbox-title-cell">${escapeHtml(ins.title || ins.insight_title || '\u2014')}</td>
+      <td>${escapeHtml(ins.planning_group || '\u2014')}</td>
       <td>${escapeHtml(cat)}</td>
       <td>${escapeHtml(ins.proposal_type || '\u2014')}</td>
       <td><span class="sandbox-status-badge" style="background:${statusColor}20;color:${statusColor};border:1px solid ${statusColor}40;">${escapeHtml(shortStatus)}</span></td>
@@ -596,13 +621,13 @@ function sandboxBuildDetailPanel(ins) {
   // Category
   html += `<div class="sandbox-detail-field">
     <div class="sandbox-detail-field-label">Category</div>
-    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-category', cat, ['Efficiency', 'Effectiveness']) : escapeHtml(cat)}</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-category', cat, SANDBOX_CATEGORIES) : escapeHtml(cat)}</div>
   </div>`;
 
   // Proposal Type
   html += `<div class="sandbox-detail-field">
     <div class="sandbox-detail-field-label">Proposal Type</div>
-    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-proposal-type', ins.proposal_type || '', ['IS Impacting', 'Process/Workflow Related', 'Tooling']) : escapeHtml(ins.proposal_type || '\u2014')}</div>
+    <div class="sandbox-detail-field-value">${isEditing ? _sel('sbox-edit-proposal-type', ins.proposal_type || '', SANDBOX_PROPOSAL_TYPES) : escapeHtml(ins.proposal_type || '\u2014')}</div>
   </div>`;
 
   // Impact
