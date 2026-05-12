@@ -155,6 +155,8 @@ function toCSV(rows: Record<string, any>[]): string {
 
 // ============================================================
 // POST /tardiness/upload — CSV upload with auto-calculation
+// Batch-optimised: single duplicate-check query + batch INSERT
+// to avoid per-record round-trips that timeout on deployed TiDB.
 // ============================================================
 router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Request, res: Response) => {
   try {
@@ -180,18 +182,28 @@ router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Re
 
     // BU Filter: only process records for employees in our roster (COMMUNITY_OPS / INTEGRITY_OPS)
     // Employees not in io_employees are outside our business unit scope and are rejected.
-    const ALLOWED_BUS = new Set(Array.from(empMap.keys())); // Only OHRs present in io_employees
+    const ALLOWED_BUS = new Set(Array.from(empMap.keys()));
 
     let inserted = 0;
     let skipped = 0;
     let skippedNoBU = 0;
     let enriched = 0;
 
+    // Phase 1: Build candidate rows in-memory (no DB calls)
+    type CandidateRow = {
+      ohr: string; dateNorm: string; rosterLogin: string; rosterLogout: string;
+      actualLogin: string; actualLogout: string; tardMins: number;
+      empName: string; supervisor: string; pg: string; role: string;
+      shiftTime: string; shiftType: string; weekEnding: string;
+      validationStatus: string; autoRemarks: string | null;
+      autoValidatedBy: string | null; autoValidatedByOhr: string | null;
+      autoValidatedAt: string | null;
+    };
+    const candidates: CandidateRow[] = [];
+
     for (const r of records) {
       const ohr = String(r.ohr || r.OHR || r.ohr_id || "").trim();
       if (!ohr) { skipped++; continue; }
-
-      // Reject OHRs not in our roster (outside COMMUNITY_OPS / INTEGRITY_OPS scope)
       if (!ALLOWED_BUS.has(ohr)) { skippedNoBU++; skipped++; continue; }
 
       const rawDate = String(r.date || r.Date || "").trim();
@@ -203,45 +215,68 @@ router.post("/tardiness/upload", validate(tardinessUploadSchema), async (req: Re
       const actualLogin = String(r.actual_login || r["Actual Login"] || "").trim();
       const actualLogout = String(r.actual_logout || r["Actual Logout"] || "").trim();
 
-      // Auto-calculate tardiness
       const tardMins = calcTardinessMinutes(rosterLogin, actualLogin);
-
-      // Only create validation items for late logins (tardiness > 0)
       if (tardMins <= 0) { skipped++; continue; }
 
-      // Duplicate detection: same OHR + date
-      const existing: any = await db.execute(
-        sql`SELECT id FROM io_tardiness WHERE ohr_id = ${ohr} AND date = ${dateNorm} LIMIT 1`
-      );
-      const existingRows = Array.isArray(existing) ? existing : [];
-      if (existingRows.length > 0) { skipped++; continue; }
-
-      // Enrich from io_employees
       const emp = empMap.get(ohr);
-
       const empName = String(r.name || r.Name || emp?.full_name || "Unknown").trim();
-      const supervisor = emp?.supervisor_name || "";
-      const pg = emp?.planning_group || "";
-      const role = emp?.actual_role || "";
-      const shiftTime = emp?.shift_time || "";
       if (emp) enriched++;
 
-      const shiftType = deriveShiftType(rosterLogin);
-      const weekEnding = computeWeekEnding(dateNorm);
-
-      // Auto-invalidate records within 5-minute grace period
       const autoInvalid = tardMins < 5;
-      const validationStatus = autoInvalid ? 'Invalid' : 'Pending';
-      const autoRemarks = autoInvalid ? 'Auto-invalidated: within 5-minute grace period' : null;
-      const autoValidatedBy = autoInvalid ? 'System' : null;
-      const autoValidatedByOhr = autoInvalid ? 'SYSTEM' : null;
-      const autoValidatedAt = autoInvalid ? now : null;
+      candidates.push({
+        ohr, dateNorm, rosterLogin, rosterLogout, actualLogin, actualLogout, tardMins,
+        empName,
+        supervisor: emp?.supervisor_name || "",
+        pg: emp?.planning_group || "",
+        role: emp?.actual_role || "",
+        shiftTime: emp?.shift_time || "",
+        shiftType: deriveShiftType(rosterLogin),
+        weekEnding: computeWeekEnding(dateNorm),
+        validationStatus: autoInvalid ? 'Invalid' : 'Pending',
+        autoRemarks: autoInvalid ? 'Auto-invalidated: within 5-minute grace period' : null,
+        autoValidatedBy: autoInvalid ? 'System' : null,
+        autoValidatedByOhr: autoInvalid ? 'SYSTEM' : null,
+        autoValidatedAt: autoInvalid ? now : null,
+      });
+    }
 
-      await db.execute(
-        sql`INSERT INTO io_tardiness (ohr_id, employee_name, supervisor_name, planning_group, actual_role, shift_time, date, roster_login, roster_logout, actual_login, actual_logout, tardiness_minutes, shift_type, week_ending, validation_status, remarks, validated_by, validated_by_ohr, validated_at, upload_batch, created_at)
-            VALUES (${ohr}, ${empName}, ${supervisor}, ${pg}, ${role}, ${shiftTime}, ${dateNorm}, ${rosterLogin}, ${rosterLogout}, ${actualLogin}, ${actualLogout}, ${tardMins}, ${shiftType}, ${weekEnding}, ${validationStatus}, ${autoRemarks}, ${autoValidatedBy}, ${autoValidatedByOhr}, ${autoValidatedAt}, ${batchId}, ${now})`
+    if (candidates.length === 0) {
+      emitChange(req, "tardiness", "bulk_update", { inserted: 0, skipped });
+      return res.json({ success: true, inserted: 0, skipped, skipped_not_in_roster: skippedNoBU, enriched, total: records.length, batch_id: batchId });
+    }
+
+    // Phase 2: Batch duplicate detection — single query for all candidate ohr+date pairs
+    const pairConditions = candidates.map(c =>
+      `(ohr_id = '${c.ohr.replace(/'/g, "''")}' AND date = '${c.dateNorm.replace(/'/g, "''")}')`
+    );
+    // Query in chunks of 200 pairs to avoid SQL length limits
+    const existingPairs = new Set<string>();
+    const CHUNK = 200;
+    for (let i = 0; i < pairConditions.length; i += CHUNK) {
+      const chunk = pairConditions.slice(i, i + CHUNK);
+      const existingRows: any = await db.execute(
+        sql.raw(`SELECT ohr_id, date FROM io_tardiness WHERE ${chunk.join(" OR ")}`)
       );
-      inserted++;
+      const rows = Array.isArray(existingRows) ? existingRows : [];
+      for (const row of rows) existingPairs.add(`${row.ohr_id}|${row.date}`);
+    }
+
+    // Phase 3: Filter out duplicates, then batch INSERT remaining rows
+    const toInsert = candidates.filter(c => !existingPairs.has(`${c.ohr}|${c.dateNorm}`));
+    skipped += candidates.length - toInsert.length; // duplicates
+
+    // Batch INSERT in chunks of 100 rows (TiDB multi-row INSERT)
+    const INS_CHUNK = 100;
+    const esc = (v: string | null) => v === null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`;
+    for (let i = 0; i < toInsert.length; i += INS_CHUNK) {
+      const chunk = toInsert.slice(i, i + INS_CHUNK);
+      const valueRows = chunk.map(c =>
+        `(${esc(c.ohr)}, ${esc(c.empName)}, ${esc(c.supervisor)}, ${esc(c.pg)}, ${esc(c.role)}, ${esc(c.shiftTime)}, ${esc(c.dateNorm)}, ${esc(c.rosterLogin)}, ${esc(c.rosterLogout)}, ${esc(c.actualLogin)}, ${esc(c.actualLogout)}, ${c.tardMins}, ${esc(c.shiftType)}, ${esc(c.weekEnding)}, ${esc(c.validationStatus)}, ${esc(c.autoRemarks)}, ${esc(c.autoValidatedBy)}, ${esc(c.autoValidatedByOhr)}, ${esc(c.autoValidatedAt)}, ${esc(batchId)}, ${esc(now)})`
+      );
+      await db.execute(sql.raw(
+        `INSERT INTO io_tardiness (ohr_id, employee_name, supervisor_name, planning_group, actual_role, shift_time, date, roster_login, roster_logout, actual_login, actual_logout, tardiness_minutes, shift_type, week_ending, validation_status, remarks, validated_by, validated_by_ohr, validated_at, upload_batch, created_at) VALUES ${valueRows.join(", ")}`
+      ));
+      inserted += chunk.length;
     }
 
     emitChange(req, "tardiness", "bulk_update", { inserted, skipped });

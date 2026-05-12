@@ -4179,3 +4179,6 @@
 - [x] Remove old columns: Role (5), Planning Group (6), Billing (13), Locked (14)
 - [x] Add new columns: Billing Role, Billing Planning Group, Internal Role, Internal Planning Group
 - [x] Reorder to: Date, OHR, Agent, Tag, UPL Reason, Remarks, OT Hours, FLM, Shift, Status, Billing Role, Billing PG, Internal Role, Internal PG
+
+## Bug Fix — Tardiness Upload
+- [x] Fix Tardiness CSV upload error: "Unexpected token 'I', 'Internal S'... is not valid JSON" — server returning plain text error instead of JSON

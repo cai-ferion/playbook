@@ -115,7 +115,9 @@ async function tardinessUploadCSV() {
         },
         body: JSON.stringify({ records: batch }),
       });
-      const data = await resp.json();
+      let data;
+      const respText = await resp.text();
+      try { data = JSON.parse(respText); } catch { throw new Error(resp.ok ? 'Invalid server response' : `Server error (${resp.status}): ${respText.slice(0, 120)}`); }
       if (!resp.ok) throw new Error(data.error || "Upload failed");
       totalInserted += data.inserted || 0;
       totalSkipped += data.skipped || 0;
