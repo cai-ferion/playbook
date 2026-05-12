@@ -569,6 +569,9 @@ function havenShowLeaveDetail(leaveId) {
   if (canCancel) {
     footerHtml += `<button class="haven-form-btn haven-form-btn-reject" onclick="havenInlineCancel('${escapeHtml(lv.leave_id)}')">Cancel Leave</button>`;
   }
+  if (isAdmin && lv.status === 'Rejected') {
+    footerHtml += `<button class="haven-form-btn haven-form-btn-approve" onclick="havenAdminOverride('${escapeHtml(lv.leave_id)}','${escapeHtml(lv.full_name)}','${escapeHtml(lv.start_date)}')">Override (Approve)</button>`;
+  }
   if (isAdmin) {
     footerHtml += `<button class="haven-form-btn haven-form-btn-delete" onclick="havenInlineDelete('${escapeHtml(lv.leave_id)}')">Delete</button>`;
   }
@@ -951,6 +954,44 @@ function havenInlineDelete(leaveId) {
     }
   };
 }
+// ─── Admin Override (FLM Rejection → Pending OM) ──────────────────────────────
+function havenAdminOverride(leaveId, fullName, startDate) {
+  const zone = document.getElementById('haven-inline-action-zone');
+  if (!zone) return;
+  zone.innerHTML = `
+    <div class="haven-inline-confirm">
+      <p class="haven-inline-confirm-msg">Override FLM rejection for <strong>${escapeHtml(fullName)}</strong>'s leave on <strong>${escapeHtml(startDate)}</strong>? This will move it to Pending OM for final approval.</p>
+      <div class="haven-inline-confirm-actions">
+        <button class="haven-form-btn haven-form-btn-cancel" onclick="document.getElementById('haven-inline-action-zone').innerHTML=''">Cancel</button>
+        <button class="haven-form-btn haven-form-btn-approve" id="haven-override-yes">Yes, Override</button>
+      </div>
+    </div>
+  `;
+  zone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('haven-override-yes').onclick = async () => {
+    try {
+      const user = typeof currentUser !== 'undefined' ? currentUser : null;
+      const res = await fetch(`${IO_API_BASE}/leaves/admin-override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-actor-ohr': user ? user.ohr_id : '' },
+        body: JSON.stringify({ leave_id: leaveId })
+      });
+      const result = await res.json();
+      if (result.ok) {
+        showToast('Leave overridden — now Pending OM approval', 'success');
+        havenCloseForm();
+        await havenLoadLeaves();
+        await havenLoadPeriodConfig();
+        havenRefreshCalendar();
+      } else {
+        showToast('Error: ' + (result.error || 'Unknown'), 'error');
+      }
+    } catch (e) {
+      showToast('Network error', 'error');
+    }
+  };
+}
+
 // ─── Bulk Approve/Reject from Day View ─────────────────────────────────────────
 function havenBulkApproveList(ids, leaveStatus) {
   if (!ids || ids.length === 0) return;
@@ -1078,6 +1119,7 @@ window.havenSingleReject = havenSingleReject;
 window.havenInlineApprove = havenInlineApprove;
 window.havenInlineReject = havenInlineReject;
 window.havenInlineDelete = havenInlineDelete;
+window.havenAdminOverride = havenAdminOverride;
 window.havenBulkApproveList = havenBulkApproveList;
 window.havenBulkRejectList = havenBulkRejectList;
 window.havenDoReject = havenDoReject;

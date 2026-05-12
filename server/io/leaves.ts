@@ -614,4 +614,39 @@ router.post("/filing-extension/toggle", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/io/leaves/admin-override - Admin overrides FLM rejection to approve
+router.post("/leaves/admin-override", async (req: Request, res: Response) => {
+  try {
+    const actorOhr = (req.headers["x-actor-ohr"] as string) || (req.user as any)?.ohrId || (req.user as any)?.ohr_id || '';
+    if (!isAdminOhr(actorOhr)) {
+      return res.status(403).json({ error: "Only admins can override leave decisions" });
+    }
+    const { leave_id } = req.body;
+    if (!leave_id) return res.status(400).json({ error: "leave_id is required" });
+    const db = await getDb();
+    if (!db) return res.status(500).json({ error: "Database not available" });
+    // Fetch the leave
+    const rows = await db.select().from(ioLeaves).where(eq(ioLeaves.leave_id, String(leave_id))).limit(1);
+    if (rows.length === 0) return res.status(404).json({ error: "Leave not found" });
+    const lv = rows[0];
+    if (lv.status !== 'Rejected') {
+      return res.status(400).json({ error: "Can only override leaves with Rejected status" });
+    }
+    const now = new Date().toISOString();
+    // Override: set status to Pending OM (as if FLM approved it)
+    await db.update(ioLeaves).set({
+      status: 'Pending OM',
+      tl_reviewer: 'Admin Override',
+      tl_review_date: now,
+      rejection_reason: null,
+      updated_at: now,
+    }).where(eq(ioLeaves.leave_id, String(leave_id)));
+    emitChange(req, "leaves", "record_updated", { leave_id, status: "Pending OM" });
+    res.json({ ok: true, new_status: 'Pending OM' });
+  } catch (err: any) {
+    console.error("[IO API] leaves admin-override error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

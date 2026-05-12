@@ -4173,3 +4173,4 @@
 - [x] Update frontend: show PG columns in email preview and history table
 - [x] Update revert mechanism to also restore original PG in attendance
 - [x] Rename feature label from "Role Change" to "Assignment Change" or similar
+- [x] Add admin-only Override button on declined Haven leave requests (FLM approval level, inline confirmation)
