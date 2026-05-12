@@ -116,22 +116,22 @@ router.get("/attendance/export", async (req: Request, res: Response) => {
     if (format === "json") {
       return res.json({ rows, total: rows.length });
     }
-    // CSV with user-friendly column headers
+    // CSV with user-friendly column headers (14-column layout)
     const csvColumns = [
       { key: "log_date", label: "Date" },
       { key: "ohr_id", label: "OHR" },
       { key: "snap_full_name", label: "Agent" },
-      { key: "snap_supervisor", label: "FLM" },
-      { key: "snap_actual_role", label: "Role" },
-      { key: "snap_planning_group", label: "Planning Group" },
-      { key: "snap_shift_time", label: "Shift" },
-      { key: "snap_status", label: "Status" },
       { key: "tag", label: "Tag" },
       { key: "upl_reason", label: "UPL Reason" },
       { key: "remarks", label: "Remarks" },
       { key: "ot_hours", label: "OT Hours" },
-      { key: "snap_billing_name", label: "Billing" },
-      { key: "is_locked", label: "Locked" },
+      { key: "snap_supervisor", label: "FLM" },
+      { key: "snap_shift_time", label: "Shift" },
+      { key: "snap_status", label: "Status" },
+      { key: "snap_actual_role", label: "Billing Role" },
+      { key: "snap_planning_group", label: "Billing Planning Group" },
+      { key: "internal_role", label: "Internal Role" },
+      { key: "internal_planning_group", label: "Internal Planning Group" },
     ];
     const escapeCsv = (val: any): string => {
       if (val === null || val === undefined) return "";
