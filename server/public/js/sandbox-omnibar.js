@@ -27,9 +27,27 @@
 
   // Predefined option sets
   const SANDBOX_DEFINED_OPTIONS = {
-    planning_group: ['Hateful Conduct', 'Bullying & Harassment', 'Violence & Incitement', 'Suicide & Self-Injury', 'Dangerous Organizations', 'Regulated Goods', 'Fraud & Deception', 'Adult Sexual Exploitation', 'CSAM', 'Human Exploitation'],
-    proposal_type: ['New Policy', 'Policy Update', 'Process Improvement', 'Tool Enhancement', 'Training Material', 'Other'],
-    status: ['Pending - Initial Review', 'Pending - Final Review', 'Approved', 'Rejected - Initial Review', 'Rejected - Final Review', 'Implemented', 'Archived'],
+    category: ['Efficiency', 'Effectiveness'],
+    _category: ['Efficiency', 'Effectiveness'],
+    proposal_type: ['Tooling', 'Process/Workflow Related', 'IS Impacting'],
+    status: [
+      'Pending - Initial Review',
+      'Rejected - Initial Review [Duplicate]',
+      'Rejected - Initial Review [Insufficient Context/Details]',
+      'Rejected - Initial Review [Out of Scope]',
+      'Rejected - Initial Review [Pitched Already]',
+      'Pending - Final Review',
+      'Rejected - Final Review [Duplicate]',
+      'Rejected - Final Review [Insufficient Context/Details]',
+      'Rejected - Final Review [Out of Scope]',
+      'Rejected - Final Review [Pitched Already]',
+      'Approved - Final Review',
+      'Elevated - Task in Progress',
+      'Elevated - POC Rejected',
+      'Elevated - Pending POC Discussion',
+      'Elevated - No POC',
+      'Implemented'
+    ],
   };
 
   // ===== State =====
