@@ -28,7 +28,7 @@ export interface RateLimitTier {
 
 export const TIERS: Record<string, RateLimitTier> = {
   /** Read endpoints — generous limit for dashboard/list views */
-  READ: { maxRequests: 300, windowMs: 60_000, name: "read" },
+  READ: { maxRequests: 600, windowMs: 60_000, name: "read" },
   /** Standard write endpoints — single-record create/update/delete */
   WRITE: { maxRequests: 30, windowMs: 60_000, name: "write" },
   /** Bulk operations — imports, bulk-tag, bulk-action, uploads */
@@ -202,7 +202,9 @@ export function rateLimitMiddleware(req: Request, res: Response, next: NextFunct
     path.startsWith("/api/site/") ||
     path === "/api/site" ||
     path === "/api/io/events" || // SSE stream — single long-lived connection
-    path === "/api/debug-paths"
+    path === "/api/debug-paths" ||
+    path.startsWith("/api/io/lookup/") || // Reference data — idempotent, high-frequency on page load
+    path === "/api/io/employees/slim" // Lightweight employee lookup — fires on every view
   ) {
     next();
     return;

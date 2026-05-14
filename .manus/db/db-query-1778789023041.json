@@ -1,0 +1,32 @@
+{
+  "query": "SELECT id, ohr_id, snap_full_name, log_date, tag, snap_shift_time, snap_actual_role, snap_planning_group, remarks FROM io_attendance WHERE ohr_id = '740044529' AND log_date IN ('2026-05-14', '2026-05-15') ORDER BY log_date;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT id, ohr_id, snap_full_name, log_date, tag, snap_shift_time, snap_actual_role, snap_planning_group, remarks FROM io_attendance WHERE ohr_id = '740044529' AND log_date IN ('2026-05-14', '2026-05-15') ORDER BY log_date;",
+  "rows": [
+    {
+      "id": "6ab63994",
+      "ohr_id": "740044529",
+      "snap_full_name": "Gabrillo, Thricia Mae Santos",
+      "log_date": "2026-05-14",
+      "tag": "NULL",
+      "snap_shift_time": "Mid-Shift",
+      "snap_actual_role": "Agent",
+      "snap_planning_group": "S-ABF",
+      "remarks": "NULL"
+    },
+    {
+      "id": "e408857a",
+      "ohr_id": "740044529",
+      "snap_full_name": "Gabrillo, Thricia Mae Santos",
+      "log_date": "2026-05-15",
+      "tag": "NULL",
+      "snap_shift_time": "Mid-Shift",
+      "snap_actual_role": "Agent",
+      "snap_planning_group": "S-ABF",
+      "remarks": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tohr_id\tsnap_full_name\tlog_date\ttag\tsnap_shift_time\tsnap_actual_role\tsnap_planning_group\tremarks\n6ab63994\t740044529\tGabrillo, Thricia Mae Santos\t2026-05-14\tNULL\tMid-Shift\tAgent\tS-ABF\tNULL\ne408857a\t740044529\tGabrillo, Thricia Mae Santos\t2026-05-15\tNULL\tMid-Shift\tAgent\tS-ABF\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1784
+}

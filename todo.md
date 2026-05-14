@@ -4193,3 +4193,6 @@
 
 ## Bug Fix — Rate Limit on Hard Refresh
 - [x] Increase READ tier rate limit from 100 to 300 requests/minute to prevent "Rate exceeded" on hard refresh (BPO shared IP + multiple API calls on page load)
+
+## Bug Fix — Rate Exceeded Still Occurring (2nd Fix)
+- [x] Further increase READ rate limit to 600/min + exempt lookup/slim endpoints from rate limiting entirely

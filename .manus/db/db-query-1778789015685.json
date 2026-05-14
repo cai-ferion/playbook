@@ -1,0 +1,210 @@
+{
+  "query": "DESCRIBE io_attendance;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute DESCRIBE io_attendance;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "varchar(64)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ohr_id",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "log_date",
+      "Type": "varchar(30)",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "tag",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "upl_reason",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "remarks",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ot_hours",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at",
+      "Type": "varchar(64)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_full_name",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_supervisor",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_planning_group",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_shift_time",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_actual_role",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_billing_name",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "snap_status",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "is_locked",
+      "Type": "tinyint(1)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "locked_at",
+      "Type": "varchar(64)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "role",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "planning_group",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "internal_role",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "internal_planning_group",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "actual_vs_projection",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "wfm_tag",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "batch_id",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "version",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tvarchar(64)\tNO\tPRI\tNULL\t\nohr_id\tvarchar(20)\tYES\tMUL\tNULL\t\nlog_date\tvarchar(30)\tYES\tMUL\tNULL\t\ntag\tvarchar(50)\tYES\tMUL\tNULL\t\nupl_reason\tvarchar(255)\tYES\t\tNULL\t\nremarks\ttext\tYES\t\tNULL\t\not_hours\tvarchar(20)\tYES\t\tNULL\t\ncreated_at\tvarchar(64)\tYES\t\tNULL\t\nsnap_full_name\tvarchar(255)\tYES\t\tNULL\t\nsnap_supervisor\tvarchar(255)\tYES\tMUL\tNULL\t\nsnap_planning_group\tvarchar(100)\tYES\t\tNULL\t\nsnap_shift_time\tvarchar(100)\tYES\t\tNULL\t\nsnap_actual_role\tvarchar(100)\tYES\t\tNULL\t\nsnap_billing_name\tvarchar(255)\tYES\t\tNULL\t\nsnap_status\tvarchar(50)\tYES\t\tNULL\t\nis_locked\ttinyint(1)\tYES\t\t0\t\nlocked_at\tvarchar(64)\tYES\t\tNULL\t\nrole\tvarchar(100)\tYES\t\tNULL\t\nplanning_group\tvarchar(100)\tYES\t\tNULL\t\ninternal_role\tvarchar(100)\tYES\t\tNULL\t\ninternal_planning_group\tvarchar(100)\tYES\t\tNULL\t\nactual_vs_projection\tvarchar(20)\tYES\t\tNULL\t\nwfm_tag\tvarchar(50)\tYES\tMUL\tNULL\t\nbatch_id\tvarchar(50)\tYES\t\tNULL\t\nversion\tint\tNO\t\t1\t\n",
+  "stderr": "",
+  "execution_time_ms": 1897
+}

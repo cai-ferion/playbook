@@ -162,7 +162,7 @@ describe("Rate Limiting — Phase 6.2", () => {
       rateLimitMiddleware(req as Request, res as Response, next);
 
       expect(next).toHaveBeenCalled();
-      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Limit", "300");
+      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Limit", "600");
       expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Tier", "read");
     });
 
@@ -239,6 +239,23 @@ describe("Rate Limiting — Phase 6.2", () => {
       expect(res.setHeader).not.toHaveBeenCalled();
     });
 
+    it("skips rate limiting for lookup endpoints", () => {
+      const lookupPaths = [
+        "/api/io/lookup/planning-groups",
+        "/api/io/lookup/team-leads",
+        "/api/io/lookup/barangays?q=manila",
+        "/api/io/employees/slim",
+      ];
+      for (const path of lookupPaths) {
+        const req = createMockReq("GET", path);
+        const res = createMockRes();
+        const next = vi.fn();
+        rateLimitMiddleware(req as Request, res as Response, next);
+        expect(next).toHaveBeenCalled();
+        expect(res.setHeader).not.toHaveBeenCalled();
+      }
+    });
+
     it("falls back to IP-based key when no actor OHR", () => {
       // Use a non-auth GET path to test IP fallback
       const req = createMockReq("GET", "/api/io/attendance");
@@ -304,8 +321,8 @@ describe("Rate Limiting — Phase 6.2", () => {
   });
 
   describe("Tier limits are correctly configured", () => {
-    it("READ tier: 300 req/min", () => {
-      expect(TIERS.READ.maxRequests).toBe(300);
+    it("READ tier: 600 req/min", () => {
+      expect(TIERS.READ.maxRequests).toBe(600);
       expect(TIERS.READ.windowMs).toBe(60_000);
     });
 

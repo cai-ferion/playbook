@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, ohr_id, full_name, attendance_date, tag, shift, snap_actual_role, snap_planning_group, status, remarks FROM io_attendance WHERE ohr_id = '740044529' AND attendance_date IN ('2026-05-14', '2026-05-15') ORDER BY attendance_date;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT id, ohr_id, full_name, attendance_date, tag, shift, snap_actual_role, snap_planning_group, status, remarks FROM io_attendance WHERE ohr_id = '740044529' AND attendance_date IN ('2026-05-14', '2026-05-15') ORDER BY attendance_date;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'attendance_date' in 'where clause'"
+  ]
+}
