@@ -162,7 +162,7 @@ describe("Rate Limiting — Phase 6.2", () => {
       rateLimitMiddleware(req as Request, res as Response, next);
 
       expect(next).toHaveBeenCalled();
-      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Limit", "100");
+      expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Limit", "300");
       expect(res.setHeader).toHaveBeenCalledWith("X-RateLimit-Tier", "read");
     });
 
@@ -304,8 +304,8 @@ describe("Rate Limiting — Phase 6.2", () => {
   });
 
   describe("Tier limits are correctly configured", () => {
-    it("READ tier: 100 req/min", () => {
-      expect(TIERS.READ.maxRequests).toBe(100);
+    it("READ tier: 300 req/min", () => {
+      expect(TIERS.READ.maxRequests).toBe(300);
       expect(TIERS.READ.windowMs).toBe(60_000);
     });
 

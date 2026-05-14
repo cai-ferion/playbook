@@ -28,7 +28,7 @@ export interface RateLimitTier {
 
 export const TIERS: Record<string, RateLimitTier> = {
   /** Read endpoints — generous limit for dashboard/list views */
-  READ: { maxRequests: 100, windowMs: 60_000, name: "read" },
+  READ: { maxRequests: 300, windowMs: 60_000, name: "read" },
   /** Standard write endpoints — single-record create/update/delete */
   WRITE: { maxRequests: 30, windowMs: 60_000, name: "write" },
   /** Bulk operations — imports, bulk-tag, bulk-action, uploads */

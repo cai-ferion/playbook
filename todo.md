@@ -4190,3 +4190,6 @@
 
 ## Bug Fix — Group Task Audience Preview
 - [x] Fix Group Task "New Group Task" wizard showing 0 employees in Preview step despite valid filter selections (All PGs, All Depts, 5 Roles selected) — root cause: `const [rows]` destructured first row instead of full array from db.execute()
+
+## Bug Fix — Rate Limit on Hard Refresh
+- [x] Increase READ tier rate limit from 100 to 300 requests/minute to prevent "Rate exceeded" on hard refresh (BPO shared IP + multiple API calls on page load)
