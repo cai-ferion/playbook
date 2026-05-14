@@ -1,0 +1,42 @@
+{
+  "query": "SELECT DISTINCT planning_group, COUNT(*) as cnt FROM io_employees WHERE employement_status = 'Active' GROUP BY planning_group ORDER BY cnt DESC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT DISTINCT planning_group, COUNT(*) as cnt FROM io_employees WHERE employement_status = 'Active' GROUP BY planning_group ORDER BY cnt DESC",
+  "rows": [
+    {
+      "planning_group": "RECALL_MEASUREMENT_CTR",
+      "cnt": "151"
+    },
+    {
+      "planning_group": "S-ABF",
+      "cnt": "115"
+    },
+    {
+      "planning_group": "CS-ABF",
+      "cnt": "81"
+    },
+    {
+      "planning_group": "SME_CTR",
+      "cnt": "9"
+    },
+    {
+      "planning_group": "MULTIPLE",
+      "cnt": "9"
+    },
+    {
+      "planning_group": "QPE_CTR",
+      "cnt": "8"
+    },
+    {
+      "planning_group": "CSO_CTR",
+      "cnt": "7"
+    },
+    {
+      "planning_group": "FAD_CTR",
+      "cnt": "7"
+    }
+  ],
+  "messages": [],
+  "stdout": "planning_group\tcnt\nRECALL_MEASUREMENT_CTR\t151\nS-ABF\t115\nCS-ABF\t81\nSME_CTR\t9\nMULTIPLE\t9\nQPE_CTR\t8\nCSO_CTR\t7\nFAD_CTR\t7\n",
+  "stderr": "",
+  "execution_time_ms": 1793
+}

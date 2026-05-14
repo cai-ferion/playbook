@@ -4187,3 +4187,6 @@
 - [x] Update filters: Planning Group (PGs from roster), Insight Category (Efficiency/Effectiveness), Proposal Type (Tooling, Process/Workflow Related, IS Impacting), Status (16 statuses from Review Area, no Archived)
 - [x] Update submission form to use same fields: PG, Category, Proposal Type
 - [x] Remove any old/incorrect filter options (e.g., old category list, Archived status)
+
+## Bug Fix — Group Task Audience Preview
+- [x] Fix Group Task "New Group Task" wizard showing 0 employees in Preview step despite valid filter selections (All PGs, All Depts, 5 Roles selected) — root cause: `const [rows]` destructured first row instead of full array from db.execute()

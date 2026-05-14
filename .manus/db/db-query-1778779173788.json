@@ -1,0 +1,34 @@
+{
+  "query": "SELECT DISTINCT actual_role, COUNT(*) as cnt FROM io_employees WHERE employement_status = 'Active' GROUP BY actual_role ORDER BY cnt DESC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT DISTINCT actual_role, COUNT(*) as cnt FROM io_employees WHERE employement_status = 'Active' GROUP BY actual_role ORDER BY cnt DESC",
+  "rows": [
+    {
+      "actual_role": "Agent",
+      "cnt": "323"
+    },
+    {
+      "actual_role": "Operational SME",
+      "cnt": "20"
+    },
+    {
+      "actual_role": "Team Lead",
+      "cnt": "20"
+    },
+    {
+      "actual_role": "Quality & Policy Expert",
+      "cnt": "14"
+    },
+    {
+      "actual_role": "Manager",
+      "cnt": "6"
+    },
+    {
+      "actual_role": "Trainer",
+      "cnt": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "actual_role\tcnt\nAgent\t323\nOperational SME\t20\nTeam Lead\t20\nQuality & Policy Expert\t14\nManager\t6\nTrainer\t4\n",
+  "stderr": "",
+  "execution_time_ms": 3255
+}

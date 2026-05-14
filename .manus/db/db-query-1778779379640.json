@@ -1,0 +1,18 @@
+{
+  "query": "SELECT DISTINCT employement_status, COUNT(*) as cnt FROM io_employees GROUP BY employement_status ORDER BY cnt DESC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4YuDyuJcMLGZreH.8d7384225f8d --database 5AVfpygNb7cNbPRpHCcCdp --execute SELECT DISTINCT employement_status, COUNT(*) as cnt FROM io_employees GROUP BY employement_status ORDER BY cnt DESC",
+  "rows": [
+    {
+      "employement_status": "Active",
+      "cnt": "387"
+    },
+    {
+      "employement_status": "Inactive",
+      "cnt": "113"
+    }
+  ],
+  "messages": [],
+  "stdout": "employement_status\tcnt\nActive\t387\nInactive\t113\n",
+  "stderr": "",
+  "execution_time_ms": 2448
+}

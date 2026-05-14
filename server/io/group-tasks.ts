@@ -48,7 +48,7 @@ async function resolveTargetEmployees(filters: {
   }
 
   const query = `SELECT e.ohr_id, e.full_name FROM io_employees e WHERE ${conditions.join(" AND ")} ORDER BY e.full_name`;
-  const [rows] = (await db.execute(sql.raw(query))) as unknown as [Array<{ ohr_id: string; full_name: string }>];
+  const rows = (await db.execute(sql.raw(query))) as unknown as Array<{ ohr_id: string; full_name: string }>;
   return rows;
 }
 
